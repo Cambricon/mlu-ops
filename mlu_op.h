@@ -27,8 +27,8 @@
  * MLU-OPS: Cambricon Open Source operator library for Network
  ******************************************************************************/
 
-#define MLUOP_MAJOR 0
-#define MLUOP_MINOR 11
+#define MLUOP_MAJOR 1
+#define MLUOP_MINOR 0
 #define MLUOP_PATCHLEVEL 0
 
 /*********************************************************************************

@@ -20,27 +20,9 @@ Cambricon MLU-OPS具有以下特点：
    +-----------------------------+-----------------------------+
    | Cambricon MLU-OPS 版本      | 依赖组件版本                |
    +=============================+=============================+
-   | Cambricon BANG C OPS v0.11.z| CNToolkit >= v3.7.0         |
+   | Cambricon MLU-OPS v1.0.z    | CNToolkit >= v3.8.4         |
    |                             +-----------------------------+
-   |                             | CNNL >= v1.21.1             |
-   +-----------------------------+-----------------------------+
-   | Cambricon BANG C OPS v0.10.z| CNToolkit >= v3.7.0         |
-   +-----------------------------+-----------------------------+
-   | Cambricon BANG C OPS v0.9.z | CNToolkit >= v3.7.0         |
-   +-----------------------------+-----------------------------+
-   | Cambricon BANG C OPS v0.8.z | CNToolkit >= v3.6.1         |
-   +-----------------------------+-----------------------------+
-   | Cambricon BANG C OPS v0.7.z | CNToolkit >= v3.5.0         |
-   +-----------------------------+-----------------------------+
-   | Cambricon BANG C OPS v0.6.z | CNToolkit >= v3.4.1         |
-   +-----------------------------+-----------------------------+
-   | Cambricon BANG C OPS v0.5.z | CNToolkit >= v3.3.0         |
-   +-----------------------------+-----------------------------+
-   | Cambricon BANG C OPS v0.4.z | CNToolkit = v3.0.2          |
-   +-----------------------------+-----------------------------+
-   | Cambricon BANG C OPS v0.3.z | CNToolkit >= v3.1.2         |
-   +-----------------------------+-----------------------------+
-   | Cambricon BANG C OPS v0.2.z | CNToolkit >= v3.0.1         |
+   |                             | CNNL >= v1.23.2             |
    +-----------------------------+-----------------------------+
 
 
@@ -54,28 +36,232 @@ Cambricon MLU-OPS具有以下特点：
    +-----------------------------+------------------------+--------------------------------+
    | Cambricon MLU-OPS 版本      | 支持的CPU架构          | 支持的MLU架构                  |
    +=============================+========================+================================+
-   | Cambricon BANG C OPS v0.11.z| x86_64                 | MLU370、MLU590                 |
+   | Cambricon MLU-OPS v1.0.z    | x86_64                 | MLU370、MLU590                 |
    +-----------------------------+------------------------+--------------------------------+
-   | Cambricon BANG C OPS v0.10.z| x86_64                 | MLU370、MLU590                 |
-   +-----------------------------+------------------------+--------------------------------+
-   | Cambricon BANG C OPS v0.9.z | x86_64                 | MLU370、MLU590                 |
-   +-----------------------------+------------------------+--------------------------------+
-   | Cambricon BANG C OPS v0.8.z | x86_64                 | MLU370、MLU590                 |
-   +-----------------------------+------------------------+--------------------------------+
-   | Cambricon BANG C OPS v0.7.z | x86_64                 | MLU370、MLU590                 |
-   +-----------------------------+------------------------+--------------------------------+
-   | Cambricon BANG C OPS v0.6.z | x86_64                 | MLU370、MLU590                 |
-   +-----------------------------+------------------------+--------------------------------+
-   | Cambricon BANG C OPS v0.5.z | x86_64                 | MLU370、MLU590                 |
-   +-----------------------------+------------------------+--------------------------------+
-   | Cambricon BANG C OPS v0.4.z | x86_64                 | MLU290、MLU370                 |
-   +-----------------------------+------------------------+--------------------------------+
-   | Cambricon BANG C OPS v0.3.z | x86_64                 | MLU270、MLU290、MLU370         |
-   |                             +------------------------+--------------------------------+
-   |                             | AArch64                | MLU270、MLU290、MLU370         |
-   +-----------------------------+------------------------+--------------------------------+
-   | Cambricon BANG C OPS v0.2.z | x86_64                 | MLU270、MLU290、MLU370         |
-   +-----------------------------+------------------------+--------------------------------+
+
+
+v1.0.0
+-----------------
+
+特性变更
+~~~~~~~~~~~~~~~~~~~~~
+
+- 新增以下算子接口：
+
+   * ``dcn``
+
+     + mluOpDCNForward
+
+     + mluOpDCNBackwardWeight
+
+     + mluOpDCNBackwardData
+
+     + mluOpCreateDCNDescriptor
+
+     + mluOpDestroyDCNDescriptor
+
+     + mluOpSetDCNDescriptor
+
+     + mluOpGetDCNBakcwardDataWorkspaceSize
+
+     + mluOpGetDCNForwardWorkspaceSize
+
+     + mluOpGetDCNBackwardWeightWorkspaceSize
+
+- 经过一整个大版本的废弃声明，移除以下算子接口，如需使用功能，请调用CNNL对应接口：
+
+   * ``add_n``
+
+     + mluOpAddN
+
+     + mluOpGetAddNWorkspaceSize
+
+     + mluOpAddN_v2
+
+   * ``batch_matmul_bcast``
+
+     + mluOpGetBatchMatMulBCastWorkspaceSize
+
+     + mluOpGetBatchMatMulHeuristicResult
+
+     + mluOpGetBatchMatMulAlgoHeuristic
+
+     + mluOpBatchMatMulBCastDescCreate
+
+     + mluOpBatchMatMulBCastDescDestroy
+
+     + mluOpSetBatchMatMulBCastDescAttr
+
+     + mluOpGetBatchMatMulBCastDescAttr
+
+     + mluOpBatchMatMulBCastAlgoCreate
+
+     + mluOpBatchMatMulBCastAlgoDestroy
+
+     + mluOpGetQuantizeBatchMatMulBCastAlgorithm
+
+     + mluOpGetQuantizeBatchMatMulBCastWorkspaceSize
+
+     + mluOpQuantizeBatchMatMulBCast
+
+     + mluOpBatchMatMulBCast
+
+     + mluOpBatchMatMulBCast_v2
+
+   * ``copy``
+
+     + mluOpCopy
+
+   * ``concat``
+
+     + mluOpConcat
+
+     + mluOpGetConcatWorkspaceSize
+
+   * ``expand``
+
+     + mluOpExpand
+
+   * ``fill``
+
+     + mluOpFill
+
+     + mluOpFill_v3
+
+   * ``gather_nd``
+
+     + mluOpGatherNd
+
+   * ``matmul``
+
+     + mluOpMatMul
+
+     + mluOpMatMulDescCreate
+
+     + mluOpMatMulDescDestroy
+
+     + mluOpSetMatMulDescAttr
+
+     + mluOpGetMatMulDescAttr
+
+     + mluOpCreateMatMulHeuristicResult
+
+     + mluOpDestroyMatMulHeuristicResult
+
+     + mluOpGetMatMulHeuristicResult
+
+     + mluOpGetMatMulAlgoHeuristic
+
+     + mluOpMatMulAlgoCreate
+
+     + mluOpMatMulAlgoDestroy
+
+     + mluOpGetMatMulWorkspaceSize
+
+     + mluOpMatMul_v2
+
+   * ``nms``
+
+     + mluOpNms
+
+   * ``pad``
+
+     + mluOpPad
+
+   * ``reduce``
+
+     + mluOpReduce
+
+     + mluOpCreateReduceDescriptor
+
+     + mluOpDestroyReduceDescriptor
+
+     + mluOpSetReduceDescriptor
+
+     + mluOpSetReduceDescriptor_v2
+
+     + mluOpGetReduceOpWorkspaceSize
+
+   * ``scatter_nd``
+
+     + mluOpScatterNd
+
+     + mluOpScatterNd_v2
+
+   * ``stride_slice``
+
+     + mluOpStrideSlice
+
+   * ``transform``
+
+     + mluOpTransform
+
+   * ``transpose``
+
+     + mluOpCreateTransposeDescriptor
+
+     + mluOpDestroyTransposeDescriptor
+
+     + mluOpSetTransposeDescriptor
+
+     + mluOpGetTransposeWorkspaceSize
+
+     + mluOpTranspose
+
+     + mluOpTranspose_v2
+
+   * ``unique``
+
+     + mluOpUnique
+
+     + mluOpCreateUniqueDescriptor
+
+     + mluOpDestroyUniqueDescriptor
+
+     + mluOpSetUniqueDescriptor
+
+     + mluOpGetUniqueWorkSpace
+
+     + mluOpUniqueGetOutLen
+
+     + mluOpGetUniqueWorkspaceSize
+
+     + mluOpUnique_v2
+
+- 新增编译前对环境中各个依赖项的版本检查。
+
+- 更新公共组件core/GTest代码。
+
+- 更新MLU-OPS仓库中对环境安装、编译、测试流程的叙述。
+
+- 移除对Ubuntu18.04系统的支持。
+
+- 移除BangPy组件，调整MLU-OPS仓库代码结构。
+
+已修复问题
+~~~~~~~~~~~~~~~~~~~~~
+
+- 修复以下算子问题：
+
+   * ``voxel_pooling_forward``
+
+     + 移除GTest中额外调用的API接口。
+
+已知遗留问题
+~~~~~~~~~~~~~~~~~~~~~
+
+- ``roi_align_rotated``
+
+   * mluOpRoiAlignRotatedForward接口在输入feature以及rois元素数量接近2G时出现运行超时。
+
+   * mluOpRoiAlignRotatedBackward接口在输入top_grad以及rois元素数量接近2G时出现运行超时。
+
+- ``carafe``
+
+   * mluOpCarafeForward接口在输入input以及mask元素数量超过2G时出现运行错误。
+
+   * mluOpCarafeBackward接口在输入input、mask以及grad_output元素数量接近2G时出现运行超时。
+
 
 v0.11.0
 -----------------
