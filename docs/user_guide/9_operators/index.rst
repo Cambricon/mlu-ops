@@ -733,7 +733,7 @@ mluOpSyncBatchNormBackwardElemt
 .. _execFFT:
 
 mluOpExecFFT
-------------
+---------------
 对一个长度为N的实数数列进行傅里叶变换。
 
 计算公式如下：
