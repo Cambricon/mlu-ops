@@ -699,8 +699,8 @@ __mlu_func__ void __mluop_get_stage_indices_tfuse(int *dst_nram, int length) {
  * *************************************************************************/
 __mlu_vector__ void __mluop_get_indices(float *dst, float start_index,
                                         uint32_t len) {
-  vv_int16 r_out, r_dim;
-  unsigned BlockDim = __vv_get_length() / sizeof(int16_t);
+  vv_float r_out, r_dim;
+  unsigned BlockDim = __vv_get_length() / sizeof(float);
   __asm__ volatile("index.vvr.f32 %[dst], %[base], 1;\n\t"
                    : [ dst ] "+r"(r_out)
                    : [ base ] "r"(start_index));
