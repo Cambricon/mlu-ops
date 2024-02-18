@@ -31,3 +31,5 @@ rotated_feature_align_backward
 rotated_feature_align_forward
 voxelization
 voxel_pooling_forward
+poly_nms
+
