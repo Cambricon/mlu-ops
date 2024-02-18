@@ -18,7 +18,7 @@
 
 |      序号      |           需求            |            需求详情            |
 |----------------|---------------------------|--------------------------------|
-|        1       |          支持硬件         |      MLU370 <br> MLU590        |
+|        1       |          支持硬件         |      MLU370及以上              |
 |        2       |          job类型          |  block <br> U1 <br> U2 <br> U4 |
 |        3       |         layout            | 支持NHWC 、NCHW、ARRAY等layout |
 |        4       |         多维              |         是否支持多维           |
@@ -63,7 +63,7 @@
 |  Layout 测试    |    支持 NCHW/NHWC                |            |          |
 |  0 元素测试     |    是否支持 0 元素测试           |            |          |
 |  稳定性测试     |--gtest_repeat=NUM<br>--thread=NUM|            |          |
-|  多平台测试     |     MLU370/MLU590                |            |          |
+|  多平台测试     |     MLU370及以上                 |            |          |
 |  nan / inf 测试 |     是否支持 nan / inf 测试      |            |          |
 |  内存泄漏测试   |      测试结果                    |            |          |
 |  代码覆盖率测试 |      测试结果                    |            |          |
@@ -73,13 +73,6 @@
 详见：[MLU-OPS™性能验收标准](./MLU-OPS-Performance-Acceptance-Standard.md)
 
 平台：MLU370
-
-|operator|mlu_hardware_time(us)|mlu_interface_time(us)|mlu_io_efficiency|mlu_compute_efficiency|mlu_workwpace_size(Bytes)|data_type|shape|
-|-------|----|----|----|----|----|----|-----|
-|op_name|    |    |    |    |    |    |     |
-|op_name|    |    |    |    |    |    |     |
-
-平台：MLU590
 
 |operator|mlu_hardware_time(us)|mlu_interface_time(us)|mlu_io_efficiency|mlu_compute_efficiency|mlu_workwpace_size(Bytes)|data_type|shape|
 |-------|----|----|----|----|----|----|-----|
