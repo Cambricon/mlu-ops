@@ -10,8 +10,9 @@ MLU-OPS™ 使用警告方法来防呆，即将不正常情形通过日志警告
 应用场景：单个变量的检查（或两个变量之间的简单关系检查），如：空指针检查，值大小的检查，tensor_dtype一致检查<br>
 声明与定义位置：[core/logging.h](../core/logging.h)<br>
 防呆返回值：MLUOP_STATUS_BAD_PARAM<br>
-注意事项：这类仅检查逻辑错误的情况，不检查由于环境限制而不能成功的情况<br>
+注意事项：不支持的状态检查不使用，例如：暂时不支持的规模。<br>
 规范示例：
+[example](../kernels/ball_query/ball_query.cpp)
 ```c++
 const api_name = "[mluOp***]";
 // PARAM_CHECK 检查指针
@@ -75,12 +76,16 @@ INTERNAL_CHECK(
 注意事项：返回状态为 mluOpStatus_t 的函数中，
 mlu_ops.h 中出现的函数需要带 MLUOP_WIN_API 修饰，其他的函数不带 MLUOP_WIN_API 修饰。
 规范示例：
+[example](../kernels/abs/abs.cpp)
 ```c++
 mluOpStatus_t
 Kernel3StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
                         const cnrtQueue_t queue, const mluOpDataType_t d_type,
                         const void *x, void *y, const int num);
 
+CHECK_RETURN("[mluOpAbs] ",
+               Kernel3StagePipelineAbs(k_dim, k_type, handle->queue,
+                                       x_desc->dtype, x, y, element_num));
 ```
 常见错误示例：
 无
@@ -91,6 +96,7 @@ Kernel3StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
 声明与定义位置：[core/logging.h](../core/logging.h)，[core/logging.h](../core/util.cpp)<br>
 防呆返回值：无，只抛出异常<br>
 规范示例：
+[example](../test/mlu_op_gtest/pb_gtest/src/zoo/abs/abs.cpp)
 ```c++
 // test/mlu_op_gtest/pb_gtest/src/zoo 目录下的MLUOP_CHECK
 // 例如 abs.cpp > compute() 函数中
@@ -131,6 +137,7 @@ TENSOR_NUM_CHECK(api_name, input_grad_count, LARGE_TENSOR_NUM,
 2.如果算子执行过程中出现错误抛出异常，由于 device 端异步执行，该防呆可能抓不到异常。<br>
 只有同步执行时，才会使能。<br>
 规范示例：
+[example](../kernels/ball_query/ball_query_union1.mlu)
 ```c++
 template <typename T>
 __mlu_global__ void MLUUnion1KernelBallQuery(
@@ -166,6 +173,7 @@ KERNEL_CHECK((KernelRoiAlignRotatedBackward(
 [kernels/utils/cnnl_helper.cpp](../kernels/utils/cnnl_helper.cpp)<br>
 防呆返回值：<br>
 注意事项：v1.0 CHECK_FUNC_RETURN 待废弃
+[example](../kernels/dynamic_point_to_voxel/dynamic_point_to_voxel_forward/dynamic_point_to_voxel_forward.cpp)
 规范示例：
 ```c++
 // dynamic_point_to_voxel_forward.cpp
@@ -197,6 +205,7 @@ CHECK_FUNC_RETURN(
 应用场景：适用于各种情况，自定义防呆更加灵活，可以检查复杂的条件，更准确地解释防呆信息。
 声明与定义位置：当前算子目录内
 规范示例：
+[example](../kernels/sparse_conv/indice_convolution_backward_data/indice_convolution_backward_data.cpp)
 ```c++
 // 参数有关联关系，需要进行解释
 // indice_convolution_backward_data 中部分参数有关联关系，需要进行解释
