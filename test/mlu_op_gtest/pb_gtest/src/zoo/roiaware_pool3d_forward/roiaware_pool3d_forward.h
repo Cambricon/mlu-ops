@@ -30,7 +30,7 @@ namespace mluoptest {
 class RoiawarePool3dForwardExecutor : public Executor {
  public:
   RoiawarePool3dForwardExecutor() {}
-  ~RoiawarePool3dForwardExecutor() { workspaceFree(); }
+  ~RoiawarePool3dForwardExecutor() {}
   void paramCheck() override;
   void workspaceMalloc() override;
   void workspaceFree() override;

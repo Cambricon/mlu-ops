@@ -33,7 +33,7 @@ namespace mluoptest {
 class DynamicPointToVoxelForwardExecutor : public Executor {
  public:
   DynamicPointToVoxelForwardExecutor() {}
-  ~DynamicPointToVoxelForwardExecutor() { workspaceFree(); }
+  ~DynamicPointToVoxelForwardExecutor() {}
   void paramCheck() override;
   void compute() override;
   void cpuCompute() override;

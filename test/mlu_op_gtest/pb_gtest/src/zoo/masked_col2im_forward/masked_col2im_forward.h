@@ -29,7 +29,7 @@ namespace mluoptest {
 class MaskedCol2imForwardExecutor : public Executor {
  public:
   MaskedCol2imForwardExecutor() {}
-  ~MaskedCol2imForwardExecutor() { workspaceFree(); }
+  ~MaskedCol2imForwardExecutor() {}
 
   void paramCheck() override;
   void compute() override;

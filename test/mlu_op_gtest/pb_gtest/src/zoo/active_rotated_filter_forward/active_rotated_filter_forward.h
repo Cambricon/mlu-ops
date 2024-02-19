@@ -31,7 +31,7 @@ namespace mluoptest {
 class ActiveRotatedFilterForwardExecutor : public Executor {
  public:
   ActiveRotatedFilterForwardExecutor() {}
-  ~ActiveRotatedFilterForwardExecutor() { workspaceFree(); }
+  ~ActiveRotatedFilterForwardExecutor() {}
 
   void paramCheck() override;
   void compute() override;
