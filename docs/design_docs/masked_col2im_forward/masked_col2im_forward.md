@@ -82,15 +82,15 @@
 ### 1.4 算子限制
 
 | 限制类型    | 详细说明                                            |
-| ----------- | ------------------------------------------------------------ |
-| 数据类型限制| col和im仅支持half和float，且两者数据类型相同；mask_h_idx和mask_w_idx必须为int32_t                       |
+| -----------| ------------------------------------------------------------ |
+| 数据类型限制 | col和im仅支持half和float，且两者数据类型相同；<br />mask_h_idx和mask_w_idx必须为int32_t                       |
 | 布局限制    | im仅支持NCHW |
-| 规模限制    | im的第一维大小必须是1；col的第二维、mask_h_idx的第一维和mask_w_idx的第一维大小相同；im的第二维和col的第一维大小相同               |
+| 规模限制    | im的第一维大小必须是1；<br />col的第二维、mask_h_idx的第一维和mask_w_idx的第一维大小相同；<br />im的第二维和col的第一维大小相同               |
 | 功能限制    | 无                         |
-| 数据范围限制| mask_h_idx取整范围在[0，height-1]，height是输出col的高；mask_w_idx取整范围在[width-1],width是输出col的宽；mask_h_idx与mask_w_idx组成的坐标不允许重复     |
-| 原位限制    | 不支持原位|
-| stride限制  | 不支持stride机制|
-| 广播限制    | 不支持广播|
+| 数据范围限制 | mask_h_idx 取值范围为[0，height-1]，其中 height 是输出col的高；<br />mask_w_idx 取值范围为 [width-1]，其中 width 是输出col的宽；<br />mask_h_idx与mask_w_idx组成的坐标不允许重复     |
+| 原位限制    | 不支持原位        |
+| stride限制 | 不支持stride机制  |
+| 广播限制    | 不支持广播        |
 
 ### 1.5 验收标准
 
