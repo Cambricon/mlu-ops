@@ -32,30 +32,32 @@
 ### 1.1 算子需求分析
 
 | 算子功能简介                                                                 | psroipool算子的反向  |
-| ---------------------------------------------------------------------------- | --------------------------------------- |
+| -------------------------------------------------------------------------- | ------------------- |
 | 需求来源               | Pytorch                              |
-| 应用网络               | R-FCN                            |
+| 应用网络               | R-FCN                                |
 | 输入数据类型           |  top_grad: float; mapping_channel: int32_t; </br>rois: float                              |
 | 输入 Shape            | top_grad: [rois_num, hi, wi, output_dim]; </br>mapping_channel: [rois_num, hi, wi, output_dim]; </br>rois: [rois_num, rois_offset]  |
 | 输入 Layout           | top_grad: NHWC; mapping_channel: NHWC; </br>rois: ARRAY             |
-| 输出数据类型            | bottom_grad: float|
-| 输出 Shape            | bottom_grad: [batches, ho, wo, channels]         |
-| 输出 Layout              |bottom_grad: NHWC  |
-| 模式(可选）                      |                                           |
-| 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理              | 无                         |
-| 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 无                           |
-| 是否需要支持原位           | 否         |
-| 是否需要支持 stride 机制   | 否                                                           |
-| 是否需要支持广播           | 否                                                           |
+| 输出数据类型            | bottom_grad: float                         |
+| 输出 Shape            | bottom_grad: [batches, ho, wo, channels]   |
+| 输出 Layout           |bottom_grad: NHWC                           |
+| 模式(可选）             |                                           |
+| 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理             | 无             |
+| 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 无             |
+| 是否需要支持原位           | 否                                                       |
+| 是否需要支持 stride 机制   | 否                                                       |
+| 是否需要支持广播           | 否                                                       |
 | 0 元素检查是否直接返回      | top_grad: (是, return MLUOP_STATUS_SUCCESS); </br>mapping_channel:(是, return MLUOP_STATUS_SUCCESS); </br>rois: (否，return MLUOP_STATUS_BAD_PARAM); </br>bottom_grad: (是, return MLUOP_STATUS_SUCCESS)         |
-| 其他特殊需求(在线量化，融合，转数提前等，可选)                               |                                                                |
-| 本次开发优先支持的规模/模式                                                  |                                |
+| 其他特殊需求(在线量化，融合，转数提前等，可选)                                            |                                |
+| 本次开发优先支持的规模/模式                                                            |                                |
 
 ### 1.2 算子功能和应用场景描述
 
 算子功能： psroipool 算子的反向
 
 应用场景： 该算子应用于R-FCN网络。
+
+`rois.shape=[rois_num, rois_offset]`，其中 rois_offset 固定取值 5，每一组 roi （`rois[i,:],i=0,1,...,rois_num`）中数据按顺序依次为： `batch_id`,`roi_x_start`, `roi_y_start`,`roi_x_end`,`roi_y_end`。
 
 - example:
 
@@ -233,15 +235,15 @@ tensor([[[[nan, 0., 0.],
 ### 1.4 算子限制
 
 | 限制类型     | 详细说明 |
-| ------------ | --------------------------------------------------------------------------------------------------------------- |
-| 数据类型限制 | 输入数据（包括top_grad、rois）和输出数据（bottom_grad）的类型必须相同，而且仅支持 float。输入数据（mapping_channel）类型必须是 int32_t。         |
-| 布局限制     | 对于 top_grad、mapping_channel 不支持 NCHW 的 layout，并且每个 roi 只支持 [batch_id, roi_x_start, roi_y_start, roi_x_end, roi_y_end] 规模。 |
-| 数据规模限制 | 无                                                            |
-| 原位限制     | 不支持原位                                                                                                      |
-| stride 限制  | 不支持 stride 机制                                                                                              |
-| 广播限制     |  参数不支持广播                                                                                              |
-| 输入参数限制 | pooled_height = pooled_width, rois_offset = 5, </br>output_dim >= 1, spatial_scale > 0, </br>channels = pooled_height * pooled_width * output_dim, </br>每个 roi 只支持 [batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w], 0 <= batch_id <= batches - 1
-| nan/inf限制 | 已支持|
+| ---------- | --------------------------------------------------------------------------------------------------------------- |
+| 数据类型限制 | 输入数据（包括top_grad、rois）和输出数据（bottom_grad）的类型必须相同，仅支持 float。</br>输入数据（mapping_channel）类型必须是 int32_t。         |
+| 布局限制    | top_grad、mapping_channel 不支持 NCHW 的 layout |
+| 数据规模限制 | 无                                            |
+| 原位限制    | 不支持原位                                      |
+| stride 限制 | 不支持 stride 机制                             |
+| 广播限制    |  不支持广播                                     |
+| 输入参数限制 | 特征图池化后的高与宽需相等（`pooled_height = pooled_width`）</br> rois_offset 需等于 5, </br>output_dim 需大于等于 1, </br>spatial_scale 需大于 0, </br>channels 与 pooled_height * pooled_width * output_dim 需相等, </br> 每个 roi 中 batch_id 需满足 `0 <= batch_id <= batches - 1` 
+| nan/inf限制 | 无                                            |
 
 ### 1.5 验收标准
 
