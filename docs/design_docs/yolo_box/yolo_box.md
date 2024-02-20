@@ -209,8 +209,7 @@
 | 布局限制     | x、img_size、anchors、boxes、scores 仅支持 ARRAY              |
 | 规模限制     | `anchors.shape=[2*S]`，`S` 须大于0，且 S % 2 == 0<br />`x.shape=[N,C,H,W]`，C须大于0<br />img_size的shape为`[N, 2]`，dim[1]为2<br />boxes的shape为`[N, S, 4, H*W]`，dim[1]==S，dim[2]须为4<br />scores的shape为`[N, S, class_num, H*W]`，dim[1]==S，dim[2]须为class_num<br />class_num须大于0且在200平台上小于1535，在300平台上小于2559，此处class_num的取值上限由NRAM空间大小决定，计算公式：(MAX_NRAM_SIZE / sizeof(float) / 2 / 32) - 2 （见scores空间划分）|
 | 功能限制     | 无限制                                                       |
-| 数据范围限制 | 当 `iou_aware` 为 `true` 时，`iou_aware_factor` 的范围为 [0, 1] <br>
-`x` 受真值影响，部分值有指数运算，会与竞品对不齐                           |
+| 数据范围限制 | 当 `iou_aware` 为 `true` 时，`iou_aware_factor` 的范围为 [0, 1] <br>`x` 受真值影响，部分值有指数运算，会与竞品对不齐                           |
 | 原位限制     | 不支持原位                                                   |
 | stride 限制  | 不支持 stride 机制                                           |
 | 广播限制     | 不支持广播                                                   |
