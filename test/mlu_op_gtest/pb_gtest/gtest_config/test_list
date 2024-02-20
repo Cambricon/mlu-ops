@@ -35,3 +35,4 @@ voxelization
 voxel_pooling_forward
 poly_nms
 diff_iou_rotated_sort_vertices_forward
+yolo_box
