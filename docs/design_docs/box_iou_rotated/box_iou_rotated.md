@@ -146,7 +146,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxIouRotated(mluOpHandle_t handle,
 5. 通过上述过程得到的有效交点，如果`nums_in`对应大于 2，代表有 2 个以上的交点，可以计算交叠面积，否则设置对应位置的`valid_box`为 false，设置 ious=0.
 6. 用 Convex-hull-graham 顶点扫描法，标量计算每一组 24 个交点，进行排序、筛选得出凸包形状的顶点集合。（区分 arch）
     - 300 系列顶点间的顺序有cross_product值比较来进行排序。
-    - 500 系列
+    - 300 系列以上
         1. 两个box相交得出的多边形只能是凸包，排序正确情况下，没有凹点需要筛选，可以省略筛选点的步骤。
         2. 按照各点与x正半轴形成的角度，逆时针排序。    
             ![box_iou_rotated](./res/sort_vertices1.png)
@@ -230,4 +230,4 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxIouRotated(mluOpHandle_t handle,
 ### 4.1 当前存在问题的规模说明
 
 ### 4.2 已经过优化的规模说明
-在500系列上已对convex_hull_graham进行性能优化，优化后kernel性能提升6.8% ~ 98%.
+在300系列以上已对convex_hull_graham进行性能优化，优化后kernel性能提升6.8% ~ 98%.
