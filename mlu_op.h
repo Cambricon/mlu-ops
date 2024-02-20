@@ -3633,7 +3633,7 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  *   - 2C * sizeof(datatype of \b feats) + (N + 3C + 1) * sizeof(int) + N
  *     must be less than or equal to 640KB on MLU300 series.
  *   - 2C * sizeof(datatype of \b feats) + (N + 3C + 1) * sizeof(int) + N
- *     must be less than or equal to 380KB on series above MLU300.
+ *     must be less than or equal to 380KB on series higher than MLU300 series.
  *
  * @par API Dependency
  * - Before calling this function, you need to get the size of workspace by
@@ -5373,7 +5373,7 @@ mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
  *
  * @par Note
  * - On MLU300, the input \b grid with NaN or infinity is not supported.
- * - On series above MLU300, the inputs \b grid and \b input with NaN or infinity are supported.
+ * - On series higher than MLU300 series, the inputs \b grid and \b input with NaN or infinity are supported.
  *
  * @par Example
  * - None.
@@ -5455,7 +5455,7 @@ mluOpRoiCropForward(mluOpHandle_t handle,
  *
  * @par Note
  * - On MLU300, the input \b grid with NaN or infinity is not supported.
- * - On series above MLU300, the inputs \b grid and \b grad_output with NaN or infinity are supported.
+ * - On series higher than MLU300 series, the inputs \b grid and \b grad_output with NaN or infinity are supported.
  *
  * @par Example
  * - None.
@@ -6970,8 +6970,8 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  *   \b weight is NULL on MLU300 series. The length of C should be in the range of [0, 14848] when
  *   \b weight is not NULL on MLU300 series.
  * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 9785] when
- *   \b weight is NULL on series above MLU300. The length of C should be in the range of [0, 8864] when
- *   \b weight is not NULL on series above MLU300.
+ *   \b weight is NULL on series higher than MLU300 series. The length of C should be in the range of [0, 8864] when
+ *   \b weight is not NULL on series higher than MLU300 series.
  * - \b weight does not support positive infinity and negative infinity currently.
  * - \b gamma should be in the range of [0, 10000].
  *
@@ -7363,7 +7363,7 @@ mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
  * @par Note
  * - The input \b sampling_loc that contains NaN or infinity is not supported.
  * - The \b value, \b sampling_loc, \b with attn_weight and \b grad_output contain NaN or infinity are not
- *   supported on series above MLU300 currently.
+ *   supported on series higher than MLU300 series currently.
  * - The function does not support MLU200 series.
  *
  * @par Example
@@ -10473,7 +10473,7 @@ mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
  *
  * @par Scale Limitation
  * - On MLU370, the number of boxes cannot exceed 23404;
- *   On series above MLU300, the number of boxes cannot exceed 14042.
+ *   On series higher than MLU300 series, the number of boxes cannot exceed 14042.
  *
  * @par API Dependency
  * - None.
