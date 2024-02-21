@@ -185,8 +185,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpNmsRotated(mluOpHandle_t handle,
 - 框架在需求列表中给出的算子在网络中用到的规模：`boxes` 为 [34,5], [78,5]
 
 - 单核BLOCK任务下：
-  1. MLU590: box_num < 3000 不超时
-  2. MLU370: box_num < 3200 不超时
+  1. MLU370: box_num < 3200 不超时
   2. MLU290: box_num < 1100 不超时
 
 ### 3.8 算子防呆检查

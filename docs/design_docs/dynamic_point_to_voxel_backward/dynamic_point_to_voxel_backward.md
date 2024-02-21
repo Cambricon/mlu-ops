@@ -211,7 +211,7 @@ KERNEL_CHECK((KernelMaxReduceScatterGrad(k_dim, k_type, handle->queue,
                                              workspace, voxel_num, N, C)))
 ```
 
-在300平台上缺少__scatter指令，在500平台上scatter_nd的性能优于kernel2，因此使用scatter_nd算子代替kernel2；scatter_nd是仓库已有算子，本设计文档不对其进行过多描述，下文主要对本算子的kernel在设备端的实现方案进行详细描述。
+在300平台上缺少__scatter指令，在300平台以上scatter_nd的性能优于kernel2，因此使用scatter_nd算子代替kernel2；scatter_nd是仓库已有算子，本设计文档不对其进行过多描述，下文主要对本算子的kernel在设备端的实现方案进行详细描述。
 
 - #### device 端
 
