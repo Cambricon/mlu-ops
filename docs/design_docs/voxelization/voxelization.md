@@ -428,7 +428,7 @@ int32_t split_num = 2;
     }
     *voxel_num = voxel_num_temp;
 ```
-500系列方案如下：
+300系列以上平台的方案如下：
 先明确KernelPoint2Voxel的输出：
 
 point_to_pointidx: 表示当前 point 在集合 points 中的下标。 若 points 中包含多个相同的 point，那么这些 point 的下标也相同，为该 point 在 points 中第一次出现的位置。

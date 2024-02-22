@@ -3633,7 +3633,7 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  *   - 2C * sizeof(datatype of \b feats) + (N + 3C + 1) * sizeof(int) + N
  *     must be less than or equal to 640KB on MLU300 series.
  *   - 2C * sizeof(datatype of \b feats) + (N + 3C + 1) * sizeof(int) + N
- *     must be less than or equal to 380KB on MLU500 series.
+ *     must be less than or equal to 380KB on series higher than MLU300 series.
  *
  * @par API Dependency
  * - Before calling this function, you need to get the size of workspace by
@@ -3641,9 +3641,9 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  *
  * @par Note
  * - This function is only supported on MLU300 series or above platforms.
- * - On MLU300 and MLU500, the inputs \b point2voxel_map, \b voxel_points_count, and \b voxel_num with NaN or infinity
- *   are not supported.
- * - On MLU300 and MLU500, the inputs \b grad_voxel_feats, \b feats and \b voxel_feats with NaN or infinity
+ * - On MLU300 series and above, the inputs \b point2voxel_map, \b voxel_points_count, and \b voxel_num with NaN or
+ *   infinity are not supported.
+ * - On MLU300 series and above, the inputs \b grad_voxel_feats, \b feats and \b voxel_feats with NaN or infinity
  *   are supported.
  *
  * @par Example
@@ -3801,8 +3801,8 @@ mluOpGetDynamicPointToVoxelForwardWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Note
  * - This function is only supported on MLU300 series or above platforms.
- * - On MLU300 and MLU500, the input \b coors with NaN or infinity is not supported.
- * - On MLU300 and MLU500, the input \b feats with NaN or infinity is supported.
+ * - On MLU300 series and above, the input \b coors with NaN or infinity is not supported.
+ * - On MLU300 series and above, the input \b feats with NaN or infinity is supported.
  *
  * @par Example
  * - None.
@@ -5373,7 +5373,7 @@ mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
  *
  * @par Note
  * - On MLU300, the input \b grid with NaN or infinity is not supported.
- * - On MLU500, the inputs \b grid and \b input with NaN or infinity are supported.
+ * - On series higher than MLU300 series, the inputs \b grid and \b input with NaN or infinity are supported.
  *
  * @par Example
  * - None.
@@ -5455,7 +5455,7 @@ mluOpRoiCropForward(mluOpHandle_t handle,
  *
  * @par Note
  * - On MLU300, the input \b grid with NaN or infinity is not supported.
- * - On MLU500, the inputs \b grid and \b grad_output with NaN or infinity are supported.
+ * - On series higher than MLU300 series, the inputs \b grid and \b grad_output with NaN or infinity are supported.
  *
  * @par Example
  * - None.
@@ -6970,8 +6970,8 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  *   \b weight is NULL on MLU300 series. The length of C should be in the range of [0, 14848] when
  *   \b weight is not NULL on MLU300 series.
  * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 9785] when
- *   \b weight is NULL on MLU500 series. The length of C should be in the range of [0, 8864] when
- *   \b weight is not NULL on MLU500 series.
+ *   \b weight is NULL on series higher than MLU300 series. The length of C should be in the range of [0, 8864] when
+ *   \b weight is not NULL on series higher than MLU300 series.
  * - \b weight does not support positive infinity and negative infinity currently.
  * - \b gamma should be in the range of [0, 10000].
  *
@@ -7363,7 +7363,7 @@ mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
  * @par Note
  * - The input \b sampling_loc that contains NaN or infinity is not supported.
  * - The \b value, \b sampling_loc, \b with attn_weight and \b grad_output contain NaN or infinity are not
- *   supported ON MLU500 series currently.
+ *   supported on series higher than MLU300 series currently.
  * - The function does not support MLU200 series.
  *
  * @par Example
@@ -10473,7 +10473,7 @@ mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
  *
  * @par Scale Limitation
  * - On MLU370, the number of boxes cannot exceed 23404;
- *   On MLU590, the number of boxes cannot exceed 14042.
+ *   On series higher than MLU300 series, the number of boxes cannot exceed 14042.
  *
  * @par API Dependency
  * - None.

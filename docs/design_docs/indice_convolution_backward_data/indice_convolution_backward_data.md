@@ -230,8 +230,8 @@ step 8：若 k == K - 1，结束循环，否则回到 step 2，k = k + 1。
   PARAM_CHECK(api, indice_pairs_desc != NULL);
   PARAM_CHECK(api, input_grad_desc != NULL);
 
-  if (handle->arch != MLUOP_MLU370 && handle->arch != MLUOP_MLU590) {
-    LOG(ERROR) << api << " Only support hardware over MLU300 .";
+  if (handle->arch < MLUOP_MLU370) {
+    LOG(ERROR) << api << " Only support hardware higher than MLU300 series.";
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 

@@ -1,5 +1,3 @@
-
-
 # ms_deform_attn_backward 算子开发方案设计
 * #### 文档基本信息
 
@@ -89,7 +87,7 @@ ms_deform_attn的反向算子，计算grad_value，grad_sampling_loc和grad_attn
 | 布局限制    | 仅支持ARRAY的Layout     |
 | 规模限制    | 暂无 |
 | 功能限制    | 暂无|
-| 数据范围限制| 输入sampling_loc中不支持nan和inf。MLU500：value,sampling_loc,attn_weight and grad_output 暂时不支持NaN和inf。|
+| 数据范围限制| 输入sampling_loc中不支持nan和inf。|
 | 原位限制    | 不支持|
 | stride限制  | 不支持|
 | 广播限制    | 不支持|
@@ -391,7 +389,7 @@ nram划分：
 
 在BEVFormer网络中，输入的C通道只有32，需要处理的点数据量比较大，如果每个MLU core每次只处理一个点的数据，板卡的IO无法打满，计算量也无法打满，
 在片上会有大量的内存闲置，导致整体性能变差。对于这种场景，一次处理多个点，把方案中的标量计算部分转换成矢量计算，计算出这些点的加权系数以及偏移信息，
-保存在片上。在load value时，一次load多个点的数据到片上（在MLU500上，可以使用dld做优化），在计算时候，就可以一次计算多个点输出，提高算子的性能。
+保存在片上。在load value时，一次load多个点的数据到片上，在计算时候，就可以一次计算多个点输出，提高算子的性能。
 网络规模：data_value: [6, 30825, 8, 32]，data_spatial_shapes: [4, 2]，data_level_start_index: [4]，data_sampling_loc: [6, 9664, 8, 4, 8, 2]
 data_attn_weight: [6, 9664, 8, 4, 8]，grad_output: [6, 9664, 8, 32]。
 
