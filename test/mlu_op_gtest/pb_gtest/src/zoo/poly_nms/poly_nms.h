@@ -32,7 +32,7 @@ class PolyNmsExecutor : public Executor {
  public:
   PolyNmsExecutor() {}
   ~PolyNmsExecutor() {}
-  
+
   void paramCheck() override;
   void compute() override;
   void cpuCompute() override;
