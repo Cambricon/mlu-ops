@@ -487,7 +487,7 @@ __mlu_func__ void computeMutiLayerOnchip(
     DT *matmul_im_mul_im_addr, DT *output, int batch, int n, int m, int l,
     int s, int fft_flag, int direction) {
   // load subgraph from workspace data: X[C, batch_id, 2^s * core_offset, L]
-  // ->(C x 1 x 2^s x L) each ipu core deals with 2 sub graph
+  // ->(C x 1 x 2^s x L) each mlu core deals with 2 sub graph
   int repeat_remain_flag = (param.op_group_num_x_batch % taskDimX);
   int repeat_plus_one = repeat_remain_flag > 0 ? 1 : 0;
   int repeat_for_each_core =
@@ -558,9 +558,9 @@ __mlu_func__ void computeLayerByLayer(const AddrNode<DT> &addr,
            repeat_for_each_core);
     for (int repeat_id = 0; repeat_id < repeat_for_each_core; repeat_id++) {
       int continue_flag_for_each_core =
-          // all ipu cores will be used the same times
+          // all mlu cores will be used the same times
           repeat_remain_flag == 0
-          // assume that all ipu cores just less one than others at most
+          // assume that all mlu cores just less one than others at most
           || (repeat_id != repeat_for_each_core - 1) ||
           (repeat_id == repeat_for_each_core - 1 &&
            taskId < repeat_remain_flag);
