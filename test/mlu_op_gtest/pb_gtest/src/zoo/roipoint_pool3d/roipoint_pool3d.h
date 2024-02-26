@@ -31,7 +31,7 @@ namespace mluoptest {
 class RoipointPool3dExecutor : public Executor {
  public:
   RoipointPool3dExecutor() {}
-  ~RoipointPool3dExecutor() { workspaceFree(); }
+  ~RoipointPool3dExecutor() {}
 
   void paramCheck();
   void workspaceMalloc();

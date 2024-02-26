@@ -30,7 +30,7 @@ namespace mluoptest {
 class VoxelizationExecutor : public Executor {
  public:
   VoxelizationExecutor() {}
-  ~VoxelizationExecutor() { workspaceFree(); }
+  ~VoxelizationExecutor() {}
 
   void paramCheck() override;
   void workspaceMalloc() override;

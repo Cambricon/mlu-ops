@@ -31,7 +31,7 @@ namespace mluoptest {
 class MoeDispatchBackwardGateExecutor : public Executor {
  public:
   MoeDispatchBackwardGateExecutor() {}
-  ~MoeDispatchBackwardGateExecutor() { workspaceFree(); }
+  ~MoeDispatchBackwardGateExecutor() {}
 
   void paramCheck() override;
   void compute() override;
