@@ -16,13 +16,13 @@ env_vars = dict(os.environ)
 version_status = {"not_found_version":2, "version_check_failed": 1,
                   "success": 0}
 
-# version(str1) >= version(str2)
-def geVersion(str1, str2):
+# version(str1) > version(str2)
+def gtVersion(str1, str2):
     global version_check_module
     if version_check_module == 1:
         try:
             from packaging import version
-            return version.parse(str1) >= version.parse(str2)
+            return version.parse(str1) > version.parse(str2)
         except ImportError:
             print("packaging not exists, try import distutils")
             version_check_module = 0
@@ -30,7 +30,7 @@ def geVersion(str1, str2):
     if version_check_module == 0:
         try:
             from distutils.version import LooseVersion
-            return LooseVersion(str1) >= LooseVersion(str2)
+            return LooseVersion(str1) > LooseVersion(str2)
         except ImportError:
             print("distutils not exists, version check failed")
             version_check_module = -1
@@ -63,7 +63,7 @@ def check_cntoolkit():
         for line in data:
             if "Neuware Version" in line:
                 cur_tk_ver = line.strip("\n").split(" ")[-1]
-                if geVersion(required_version["cntoolkit"], cur_tk_ver):
+                if gtVersion(required_version["cntoolkit"], cur_tk_ver):
                     print(
                         "Warning: The version of cntoolkit needs to be at least "
                         + required_version["cntoolkit"]
@@ -87,7 +87,7 @@ def check_cnnl():
             tmp = filePath.split(".")
             if len(tmp) > 3:
                 cur_cnnl_ver = filePath[11:]
-                if geVersion(required_version["cnnl"], cur_cnnl_ver):
+                if gtVersion(required_version["cnnl"], cur_cnnl_ver):
                     print(
                         "Warning: The version of cnnl needs to be at least "
                         + required_version["cnnl"]
@@ -106,7 +106,7 @@ def check_driver():
         return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n").split(":")[-1]
-    if geVersion(required_version["driver"], sys_out):
+    if gtVersion(required_version["driver"], sys_out):
         print(
             "Warning: The version of driver needs to be at least "
             + required_version["driver"]
@@ -125,7 +125,7 @@ def check_protoc():
         return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n").split(" ")[-1]
-    if geVersion(sys_out, required_version["protoc"]):
+    if gtVersion(sys_out, required_version["protoc"]):
         print(
             "Warning: The version of protoc needs to be at most "
             + required_version["protoc"]
@@ -144,7 +144,7 @@ def check_libxml2():
         return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n")
-    if geVersion(required_version["libxml2"], sys_out):
+    if gtVersion(required_version["libxml2"], sys_out):
         print(
             "Warning: The version of libxml2 needs to be at least "
             + required_version["libxml2"]
@@ -177,7 +177,7 @@ def check_eigen3():
             break
         line = h_file.readline()
 
-    if geVersion(required_version["eigen3"], eigen_ver):
+    if gtVersion(required_version["eigen3"], eigen_ver):
         print(
             "Warning: The version of eigen3 needs to be at least "
             + required_version["eigen3"]
