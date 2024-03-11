@@ -1,7 +1,8 @@
 import sys
 import json
 import os
-from distutils.version import LooseVersion
+# version_check Module: packaging 1, distutils 0
+version_check_module = 1
 
 build_file = "build.property"
 required_version = {}
@@ -15,6 +16,26 @@ env_vars = dict(os.environ)
 version_status = {"not_found_version":2, "version_check_failed": 1,
                   "success": 0}
 
+# version(str1) > version(str2)
+def gtVersion(str1, str2):
+    global version_check_module
+    if version_check_module == 1:
+        try:
+            from packaging import version
+            return version.parse(str1) > version.parse(str2)
+        except ImportError:
+            print("packaging not exists, try import distutils")
+            version_check_module = 0
+
+    if version_check_module == 0:
+        try:
+            from distutils.version import LooseVersion
+            return LooseVersion(str1) > LooseVersion(str2)
+        except ImportError:
+            print("distutils not exists, version check failed")
+            version_check_module = -1
+
+    return FALSE
 
 def get_build_requires(print_mode=1):
     global required_version
@@ -42,9 +63,7 @@ def check_cntoolkit():
         for line in data:
             if "Neuware Version" in line:
                 cur_tk_ver = line.strip("\n").split(" ")[-1]
-                if LooseVersion(required_version["cntoolkit"]) > LooseVersion(
-                    cur_tk_ver
-                ):
+                if gtVersion(required_version["cntoolkit"], cur_tk_ver):
                     print(
                         "Warning: The version of cntoolkit needs to be at least "
                         + required_version["cntoolkit"]
@@ -68,7 +87,7 @@ def check_cnnl():
             tmp = filePath.split(".")
             if len(tmp) > 3:
                 cur_cnnl_ver = filePath[11:]
-                if LooseVersion(required_version["cnnl"]) > LooseVersion(cur_cnnl_ver):
+                if gtVersion(required_version["cnnl"], cur_cnnl_ver):
                     print(
                         "Warning: The version of cnnl needs to be at least "
                         + required_version["cnnl"]
@@ -87,7 +106,7 @@ def check_driver():
         return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n").split(":")[-1]
-    if LooseVersion(required_version["driver"]) > LooseVersion(sys_out):
+    if gtVersion(required_version["driver"], sys_out):
         print(
             "Warning: The version of driver needs to be at least "
             + required_version["driver"]
@@ -106,7 +125,7 @@ def check_protoc():
         return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n").split(" ")[-1]
-    if LooseVersion(required_version["protoc"]) < LooseVersion(sys_out):
+    if gtVersion(sys_out, required_version["protoc"]):
         print(
             "Warning: The version of protoc needs to be at most "
             + required_version["protoc"]
@@ -125,7 +144,7 @@ def check_libxml2():
         return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n")
-    if LooseVersion(required_version["libxml2"]) > LooseVersion(sys_out):
+    if gtVersion(required_version["libxml2"], sys_out):
         print(
             "Warning: The version of libxml2 needs to be at least "
             + required_version["libxml2"]
@@ -149,16 +168,16 @@ def check_eigen3():
     line = h_file.readline()
     eigen_ver = ""
     while len(line) > 0:
-        if "Eigen version and basic defaults" in line:
-            line = h_file.readline()
-            line = h_file.readline()
-            eigen_ver = h_file.readline()[28:-1]
-            eigen_ver += "." + h_file.readline()[28:-1]
-            eigen_ver += "." + h_file.readline()[28:-1]
+        if "EIGEN_WORLD_VERSION" in line:
+            eigen_ver = line[28:-1]
+        if "EIGEN_MAJOR_VERSION" in line:
+            eigen_ver += "." + line[28:-1]
+        if "EIGEN_MINOR_VERSION" in line:
+            eigen_ver += "." + line[28:-1]
             break
         line = h_file.readline()
 
-    if LooseVersion(required_version["eigen3"]) > LooseVersion(eigen_ver):
+    if gtVersion(required_version["eigen3"], eigen_ver):
         print(
             "Warning: The version of eigen3 needs to be at least "
             + required_version["eigen3"]
