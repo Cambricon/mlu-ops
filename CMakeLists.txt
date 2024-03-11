@@ -165,10 +165,13 @@ endif()
 
 set(LINK_FLAGS "-Wl,--version-script=${CMAKE_BINARY_DIR}/${MLUOP_SYMBOL_VIS_FILE}")
 message(STATUS "LINK_FLAGS:${LINK_FLAGS}")
-add_library(mluopscore STATIC ${core_src_files})
+add_library(mluopscore SHARED ${core_src_files})
+add_library(mluops_core_obj OBJECT ${core_src_files})
 
 target_link_libraries(mluopscore cnnl cnrt cndrv)
 bang_add_library(mluops SHARED ${src_files} ${src_helper_files})
+add_library(mluops_static STATIC ${src_files} ${src_helper_files} $<TARGET_OBJECTS:mluops_core_obj>)
+
 target_link_libraries(mluops
   -Wl,--start-group
   ${arch_binary_files}
@@ -180,6 +183,13 @@ target_link_libraries(mluops
 )
 target_link_libraries(mluops ${LINK_FLAGS})
 set_target_properties(mluops PROPERTIES
+  OUTPUT_NAME "mluops"
+  PREFIX      "lib"
+  VERSION     "${BUILD_VERSION}"
+  SOVERSION   "${MAJOR_VERSION}"
+)
+
+set_target_properties(mluops_static PROPERTIES
   OUTPUT_NAME "mluops"
   PREFIX      "lib"
   VERSION     "${BUILD_VERSION}"
