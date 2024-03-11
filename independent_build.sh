@@ -103,6 +103,7 @@ usage () {
     echo "    -c, --coverage              Build mlu-ops with coverage test."
     echo "    --asan                      Build with asan check enabled"
     echo "    -d, --debug                 Build mlu-ops with debug mode"
+    echo "    --disable-gtest              Build mlu-ops without gtest"
     echo "    --enable-bang-memcheck      Build with cncc '-mllvm -enable-mlisa-sanitizer -Xbang-cnas -O0 -g' arg to enable memcheck"
     echo "    --mlu370                    Build for target product MLU370: __BANG_ARCH__ = 372"
     echo "                                                                 __MLU_NRAM_SIZE__ = 768KB"
@@ -319,6 +320,11 @@ if [ $# != 0 ]; then
         export MLUOP_BUILD_PREPARE_ONLY="ON"
         prog_log_note "Prepare dependency only."
         ;;
+      --disable-gtest)
+        shift
+        export MLU_OP_BUILD_GTEST="OFF"
+        prog_log_note "Disable gtest."
+        ;;
       --)
         shift
         if [ $# -gt 0 ]; then
@@ -424,7 +430,8 @@ pushd ${BUILD_PATH} > /dev/null
                 -DMLUOP_TARGET_CPU_ARCH="${MLUOP_TARGET_CPU_ARCH}" \
                 -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}" \
                 -DMLUOP_SYMBOL_VIS_FILE="${MLUOP_SYMBOL_VIS_FILE}" \
-                -DMLUOP_PACKAGE_INFO_SET="${MLUOP_PACKAGE_INFO_SET}"
+                -DMLUOP_PACKAGE_INFO_SET="${MLUOP_PACKAGE_INFO_SET}" \
+                -DMLU_OP_BUILD_GTEST="${MLUOP_PACKAGE_INFO_SET}"
 
 popd > /dev/null
 ${CMAKE} --build ${BUILD_PATH} --  -j${BUILD_JOBS}
