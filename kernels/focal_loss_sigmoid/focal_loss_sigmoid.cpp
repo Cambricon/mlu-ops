@@ -203,8 +203,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "input", input, input_desc);
     if (weight != NULL) {
-      GEN_CASE_DATA_REAL(true, "weight", weight, weight_desc);
       GEN_CASE_DATA_REAL_V2(true, "target", target, target_desc, C - 1, 0);
+      GEN_CASE_DATA_REAL(true, "weight", weight, weight_desc);
     } else {
       GEN_CASE_DATA_REAL_V2(true, "target", target, target_desc, C, 0);
     }
