@@ -116,7 +116,7 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
 
   // generate prototxt
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("nms_rotated");
+    GEN_CASE_START("nms_rotated", "NMS_ROTATED");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "input1", boxes, boxes_desc);
     GEN_CASE_DATA_REAL(true, "input2", scores, scores_desc);

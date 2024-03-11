@@ -474,7 +474,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("fft");
+    GEN_CASE_START("fft", "FFT");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", input, fft_plan->input_desc, 1, 0);
     GEN_CASE_DATA(false, "output", output, fft_plan->output_desc, 0, 0);

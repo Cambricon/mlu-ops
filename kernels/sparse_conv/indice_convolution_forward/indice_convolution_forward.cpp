@@ -604,7 +604,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionForward(
 
   // gen_case
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("indice_convolution_forward");
+    GEN_CASE_START("indice_convolution_forward", "INDICE_CONVOLUTION_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "features", features, features_desc);
     GEN_CASE_DATA_REAL(true, "filters", filters, filters_desc);

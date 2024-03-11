@@ -38,8 +38,9 @@
 // #define MLUOP_GEN_CASE_ON_NEW (mluop::gen_case::isGenCaseOn())
 #define MLUOP_GEN_CASE_ON_NEW (mluop::gen_case::genCaseModeGet(true) > 0)
 
-#define GEN_CASE_START(op_name) \
-  mluop::gen_case::PbNode *node = mluop::gen_case::genCaseStart(op_name)
+#define GEN_CASE_START(op_name, op_type) \
+  mluop::gen_case::PbNode *node = mluop::gen_case::genCaseStart(op_name, \
+                                                                op_type)
 
 #define GEN_CASE_DATA(is_input, id, data, data_desc, upper_bound, lower_bound) \
   mluop::gen_case::genCaseData(node, is_input, id, data, data_desc,            \
@@ -599,7 +600,7 @@ void genCaseModeRestore();
 void genCaseModeSet(int mode);
 inline int getOpNameMask(const std::string op_name_, const std::string op_name);
 
-PbNode *genCaseStart(std::string op_name, std::string op_type = "NONE");
+PbNode *genCaseStart(std::string op_name, std::string op_type);
 void genCaseData(PbNode *node, bool is_input, std::string id,
                  const void *device_data, mluOpTensorDescriptor_t desc,
                  double param1, double param2,

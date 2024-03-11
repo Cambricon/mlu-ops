@@ -243,7 +243,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
 
   // generate mluOpRoiPointPool3d prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("roipoint_pool3d");
+    GEN_CASE_START("roipoint_pool3d", "ROIPOINT_POOL3D");
     // set handle dump mlu output
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "points", points, points_desc, 10, -10);

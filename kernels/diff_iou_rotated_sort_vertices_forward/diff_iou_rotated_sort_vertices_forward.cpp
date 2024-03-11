@@ -169,11 +169,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpDiffIouRotatedSortVerticesForward(
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("diff_iou_rotated_sort_vertices_forward");
+    GEN_CASE_START("diff_iou_rotated_sort_vertices_forward",
+                   "DIFF_IOU_ROTATED_SORT_VERTICES_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "vertices", vertices, vertices_desc);
-    GEN_CASE_DATA_REAL(true, "mask", mask, mask_desc);
-    GEN_CASE_DATA_REAL(true, "num_valid", num_valid, num_valid_desc);
+    GEN_CASE_DATA_REAL_V2(true, "mask", mask, mask_desc, 1, 0);
+    GEN_CASE_DATA_REAL_V2(true, "num_valid", num_valid, num_valid_desc, 8, 0);
     GEN_CASE_DATA(false, "idx", idx, idx_desc, 0, 0);
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 0, 0, 0);
   }

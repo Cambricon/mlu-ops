@@ -274,7 +274,7 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
                                        c_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type) &&
-    c_desc->dtype == MLUOP_DTYPE_HALF) {
+      c_desc->dtype == MLUOP_DTYPE_HALF) {
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   } else {

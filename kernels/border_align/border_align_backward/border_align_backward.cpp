@@ -118,7 +118,7 @@ mluOpStatus_t mluOpBorderAlignBackward(
 
   // generate case prototxt
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("border_align_backward");
+    GEN_CASE_START("border_align_backward", "BORDER_ALIGN_BACKWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input1", grad_output, grad_output_desc, 100, 0);
     GEN_CASE_DATA_REAL(true, "input2", boxes, boxes_desc);

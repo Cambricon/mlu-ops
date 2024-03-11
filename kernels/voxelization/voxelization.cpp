@@ -244,7 +244,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("voxelization");
+    GEN_CASE_START("voxelization", "VOXELIZATION");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "points", points, points_desc, 10, -10);
     GEN_CASE_DATA(true, "voxel_size", voxel_size, voxel_size_desc, 10, -10);

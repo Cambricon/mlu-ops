@@ -464,7 +464,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
   int64_t n = output_desc->dims[2];
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("three_interpolate_forward");
+    GEN_CASE_START("three_interpolate_forward", "THREE_INTERPOLATE_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "features", features, features_desc, 0, 100);
     GEN_CASE_DATA(true, "indices", indices, indices_desc, 0, m - 1);
@@ -521,7 +521,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(
   int64_t m = grad_features_desc->dims[2];
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("three_interpolate_backward");
+    GEN_CASE_START("three_interpolate_backward", "THREE_INTERPOLATE_BACKWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "grad_output", grad_output, grad_output_desc, 0, 100);
     GEN_CASE_DATA(true, "indices", indices, indices_desc, 0, m - 1);

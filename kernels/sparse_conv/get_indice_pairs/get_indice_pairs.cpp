@@ -38,7 +38,7 @@ static void getIndicePairsGencase(
     const mluOpTensorDescriptor_t indice_pairs_desc, void *indice_pairs,
     const mluOpTensorDescriptor_t out_indices_desc, void *out_indices,
     const mluOpTensorDescriptor_t indice_num_desc, void *indice_num) {
-  GEN_CASE_START("get_indice_pairs");
+  GEN_CASE_START("get_indice_pairs", "GET_INDICE_PAIRS");
   GEN_CASE_HANDLE(handle);
   GEN_CASE_DATA_REAL(true, "indices", indices, indices_desc);
   GEN_CASE_DATA_REAL(false, "out_indices", out_indices, out_indices_desc);

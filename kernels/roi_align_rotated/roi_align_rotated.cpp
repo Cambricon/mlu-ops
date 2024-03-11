@@ -116,7 +116,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(
           << ".";
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("roi_align_rotated_forward");
+    GEN_CASE_START("roi_align_rotated_forward", "ROI_ALIGN_ROTATED_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input1", features, features_desc, 10, 0);
     GEN_CASE_DATA_REAL(true, "input2", rois, rois_desc);
@@ -225,7 +225,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedBackward(
           << ".";
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("roi_align_rotated_backward");
+    GEN_CASE_START("roi_align_rotated_backward", "ROI_ALIGN_ROTATED_BACKWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input1", top_grad, top_grad_desc, 10, 0);
     GEN_CASE_DATA_REAL(true, "input2", rois, rois_desc);

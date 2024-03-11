@@ -150,7 +150,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpActiveRotatedFilterForward(
 
   // generate mluOpActiveRotatedFilterForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("active_rotated_filter_forward");
+    GEN_CASE_START("active_rotated_filter_forward",
+                   "ACTIVE_ROTATED_FILTER_FORWARD");
     // set handle dump mlu output
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", input, input_desc, 100, -100);

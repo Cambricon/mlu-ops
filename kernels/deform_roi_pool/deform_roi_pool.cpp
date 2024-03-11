@@ -315,7 +315,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(
 
   // generate mluOpDeformRoiPoolForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("deform_roi_pool_forward");
+    GEN_CASE_START("deform_roi_pool_forward", "DEFORM_ROI_POOL_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", input, input_desc, -10, 10);
     GEN_CASE_DATA_REAL(true, "rois", rois, rois_desc);
@@ -401,7 +401,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolBackward(
 
   // generate mluOpDeformRoiPoolBackward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("deform_roi_pool_backward");
+    GEN_CASE_START("deform_roi_pool_backward", "DEFORM_ROI_POOL_BACKWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "grad_output", grad_output, grad_output_desc, -10, 10);
     GEN_CASE_DATA(true, "input", input, input_desc, -10, 10);

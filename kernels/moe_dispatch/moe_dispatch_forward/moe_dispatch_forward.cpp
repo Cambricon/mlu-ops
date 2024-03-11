@@ -165,7 +165,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchForward(
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("moe_dispatch_forward");
+    GEN_CASE_START("moe_dispatch_forward", "MOE_DISPATCH_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "gates", gates, gates_desc, 0, 1);
     GEN_CASE_DATA_REAL(true, "indices", indices, indices_desc);

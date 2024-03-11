@@ -219,7 +219,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
   PARAM_CHECK("[mluOpMsDeformAttnForward]", data_col != NULL);
   // generate mluOpMsDeformAttnForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("ms_deform_attn_forward");
+    GEN_CASE_START("ms_deform_attn_forward", "MS_DEFORM_ATTN_FORWARD");
     // set handle dump mlu output
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "data_value", data_value, data_value_desc, 10, -10);

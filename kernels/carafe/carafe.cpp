@@ -344,7 +344,8 @@ mluOpStatus_t CarafeForwardParamCheck(
               "The input tensor is not contiguous!");
   PARAM_CHECK(CARAFE_FORWARD_API, !mluop::ifNeedTensorStrideProcess(mask_desc),
               "The mask tensor is not contiguous!");
-  PARAM_CHECK(CARAFE_FORWARD_API, !mluop::ifNeedTensorStrideProcess(output_desc),
+  PARAM_CHECK(CARAFE_FORWARD_API,
+              !mluop::ifNeedTensorStrideProcess(output_desc),
               "The output tensor is not contiguous!");
   /*
    * off-chip data type check
@@ -784,7 +785,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeForward(
 
   // GEN_CASE
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("carafe_forward");
+    GEN_CASE_START("carafe_forward", "CARAFE_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", input, input_desc, 5.1, -5.3);
     GEN_CASE_DATA(true, "mask", mask, mask_desc, 0.0, 1.0);
@@ -840,7 +841,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeBackward(
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("carafe_backward");
+    GEN_CASE_START("carafe_backward", "CARAFE_BACKWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", input, input_desc, 5.1, -5.3);
     GEN_CASE_DATA(true, "mask", mask, mask_desc, 0.0, 1.0);

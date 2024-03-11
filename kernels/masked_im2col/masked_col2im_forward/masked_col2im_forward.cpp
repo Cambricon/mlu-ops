@@ -247,9 +247,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpMaskedCol2imForward(
   PARAM_CHECK("[mluOpMaskedCol2imForward]", mask_w_idx != NULL);
   PARAM_CHECK("[mluOpMaskedCol2imForward]", im != NULL);
 
+  const int height = im_desc->dims[2];
+  const int width = im_desc->dims[3];
   // generate mluOpMaskedCol2imForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("masked_col2im_forward");
+    GEN_CASE_START("masked_col2im_forward", "MASKED_COL2IM_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "col", col, col_desc, -10, 10);
     GEN_CASE_DATA_REAL(true, "mask_h_idx", mask_h_idx, mask_h_idx_desc);
@@ -319,8 +321,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpMaskedCol2imForward(
   VLOG(5) << "[mluOpMaskedCol2imForward] cnnlTranspose_v2 col end.";
 
   const int channels = im_desc->dims[1];
-  const int height = im_desc->dims[2];
-  const int width = im_desc->dims[3];
   VLOG(5) << "Launch kernel MLUUnion1MaskedCol2imForward<<<" << k_dim.x << ", "
           << k_dim.y << ", " << k_dim.z << ">>>.";
   CHECK_RETURN("[mluOpMaskedCol2imForward]",

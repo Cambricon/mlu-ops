@@ -166,7 +166,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("yolo_box");
+    GEN_CASE_START("yolo_box", "YOLO_BOX");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "x", x, x_desc, 10, 0);
     GEN_CASE_DATA(true, "img_size", img_size, img_size_desc, 1000, 100);

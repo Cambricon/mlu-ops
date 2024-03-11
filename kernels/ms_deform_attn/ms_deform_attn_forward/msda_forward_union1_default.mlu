@@ -270,13 +270,17 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
               loadNeighborPointsData(
                   (T *)data_value_ptr,
                   (T *)(ping_data_value_p1_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p2_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p3_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p4_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   span_num_deal, spatial_w_next_point, spatial_h_next_point,
                   num_heads, channels, x_next_point, y_next_point, head_idx);
             }
@@ -297,13 +301,17 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
               loadNeighborPointsData(
                   (T *)data_value_ptr,
                   (T *)(ping_data_value_p1_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p2_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p3_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p4_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   span_num_deal, spatial_w, spatial_h, num_heads, channels,
                   x_next_point, y_next_point, head_idx);
             }
@@ -312,15 +320,20 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
           if (y > -1 && x > -1 && y < spatial_h && x < spatial_w) {
             computeMsDeformAttn(
                 (T *)(ping_data_value_p1_nram +
-                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),  // NOLINT
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
                 (T *)(ping_data_value_p2_nram +
-                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),  // NOLINT
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
                 (T *)(ping_data_value_p3_nram +
-                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),  // NOLINT
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
                 (T *)(ping_data_value_p4_nram +
-                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),  // NOLINT
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
                 (T *)auxiliary_a, (T *)auxiliary_b,
-                (T *)(ping_data_col_nram + data_col_ping_pong_idx * ping_pong_gap),  // NOLINT
+                (T *)(ping_data_col_nram +
+                      data_col_ping_pong_idx * ping_pong_gap),  // NOLINT
                 weight, span_num_deal, spatial_w, spatial_h, x, y);
           }
           spatial_w = spatial_w_next_point;
@@ -402,13 +415,17 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
               loadNeighborPointsData(
                   (T *)data_value_ptr,
                   (T *)(ping_data_value_p1_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p2_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p3_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p4_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   channels_rem, spatial_w_next_point, spatial_h_next_point,
                   num_heads, channels, x_next_point, y_next_point, head_idx);
             }
@@ -429,13 +446,17 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
               loadNeighborPointsData(
                   (T *)data_value_ptr,
                   (T *)(ping_data_value_p1_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p2_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p3_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   (T *)(ping_data_value_p4_nram +
-                        ((level_idx * num_points + point_idx + 1) % 2) * ping_pong_gap),  // NOLINT
+                        ((level_idx * num_points + point_idx + 1) % 2) *
+                            ping_pong_gap),  // NOLINT
                   channels_rem, spatial_w, spatial_h, num_heads, channels,
                   x_next_point, y_next_point, head_idx);
             }
@@ -444,15 +465,20 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
           if (y > -1 && x > -1 && y < spatial_h && x < spatial_w) {
             computeMsDeformAttn(
                 (T *)(ping_data_value_p1_nram +
-                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),  // NOLINT
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
                 (T *)(ping_data_value_p2_nram +
-                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),  // NOLINT
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
                 (T *)(ping_data_value_p3_nram +
-                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),  // NOLINT
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
                 (T *)(ping_data_value_p4_nram +
-                      ((level_idx * num_points + point_idx) % 2) * ping_pong_gap),  // NOLINT
+                      ((level_idx * num_points + point_idx) % 2) *
+                          ping_pong_gap),  // NOLINT
                 (T *)auxiliary_a, (T *)auxiliary_b,
-                (T *)(ping_data_col_nram + data_col_ping_pong_idx * ping_pong_gap),  // NOLINT
+                (T *)(ping_data_col_nram +
+                      data_col_ping_pong_idx * ping_pong_gap),  // NOLINT
                 weight, channels_align_rem, spatial_w, spatial_h, x, y);
           }
           spatial_w = spatial_w_next_point;

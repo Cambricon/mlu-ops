@@ -197,7 +197,7 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
 
   // generate prototxt
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("box_iou_rotated");
+    GEN_CASE_START("box_iou_rotated", "BOX_IOU_ROTATED");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "input", box1, box1_desc);
     GEN_CASE_DATA_REAL(true, "input", box2, box2_desc);

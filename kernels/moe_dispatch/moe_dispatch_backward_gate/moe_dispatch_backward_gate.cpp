@@ -212,10 +212,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardGate(
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("moe_dispatch_backward_gate");
+    GEN_CASE_START("moe_dispatch_backward_gate", "MOE_DISPATCH_BACKWARD_GATE");
     GEN_CASE_HANDLE(handle);
-    GEN_CASE_DATA_REAL(true, "indices", indices, indices_desc);
-    GEN_CASE_DATA_REAL(true, "locations", locations, locations_desc);
+    GEN_CASE_DATA_REAL_V2(true, "indices", indices, indices_desc, num_experts,
+                          0);
+    GEN_CASE_DATA_REAL_V2(true, "locations", locations, locations_desc,
+                          capacity, 0);
     GEN_CASE_DATA(true, "input", input, input_desc, 0, 0);
     GEN_CASE_DATA(true, "dispatch", dispatch, dispatch_desc, 0, 0);
     GEN_CASE_DATA(false, "grad_gates", grad_gates, grad_gates_desc, 0, 0);
