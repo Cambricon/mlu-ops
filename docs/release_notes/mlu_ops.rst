@@ -659,7 +659,7 @@ v0.3.0
 
   * ``three_interpolate_forward``
 
-  * ``ball_qeury``
+  * ``ball_query``
 
 已修复问题
 ~~~~~~~~~~~~~~~~~~~~~~

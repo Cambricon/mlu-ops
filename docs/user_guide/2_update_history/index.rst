@@ -228,7 +228,7 @@
   **更新内容**：
 
   -  适配 AArch64 架构的 KylinV10 系统。
-  -  新增 :ref:`three_interpolate_forward` 和 :ref:`ball_qeury` 章节。
+  -  新增 :ref:`three_interpolate_forward` 和 :ref:`ball_query` 章节。
 
 * **V0.2.0**
 
