@@ -32,6 +32,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/cnnl_helper.h"
 #include "mlu_op.h"
+#include "kernels/sparse_conv/get_indice_pairs/get_indice_pairs_structs.h"
 
 static mluOpStatus_t foolProof(
     const std::string api_name, mluOpHandle_t handle,
@@ -91,6 +92,12 @@ static mluOpStatus_t foolProof(
   PARAM_CHECK(api_name, features_desc->dim == 2);
   PARAM_CHECK(api_name, indice_pairs_desc->dim == 3);
   PARAM_CHECK(api_name, features_out_desc->dim == 2);
+  if (indice_pairs_desc->dims[2] > INDICE_IN_LARGE_TENSOR_NUM) {
+    LOG(ERROR) << api_name << " Check failed: "
+               << "indice_pairs_desc->dims[2] cannot be greater than "
+               << INDICE_IN_LARGE_TENSOR_NUM << ".";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
   if (filters_desc->dim != 5) {
     LOG(ERROR) << api_name
                << "The filters dimension number only support 5 currently,"
