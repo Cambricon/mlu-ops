@@ -226,7 +226,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
 
   // generate prototxt
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("generate_proposals_v2");
+    GEN_CASE_START("generate_proposals_v2", "GENERATE_PROPOSALS_V2");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input1", scores, scores_desc, 10, 0);
     GEN_CASE_DATA(true, "input2", bbox_deltas, bbox_deltas_desc, 10, 0);

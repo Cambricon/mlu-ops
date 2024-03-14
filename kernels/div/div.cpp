@@ -53,7 +53,7 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("div");
+    GEN_CASE_START("div", "DIV");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "x", x, x_desc, 10, 0);
     GEN_CASE_DATA(true, "y", y, y_desc, 10, 0);

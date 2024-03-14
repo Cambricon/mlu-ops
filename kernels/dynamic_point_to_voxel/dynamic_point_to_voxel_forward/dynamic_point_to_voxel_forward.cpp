@@ -244,7 +244,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
   }
   // generator
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("dynamic_point_to_voxel_forward");
+    GEN_CASE_START("dynamic_point_to_voxel_forward",
+                   "DYNAMIC_POINT_TO_VOXEL_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "feats", feats, feats_desc, -100, 100);
     GEN_CASE_DATA_REAL(true, "coors", coors, coors_desc);

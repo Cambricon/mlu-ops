@@ -189,7 +189,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(
   uint32_t bin_num = grid_n * output_h * output_w;
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("roi_crop_forward");
+    GEN_CASE_START("roi_crop_forward", "ROI_CROP_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", input, input_desc, -10, 10);
     GEN_CASE_DATA(true, "grid", grid, grid_desc, -1, 1);
@@ -236,7 +236,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(
   uint32_t bin_num = grid_n * output_h * output_w;
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("roi_crop_backward");
+    GEN_CASE_START("roi_crop_backward", "ROI_CROP_BACKWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "grad_output", grad_output, grad_output_desc, -10, 10);
     GEN_CASE_DATA(true, "grid", grid, grid_desc, -1, 1);

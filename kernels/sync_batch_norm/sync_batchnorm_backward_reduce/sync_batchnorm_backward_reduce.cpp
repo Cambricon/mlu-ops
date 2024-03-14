@@ -53,8 +53,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(
       << "[mluOpGetSyncBatchnormBackwardReduceWorkspaceSize] is deprecated and"
       << " will be removed in the future release, please use "
       << "[mluOpGetSyncBatchNormBackwardReduceWorkspaceSize] instead.";
-  return mluOpGetSyncBatchNormBackwardReduceWorkspaceSize(
-              handle, desc_x, workspace_size);
+  return mluOpGetSyncBatchNormBackwardReduceWorkspaceSize(handle, desc_x,
+                                                          workspace_size);
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormBackwardReduce(
@@ -128,11 +128,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchnormBackwardReduce(
       << " will be removed in the future release, please use "
       << "[mluOpSyncBatchNormBackwardReduce] instead.";
   return mluOpSyncBatchNormBackwardReduce(
-              handle, desc_dz, dz, desc_x, x, desc_mean, mean,
-              desc_invstd, invstd, desc_dfilter, dfilter,
-              desc_dbias, dbias, desc_sum_dy, sum_dy,
-              desc_sum_dy_xmu, sum_dy_xmu,
-              needs_input_grad0, needs_input_grad1, needs_input_grad2);
+      handle, desc_dz, dz, desc_x, x, desc_mean, mean, desc_invstd, invstd,
+      desc_dfilter, dfilter, desc_dbias, dbias, desc_sum_dy, sum_dy,
+      desc_sum_dy_xmu, sum_dy_xmu, needs_input_grad0, needs_input_grad1,
+      needs_input_grad2);
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormBackwardReduce_v2(
@@ -212,9 +211,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchnormBackwardReduce_v2(
       << " will be removed in the future release, please use "
       << "[mluOpSyncBatchNormBackwardReduce_v2] instead.";
   return mluOpSyncBatchNormBackwardReduce_v2(
-              handle, desc_dz, dz, desc_x, x, desc_mean, mean,
-              desc_invstd, invstd, workspace, workspace_size,
-              desc_dfilter, dfilter, desc_dbias, dbias,
-              desc_sum_dy, sum_dy, desc_sum_dy_xmu, sum_dy_xmu,
-              needs_input_grad0, needs_input_grad1, needs_input_grad2);
+      handle, desc_dz, dz, desc_x, x, desc_mean, mean, desc_invstd, invstd,
+      workspace, workspace_size, desc_dfilter, dfilter, desc_dbias, dbias,
+      desc_sum_dy, sum_dy, desc_sum_dy_xmu, sum_dy_xmu, needs_input_grad0,
+      needs_input_grad1, needs_input_grad2);
 }

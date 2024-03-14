@@ -192,7 +192,7 @@ mluOpStatus_t mluOpPriorBox(
                              : min_sizes_num * aspect_ratios_num;
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("prior_box");
+    GEN_CASE_START("prior_box", "PRIOR_BOX");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "input1", min_sizes, min_sizes_desc);
     GEN_CASE_DATA_REAL(true, "input2", aspect_ratios, aspect_ratios_desc);

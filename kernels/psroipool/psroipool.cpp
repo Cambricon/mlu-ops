@@ -229,7 +229,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
   const int rois_offset = rois_desc->dims[1];
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("psroipool_forward");
+    GEN_CASE_START("psroipool_forward", "PSROIPOOL_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", input, input_desc, 1, 0);
     GEN_CASE_DATA_REAL(true, "rois", rois, rois_desc);
@@ -303,7 +303,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
   const int rois_offset = rois_desc->dims[1];
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("psroipool_backward");
+    GEN_CASE_START("psroipool_backward", "PSROIPOOL_BACKWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", top_grad, top_grad_desc, 1, 0);
     GEN_CASE_DATA_REAL(true, "mapping_channel", mapping_channel,

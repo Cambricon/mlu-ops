@@ -303,7 +303,8 @@ static void spconvbpdataGencase(
     const void *indice_pairs, const int64_t indice_num[], const int64_t inverse,
     const int64_t sub_m, void *workspace, size_t workspace_size,
     const mluOpTensorDescriptor_t input_grad_desc, void *input_grad) {
-  GEN_CASE_START("indice_convolution_backward_data");
+  GEN_CASE_START("indice_convolution_backward_data",
+                 "INDICE_CONVOLUTION_BACKWARD_DATA");
   GEN_CASE_HANDLE(handle);
   GEN_CASE_DATA_REAL(true, "output_grad", output_grad, output_grad_desc);
   GEN_CASE_DATA_REAL(true, "filters", filters, filters_desc);

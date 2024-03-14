@@ -229,7 +229,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
 
   // generator
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("dynamic_point_to_voxel_backward");
+    GEN_CASE_START("dynamic_point_to_voxel_backward",
+                   "DYNAMIC_POINT_TO_VOXEL_BACKWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "grad_voxel_feats", grad_voxel_feats,
                        grad_voxel_feats_desc);

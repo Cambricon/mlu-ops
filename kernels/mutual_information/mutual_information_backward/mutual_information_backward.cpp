@@ -413,7 +413,7 @@ static void mutualInformationBackwardGencase(
     const mluOpTensorDescriptor_t ans_grad_desc, void *ans_grad,
     const bool overwrite_ans_grad, const mluOpTensorDescriptor_t px_grad_desc,
     void *px_grad, const mluOpTensorDescriptor_t py_grad_desc, void *py_grad) {
-  GEN_CASE_START("mutual_information_backward");
+  GEN_CASE_START("mutual_information_backward", "MUTUAL_INFORMATION_BACKWARD");
   GEN_CASE_HANDLE(handle);
 
   GEN_CASE_DATA(true, "px", px, px_desc, -1, 1);

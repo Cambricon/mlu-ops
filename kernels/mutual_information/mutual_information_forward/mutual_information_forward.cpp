@@ -335,7 +335,7 @@ static void mutualInformationForwardGencase(
     const mluOpTensorDescriptor_t opt_boundary_desc, const void *opt_boundary,
     const mluOpTensorDescriptor_t p_desc, const void *p,
     const mluOpTensorDescriptor_t ans_desc, void *ans) {
-  GEN_CASE_START("mutual_information_forward");
+  GEN_CASE_START("mutual_information_forward", "MUTUAL_INFORMATION_FORWARD");
   GEN_CASE_HANDLE(handle);
 
   GEN_CASE_DATA(true, "px", px, px_desc, -1, 1);

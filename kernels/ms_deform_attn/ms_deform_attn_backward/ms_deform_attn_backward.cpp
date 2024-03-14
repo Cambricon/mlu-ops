@@ -271,7 +271,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
       &calc_grad_value_loc_weight_flag);
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("ms_deform_attn_backward");
+    GEN_CASE_START("ms_deform_attn_backward", "MS_DEFORM_ATTN_BACKWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "value", value, value_desc);
     GEN_CASE_DATA_REAL(true, "spatial_shapes", spatial_shapes,

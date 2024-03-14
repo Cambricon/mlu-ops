@@ -189,7 +189,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
 
   // generate mluOpBboxOverlaps prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("bbox_overlaps");
+    GEN_CASE_START("bbox_overlaps", "BBOX_OVERLAPS");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "input", bbox1, bbox1_desc);
     GEN_CASE_DATA_REAL(true, "input", bbox2, bbox2_desc);

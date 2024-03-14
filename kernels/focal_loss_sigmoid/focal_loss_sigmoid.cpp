@@ -199,12 +199,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
   const int32_t C = static_cast<int32_t>(input_desc->dims[1]);
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("focal_loss_sigmoid_forward");
+    GEN_CASE_START("focal_loss_sigmoid_forward", "FOCAL_LOSS_SIGMOID_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "input", input, input_desc);
-    GEN_CASE_DATA_REAL(true, "target", target, target_desc);
     if (weight != NULL) {
+      GEN_CASE_DATA_REAL_V2(true, "target", target, target_desc, C - 1, 0);
       GEN_CASE_DATA_REAL(true, "weight", weight, weight_desc);
+    } else {
+      GEN_CASE_DATA_REAL_V2(true, "target", target, target_desc, C, 0);
     }
     GEN_CASE_DATA(false, "output", output, output_desc, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "focal_loss_sigmoid_forward", "prefer", prefer);
@@ -487,7 +489,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   if (MLUOP_GEN_CASE_ON_NEW) {
     const int upper_bound = is_half ? 5 : 20;
     const int lower_bound = -1 * upper_bound;
-    GEN_CASE_START("focal_loss_sigmoid_backward");
+    GEN_CASE_START("focal_loss_sigmoid_backward",
+                   "FOCAL_LOSS_SIGMOID_BACKWARD");
     GEN_CASE_HANDLE(handle);
     FOCAL_LOSS_GEN_CASE_DATA_REAL(true, "input", input, input_desc, upper_bound,
                                   lower_bound);

@@ -201,7 +201,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
 
   // generate mluOpThreeNNForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("three_nn_forward");
+    GEN_CASE_START("three_nn_forward", "THREE_NN_FORWARD");
     // set handle dump mlu output
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "unknown", unknown, unknown_desc, 100, -100);

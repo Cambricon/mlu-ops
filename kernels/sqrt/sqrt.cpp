@@ -50,7 +50,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("sqrt");
+    GEN_CASE_START("sqrt", "SQRT");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "x", x, x_desc, 100, 0.1);
     GEN_CASE_DATA(true, "y", y, y_desc, 0, 0);
@@ -99,7 +99,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("sqrt_backward");
+    GEN_CASE_START("sqrt_backward", "SQRT_BACKWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "y", y, y_desc, 10, 0.1);
     GEN_CASE_DATA(true, "diff_y", diff_y, dy_desc, -10, 10);

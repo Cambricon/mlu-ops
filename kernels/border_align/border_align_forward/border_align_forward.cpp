@@ -110,7 +110,7 @@ mluOpStatus_t mluOpBorderAlignForward(
   PARAM_CHECK(API, output != nullptr);
   PARAM_CHECK(API, argmax_idx != nullptr);
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("border_align_forward");
+    GEN_CASE_START("border_align_forward", "BORDER_ALIGN_FORWARD");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input1", input, input_desc, 100, 0);
     GEN_CASE_DATA_REAL(true, "input2", boxes, boxes_desc);

@@ -79,7 +79,8 @@ static void indiceConvFilterGencase(
     const void *indice_pairs, const int64_t indice_num[], const int64_t inverse,
     const int64_t subm, void *workspace, size_t workspace_size,
     const mluOpTensorDescriptor_t filters_grad_desc, void *filters_grad) {
-  GEN_CASE_START("indice_convolution_backward_filter");
+  GEN_CASE_START("indice_convolution_backward_filter",
+                 "INDICE_CONVOLUTION_BACKWARD_FILTER");
   GEN_CASE_HANDLE(handle);
   GEN_CASE_DATA_REAL(true, "features", features, features_desc);
   GEN_CASE_DATA_REAL(true, "output_grad", output_grad, output_grad_desc);
