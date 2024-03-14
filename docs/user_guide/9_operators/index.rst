@@ -335,7 +335,7 @@ mluOpMutualInformationBackward
 
 .. _mutual_information_forward:
 
-mluOpMutualInformationforward
+mluOpMutualInformationForward
 --------------------------------
 该算子是计算输入 ``px`` 和 ``py`` 之间的互信息。
 
