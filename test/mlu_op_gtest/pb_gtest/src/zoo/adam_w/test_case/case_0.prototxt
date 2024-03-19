@@ -1,0 +1,150 @@
+op_name: "adamw"
+op_type: ADAMW
+input {
+  id: "param"
+  shape: {
+    dims: 999
+    dims: 9
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 21
+    upper_bound: 1
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+
+input {
+  id: "param_h"
+  shape: {
+    dims: 999
+    dims: 9
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_BFLOAT16
+  random_data: {
+    seed: 21
+    upper_bound: 1
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+
+input {
+  id: "momentum"
+  shape: {
+    dims: 999
+    dims: 9
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 30
+    upper_bound: 1
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+
+input {
+  id: "velocity"
+  shape: {
+    dims: 999
+    dims: 9
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 21
+    upper_bound: 1
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+
+input {
+  id: "grad"
+  shape: {
+    dims: 999
+    dims: 9
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_BFLOAT16
+  random_data: {
+    seed: 15
+    upper_bound: 1
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+}
+
+output {
+  id: "out1"
+  shape: {
+    dims: 999
+    dims: 9
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+
+output {
+  id: "out2"
+  shape: {
+    dims: 999
+    dims: 9
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_BFLOAT16
+}
+
+output {
+  id: "out3"
+  shape: {
+    dims: 999
+    dims: 9
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+
+output {
+  id: "out4"
+  shape: {
+    dims: 999
+    dims: 9
+    dims: 16
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+
+adamw_param: {
+    lr: 0.0008250000000000001
+    beta1: 0.9
+    beta2: 0.95
+    bias1: 0.18999999999999995
+    bias2: 0.09750000000000003
+    epsilon: 1e-08
+    weight_decay: 0.1
+    scale: 1.0
+}
+
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
+
