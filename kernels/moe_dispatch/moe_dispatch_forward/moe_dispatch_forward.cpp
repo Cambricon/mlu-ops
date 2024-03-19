@@ -172,6 +172,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchForward(
     GEN_CASE_DATA_REAL(true, "locations", locations, locations_desc);
     GEN_CASE_DATA(true, "input", input, input_desc, -100, 100);
     GEN_CASE_DATA(true, "dispatch", dispatch, dispatch_desc, -100, 100);
+    GEN_CASE_DATA(false, "dispatch", dispatch, dispatch_desc, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "moe_dispatch_forward", "samples", samples);
     GEN_CASE_OP_PARAM_SINGLE(1, "moe_dispatch_forward", "capacity", capacity);
     GEN_CASE_OP_PARAM_SINGLE(2, "moe_dispatch_forward", "hidden", hidden);
