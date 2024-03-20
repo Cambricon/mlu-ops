@@ -636,8 +636,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionForward(
                              indice_pairs, indice_num, num_act_out, workspace,
                              nullptr, features_out_desc, features_out));
 
-  if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_END();
-  }
+  GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
