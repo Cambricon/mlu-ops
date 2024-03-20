@@ -167,11 +167,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchForward(
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("moe_dispatch_forward", "MOE_DISPATCH_FORWARD");
     GEN_CASE_HANDLE(handle);
-    GEN_CASE_DATA(true, "gates", gates, gates_desc, 0, 1);
-    GEN_CASE_DATA_REAL(true, "indices", indices, indices_desc);
-    GEN_CASE_DATA_REAL(true, "locations", locations, locations_desc);
-    GEN_CASE_DATA(true, "input", input, input_desc, -100, 100);
-    GEN_CASE_DATA(true, "dispatch", dispatch, dispatch_desc, -100, 100);
+    GEN_CASE_DATA(true, "gates", gates, gates_desc, 1, 0);
+    GEN_CASE_DATA_REAL_V2(true, "indices", indices, indices_desc,
+                          num_experts - 1, 0);
+    GEN_CASE_DATA_REAL_V2(true, "locations", locations, locations_desc,
+                          capacity - 1, 0);
+    GEN_CASE_DATA(true, "input", input, input_desc, 100, -100);
+    GEN_CASE_DATA(true, "dispatch", dispatch, dispatch_desc, 100, -100);
     GEN_CASE_DATA(false, "dispatch", dispatch, dispatch_desc, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "moe_dispatch_forward", "samples", samples);
     GEN_CASE_OP_PARAM_SINGLE(1, "moe_dispatch_forward", "capacity", capacity);
