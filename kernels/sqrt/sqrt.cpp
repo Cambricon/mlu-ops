@@ -53,7 +53,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
     GEN_CASE_START("sqrt", "SQRT");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "x", x, x_desc, 100, 0.1);
-    GEN_CASE_DATA(true, "y", y, y_desc, 0, 0);
+    GEN_CASE_DATA(false, "y", y, y_desc, 0, 0);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
 

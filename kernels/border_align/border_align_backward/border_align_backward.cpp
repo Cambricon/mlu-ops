@@ -124,7 +124,7 @@ mluOpStatus_t mluOpBorderAlignBackward(
     GEN_CASE_DATA_REAL(true, "input2", boxes, boxes_desc);
     GEN_CASE_DATA_REAL(true, "input3", argmax_idx, argmax_idx_desc);
     GEN_CASE_DATA(false, "output1", grad_input, grad_input_desc, 0, 0);
-    GEN_CASE_OP_PARAM_SINGLE(0, "border_align_backward", "pool_size",
+    GEN_CASE_OP_PARAM_SINGLE(0, "border_align", "pool_size",
                              pool_size);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }

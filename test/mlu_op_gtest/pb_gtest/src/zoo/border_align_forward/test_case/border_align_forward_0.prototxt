@@ -15,7 +15,6 @@ input {
     lower_bound: 0
     distribution: UNIFORM
   }
-
 }
 
 input {
@@ -33,9 +32,6 @@ input {
     lower_bound: 0
     distribution: UNIFORM
     }
-
-  
-
 }
 
 output {
@@ -66,9 +62,8 @@ output {
   layout: LAYOUT_NHWC
   dtype: DTYPE_INT32
 }
-
 border_align_param: {
-pool_size:10
+  pool_size:10
 }
 test_param: {
   error_func: DIFF1
