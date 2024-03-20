@@ -1,4 +1,5 @@
 [rely_real_data]
+active_rotated_filter_forward
 box_iou_rotated
 masked_col2im_forward
 deform_roi_pool_backward

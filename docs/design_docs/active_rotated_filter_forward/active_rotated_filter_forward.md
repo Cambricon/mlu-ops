@@ -174,7 +174,7 @@ For debugging consider passing CUDA_LAUNCH_BLOCKING=1.
 | 限制类型     | 详细说明                                                     |
 | ------------ | ------------------------------------------------------------ |
 | 规模限制     | 输入input为5维，且dim3 == dim4, dim3 只能为1或者3。dim2 为2的幂数大于0且小于等于128<br>输入indices 为4维，dim0 与input.dim2相等; dim1== dim2, 且与input.dim3相等。<br>indices dim3 只能为2,4,8 |
-| 数据范围限制 | 无                                                           |
+| 数据范围限制 | 输入indices，有特殊规律，由旋转角度决定， 输入input无限制                                                           |
 | 原位限制     | 不支持原位                                                   |
 | stride限制   | 不支持stride机制                                             |
 | 广播限制     | 不支持广播                                                   |

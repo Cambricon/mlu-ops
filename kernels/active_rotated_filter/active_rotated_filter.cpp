@@ -155,7 +155,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpActiveRotatedFilterForward(
     // set handle dump mlu output
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", input, input_desc, 100, -100);
-    GEN_CASE_DATA(true, "indices", indices, indices_desc, 100, -100);
+    GEN_CASE_DATA_REAL(true, "indices", indices, indices_desc);
     GEN_CASE_DATA(false, "output", output, output_desc, 0, 0);
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 0.003, 0.003, 0);
   }
