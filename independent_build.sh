@@ -19,7 +19,8 @@ export MLUOP_BUILD_COVERAGE_TEST=${MLUOP_BUILD_COVERAGE_TEST:-OFF} # ON/OFF cove
 export MLUOP_BUILD_ASAN_CHECK=${MLUOP_BUILD_ASAN_CHECK:-OFF} # ON/OFF Address Sanitizer (ASan)
 export MLUOP_BUILD_BANG_MEMCHECK=${MLUOP_BUILD_BANG_MEMCHECK:-OFF} # ON/OFF bang memcheck
 export MLUOP_BUILD_PREPARE=${MLUOP_BUILD_PREPARE:-ON}
-export MLU_OP_BUILD_GTEST=${MLU_OP_BUILD_GTEST:-ON}
+export MLUOP_BUILD_GTEST=${MLUOP_BUILD_GTEST:-ON}
+export MLUOP_BUILD_STATIC=${MLUOP_BUILD_GTEST:-OFF}
 export BUILD_JOBS="${BUILD_JOBS:-16}" # concurrent build jobs
 
 # import common method like `download_pkg`, `get_json_val`, `common_extract`, etc
@@ -51,6 +52,7 @@ long_args=(
   no_prepare
   prepare
   disable-gtest
+  enable-static
 )
 
 add_mlu_arch_support () {
@@ -107,6 +109,7 @@ usage () {
     echo "    -d, --debug                 Build mlu-ops with debug mode"
     echo "    --disable-gtest             Build mlu-ops without gtest"
     echo "    --enable-bang-memcheck      Build with cncc '-mllvm -enable-mlisa-sanitizer -Xbang-cnas -O0 -g' arg to enable memcheck"
+    echo "    --enable-static             Build mlu-ops static library"
     echo "    --mlu370                    Build for target product MLU370: __BANG_ARCH__ = 372"
     echo "                                                                 __MLU_NRAM_SIZE__ = 768KB"
     echo "                                                                 __MLU_WRAM_SIZE__ = 1024KB"
@@ -294,6 +297,10 @@ if [ $# != 0 ]; then
           shift
           export MLUOP_BUILD_BANG_MEMCHECK="ON"
           ;;
+      --enable-static)
+          shift
+          export MLUOP_BUILD_STATIC="ON"
+          ;;
       --filter)
         shift
         export MLUOP_BUILD_SPECIFIC_OP=$1
@@ -324,7 +331,7 @@ if [ $# != 0 ]; then
         ;;
       --disable-gtest)
         shift
-        export MLU_OP_BUILD_GTEST="OFF"
+        export MLUOP_BUILD_GTEST="OFF"
         prog_log_note "Disable gtest."
         ;;
       --)
@@ -433,7 +440,8 @@ pushd ${BUILD_PATH} > /dev/null
                 -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}" \
                 -DMLUOP_SYMBOL_VIS_FILE="${MLUOP_SYMBOL_VIS_FILE}" \
                 -DMLUOP_PACKAGE_INFO_SET="${MLUOP_PACKAGE_INFO_SET}" \
-                -DMLU_OP_BUILD_GTEST="${MLU_OP_BUILD_GTEST}"
+                -DMLUOP_BUILD_GTEST="${MLUOP_BUILD_GTEST}" \
+                -DMLUOP_BUILD_STATIC="${MLUOP_BUILD_STATIC}"
 
 popd > /dev/null
 ${CMAKE} --build ${BUILD_PATH} --  -j${BUILD_JOBS}
