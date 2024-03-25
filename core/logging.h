@@ -134,10 +134,10 @@
   }
 
 // This prints out values instead of names of variables inside __VA_ARGS__
-#define PARAM_CHECK_V2(api, condition, ...)                              \
-  if (!(condition)) {                                                    \
-    LOG(ERROR) << api << " Check failed: " #condition ". " __VA_ARGS__;  \
-    return MLUOP_STATUS_BAD_PARAM;                                       \
+#define PARAM_CHECK_V2(api, condition, ...)                             \
+  if (!(condition)) {                                                   \
+    LOG(ERROR) << api << " Check failed: " #condition ". " __VA_ARGS__; \
+    return MLUOP_STATUS_BAD_PARAM;                                      \
   }
 
 // CHECK_EQ/NE/... with return value.
