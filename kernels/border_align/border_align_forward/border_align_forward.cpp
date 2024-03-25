@@ -78,25 +78,26 @@ mluOpStatus_t mluOpBorderAlignForward(
   PARAM_CHECK(API, output_desc->layout == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK(API, argmax_idx_desc->layout == MLUOP_LAYOUT_NHWC);
 
-  PARAM_CHECK(API, input_desc->dims[3] % border_num == 0);
-  PARAM_CHECK_NE(API, origin_n, 0);
-  PARAM_CHECK_NE(API, origin_c, 0);
-  PARAM_CHECK_NE(API, origin_h, 0);
-  PARAM_CHECK_NE(API, origin_w, 0);
-  PARAM_CHECK_NE(API, origin_k, 0);
+  PARAM_CHECK(API, input_desc->dims[3] % 4 == 0);
+  PARAM_CHECK_NE(API, input_desc->dims[0], 0);
+  PARAM_CHECK_NE(API, input_desc->dims[3] / 4, 0);
+  PARAM_CHECK_NE(API, input_desc->dims[1], 0);
+  PARAM_CHECK_NE(API, input_desc->dims[2], 0);
+  PARAM_CHECK_NE(API, boxes_desc->dims[1], 0);
   PARAM_CHECK(API, boxes_desc->dim == 3);
-  PARAM_CHECK(API, boxes_desc->dims[2] == coord_num);
+  PARAM_CHECK(API, boxes_desc->dims[2] == 4);
 
-  PARAM_CHECK(API, origin_n == boxes_desc->dims[0]);
-  PARAM_CHECK(API, origin_h * origin_w == origin_k);
-  PARAM_CHECK_EQ(API, output_desc->dims[0], origin_n);
-  PARAM_CHECK_EQ(API, output_desc->dims[1], origin_k);
-  PARAM_CHECK_EQ(API, output_desc->dims[2], border_num);
-  PARAM_CHECK_EQ(API, output_desc->dims[3], origin_c);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[0], origin_n);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[1], origin_k);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[2], border_num);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[3], origin_c);
+  PARAM_CHECK(API, input_desc->dims[0]== boxes_desc->dims[0]);
+  PARAM_CHECK(API, input_desc->dims[1] * input_desc->dims[2]
+                    == boxes_desc->dims[1]);
+  PARAM_CHECK_EQ(API, output_desc->dims[0], input_desc->dims[0]);
+  PARAM_CHECK_EQ(API, output_desc->dims[1], boxes_desc->dims[1]);
+  PARAM_CHECK_EQ(API, output_desc->dims[2], 4);
+  PARAM_CHECK_EQ(API, output_desc->dims[3], input_desc->dims[3] / 4);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[0], input_desc->dims[0]);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[1], boxes_desc->dims[1]);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[2], 4);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[3], input_desc->dims[3] / 4);
 
   const size_t input_num = mluOpGetTensorElementNum(input_desc);
   const size_t boxes_num = mluOpGetTensorElementNum(boxes_desc);

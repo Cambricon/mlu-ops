@@ -351,10 +351,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
     const mluOpTensorDescriptor_t indice_pairs_desc,
     const mluOpTensorDescriptor_t input_grad_desc, const int64_t indice_num[],
     const int64_t inverse, size_t *workspace_size) {
+  const char *api_name = "[mluOpGetIndiceConvolutionBackwardDataWorkspaceSize]";
   bool is_zero_element = false;
   if (workspace_size == NULL) {
-    LOG(ERROR) << "[mluOpGetIndiceConvolutionBackwardDataWorkspaceSize] "
-               << "The pointer workspace_size should not be nullptr.";
+    LOG(ERROR) << api_name
+               << " The pointer workspace_size should not be nullptr.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   mluOpStatus_t ret =
@@ -431,12 +432,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
     cnnlMatMulHeuristicResult_t cnnl_heuristic_result;
     cnnlMatMulAlgo_t cnnl_matmul_algo;
 
-    MLUOP_CHECK(mluOpCreateTensorDescriptor(&sub_filters_desc));
-    // MLUOP_CHECK(mluOpCreateTensorDescriptor(&sub_filters_desc));
+    CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&sub_filters_desc));
+    // CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&sub_filters_desc));
     int sub_filter_dims[2] = {(int)(dxc), (int)(dyc)};
-    MLUOP_CHECK(mluOpSetTensorDescriptor(sub_filters_desc, MLUOP_LAYOUT_ARRAY,
-                                         filters_desc->dtype, 2,
-                                         sub_filter_dims));
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                               sub_filters_desc, MLUOP_LAYOUT_ARRAY,
+                               filters_desc->dtype, 2, sub_filter_dims));
     int is_trans_a = 0, is_trans_b = 1;
     int tf32_flag_int = 0;
     CALL_CNNL(cnnlMatMulDescCreate(&cnnl_matmul_desc));
@@ -446,16 +447,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
                                     &(is_trans_b), sizeof(is_trans_b)));
     CALL_CNNL(cnnlSetMatMulDescAttr(cnnl_matmul_desc, CNNL_MATMUL_ALLOW_TF32,
                                     &(tf32_flag_int), sizeof(tf32_flag_int)));
-    MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_grad_condence_desc));
+    CHECK_RETURN(api_name,
+                 mluOpCreateTensorDescriptor(&output_grad_condence_desc));
     int output_grad_condence_dims[2] = {(int)(max_indice_num), (int)(dyc)};
-    MLUOP_CHECK(mluOpSetTensorDescriptor(
-        output_grad_condence_desc, MLUOP_LAYOUT_ARRAY, output_grad_desc->dtype,
-        2, output_grad_condence_dims));
-    MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_grad_condence_desc));
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(output_grad_condence_desc,
+                                                    MLUOP_LAYOUT_ARRAY,
+                                                    output_grad_desc->dtype, 2,
+                                                    output_grad_condence_dims));
+    CHECK_RETURN(api_name,
+                 mluOpCreateTensorDescriptor(&input_grad_condence_desc));
     int input_grad_condence_dims[2] = {(int)(max_indice_num), (int)(dxc)};
-    MLUOP_CHECK(mluOpSetTensorDescriptor(
-        input_grad_condence_desc, MLUOP_LAYOUT_ARRAY, input_grad_desc->dtype, 2,
-        input_grad_condence_dims));
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(input_grad_condence_desc,
+                                                    MLUOP_LAYOUT_ARRAY,
+                                                    input_grad_desc->dtype, 2,
+                                                    input_grad_condence_dims));
 
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(sub_filters_desc,
@@ -491,9 +496,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_grad_condence_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
 
-    MLUOP_CHECK(mluOpDestroyTensorDescriptor(output_grad_condence_desc));
-    MLUOP_CHECK(mluOpDestroyTensorDescriptor(sub_filters_desc));
-    MLUOP_CHECK(mluOpDestroyTensorDescriptor(input_grad_condence_desc));
+    CHECK_RETURN(api_name,
+                 mluOpDestroyTensorDescriptor(output_grad_condence_desc));
+    CHECK_RETURN(api_name, mluOpDestroyTensorDescriptor(sub_filters_desc));
+    CHECK_RETURN(api_name,
+                 mluOpDestroyTensorDescriptor(input_grad_condence_desc));
     matmul_workspace_size = (uint64_t)workspace_size_matmul;
   }
   // scatter to input_grad_tmp_workspace_size workspace
@@ -514,12 +521,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
     }
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_grad_desc,
                                                  cnnl_output_desc);
-    CHECK_FUNC_RETURN(
+    CALL_CNNL(
         cnnlGetAddNWorkspaceSize(cnnl_handle, cnnl_input_descs, addn_num,
-                                 cnnl_output_desc, &addn_workspace_size),
-        CNNL_STATUS_SUCCESS,
-        "[cnnlAddN_v2] Internal error accured in cnnlGetAddNWorkspaceSize.",
-        MLUOP_STATUS_INTERNAL_ERROR);
+                                 cnnl_output_desc, &addn_workspace_size));
     for (int i = 0; i < addn_num; i++) {
       DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_descs[i]);
     }
@@ -553,6 +557,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
     const void *indice_pairs, const int64_t indice_num[], const int64_t inverse,
     const int64_t sub_m, void *workspace, const size_t workspace_size,
     const mluOpTensorDescriptor_t input_grad_desc, void *input_grad) {
+  const char *api_name = "[mluOpIndiceConvolutionBackwardData]";
   // fool check
   {
     bool is_zero_element = false;
@@ -618,7 +623,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
     filter_transpose = (char *)workspace;
     workspace_base += filter_transpose_size;
     cnnlTransposeDescriptor_t trans_desc;
-    MLUOP_CHECK(mluOpCreateTensorDescriptor(&filter_transpose_desc));
+    CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&filter_transpose_desc));
     CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
     int permute[5] = {0, 1, 2, 3, 4};
     int filter_transpose_dims[5];
@@ -627,9 +632,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
       filter_transpose_dims[i] = filters_desc->dims[permute[i]];
       VLOG(5) << "permute " << permute[i];
     }
-    MLUOP_CHECK(mluOpSetTensorDescriptor(
-        filter_transpose_desc, MLUOP_LAYOUT_ARRAY, filters_desc->dtype,
-        filters_desc->dim, filter_transpose_dims));
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                               filter_transpose_desc, MLUOP_LAYOUT_ARRAY,
+                               filters_desc->dtype, filters_desc->dim,
+                               filter_transpose_dims));
     CALL_CNNL(
         cnnlSetTransposeDescriptor(trans_desc, filters_desc->dim, permute));
     size_t transpose_workspace_size = 0;
@@ -656,7 +662,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
       DESTROY_CNNL_HANDLE(cnnl_handle);
     }
     CALL_CNNL(cnnlDestroyTransposeDescriptor(trans_desc));
-    MLUOP_CHECK(mluOpDestroyTensorDescriptor(filter_transpose_desc));
+    CHECK_RETURN(api_name, mluOpDestroyTensorDescriptor(filter_transpose_desc));
   } else {
     filter_transpose_desc = filters_desc;
   }
@@ -667,11 +673,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
 
   // filters calculate desc
   mluOpTensorDescriptor_t sub_filters_desc;
-  MLUOP_CHECK(mluOpCreateTensorDescriptor(&sub_filters_desc));
+  CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&sub_filters_desc));
   int sub_filter_dims[2] = {(int)(dxc), (int)(dyc)};
-  MLUOP_CHECK(mluOpSetTensorDescriptor(sub_filters_desc, MLUOP_LAYOUT_ARRAY,
-                                       filters_desc->dtype, 2,
-                                       sub_filter_dims));
+  CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                             sub_filters_desc, MLUOP_LAYOUT_ARRAY,
+                             filters_desc->dtype, 2, sub_filter_dims));
   float fill_value = 0;
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_grad_desc,
@@ -698,16 +704,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
     // gather output_grad
     mluOpTensorDescriptor_t gather_indices_desc;
     mluOpTensorDescriptor_t output_grad_condence_desc;
-    MLUOP_CHECK(mluOpCreateTensorDescriptor(&gather_indices_desc));
+    CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&gather_indices_desc));
     int gather_indices_dims[2] = {(int)(indice_num[kk]), (int)(1)};
-    MLUOP_CHECK(mluOpSetTensorDescriptor(gather_indices_desc,
-                                         MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         2, gather_indices_dims));
-    MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_grad_condence_desc));
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                               gather_indices_desc, MLUOP_LAYOUT_ARRAY,
+                               MLUOP_DTYPE_INT32, 2, gather_indices_dims));
+    CHECK_RETURN(api_name,
+                 mluOpCreateTensorDescriptor(&output_grad_condence_desc));
     int output_grad_condence_dims[2] = {(int)(indice_num[kk]), (int)(dyc)};
-    MLUOP_CHECK(mluOpSetTensorDescriptor(
-        output_grad_condence_desc, MLUOP_LAYOUT_ARRAY, output_grad_desc->dtype,
-        2, output_grad_condence_dims));
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(output_grad_condence_desc,
+                                                    MLUOP_LAYOUT_ARRAY,
+                                                    output_grad_desc->dtype, 2,
+                                                    output_grad_condence_dims));
     uint64_t gather_indices_offset =
         (kk * 2 + 1) * int(indice_pairs_desc->dims[2]) * int_dwidth;
     char *gather_indices =
@@ -741,11 +749,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
     CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_ALLOW_TF32,
                                     &(tf32_flag_int), sizeof(tf32_flag_int)));
     mluOpTensorDescriptor_t input_grad_condence_desc;
-    MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_grad_condence_desc));
+    CHECK_RETURN(api_name,
+                 mluOpCreateTensorDescriptor(&input_grad_condence_desc));
     int input_grad_condence_dims[2] = {(int)(indice_num[kk]), (int)(dxc)};
-    MLUOP_CHECK(mluOpSetTensorDescriptor(
-        input_grad_condence_desc, MLUOP_LAYOUT_ARRAY, input_grad_desc->dtype, 2,
-        input_grad_condence_dims));
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(input_grad_condence_desc,
+                                                    MLUOP_LAYOUT_ARRAY,
+                                                    input_grad_desc->dtype, 2,
+                                                    input_grad_condence_dims));
     cnnlMatMulHeuristicResult_t heuristic_result;
     CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
     cnnlMatMulAlgo_t matmul_algo;
@@ -876,12 +886,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
       }
       DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_grad_desc,
                                                    cnnl_output_desc);
-      CHECK_FUNC_RETURN(
+      CALL_CNNL(
           cnnlGetAddNWorkspaceSize(cnnl_handle, cnnl_input_descs, addn_num,
-                                   cnnl_output_desc, &addn_workspace_size),
-          CNNL_STATUS_SUCCESS,
-          "[cnnlAddN_v2] Internal error accured in cnnlGetAddNWorkspaceSize.",
-          MLUOP_STATUS_INTERNAL_ERROR);
+                                   cnnl_output_desc, &addn_workspace_size));
 
       CALL_CNNL(cnnlAddN_v2(cnnl_handle, cnnl_input_descs, addn_array, addn_num,
                             cnnl_output_desc, input_grad, workspace_addn,
@@ -894,12 +901,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
       DESTROY_CNNL_HANDLE(cnnl_handle);
     }
 
-    MLUOP_CHECK(mluOpDestroyTensorDescriptor(input_grad_condence_desc));
-    MLUOP_CHECK(mluOpDestroyTensorDescriptor(gather_indices_desc));
-    MLUOP_CHECK(mluOpDestroyTensorDescriptor(output_grad_condence_desc));
+    CHECK_RETURN(api_name,
+                 mluOpDestroyTensorDescriptor(input_grad_condence_desc));
+    CHECK_RETURN(api_name, mluOpDestroyTensorDescriptor(gather_indices_desc));
+    CHECK_RETURN(api_name,
+                 mluOpDestroyTensorDescriptor(output_grad_condence_desc));
     kk_count++;
   }
-  MLUOP_CHECK(mluOpDestroyTensorDescriptor(sub_filters_desc));
+  CHECK_RETURN(api_name, mluOpDestroyTensorDescriptor(sub_filters_desc));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

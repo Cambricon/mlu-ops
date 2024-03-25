@@ -42,14 +42,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPoolingForward(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(rois_desc, cnnl_rois_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
 
-  CHECK_FUNC_RETURN(
+  CALL_CNNL(
       cnnlRoiPoolingForward(cnnl_handle, cnnlPoolingMode_t(pooling_mode),
                             cnnl_input_desc, input, cnnl_rois_desc, rois,
-                            spatial_scale, cnnl_output_desc, output, argmax),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpRoiPoolingForward] Internal error"
-      " accured in mluOpRoiPoolingForward.",
-      MLUOP_STATUS_INTERNAL_ERROR);
+                            spatial_scale, cnnl_output_desc, output, argmax));
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_rois_desc);

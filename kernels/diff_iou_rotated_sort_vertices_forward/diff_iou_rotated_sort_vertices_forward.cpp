@@ -94,18 +94,18 @@ static mluOpStatus_t diffIouRotatedSortVerticesForwardParamCheck(
                      << mluOpGetNameOfDataType(idx_desc->dtype) << ".");
 
   // check dim
-  int dim_b = vertices_desc->dims[0];
-  int dim_n = vertices_desc->dims[1];
-  int dim_m = vertices_desc->dims[2];
-  PARAM_CHECK(op_name, (dim_b == mask_desc->dims[0]));
-  PARAM_CHECK(op_name, (dim_b == num_valid_desc->dims[0]));
-  PARAM_CHECK(op_name, (dim_b == idx_desc->dims[0]));
-  PARAM_CHECK(op_name, (dim_n == mask_desc->dims[1]));
-  PARAM_CHECK(op_name, (dim_n == num_valid_desc->dims[1]));
-  PARAM_CHECK(op_name, (dim_n == idx_desc->dims[1]));
-  PARAM_CHECK(op_name, (dim_m == mask_desc->dims[2]));
+  // int dim_b = vertices_desc->dims[0];
+  // int dim_n = vertices_desc->dims[1];
+  // int dim_m = vertices_desc->dims[2];
+  PARAM_CHECK(op_name, (vertices_desc->dims[0] == mask_desc->dims[0]));
+  PARAM_CHECK(op_name, (vertices_desc->dims[0] == num_valid_desc->dims[0]));
+  PARAM_CHECK(op_name, (vertices_desc->dims[0] == idx_desc->dims[0]));
+  PARAM_CHECK(op_name, (vertices_desc->dims[1] == mask_desc->dims[1]));
+  PARAM_CHECK(op_name, (vertices_desc->dims[1] == num_valid_desc->dims[1]));
+  PARAM_CHECK(op_name, (vertices_desc->dims[1] == idx_desc->dims[1]));
+  PARAM_CHECK(op_name, (vertices_desc->dims[2] == mask_desc->dims[2]));
   PARAM_CHECK_V2(
-      op_name, (dim_m == 24),
+      op_name, (vertices_desc->dims[2] == 24),
       "vertices and mask tensors dims[2] should be 24, but the input value is "
           << vertices_desc->dims[2] << ".");
   PARAM_CHECK_V2(op_name, (vertices_desc->dims[3] == 2),
@@ -128,7 +128,7 @@ static mluOpStatus_t diffIouRotatedSortVerticesForwardParamCheck(
 
   // check element num zero
   if (vertices_element_num == 0) {
-    if (dim_n == 0) {
+    if (vertices_desc->dims[1] == 0) {
       *zero_element = true;
       return MLUOP_STATUS_SUCCESS;
     } else {

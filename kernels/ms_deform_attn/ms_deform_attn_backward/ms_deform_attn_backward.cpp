@@ -22,6 +22,8 @@
  *************************************************************************/
 #include "ms_deform_attn_backward.h"
 
+#include <string>
+
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -129,15 +131,15 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
   PARAM_CHECK(API, grad_attn_weight_desc->dim == 5);
 
   // check datatype
-  PARAM_CHECK(API, (value_desc->dtype == MLUOP_DTYPE_FLOAT &&
-                    spatial_shapes_desc->dtype == MLUOP_DTYPE_INT32 &&
-                    level_start_index_desc->dtype == MLUOP_DTYPE_INT32 &&
-                    sampling_loc_desc->dtype == MLUOP_DTYPE_FLOAT &&
-                    attn_weight_desc->dtype == MLUOP_DTYPE_FLOAT &&
-                    grad_output_desc->dtype == MLUOP_DTYPE_FLOAT &&
-                    grad_value_desc->dtype == MLUOP_DTYPE_FLOAT &&
-                    grad_sampling_loc_desc->dtype == MLUOP_DTYPE_FLOAT &&
-                    grad_attn_weight_desc->dtype == MLUOP_DTYPE_FLOAT));
+  PARAM_CHECK(API, value_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, spatial_shapes_desc->dtype == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(API, level_start_index_desc->dtype == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(API, sampling_loc_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, attn_weight_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, grad_output_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, grad_value_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, grad_sampling_loc_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, grad_attn_weight_desc->dtype == MLUOP_DTYPE_FLOAT);
 
   const int32_t num_key = value_desc->dims[1];
   const int32_t channels = value_desc->dims[3];
@@ -148,8 +150,11 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
   const int32_t num_points = attn_weight_desc->dims[4];
   // check input param
   const int32_t im2col_step_ = MIN(batch, im2col_step);
-  PARAM_CHECK(API, im2col_step_ > 0);
-  PARAM_CHECK(API, batch % im2col_step_ == 0);
+  std::string im2col_step_str =
+      "batch = attn_weight_desc->dims[0], "
+      "im2col_step_ = MIN(batch, im2col_step).";
+  PARAM_CHECK_V2(API, im2col_step_ > 0, << im2col_step_str);
+  PARAM_CHECK_V2(API, batch % im2col_step_ == 0, << im2col_step_str);
 
   // check all the input relationship
   for (int32_t i = 0; i < value_desc->dim; ++i) {
@@ -186,25 +191,26 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  PARAM_CHECK_EQ(API, value_desc->dims[0], batch);
-  PARAM_CHECK_EQ(API, value_desc->dims[2], num_heads);
+  PARAM_CHECK_EQ(API, value_desc->dims[0], attn_weight_desc->dims[0]);
+  PARAM_CHECK_EQ(API, value_desc->dims[2], attn_weight_desc->dims[2]);
 
-  PARAM_CHECK_EQ(API, spatial_shapes_desc->dims[0], num_levels);
+  PARAM_CHECK_EQ(API, spatial_shapes_desc->dims[0], attn_weight_desc->dims[3]);
   PARAM_CHECK_EQ(API, spatial_shapes_desc->dims[1], 2);
 
-  PARAM_CHECK_EQ(API, level_start_index_desc->dims[0], num_levels);
+  PARAM_CHECK_EQ(API, level_start_index_desc->dims[0],
+                 attn_weight_desc->dims[3]);
 
-  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[0], batch);
-  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[1], num_query);
-  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[2], num_heads);
-  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[3], num_levels);
-  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[4], num_points);
+  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[0], attn_weight_desc->dims[0]);
+  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[1], attn_weight_desc->dims[1]);
+  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[2], attn_weight_desc->dims[2]);
+  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[3], attn_weight_desc->dims[3]);
+  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[4], attn_weight_desc->dims[4]);
   PARAM_CHECK_EQ(API, sampling_loc_desc->dims[5], 2);
 
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[0], batch);
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[1], num_query);
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[2], num_heads);
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[3], channels);
+  PARAM_CHECK_EQ(API, grad_output_desc->dims[0], attn_weight_desc->dims[0]);
+  PARAM_CHECK_EQ(API, grad_output_desc->dims[1], attn_weight_desc->dims[1]);
+  PARAM_CHECK_EQ(API, grad_output_desc->dims[2], attn_weight_desc->dims[2]);
+  PARAM_CHECK_EQ(API, grad_output_desc->dims[3], value_desc->dims[3]);
 
   TENSOR_NUM_CHECK(API, mluOpGetTensorElementNum(value_desc), LARGE_TENSOR_NUM,
                    "");

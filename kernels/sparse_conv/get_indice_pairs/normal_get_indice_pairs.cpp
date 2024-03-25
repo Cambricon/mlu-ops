@@ -108,24 +108,18 @@ static mluOpStatus_t getReduceOpWS(mluOpHandle_t handle,
                                    const int input_active_site, size_t *size) {
   size_t total_size = 0;
   mluOpTensorDescriptor_t reduce_in_desc, reduce_out_desc;
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&reduce_in_desc));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&reduce_out_desc));
+  CHECK_RETURN(interface_name, mluOpCreateTensorDescriptor(&reduce_in_desc));
+  CHECK_RETURN(interface_name, mluOpCreateTensorDescriptor(&reduce_out_desc));
   std::vector<int> reduce_in_dims = {kernel_volume, input_active_site};
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpSetTensorDescriptor(
-                         reduce_in_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                         reduce_in_dims.size(), reduce_in_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   reduce_in_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   reduce_in_dims.size(), reduce_in_dims.data()));
   reduce_in_dims[1] = 1;
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpSetTensorDescriptor(
-                         reduce_out_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                         reduce_in_dims.size(), reduce_in_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   reduce_out_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   reduce_in_dims.size(), reduce_in_dims.data()));
   // reduce along lowest dimension
   int axis[1] = {1};
   int axis_num = 1;
@@ -148,12 +142,8 @@ static mluOpStatus_t getReduceOpWS(mluOpHandle_t handle,
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(reduce_in_desc));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(reduce_out_desc));
+  CHECK_RETURN(interface_name, mluOpDestroyTensorDescriptor(reduce_in_desc));
+  CHECK_RETURN(interface_name, mluOpDestroyTensorDescriptor(reduce_out_desc));
   CALL_CNNL(cnnlDestroyReduceDescriptor(reduce_desc));
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
@@ -166,16 +156,12 @@ static mluOpStatus_t getUniqueOpWS(mluOpHandle_t handle,
                                    const int input_active_site, size_t *size) {
   size_t total_size = 0;
   mluOpTensorDescriptor_t input_unique_desc;
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&input_unique_desc));
+  CHECK_RETURN(interface_name, mluOpCreateTensorDescriptor(&input_unique_desc));
   std::vector<int> unique_in_dims = {kernel_volume * input_active_site};
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpSetTensorDescriptor(input_unique_desc, MLUOP_LAYOUT_ARRAY,
-                                   MLUOP_DTYPE_INT32, unique_in_dims.size(),
-                                   unique_in_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   input_unique_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   unique_in_dims.size(), unique_in_dims.data()));
 
   {
     cnnlUniqueSort_t unique_mode = CNNL_SORT_ASCEND;
@@ -196,9 +182,7 @@ static mluOpStatus_t getUniqueOpWS(mluOpHandle_t handle,
     CALL_CNNL(cnnlDestroyUniqueDescriptor(unique_desc));
   }
 
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(input_unique_desc));
+  CHECK_RETURN(interface_name, mluOpDestroyTensorDescriptor(input_unique_desc));
 
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
@@ -223,41 +207,32 @@ mluOpStatus_t getNormalGetIndicePairsWorkspaceSize(
                     1;
   size_t mask_all_ws = 0, indice_index_in_ws = 0, indice_index_out_ws = 0;
   size_t out_indices_expand_ws = 0, grid_out_ws = 0, reduce_op_ws = 0;
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     getIndiceMaskAll(indice_pairs_desc, kernel_volume,
-                                      input_active_site, &mask_all_ws));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     getIndiceIndexIn(indice_pairs_desc, kernel_volume,
-                                      input_active_site, &indice_index_in_ws));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          getIndiceIndexOut(indice_pairs_desc, kernel_volume, input_active_site,
-                            &indice_index_out_ws));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          getIndiceOutExpand(indice_pairs_desc, kernel_volume,
-                             input_active_site, &out_indices_expand_ws));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     getGridOut(indice_pairs_desc, output_size, &grid_out_ws));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     getReduceOpWS(handle, interface_name, kernel_volume,
-                                   input_active_site, &reduce_op_ws));
+  CHECK_RETURN(interface_name,
+               getIndiceMaskAll(indice_pairs_desc, kernel_volume,
+                                input_active_site, &mask_all_ws));
+  CHECK_RETURN(interface_name,
+               getIndiceIndexIn(indice_pairs_desc, kernel_volume,
+                                input_active_site, &indice_index_in_ws));
+  CHECK_RETURN(interface_name,
+               getIndiceIndexOut(indice_pairs_desc, kernel_volume,
+                                 input_active_site, &indice_index_out_ws));
+  CHECK_RETURN(interface_name,
+               getIndiceOutExpand(indice_pairs_desc, kernel_volume,
+                                  input_active_site, &out_indices_expand_ws));
+  CHECK_RETURN(interface_name,
+               getGridOut(indice_pairs_desc, output_size, &grid_out_ws));
+  CHECK_RETURN(interface_name,
+               getReduceOpWS(handle, interface_name, kernel_volume,
+                             input_active_site, &reduce_op_ws));
   if (sub_m) {
     /*  workspace for subm mode
     | mask_all |indices_index_in | indices_index_out/ step_index |
     indices_in_expand |out_indices_expand| max(grid_out_ws, reduce_op_ws)|
     */
     size_t indice_in_expand_ws = 0;
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       getIndiceInExpand(indice_pairs_desc, input_active_site,
-                                         &indice_in_expand_ws));
+    CHECK_RETURN(interface_name,
+                 getIndiceInExpand(indice_pairs_desc, input_active_site,
+                                   &indice_in_expand_ws));
     total_size = mask_all_ws + indice_index_in_ws + indice_index_out_ws +
                  out_indices_expand_ws + indice_in_expand_ws +
                  std::max(grid_out_ws, reduce_op_ws);
@@ -268,15 +243,13 @@ mluOpStatus_t getNormalGetIndicePairsWorkspaceSize(
       unique_ws) |
     */
     size_t indice_unique_ws = 0, unique_op_ws = 0;
-    INTERNAL_CHECK(
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            getUniqueOpWS(handle, interface_name, indices_desc, kernel_volume,
-                          input_active_site, &unique_op_ws));
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       getIndiceUnique(indice_pairs_desc, kernel_volume,
-                                       input_active_site, &indice_unique_ws));
+        getUniqueOpWS(handle, interface_name, indices_desc, kernel_volume,
+                      input_active_site, &unique_op_ws));
+    CHECK_RETURN(interface_name,
+                 getIndiceUnique(indice_pairs_desc, kernel_volume,
+                                 input_active_site, &indice_unique_ws));
     total_size = mask_all_ws + indice_index_in_ws + indice_index_out_ws +
                  out_indices_expand_ws + indice_unique_ws +
                  std::max(grid_out_ws, std::max(reduce_op_ws, unique_op_ws));
@@ -466,24 +439,18 @@ mluOpStatus_t launchReduceOp(mluOpHandle_t handle,
                              void *reduce_workspace_ptr, size_t reduce_op_ws,
                              int kernel_volume, int input_active_site) {
   mluOpTensorDescriptor_t reduce_in_desc, reduce_out_desc;
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&reduce_in_desc));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&reduce_out_desc));
+  CHECK_RETURN(interface_name, mluOpCreateTensorDescriptor(&reduce_in_desc));
+  CHECK_RETURN(interface_name, mluOpCreateTensorDescriptor(&reduce_out_desc));
   std::vector<int> reduce_in_dims = {kernel_volume, input_active_site};
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpSetTensorDescriptor(
-                         reduce_in_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                         reduce_in_dims.size(), reduce_in_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   reduce_in_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   reduce_in_dims.size(), reduce_in_dims.data()));
   reduce_in_dims[1] = 1;
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpSetTensorDescriptor(
-                         reduce_out_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                         reduce_in_dims.size(), reduce_in_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   reduce_out_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   reduce_in_dims.size(), reduce_in_dims.data()));
   // reduce along lowest dimension
   int axis[1] = {1};
   int axis_num = 1;
@@ -508,12 +475,8 @@ mluOpStatus_t launchReduceOp(mluOpHandle_t handle,
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(reduce_in_desc));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(reduce_out_desc));
+  CHECK_RETURN(interface_name, mluOpDestroyTensorDescriptor(reduce_in_desc));
+  CHECK_RETURN(interface_name, mluOpDestroyTensorDescriptor(reduce_out_desc));
   CALL_CNNL(cnnlDestroyReduceDescriptor(reduce_desc));
   return MLUOP_STATUS_SUCCESS;
 }
@@ -527,25 +490,18 @@ mluOpStatus_t launchUniqueOp(mluOpHandle_t handle,
                              int kernel_volume, int input_active_site,
                              int *return_num_act) {
   mluOpTensorDescriptor_t unique_input_desc, unique_output_desc;
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&unique_input_desc));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&unique_output_desc));
+  CHECK_RETURN(interface_name, mluOpCreateTensorDescriptor(&unique_input_desc));
+  CHECK_RETURN(interface_name,
+               mluOpCreateTensorDescriptor(&unique_output_desc));
   std::vector<int> unique_in_dims = {kernel_volume * input_active_site};
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpSetTensorDescriptor(unique_input_desc, MLUOP_LAYOUT_ARRAY,
-                                   MLUOP_DTYPE_INT32, unique_in_dims.size(),
-                                   unique_in_dims.data()));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpSetTensorDescriptor(unique_output_desc, MLUOP_LAYOUT_ARRAY,
-                                   MLUOP_DTYPE_INT32, unique_in_dims.size(),
-                                   unique_in_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   unique_input_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   unique_in_dims.size(), unique_in_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   unique_output_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   unique_in_dims.size(), unique_in_dims.data()));
   {
     cnnlUniqueSort_t unique_mode = CNNL_SORT_ASCEND;
     cnnlUniqueDescriptor_t unique_desc;
@@ -573,12 +529,9 @@ mluOpStatus_t launchUniqueOp(mluOpHandle_t handle,
   cnrtQueueSync(handle->queue);
   cnrtMemcpy(return_num_act, unique_output_num_addr, sizeof(float),
              CNRT_MEM_TRANS_DIR_DEV2HOST);
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(unique_input_desc));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(unique_output_desc));
+  CHECK_RETURN(interface_name, mluOpDestroyTensorDescriptor(unique_input_desc));
+  CHECK_RETURN(interface_name,
+               mluOpDestroyTensorDescriptor(unique_output_desc));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -659,15 +612,12 @@ mluOpStatus_t launchFillOp(mluOpHandle_t handle,
                            void *mluOp_fill_addr, int output_size,
                            int fill_value) {
   mluOpTensorDescriptor_t fill_tensor_desc;
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&fill_tensor_desc));
+  CHECK_RETURN(interface_name, mluOpCreateTensorDescriptor(&fill_tensor_desc));
   std::vector<int> fill_in_dims = {output_size};
-  INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                                     mluOpSetTensorDescriptor(
-                                         fill_tensor_desc, MLUOP_LAYOUT_ARRAY,
-                                         MLUOP_DTYPE_INT32, fill_in_dims.size(),
-                                         fill_in_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(fill_tensor_desc, MLUOP_LAYOUT_ARRAY,
+                                        MLUOP_DTYPE_INT32, fill_in_dims.size(),
+                                        fill_in_dims.data()));
   {
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(fill_tensor_desc,
@@ -677,9 +627,7 @@ mluOpStatus_t launchFillOp(mluOpHandle_t handle,
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(fill_tensor_desc));
+  CHECK_RETURN(interface_name, mluOpDestroyTensorDescriptor(fill_tensor_desc));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -694,36 +642,27 @@ mluOpStatus_t launchScatterNdOp(mluOpHandle_t handle,
   cnnlScatterNdMode_t scatter_mode = CNNL_SCATTERND_UPDATE;
   mluOpTensorDescriptor_t scatter_input_desc, scatter_output_desc,
       scatter_indice_desc;
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&scatter_input_desc));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpCreateTensorDescriptor(&scatter_output_desc));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpCreateTensorDescriptor(&scatter_indice_desc));
+  CHECK_RETURN(interface_name,
+               mluOpCreateTensorDescriptor(&scatter_input_desc));
+  CHECK_RETURN(interface_name,
+               mluOpCreateTensorDescriptor(&scatter_output_desc));
+  CHECK_RETURN(interface_name,
+               mluOpCreateTensorDescriptor(&scatter_indice_desc));
   std::vector<int> scatter_in_dims = {num_act_out};
   std::vector<int> scatter_out_dims = {output_size};
   std::vector<int> scatter_indice_dims = {num_act_out, 1};
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpSetTensorDescriptor(
-                                  scatter_indice_desc, MLUOP_LAYOUT_ARRAY,
-                                  MLUOP_DTYPE_INT32, scatter_indice_dims.size(),
-                                  scatter_indice_dims.data()));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpSetTensorDescriptor(scatter_input_desc, MLUOP_LAYOUT_ARRAY,
-                                   MLUOP_DTYPE_INT32, scatter_in_dims.size(),
-                                   scatter_in_dims.data()));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpSetTensorDescriptor(scatter_output_desc, MLUOP_LAYOUT_ARRAY,
-                                   MLUOP_DTYPE_INT32, scatter_out_dims.size(),
-                                   scatter_out_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   scatter_indice_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   scatter_indice_dims.size(), scatter_indice_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   scatter_input_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   scatter_in_dims.size(), scatter_in_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   scatter_output_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   scatter_out_dims.size(), scatter_out_dims.data()));
   {
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(scatter_indice_desc,
@@ -745,15 +684,12 @@ mluOpStatus_t launchScatterNdOp(mluOpHandle_t handle,
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(scatter_input_desc));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpDestroyTensorDescriptor(scatter_output_desc));
-  INTERNAL_CHECK(interface_name,
-                 MLUOP_STATUS_SUCCESS ==
-                     mluOpDestroyTensorDescriptor(scatter_indice_desc));
+  CHECK_RETURN(interface_name,
+               mluOpDestroyTensorDescriptor(scatter_input_desc));
+  CHECK_RETURN(interface_name,
+               mluOpDestroyTensorDescriptor(scatter_output_desc));
+  CHECK_RETURN(interface_name,
+               mluOpDestroyTensorDescriptor(scatter_indice_desc));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -767,36 +703,26 @@ mluOpStatus_t launchGatherNdOp(mluOpHandle_t handle,
   VLOG(5) << interface_name << " call gatherNd";
   mluOpTensorDescriptor_t gather_input_desc, gather_output_desc,
       gather_indice_desc;
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&gather_input_desc));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&gather_output_desc));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpCreateTensorDescriptor(&gather_indice_desc));
+  CHECK_RETURN(interface_name, mluOpCreateTensorDescriptor(&gather_input_desc));
+  CHECK_RETURN(interface_name,
+               mluOpCreateTensorDescriptor(&gather_output_desc));
+  CHECK_RETURN(interface_name,
+               mluOpCreateTensorDescriptor(&gather_indice_desc));
   std::vector<int> gather_in_dims = {output_size};
   std::vector<int> gather_indices_dims = {input_active_site * kernel_volume, 1};
   std::vector<int> gather_out_dims = {input_active_site * kernel_volume};
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpSetTensorDescriptor(
-                                  gather_indice_desc, MLUOP_LAYOUT_ARRAY,
-                                  MLUOP_DTYPE_INT32, gather_indices_dims.size(),
-                                  gather_indices_dims.data()));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpSetTensorDescriptor(gather_input_desc, MLUOP_LAYOUT_ARRAY,
-                                   MLUOP_DTYPE_INT32, gather_in_dims.size(),
-                                   gather_in_dims.data()));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS ==
-          mluOpSetTensorDescriptor(gather_output_desc, MLUOP_LAYOUT_ARRAY,
-                                   MLUOP_DTYPE_INT32, gather_out_dims.size(),
-                                   gather_out_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   gather_indice_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   gather_indices_dims.size(), gather_indices_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   gather_input_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   gather_in_dims.size(), gather_in_dims.data()));
+  CHECK_RETURN(interface_name,
+               mluOpSetTensorDescriptor(
+                   gather_output_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                   gather_out_dims.size(), gather_out_dims.data()));
   {
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(gather_input_desc,
@@ -813,15 +739,11 @@ mluOpStatus_t launchGatherNdOp(mluOpHandle_t handle,
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(gather_input_desc));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(gather_output_desc));
-  INTERNAL_CHECK(
-      interface_name,
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(gather_indice_desc));
+  CHECK_RETURN(interface_name, mluOpDestroyTensorDescriptor(gather_input_desc));
+  CHECK_RETURN(interface_name,
+               mluOpDestroyTensorDescriptor(gather_output_desc));
+  CHECK_RETURN(interface_name,
+               mluOpDestroyTensorDescriptor(gather_indice_desc));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -928,36 +850,26 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     size_t mask_all_ws = 0, indice_index_in_ws = 0, indice_index_out_ws = 0;
     size_t indice_in_expand_ws = 0, out_indices_expand_ws = 0, grid_out_ws = 0;
     size_t reduce_op_ws = 0;
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       getIndiceMaskAll(indice_pairs_desc, kernel_volume,
-                                        input_active_site, &mask_all_ws));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            getIndiceIndexIn(indice_pairs_desc, kernel_volume,
-                             input_active_site, &indice_index_in_ws));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            getIndiceIndexOut(indice_pairs_desc, kernel_volume,
-                              input_active_site, &indice_index_out_ws));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            getIndiceOutExpand(indice_pairs_desc, kernel_volume,
-                               input_active_site, &out_indices_expand_ws));
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       getIndiceInExpand(indice_pairs_desc, input_active_site,
-                                         &indice_in_expand_ws));
-    INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                                       getGridOut(indice_pairs_desc,
-                                                  output_size, &grid_out_ws));
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       getReduceOpWS(handle, interface_name, kernel_volume,
-                                     input_active_site, &reduce_op_ws));
+    CHECK_RETURN(interface_name,
+                 getIndiceMaskAll(indice_pairs_desc, kernel_volume,
+                                  input_active_site, &mask_all_ws));
+    CHECK_RETURN(interface_name,
+                 getIndiceIndexIn(indice_pairs_desc, kernel_volume,
+                                  input_active_site, &indice_index_in_ws));
+    CHECK_RETURN(interface_name,
+                 getIndiceIndexOut(indice_pairs_desc, kernel_volume,
+                                   input_active_site, &indice_index_out_ws));
+    CHECK_RETURN(interface_name,
+                 getIndiceOutExpand(indice_pairs_desc, kernel_volume,
+                                    input_active_site, &out_indices_expand_ws));
+    CHECK_RETURN(interface_name,
+                 getIndiceInExpand(indice_pairs_desc, input_active_site,
+                                   &indice_in_expand_ws));
+    CHECK_RETURN(interface_name,
+                 getGridOut(indice_pairs_desc, output_size, &grid_out_ws));
+    CHECK_RETURN(interface_name,
+                 getReduceOpWS(handle, interface_name, kernel_volume,
+                               input_active_site, &reduce_op_ws));
     const void *compute_indices_ptr = indices;
     void *mask_all_ptr = (void *)((char *)workspace);
     void *indice_index_in_ptr = (void *)((char *)workspace + mask_all_ws);
@@ -967,22 +879,19 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     void *out_indices_expand_ptr =
         (void *)((char *)workspace + mask_all_ws + indice_index_in_ws +
                  indice_index_out_ws + indice_in_expand_ws);
-    INTERNAL_CHECK(
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchSubmKernel1(handle, sparse_conv_desc, compute_indices_ptr,
-                              mask_all_ptr, indice_index_in_ptr,
-                              indice_in_expand_ptr, out_indices_expand_ptr,
-                              batch, kernel_volume, input_active_site));
+        launchSubmKernel1(handle, sparse_conv_desc, compute_indices_ptr,
+                          mask_all_ptr, indice_index_in_ptr,
+                          indice_in_expand_ptr, out_indices_expand_ptr, batch,
+                          kernel_volume, input_active_site));
 
     // call launchDefaultKernel2   gen step_index
     void *step_index_addr = NULL;
     step_index_addr =
         (void *)((char *)(char *)workspace + mask_all_ws + indice_index_in_ws);
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchDefaultKernel2(handle, step_index_addr, input_active_site));
+    CHECK_RETURN(interface_name, launchDefaultKernel2(handle, step_index_addr,
+                                                      input_active_site));
 
     // call scatter_nd unique_output_addr + step_index_addr = grid_out_addr
     void *scatter_input_addr = NULL, *scatter_output_addr = NULL,
@@ -993,16 +902,13 @@ mluOpStatus_t NormalGetIndicePairsKernel(
                                    indice_index_in_ws + indice_index_out_ws +
                                    indice_in_expand_ws + out_indices_expand_ws);
     int fill_value = -1;
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       launchFillOp(handle, interface_name, scatter_output_addr,
-                                    output_size, fill_value));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchScatterNdOp(handle, interface_name, scatter_output_addr,
-                              scatter_input_addr, scatter_indice_addr,
-                              output_size, input_active_site));
+    CHECK_RETURN(interface_name,
+                 launchFillOp(handle, interface_name, scatter_output_addr,
+                              output_size, fill_value));
+    CHECK_RETURN(interface_name,
+                 launchScatterNdOp(handle, interface_name, scatter_output_addr,
+                                   scatter_input_addr, scatter_indice_addr,
+                                   output_size, input_active_site));
 
     // call gather_nd out_indices_expand + grid_out_addr = indice_index_out
     void *gather_input_addr = NULL, *gather_output_addr = NULL,
@@ -1011,12 +917,11 @@ mluOpStatus_t NormalGetIndicePairsKernel(
         (void *)((char *)workspace + mask_all_ws + indice_index_in_ws);
     gather_input_addr = scatter_output_addr;
     gather_indice_addr = out_indices_expand_ptr;
-    INTERNAL_CHECK(
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchGatherNdOp(handle, interface_name, gather_input_addr,
-                             gather_output_addr, gather_indice_addr,
-                             input_active_site, kernel_volume, output_size));
+        launchGatherNdOp(handle, interface_name, gather_input_addr,
+                         gather_output_addr, gather_indice_addr,
+                         input_active_site, kernel_volume, output_size));
 
     // call sumb_kernel2 indice_index_out and  mask_all = mask_all
     // get out_indices from indices
@@ -1027,12 +932,11 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     kernel2_input2_addr = gather_output_addr;
     kernel2_output1_addr = mask_all_ptr;
     kernel2_output2_addr = out_indices;
-    INTERNAL_CHECK(
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchSubmKernel2(handle, kernel2_input1_addr, kernel2_input2_addr,
-                              kernel2_output1_addr, kernel2_output2_addr,
-                              kernel_volume, input_active_site));
+        launchSubmKernel2(handle, kernel2_input1_addr, kernel2_input2_addr,
+                          kernel2_output1_addr, kernel2_output2_addr,
+                          kernel_volume, input_active_site));
 
     // call reduceOp
     void *reduce_input_addr = NULL, *reduce_output_addr = NULL;
@@ -1045,12 +949,11 @@ mluOpStatus_t NormalGetIndicePairsKernel(
                    indice_index_out_ws + indice_in_expand_ws +
                    out_indices_expand_ws);
     }
-    INTERNAL_CHECK(
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchReduceOp(handle, interface_name, reduce_output_addr,
-                           reduce_input_addr, reduce_workspace_ptr,
-                           reduce_op_ws, kernel_volume, input_active_site));
+        launchReduceOp(handle, interface_name, reduce_output_addr,
+                       reduce_input_addr, reduce_workspace_ptr, reduce_op_ws,
+                       kernel_volume, input_active_site));
 
     // call launchDefaultKernel3 l k partition and sort
     void *kernel3_input_addr = NULL, *kernel3_output_addr = NULL,
@@ -1059,17 +962,14 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     kernel3_output_addr = indice_pairs;
     kernel3_mask_addr = mask_all_ptr;
     fill_value = -1;
-    INTERNAL_CHECK(
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchFillOp(handle, interface_name, indice_pairs,
-                         kernel_volume * 2 * input_active_site, fill_value));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchDefaultKernel3(handle, kernel3_output_addr,
-                                 kernel3_input_addr, kernel3_mask_addr,
-                                 input_active_site, kernel_volume));
+        launchFillOp(handle, interface_name, indice_pairs,
+                     kernel_volume * 2 * input_active_site, fill_value));
+    CHECK_RETURN(interface_name,
+                 launchDefaultKernel3(handle, kernel3_output_addr,
+                                      kernel3_input_addr, kernel3_mask_addr,
+                                      input_active_site, kernel_volume));
   } else {
     /* workspace for default mode
     | mask_all | indices_index_in | step_index/ indices_index_out |
@@ -1080,54 +980,41 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     size_t out_indices_expand_ws = 0, indice_unique_ws = 0, grid_out_ws = 0;
     size_t reduce_op_ws = 0, unique_op_ws = 0;
 
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       getIndiceMaskAll(indice_pairs_desc, kernel_volume,
-                                        input_active_site, &mask_all_ws));
-    INTERNAL_CHECK(
+    CHECK_RETURN(interface_name,
+                 getIndiceMaskAll(indice_pairs_desc, kernel_volume,
+                                  input_active_site, &mask_all_ws));
+    CHECK_RETURN(interface_name,
+                 getIndiceIndexIn(indice_pairs_desc, kernel_volume,
+                                  input_active_site, &indice_index_in_ws));
+    CHECK_RETURN(interface_name,
+                 getIndiceIndexOut(indice_pairs_desc, kernel_volume,
+                                   input_active_site, &indice_index_out_ws));
+    CHECK_RETURN(interface_name,
+                 getIndiceOutExpand(indice_pairs_desc, kernel_volume,
+                                    input_active_site, &out_indices_expand_ws));
+    CHECK_RETURN(interface_name,
+                 getIndiceUnique(indice_pairs_desc, kernel_volume,
+                                 input_active_site, &indice_unique_ws));
+    CHECK_RETURN(interface_name,
+                 getGridOut(indice_pairs_desc, output_size, &grid_out_ws));
+    CHECK_RETURN(interface_name,
+                 getReduceOpWS(handle, interface_name, kernel_volume,
+                               input_active_site, &reduce_op_ws));
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            getIndiceIndexIn(indice_pairs_desc, kernel_volume,
-                             input_active_site, &indice_index_in_ws));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            getIndiceIndexOut(indice_pairs_desc, kernel_volume,
-                              input_active_site, &indice_index_out_ws));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            getIndiceOutExpand(indice_pairs_desc, kernel_volume,
-                               input_active_site, &out_indices_expand_ws));
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       getIndiceUnique(indice_pairs_desc, kernel_volume,
-                                       input_active_site, &indice_unique_ws));
-    INTERNAL_CHECK(interface_name, MLUOP_STATUS_SUCCESS ==
-                                       getGridOut(indice_pairs_desc,
-                                                  output_size, &grid_out_ws));
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       getReduceOpWS(handle, interface_name, kernel_volume,
-                                     input_active_site, &reduce_op_ws));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            getUniqueOpWS(handle, interface_name, indices_desc, kernel_volume,
-                          input_active_site, &unique_op_ws));
+        getUniqueOpWS(handle, interface_name, indices_desc, kernel_volume,
+                      input_active_site, &unique_op_ws));
     const void *compute_indices_ptr = indices;
     void *mask_all_ptr = (void *)((char *)workspace);
     void *indice_index_in_ptr = (void *)((char *)workspace + mask_all_ws);
     void *out_indices_expand_ptr =
         (void *)((char *)workspace + mask_all_ws + indice_index_out_ws +
                  indice_index_in_ws);
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchDefaultKernel1(handle, sparse_conv_desc, compute_indices_ptr,
-                                 mask_all_ptr, indice_index_in_ptr,
-                                 out_indices_expand_ptr, batch, kernel_volume,
-                                 input_active_site));
+    CHECK_RETURN(interface_name,
+                 launchDefaultKernel1(
+                     handle, sparse_conv_desc, compute_indices_ptr,
+                     mask_all_ptr, indice_index_in_ptr, out_indices_expand_ptr,
+                     batch, kernel_volume, input_active_site));
 
     //  call reduce_sum mask_all to indice_num
     void *reduce_input_addr = NULL, *reduce_output_addr = NULL;
@@ -1139,12 +1026,11 @@ mluOpStatus_t NormalGetIndicePairsKernel(
                                       indice_index_in_ws + indice_index_out_ws +
                                       out_indices_expand_ws + indice_unique_ws);
     }
-    INTERNAL_CHECK(
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchReduceOp(handle, interface_name, reduce_output_addr,
-                           reduce_input_addr, reduce_workspace_ptr,
-                           reduce_op_ws, kernel_volume, input_active_site));
+        launchReduceOp(handle, interface_name, reduce_output_addr,
+                       reduce_input_addr, reduce_workspace_ptr, reduce_op_ws,
+                       kernel_volume, input_active_site));
 
     // call unique_v2 out_indices_expand_ptr indice_unique_ws_ptr
     int num_act_out = 0;
@@ -1162,13 +1048,12 @@ mluOpStatus_t NormalGetIndicePairsKernel(
                                       indice_index_in_ws + indice_index_out_ws +
                                       out_indices_expand_ws + indice_unique_ws);
     }
-    INTERNAL_CHECK(
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchUniqueOp(handle, interface_name, unique_output_addr,
-                           unique_input_addr, unique_output_num_addr,
-                           unique_workspace_ptr, unique_op_ws, kernel_volume,
-                           input_active_site, &num_act_out));
+        launchUniqueOp(handle, interface_name, unique_output_addr,
+                       unique_input_addr, unique_output_num_addr,
+                       unique_workspace_ptr, unique_op_ws, kernel_volume,
+                       input_active_site, &num_act_out));
 
     if (num_act_out != kernel_volume * input_active_site) {
       num_act_out = num_act_out - 1;
@@ -1176,16 +1061,14 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     if (num_act_out <= 0) {
       // fill indice_pairs -1 indice_num 0
       int fill_value = -1;
-      INTERNAL_CHECK(
+      CHECK_RETURN(
           interface_name,
-          MLUOP_STATUS_SUCCESS ==
-              launchFillOp(handle, interface_name, indice_pairs,
-                           kernel_volume * 2 * input_active_site, fill_value));
+          launchFillOp(handle, interface_name, indice_pairs,
+                       kernel_volume * 2 * input_active_site, fill_value));
       fill_value = 0;
-      INTERNAL_CHECK(interface_name,
-                     MLUOP_STATUS_SUCCESS ==
-                         launchFillOp(handle, interface_name, indice_num,
-                                      kernel_volume, fill_value));
+      CHECK_RETURN(interface_name,
+                   launchFillOp(handle, interface_name, indice_num,
+                                kernel_volume, fill_value));
       return MLUOP_STATUS_SUCCESS;
     }
     sparse_conv_desc->num_act_out = num_act_out;
@@ -1193,10 +1076,8 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     void *step_index_addr = NULL;
     step_index_addr =
         (void *)((char *)workspace + mask_all_ws + indice_index_in_ws);
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchDefaultKernel2(handle, step_index_addr, num_act_out));
+    CHECK_RETURN(interface_name,
+                 launchDefaultKernel2(handle, step_index_addr, num_act_out));
 
     // call balance out_indices_expand_ptr distr
     void *balance_input_addr = NULL, *balance_output_addr = NULL,
@@ -1204,12 +1085,11 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     balance_input_addr = out_indices_expand_ptr;
     balance_output_addr = out_indices_expand_ptr;
     balance_mask_addr = mask_all_ptr;
-    INTERNAL_CHECK(
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchBalanceKernel(handle, interface_name, balance_input_addr,
-                                balance_output_addr, balance_mask_addr,
-                                input_active_site, kernel_volume, output_size));
+        launchBalanceKernel(handle, interface_name, balance_input_addr,
+                            balance_output_addr, balance_mask_addr,
+                            input_active_site, kernel_volume, output_size));
 
     // call scatter_nd unique_output_addr + step_index_addr = grid_out_addr
     void *scatter_input_addr = NULL, *scatter_output_addr = NULL,
@@ -1220,16 +1100,13 @@ mluOpStatus_t NormalGetIndicePairsKernel(
                                    indice_index_in_ws + indice_index_out_ws +
                                    out_indices_expand_ws + indice_unique_ws);
     int fill_value = -1;
-    INTERNAL_CHECK(interface_name,
-                   MLUOP_STATUS_SUCCESS ==
-                       launchFillOp(handle, interface_name, scatter_output_addr,
-                                    output_size, fill_value));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchScatterNdOp(handle, interface_name, scatter_output_addr,
-                              scatter_input_addr, scatter_indice_addr,
-                              output_size, num_act_out));
+    CHECK_RETURN(interface_name,
+                 launchFillOp(handle, interface_name, scatter_output_addr,
+                              output_size, fill_value));
+    CHECK_RETURN(interface_name,
+                 launchScatterNdOp(handle, interface_name, scatter_output_addr,
+                                   scatter_input_addr, scatter_indice_addr,
+                                   output_size, num_act_out));
 
     // call gather_nd out_indices_expand + grid_out_addr = indice_index_out
     void *gather_input_addr = NULL, *gather_output_addr = NULL,
@@ -1238,12 +1115,11 @@ mluOpStatus_t NormalGetIndicePairsKernel(
         (void *)((char *)workspace + mask_all_ws + indice_index_in_ws);
     gather_input_addr = scatter_output_addr;
     gather_indice_addr = out_indices_expand_ptr;
-    INTERNAL_CHECK(
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchGatherNdOp(handle, interface_name, gather_input_addr,
-                             gather_output_addr, gather_indice_addr,
-                             input_active_site, kernel_volume, output_size));
+        launchGatherNdOp(handle, interface_name, gather_input_addr,
+                         gather_output_addr, gather_indice_addr,
+                         input_active_site, kernel_volume, output_size));
 
     // call launchDefaultKernel3 l k partition and sort
     void *kernel3_input_addr = NULL, *kernel3_output_addr = NULL,
@@ -1252,27 +1128,23 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     kernel3_output_addr = indice_pairs;
     kernel3_mask_addr = mask_all_ptr;
     fill_value = -1;
-    INTERNAL_CHECK(
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchFillOp(handle, interface_name, indice_pairs,
-                         kernel_volume * 2 * input_active_site, fill_value));
-    INTERNAL_CHECK(
-        interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchDefaultKernel3(handle, kernel3_output_addr,
-                                 kernel3_input_addr, kernel3_mask_addr,
-                                 input_active_site, kernel_volume));
+        launchFillOp(handle, interface_name, indice_pairs,
+                     kernel_volume * 2 * input_active_site, fill_value));
+    CHECK_RETURN(interface_name,
+                 launchDefaultKernel3(handle, kernel3_output_addr,
+                                      kernel3_input_addr, kernel3_mask_addr,
+                                      input_active_site, kernel_volume));
 
     // get out_indices from indice unique
     void *kernel4_output_addr = NULL, *kernel4_input_addr = NULL;
     kernel4_input_addr = unique_output_addr;
     kernel4_output_addr = out_indices;
-    INTERNAL_CHECK(
+    CHECK_RETURN(
         interface_name,
-        MLUOP_STATUS_SUCCESS ==
-            launchDefaultKernel4(handle, sparse_conv_desc, kernel4_output_addr,
-                                 kernel4_input_addr, num_act_out));
+        launchDefaultKernel4(handle, sparse_conv_desc, kernel4_output_addr,
+                             kernel4_input_addr, num_act_out));
   }
   return MLUOP_STATUS_SUCCESS;
 }
