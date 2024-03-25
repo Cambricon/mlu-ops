@@ -8755,6 +8755,231 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
                                 const mluOpTensorDescriptor_t output_desc,
                                 void *output);
 
+
+
+/*!
+ * @brief Enumeration variables describing the attributes of the AdamW computation.
+ */
+typedef enum {
+    MLUOP_ADAMW_WEIGHT_DECAY = 0,
+    /*!< Set the weight_decay attribute for the AdamW operation. */
+    MLUOP_ADAMW_GRAD_SCALE = 1,
+    /*!< Set the grad_scale attribute for the AdamW operation. */
+    MLUOP_ADAMW_USE_NESTEROV = 2,
+    /*!< Specifies whether to use nesterov on the AdamW operation. */
+} mluOpAdamWDescAttribute_t;
+
+typedef struct mluOpAdamWStruct *mluOpAdamWDescriptor_t;
+
+// Group: AdamW
+/*!
+ * @brief Updates each attribute by using AdamW.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
+ * and queues in the AdamW operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] adamw_desc
+ * A host pointer to the AdamW descriptor that holds information about the AdamW operation.
+ * @param[in] param_desc
+ * The descriptor of the tensor, which contains the dimension and layout of param.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] param
+ * Pointer to the MLU memory that stores the param tensor.
+ * @param[in] paramh_desc
+ * The descriptor of the tensor, which contains the dimension and layout of param_h.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] param_h
+ * Pointer to the MLU memory that stores the param_h tensor.
+ * @param[in] momentum_desc
+ * The descriptor of the tensor, which contains the dimension and layout of momentum.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] momentum
+ * Pointer to the MLU memory that stores the momentum tensor.
+ * @param[in] velocity_desc
+ * The descriptor of the tensor, which contains the dimension and layout of velocity.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] velocity
+ * Pointer to the MLU memory that stores the velocity tensor.
+ * @param[in] grad_desc
+ * The descriptor of the tensor, which contains the dimension and layout of grad.
+ * For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grad
+ * Pointer to the MLU memory that stores the grad tensor.
+ * @param[in] lr
+ * A scalar of lr factor that is used for AdamW.
+ * @param[in] beta1
+ * A scalar of beta1 factor that is used for AdamW.
+ * @param[in] beta2
+ * A scalar of beta2 factor that is used for AdamW.
+ * @param[in] bias1
+ * A scalar of bias1 factor that is used for AdamW.
+ * @param[in] bias2
+ * A scalar of bias2 factor that is used for AdamW.
+ * @param[in] epsilon
+ * A scalar of epsilon factor that is used for AdamW.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Data Type
+ * - The supported data types of input and output tensors are as follows:
+ *   - param tensor: float
+ *   - param_h tensor: bfloat16
+ *   - momentum tensor: float
+ *   - velocity tensor: float
+ *   - grad tensor: bfloat16
+ *   
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b param tensor, \b param_h tensor, \b momentum tensor, \b velocity tensor, and \b grad
+ *   tensor are as follows:
+ *   - param tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - param_h tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - momentum tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - velocity tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - grad tensor: \p MLUOP_LAYOUT_ARRAY
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/OpenBMB/BMTrain/blob/6abcf772aa1e120192f7656e55c4adbcde53c886/csrc/cuda/adam_cuda.cu
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpAdamW(mluOpHandle_t handle,
+           mluOpAdamWDescriptor_t adamw_desc,
+           const mluOpTensorDescriptor_t param_desc,
+           void *param,
+           const mluOpTensorDescriptor_t paramh_desc,
+           void *param_h,
+           const mluOpTensorDescriptor_t momentum_desc,
+           void *momentum,
+           const mluOpTensorDescriptor_t velocity_desc,
+           void *velocity,
+           const mluOpTensorDescriptor_t grad_desc,
+           void *grad,
+           const float lr,
+           const float beta1,
+           const float beta2,
+           const float bias1,
+           const float bias2,
+           const float epsilon);
+
+// Group: AdamW
+/*!
+ * @brief Creates a descriptor pointed by \p adamw_desc for AdamW operation. 
+ * The information is defined in ::mluOpAdamWDescriptor_t.
+ * For more information about the descriptor, see "Cambricon MLU-OPS User Guide".
+ *
+ * @param[out] adamw_desc
+ * A host pointer to the AdamW descriptor that holds information about the
+ * AdamW operation.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_ALLOC_FAILED
+ *
+ * @par API Dependency
+ * - After calling this function, call ::mluOpSetAdamWDescAttr function to initialize
+ *   and set the information to the AdamW descriptor.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateAdamWDescriptor(mluOpAdamWDescriptor_t *adamw_desc);
+
+// Group: AdamW
+/*!
+ * @brief Initializes the descriptor \b adamw_desc that was previously created with
+ * ::mluOpCreateAdamWDescriptor function, and sets AdamW information
+ * to the descriptor \b adamw_desc. The information includes \b weight_decay , \b grad_scale 
+ * and \b use_nesterov for AdamW operation.
+ *
+ * @param[in] adamw_desc
+ * The descriptor of the AdamW operation. For detailed information,
+ * see ::mluOpAdamWDescriptor_t.
+ * @param[in] attr
+ * Attribute of AdamW descriptor to be set. For detailed information,
+ * see ::mluOpAdamWDescAttribute_t.
+ * @param[in] buf
+ * A host pointer to the attribute value set by this function.
+ * @param[in] size_in_bytes
+ * Buffer in bytes for verification.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - This function should be called after ::mluOpCreateAdamWDescriptor.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetAdamWDescAttr(mluOpAdamWDescriptor_t adamw_desc,
+                      mluOpAdamWDescAttribute_t attr,
+                      const void *buf,
+                      const size_t size_in_bytes);
+
+// Group: AdamW
+/*!
+ * @brief Destroys the AdamW descriptor \p adamw_desc that was previously created by
+ * ::mluOpCreateAdamWDescriptor.
+ *
+ * @param[in] adamw_desc
+ *   The AdamW descriptor to be destroyed.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Note
+ * - Call this function after calling ::mluOpAdamW.
+ * - It is necessary to call this function to destroy the AdamW descriptor to avoid memory leak.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyAdamWDescriptor(mluOpAdamWDescriptor_t adamw_desc);
+
 // Group: DeformRoiPool
 /*!
  * @brief Computes deformable roi pooling over \b input tensor. This function firstly divides the obtained
