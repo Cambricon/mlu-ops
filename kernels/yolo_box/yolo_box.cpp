@@ -94,7 +94,7 @@ static mluOpStatus_t yoloBoxParamCheck(
   PARAM_CHECK(op_name, (x_desc->dims[0] == scores_desc->dims[0]));
 
   const int anchors_num = anchors_desc->dims[0] / 2;
-  std::string anchors_num_str = "anchors_num = anchors_desc->dims[0] / 2";
+  std::string anchors_num_str = "anchors_num = anchors_desc->dims[0] / 2.";
   PARAM_CHECK(op_name, (anchors_desc->dims[0] % 2 == 0));
   PARAM_CHECK_V2(op_name, anchors_num > 0, << anchors_num_str);
   PARAM_CHECK(op_name, class_num > 0);

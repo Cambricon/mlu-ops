@@ -129,7 +129,7 @@ static mluOpStatus_t internalGetIndicePairs(
   }
   PARAM_CHECK_LE(interface_name, indices_desc->dims[0], input_spaces);
   for (int i = 0; i < sparse_conv_dimNb - 2; i++) {
-    std::string i_str = "i: " + std::to_string(i);
+    std::string i_str = "i: " + std::to_string(i) + ".";
     PARAM_CHECK_V2(interface_name, sparse_conv_desc->pad[i] >= 0, << i_str);
     PARAM_CHECK_V2(interface_name, sparse_conv_desc->dilation[i] >= 1,
                    << i_str);
@@ -167,7 +167,7 @@ static mluOpStatus_t internalGetIndicePairs(
   int sub_m = sparse_conv_desc->sub_m;
   if (sub_m) {
     for (int i = 0; i < sparse_conv_dimNb - 2; i++) {
-      std::string i_str = "i: " + std::to_string(i);
+      std::string i_str = "i: " + std::to_string(i) + ".";
       PARAM_CHECK_V2(
           interface_name,
           sparse_conv_desc->input_space[i] == sparse_conv_desc->output_space[i],

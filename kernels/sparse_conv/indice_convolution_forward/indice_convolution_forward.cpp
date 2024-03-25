@@ -146,7 +146,7 @@ static mluOpStatus_t foolProof(
 
   // indice_num[] check
   for (int i = 0; i < num_filter; ++i) {
-    std::string i_str = "i: " + std::to_string(i);
+    std::string i_str = "i: " + std::to_string(i) + ".";
     PARAM_CHECK_V2(
         api_name, indice_num[i] >= 0 && indice_num[i] <= features_desc->dims[0],
         << i_str);

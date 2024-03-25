@@ -90,7 +90,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetSparseConvolutionDescriptor(
 
   int kernel_dim = dimNb - 2;
   for (int idx = 0; idx < kernel_dim; idx++) {
-    std::string idx_str = "idx: " + std::to_string(idx);
+    std::string idx_str = "idx: " + std::to_string(idx) + ".";
     PARAM_CHECK_V2(interface_name, pad[idx] >= 0, << idx_str);
     sparse_conv_desc->pad[idx] = pad[idx];
     PARAM_CHECK_V2(interface_name, stride[idx] >= 1, << idx_str);
