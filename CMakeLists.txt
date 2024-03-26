@@ -165,7 +165,7 @@ endif()
 
 set(LINK_FLAGS "-Wl,--version-script=${CMAKE_BINARY_DIR}/${MLUOP_SYMBOL_VIS_FILE}")
 message(STATUS "LINK_FLAGS:${LINK_FLAGS}")
-add_library(mluopscore ${core_src_files})
+add_library(mluopscore STATIC ${core_src_files})
 
 target_link_libraries(mluopscore cnnl cnrt cndrv)
 bang_add_library(mluops SHARED ${src_files} ${src_helper_files})
