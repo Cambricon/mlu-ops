@@ -20,7 +20,7 @@ export MLUOP_BUILD_ASAN_CHECK=${MLUOP_BUILD_ASAN_CHECK:-OFF} # ON/OFF Address Sa
 export MLUOP_BUILD_BANG_MEMCHECK=${MLUOP_BUILD_BANG_MEMCHECK:-OFF} # ON/OFF bang memcheck
 export MLUOP_BUILD_PREPARE=${MLUOP_BUILD_PREPARE:-ON}
 export MLUOP_BUILD_GTEST=${MLUOP_BUILD_GTEST:-ON}
-export MLUOP_BUILD_STATIC=${MLUOP_BUILD_GTEST:-OFF}
+export MLUOP_BUILD_STATIC=${MLUOP_BUILD_STATIC:-OFF}
 export BUILD_JOBS="${BUILD_JOBS:-16}" # concurrent build jobs
 
 # import common method like `download_pkg`, `get_json_val`, `common_extract`, etc

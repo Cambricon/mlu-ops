@@ -17,11 +17,15 @@ fi
 
 SCRIPT_DIR=`dirname $0`
 BUILD_PATH=${SCRIPT_DIR}/build
-if [ ! -d "$BUILD_PATH" ]; then
+if [[ ! -d "$BUILD_PATH" ]]; then
   mkdir "$BUILD_PATH"
 fi
 
+if [[ -z ${MLUOPS_STATIC} ]]; then
+  MLUOPS_STATIC=OFF
+fi
+
 cd ./build/
-cmake .. -DNEUWARE_HOME="${NEUWARE_HOME}"
+cmake .. -DNEUWARE_HOME="${NEUWARE_HOME}" -DMLUOPS_STATIC="${MLUOPS_STATIC}"
 cmake --build .
 

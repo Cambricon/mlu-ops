@@ -55,7 +55,14 @@ set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_220"
 
 # build project
 file(GLOB_RECURSE src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/*.cc")
+if(${MLUOPS_STATIC} MATCHES "ON")
+  #for test static lib
+  message("-- Build sample with static mluops lib")
+  link_libraries("${NEUWARE_HOME}/lib64/libmluops.a")
+  add_executable(${PROJECT_NAME} ${src_files})
+  target_link_libraries(${PROJECT_NAME} cnrt cndrv)
+else()
+  add_executable(${PROJECT_NAME} ${src_files})
+  target_link_libraries(${PROJECT_NAME} mluops cnrt cndrv)
+endif()
 
-add_executable(${PROJECT_NAME} ${src_files})
-
-target_link_libraries(${PROJECT_NAME} mluops cnrt cndrv)

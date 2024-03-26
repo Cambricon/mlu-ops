@@ -165,15 +165,14 @@ endif()
 
 set(LINK_FLAGS "-Wl,--version-script=${CMAKE_BINARY_DIR}/${MLUOP_SYMBOL_VIS_FILE}")
 message(STATUS "LINK_FLAGS:${LINK_FLAGS}")
-add_library(mluopscore SHARED ${core_src_files})
-add_library(mluopscore_obj OBJECT ${core_src_files})
+add_library(mluopscore ${core_src_files})
 
 target_link_libraries(mluopscore cnnl cnrt cndrv)
 bang_add_library(mluops SHARED ${src_files} ${src_helper_files})
 
 if(${MLUOP_BUILD_STATIC} MATCHES "ON")
   message("-- Build MLUOP static")
-  bang_add_library(mluops_static STATIC ${src_files} ${src_helper_files} $<TARGET_OBJECTS:mluopscore_obj>)
+  bang_add_library(mluops_static STATIC ${src_files} ${src_helper_files} ${core_src_files})
 endif()
 
 target_link_libraries(mluops
