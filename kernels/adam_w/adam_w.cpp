@@ -173,7 +173,7 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
 
   // generate adam prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("adamw");
+    GEN_CASE_START("adamw", "ADAMW");
     GEN_CASE_HANDLE(handle);
     if (param != nullptr && param_h != nullptr) {
       GEN_CASE_DATA(true, "param", param, param_desc, 1, 0);

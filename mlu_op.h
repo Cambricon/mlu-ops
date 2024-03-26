@@ -8755,18 +8755,16 @@ mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
                                 const mluOpTensorDescriptor_t output_desc,
                                 void *output);
 
-
-
 /*!
  * @brief Enumeration variables describing the attributes of the AdamW computation.
  */
 typedef enum {
-    MLUOP_ADAMW_WEIGHT_DECAY = 0,
-    /*!< Set the weight_decay attribute for the AdamW operation. */
-    MLUOP_ADAMW_GRAD_SCALE = 1,
-    /*!< Set the grad_scale attribute for the AdamW operation. */
-    MLUOP_ADAMW_USE_NESTEROV = 2,
-    /*!< Specifies whether to use nesterov on the AdamW operation. */
+  MLUOP_ADAMW_WEIGHT_DECAY = 0,
+  /*!< Set the weight_decay attribute for the AdamW operation. */
+  MLUOP_ADAMW_GRAD_SCALE = 1,
+  /*!< Set the grad_scale attribute for the AdamW operation. */
+  MLUOP_ADAMW_USE_NESTEROV = 2,
+  /*!< Specifies whether to use nesterov on the AdamW operation. */
 } mluOpAdamWDescAttribute_t;
 
 typedef struct mluOpAdamWStruct *mluOpAdamWDescriptor_t;
@@ -8828,11 +8826,10 @@ typedef struct mluOpAdamWStruct *mluOpAdamWDescriptor_t;
  *   - momentum tensor: float
  *   - velocity tensor: float
  *   - grad tensor: bfloat16
- *   
  *
  * @par Data Layout
- * - The supported data layouts of \b param tensor, \b param_h tensor, \b momentum tensor, \b velocity tensor, and \b grad
- *   tensor are as follows:
+ * - The supported data layouts of \b param tensor, \b param_h tensor, \b momentum tensor, \b velocity tensor, and \b
+ * grad tensor are as follows:
  *   - param tensor: \p MLUOP_LAYOUT_ARRAY
  *   - param_h tensor: \p MLUOP_LAYOUT_ARRAY
  *   - momentum tensor: \p MLUOP_LAYOUT_ARRAY
@@ -8876,7 +8873,7 @@ mluOpAdamW(mluOpHandle_t handle,
 
 // Group: AdamW
 /*!
- * @brief Creates a descriptor pointed by \p adamw_desc for AdamW operation. 
+ * @brief Creates a descriptor pointed by \p adamw_desc for AdamW operation.
  * The information is defined in ::mluOpAdamWDescriptor_t.
  * For more information about the descriptor, see "Cambricon MLU-OPS User Guide".
  *
@@ -8910,7 +8907,7 @@ mluOpCreateAdamWDescriptor(mluOpAdamWDescriptor_t *adamw_desc);
 /*!
  * @brief Initializes the descriptor \b adamw_desc that was previously created with
  * ::mluOpCreateAdamWDescriptor function, and sets AdamW information
- * to the descriptor \b adamw_desc. The information includes \b weight_decay , \b grad_scale 
+ * to the descriptor \b adamw_desc. The information includes \b weight_decay , \b grad_scale
  * and \b use_nesterov for AdamW operation.
  *
  * @param[in] adamw_desc
