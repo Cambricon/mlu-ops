@@ -70,16 +70,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
   PARAM_CHECK(API, scores_desc->layout == MLUOP_LAYOUT_ARRAY);
 
   PARAM_CHECK_EQ(API, scores_desc->dim, 4);
-  size_t N = scores_desc->dims[0];
+  PARAM_CHECK_NE(API, scores_desc->dims[1], 0);
+  PARAM_CHECK_NE(API, scores_desc->dims[2], 0);
+  PARAM_CHECK_NE(API, scores_desc->dims[3], 0);
+
+  size_t scores_num = mluOpGetTensorElementNum(scores_desc);
+  TENSOR_NUM_CHECK(API, scores_num, LARGE_TENSOR_NUM, "");
+
   size_t H = scores_desc->dims[1];
   size_t W = scores_desc->dims[2];
   size_t A = scores_desc->dims[3];
-
-  PARAM_CHECK_NE(API, A, 0);
-  PARAM_CHECK_NE(API, H, 0);
-  PARAM_CHECK_NE(API, W, 0);
-  size_t scores_num = mluOpGetTensorElementNum(scores_desc);
-  TENSOR_NUM_CHECK(API, scores_num, LARGE_TENSOR_NUM, "");
   *size = 12 * A * H * W * 4 + handle->core_num_per_cluster * 4 * 3;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -142,45 +142,47 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
 
   // [N,H,W,A4]
   PARAM_CHECK_EQ(API, bbox_deltas_desc->dim, 4);
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[0], N);
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[1], H);
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[2], W);
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[3], 4 * A);
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[0], scores_desc->dims[0]);
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[1], scores_desc->dims[1]);
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[2], scores_desc->dims[2]);
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->dims[3], 4 * scores_desc->dims[3]);
 
   // [N, 2]
   PARAM_CHECK_EQ(API, im_shape_desc->dim, 2);
-  PARAM_CHECK_EQ(API, im_shape_desc->dims[0], N);
+  PARAM_CHECK_EQ(API, im_shape_desc->dims[0], scores_desc->dims[0]);
   PARAM_CHECK_EQ(API, im_shape_desc->dims[1], 2);
 
   // [H, W, A, 4]
   PARAM_CHECK_EQ(API, anchors_desc->dim, 4);
-  PARAM_CHECK_EQ(API, anchors_desc->dims[0], H);
-  PARAM_CHECK_EQ(API, anchors_desc->dims[1], W);
-  PARAM_CHECK_EQ(API, anchors_desc->dims[2], A);
+  PARAM_CHECK_EQ(API, anchors_desc->dims[0], scores_desc->dims[1]);
+  PARAM_CHECK_EQ(API, anchors_desc->dims[1], scores_desc->dims[2]);
+  PARAM_CHECK_EQ(API, anchors_desc->dims[2], scores_desc->dims[3]);
   PARAM_CHECK_EQ(API, anchors_desc->dims[3], 4);
 
   // [H, W, A, 4]
   PARAM_CHECK_EQ(API, variances_desc->dim, 4);
-  PARAM_CHECK_EQ(API, variances_desc->dims[0], H);
-  PARAM_CHECK_EQ(API, variances_desc->dims[1], W);
-  PARAM_CHECK_EQ(API, variances_desc->dims[2], A);
+  PARAM_CHECK_EQ(API, variances_desc->dims[0], scores_desc->dims[1]);
+  PARAM_CHECK_EQ(API, variances_desc->dims[1], scores_desc->dims[2]);
+  PARAM_CHECK_EQ(API, variances_desc->dims[2], scores_desc->dims[3]);
   PARAM_CHECK_EQ(API, variances_desc->dims[3], 4);
 
   // check output shape
   PARAM_CHECK_EQ(API, rpn_rois_desc->dim, 2);
-  PARAM_CHECK_EQ(API, rpn_rois_desc->dims[0], N * post_nms_top_n);
+  PARAM_CHECK_EQ(API, rpn_rois_desc->dims[0],
+                      scores_desc->dims[0] * post_nms_top_n);
   PARAM_CHECK_EQ(API, rpn_rois_desc->dims[1], 4);
 
   PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dim, 2);
-  PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[0], N * post_nms_top_n);
+  PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[0],
+                      scores_desc->dims[0] * post_nms_top_n);
   PARAM_CHECK_EQ(API, rpn_roi_probs_desc->dims[1], 1);
 
   PARAM_CHECK_EQ(API, rpn_rois_num_desc->dim, 1);
-  PARAM_CHECK_EQ(API, rpn_rois_num_desc->dims[0], N);
+  PARAM_CHECK_EQ(API, rpn_rois_num_desc->dims[0], scores_desc->dims[0]);
 
-  PARAM_CHECK_NE(API, A, 0);
-  PARAM_CHECK_NE(API, H, 0);
-  PARAM_CHECK_NE(API, W, 0);
+  PARAM_CHECK_NE(API, scores_desc->dims[1], 0);
+  PARAM_CHECK_NE(API, scores_desc->dims[2], 0);
+  PARAM_CHECK_NE(API, scores_desc->dims[3], 0);
 
   if (N == 0) {
     VLOG(5) << API << " skip zero element tensor.";

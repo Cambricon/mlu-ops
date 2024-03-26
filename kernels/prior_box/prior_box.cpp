@@ -102,7 +102,8 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
   // check param depand
 
   for (int i = 0; i < output_desc->dim; i++) {
-    PARAM_CHECK(api, output_desc->dims[i] == var_desc->dims[i]);
+    std::string i_str = "i: " + std::to_string(i);
+    PARAM_CHECK(api, output_desc->dims[i] == var_desc->dims[i], i_str);
   }
   if (max_sizes_desc->total_element_num != 0) {
     PARAM_CHECK(api, max_sizes_desc->dims[0] == min_sizes_desc->dims[0]);

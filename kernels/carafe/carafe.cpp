@@ -752,7 +752,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeForward(
   // check param
   bool return_directly = true;
 
-  MLUOP_CHECK_RETURN(
+  CARAFE_CHECK_RETURN(
       CARAFE_FORWARD_API,
       CarafeForwardParamCheck(handle, carafe_desc, input_desc, input, mask_desc,
                               mask, output_desc, output, &return_directly),
@@ -776,7 +776,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeForward(
   int grid_dimC = 0;
   int job_num = 0;
 
-  MLUOP_CHECK_RETURN(
+  CARAFE_CHECK_RETURN(
       CARAFE_FORWARD_API,
       genPolicy(handle, carafe_desc, input_desc, &k_dim, &k_type, &block_dimH,
                 &block_dimW, &block_dimG, &block_dimC, &grid_dimH, &grid_dimW,

@@ -234,21 +234,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
   }
 
   mluOpTensorDescriptor_t known_desc_tmp = NULL;
-  MLUOP_CHECK(mluOpCreateTensorDescriptor(&known_desc_tmp));
-  PARAM_CHECK(
+  CHECK_RETURN("[mluOpThreeNNForward]",
+               mluOpCreateTensorDescriptor(&known_desc_tmp));
+  CHECK_RETURN(
       "[mluOpThreeNNForward]",
-      MLUOP_STATUS_SUCCESS ==
-          mluOpSetTensorDescriptor(known_desc_tmp, MLUOP_LAYOUT_ARRAY,
-                                   input_dtype, known_dim, known_tmp_dims));
-  PARAM_CHECK(
+      mluOpSetTensorDescriptor(known_desc_tmp, MLUOP_LAYOUT_ARRAY,
+                               input_dtype, known_dim, known_tmp_dims));
+  CHECK_RETURN(
       "[mluOpThreeNNForward]",
-      MLUOP_STATUS_SUCCESS ==
-          transposeTensor(handle, known_desc, known, known_permute,
-                          known_desc_tmp, known_workspace, transpose_workspace,
-                          workspace_size - known_desc->total_tensor_size));
-  PARAM_CHECK(
+      transposeTensor(handle, known_desc, known, known_permute,
+                      known_desc_tmp, known_workspace, transpose_workspace,
+                      workspace_size - known_desc->total_tensor_size));
+  CHECK_RETURN(
       "[mluOpThreeNNForward]",
-      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(known_desc_tmp));
+      mluOpDestroyTensorDescriptor(known_desc_tmp));
 
   VLOG(5) << "[mluOpThreeNNForward] cnnlTranspose_v2 feature end.";
   VLOG(5) << "Launch Kernel KernelThreeNNForward<<<Union" << k_type / CORE_DIM

@@ -90,17 +90,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetSparseConvolutionDescriptor(
 
   int kernel_dim = dimNb - 2;
   for (int idx = 0; idx < kernel_dim; idx++) {
-    PARAM_CHECK_GE(interface_name, pad[idx], 0);
+    std::string idx_str = "idx: " + std::to_string(idx) + ".";
+    PARAM_CHECK_V2(interface_name, pad[idx] >= 0, << idx_str);
     sparse_conv_desc->pad[idx] = pad[idx];
-    PARAM_CHECK_GE(interface_name, stride[idx], 1);
+    PARAM_CHECK_V2(interface_name, stride[idx] >= 1, << idx_str);
     sparse_conv_desc->stride[idx] = stride[idx];
-    PARAM_CHECK_GE(interface_name, dilation[idx], 1);
+    PARAM_CHECK_V2(interface_name, dilation[idx] >= 1, << idx_str);
     sparse_conv_desc->dilation[idx] = dilation[idx];
-    PARAM_CHECK_GE(interface_name, input_space[idx], 1);
+    PARAM_CHECK_V2(interface_name, input_space[idx] >= 1, << idx_str);
     sparse_conv_desc->input_space[idx] = input_space[idx];
-    PARAM_CHECK_GE(interface_name, filter_space[idx], 1);
+    PARAM_CHECK_V2(interface_name, filter_space[idx] >= 1, << idx_str);
     sparse_conv_desc->filter_space[idx] = filter_space[idx];
-    PARAM_CHECK_GE(interface_name, output_space[idx], 1);
+    PARAM_CHECK_V2(interface_name, output_space[idx] >= 1, << idx_str);
     sparse_conv_desc->output_space[idx] = output_space[idx];
   }
 

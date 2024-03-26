@@ -146,8 +146,10 @@ static mluOpStatus_t foolProof(
 
   // indice_num[] check
   for (int i = 0; i < num_filter; ++i) {
-    PARAM_CHECK(api_name,
-                indice_num[i] >= 0 && indice_num[i] <= features_desc->dims[0]);
+    std::string i_str = "i: " + std::to_string(i) + ".";
+    PARAM_CHECK_V2(
+        api_name, indice_num[i] >= 0 && indice_num[i] <= features_desc->dims[0],
+        << i_str);
   }
 
   return MLUOP_STATUS_SUCCESS;
@@ -375,12 +377,9 @@ static mluOpStatus_t mainIndiceConvolutionForward(
       }
       DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(features_out_desc,
                                                    cnnl_output_desc);
-      CHECK_FUNC_RETURN(
-          cnnlGetAddNWorkspaceSize(cnnl_handle, cnnl_input_descs, addn_num,
-                                   cnnl_output_desc, &tempSize_addNExtra),
-          CNNL_STATUS_SUCCESS,
-          "[cnnlAddN_v2] Internal error accured in cnnlGetAddNWorkspaceSize.",
-          MLUOP_STATUS_INTERNAL_ERROR);
+      CALL_CNNL(cnnlGetAddNWorkspaceSize(cnnl_handle, cnnl_input_descs,
+                                         addn_num, cnnl_output_desc,
+                                         &tempSize_addNExtra));
       for (int i = 0; i < addn_num; i++) {
         DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_descs[i]);
       }

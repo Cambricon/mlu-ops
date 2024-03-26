@@ -33,20 +33,14 @@
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc) {
   PARAM_CHECK(DCN_API, dcn_desc != NULL);
-  CHECK_FUNC_RETURN(cnnlCreateDCNDescriptor(dcn_desc), CNNL_STATUS_SUCCESS,
-                    "[mluOpDcn] Internal error accured in "
-                    "mluOpCreateDCNDescriptor.",
-                    MLUOP_STATUS_INTERNAL_ERROR);
+  CALL_CNNL(cnnlCreateDCNDescriptor(dcn_desc));
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc) {
   PARAM_CHECK(DCN_API, dcn_desc != NULL);
-  CHECK_FUNC_RETURN(cnnlDestroyDCNDescriptor(dcn_desc), CNNL_STATUS_SUCCESS,
-                    "[mluOpDcn] Internal error accured in "
-                    "mluOpDestroyDCNDescriptor.",
-                    MLUOP_STATUS_INTERNAL_ERROR);
+  CALL_CNNL(cnnlDestroyDCNDescriptor(dcn_desc));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -55,14 +49,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetDCNDescriptor(
     const int stride[], const int dilation[], int deformable_group,
     int conv_group, int im2col_step, const mluOpDataType_t compute_type) {
   PARAM_CHECK(DCN_API, dcn_desc != NULL);
-  CHECK_FUNC_RETURN(
+  CALL_CNNL(
       cnnlSetDCNDescriptor(dcn_desc, dimNb, pad, stride, dilation,
                            deformable_group, conv_group, im2col_step,
-                           cnnlDataType_t(compute_type)),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpDcn] Internal error accured in "
-      "mluOpSetDCNDescriptor.",
-      MLUOP_STATUS_INTERNAL_ERROR);
+                           cnnlDataType_t(compute_type)));
   return MLUOP_STATUS_SUCCESS;
 }
 

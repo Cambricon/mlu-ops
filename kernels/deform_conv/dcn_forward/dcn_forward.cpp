@@ -46,14 +46,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDCNForwardWorkspaceSize(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(filter_desc, cnnl_filter_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(bias_desc, cnnl_bias_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
-  CHECK_FUNC_RETURN(cnnlGetDCNForwardWorkspaceSize(
+  CALL_CNNL(cnnlGetDCNForwardWorkspaceSize(
                         cnnl_handle, dcn_desc, cnnl_input_desc,
                         cnnl_offset_desc, cnnl_mask_desc, cnnl_filter_desc,
-                        cnnl_bias_desc, cnnl_output_desc, size),
-                    CNNL_STATUS_SUCCESS,
-                    "[mluOpDCNForward] Internal error accured in "
-                    "mluOpGetDCNForwardWorkspaceSize.",  // NOLINT
-                    MLUOP_STATUS_INTERNAL_ERROR);
+                        cnnl_bias_desc, cnnl_output_desc, size));
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_offset_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_mask_desc);
@@ -84,14 +80,11 @@ mluOpDCNForward(mluOpHandle_t handle, const mluOpDCNDescriptor_t dcn_desc,
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(filter_desc, cnnl_filter_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(bias_desc, cnnl_bias_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_output_desc);
-  CHECK_FUNC_RETURN(
+  CALL_CNNL(
       cnnlDCNForward(cnnl_handle, dcn_desc, cnnl_input_desc, input,
                      cnnl_offset_desc, offset, cnnl_mask_desc, mask,
                      cnnl_filter_desc, filter, cnnl_bias_desc, bias, workspace,
-                     workspace_size, cnnl_output_desc, output),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpDcnForward] Internal error accured in mluOpDcnForward.",
-      MLUOP_STATUS_INTERNAL_ERROR);
+                     workspace_size, cnnl_output_desc, output));
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_offset_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_mask_desc);

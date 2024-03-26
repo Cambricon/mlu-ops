@@ -129,11 +129,16 @@ static mluOpStatus_t internalGetIndicePairs(
   }
   PARAM_CHECK_LE(interface_name, indices_desc->dims[0], input_spaces);
   for (int i = 0; i < sparse_conv_dimNb - 2; i++) {
-    PARAM_CHECK_GE(interface_name, sparse_conv_desc->pad[i], 0);
-    PARAM_CHECK_GE(interface_name, sparse_conv_desc->dilation[i], 1);
-    PARAM_CHECK_GE(interface_name, sparse_conv_desc->stride[i], 1);
+    std::string i_str = "i: " + std::to_string(i) + ".";
+    PARAM_CHECK_V2(interface_name, sparse_conv_desc->pad[i] >= 0, << i_str);
+    PARAM_CHECK_V2(interface_name, sparse_conv_desc->dilation[i] >= 1,
+                   << i_str);
+    PARAM_CHECK_V2(interface_name, sparse_conv_desc->stride[i] >= 1, << i_str);
     if (sparse_conv_desc->dilation[i] != 1 &&
         sparse_conv_desc->stride[i] != 1) {
+      LOG(ERROR) << interface_name << "sparse_conv_desc->dilation[" << i
+                 << "] and sparse_conv_desc->stride[" << i
+                 << "] cannot both be 1.";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -162,10 +167,15 @@ static mluOpStatus_t internalGetIndicePairs(
   int sub_m = sparse_conv_desc->sub_m;
   if (sub_m) {
     for (int i = 0; i < sparse_conv_dimNb - 2; i++) {
-      PARAM_CHECK_EQ(interface_name, sparse_conv_desc->input_space[i],
-                     sparse_conv_desc->output_space[i]);
-      PARAM_CHECK_EQ(interface_name, sparse_conv_desc->stride[i], 1);
-      PARAM_CHECK_EQ(interface_name, sparse_conv_desc->dilation[i], 1);
+      std::string i_str = "i: " + std::to_string(i) + ".";
+      PARAM_CHECK_V2(
+          interface_name,
+          sparse_conv_desc->input_space[i] == sparse_conv_desc->output_space[i],
+          << i_str);
+      PARAM_CHECK_V2(interface_name, sparse_conv_desc->stride[i] == 1,
+                     << i_str);
+      PARAM_CHECK_V2(interface_name, sparse_conv_desc->dilation[i] == 1,
+                     << i_str);
     }
   }
 

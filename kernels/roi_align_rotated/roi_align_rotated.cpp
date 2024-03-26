@@ -60,8 +60,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(
   PARAM_CHECK(API, features_desc->layout == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK(API, output_desc->layout == MLUOP_LAYOUT_NHWC);
 
-  PARAM_CHECK(API, (features_desc->dtype == output_desc->dtype) &&
-                       (output_desc->dtype == rois_desc->dtype));
+  PARAM_CHECK(API, features_desc->dtype == output_desc->dtype);
+  PARAM_CHECK(API, output_desc->dtype == rois_desc->dtype);
   PARAM_CHECK(API, features_desc->dtype == MLUOP_DTYPE_FLOAT ||
                        features_desc->dtype == MLUOP_DTYPE_HALF);
 
@@ -143,9 +143,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(
   policyFunc(handle, rois_nums * pooled_height * pooled_width, &k_dim, &k_type);
   VLOG(5) << "[mluOpRoiAlignRotatedForward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "].";
-  KERNEL_CHECK((KernelRoiAlignRotatedForward(
+  CHECK_RETURN(API, KernelRoiAlignRotatedForward(
       k_dim, k_type, handle->queue, features_desc->dtype, features, rois, batch,
-      height, width, channel, rois_nums, roiAlignRotatedParams, output)));
+      height, width, channel, rois_nums, roiAlignRotatedParams, output));
   VLOG(5) << "Kernel KernelRoiAlignRotatedForward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
@@ -267,9 +267,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedBackward(
   }
   VLOG(5) << "cnnlFill_v3 end.";
 
-  KERNEL_CHECK((KernelRoiAlignRotatedBackward(
+  CHECK_RETURN(API, KernelRoiAlignRotatedBackward(
       k_dim, k_type, handle->queue, top_grad_desc->dtype, top_grad, rois, batch,
-      height, width, channel, rois_nums, roiAlignRotatedParams, bottom_grad)));
+      height, width, channel, rois_nums, roiAlignRotatedParams, bottom_grad));
   VLOG(5) << "Kernel KernelRoiAlignRotatedBackward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

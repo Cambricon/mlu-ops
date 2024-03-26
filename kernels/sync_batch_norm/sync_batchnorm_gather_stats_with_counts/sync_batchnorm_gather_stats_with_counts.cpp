@@ -66,16 +66,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormGatherStatsWithCounts(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, cnnl_mean_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, cnnl_invstd_desc);
 
-  CHECK_FUNC_RETURN(
+  CALL_CNNL(
       cnnlSyncBatchNormGatherStatsWithCounts(
           cnnl_handle, cnnl_mean_all_desc, mean_all, cnnl_invstd_all_desc,
           invstd_all, cnnl_movingcnnl_mean_desc, moving_mean,
           cnnl_moving_var_desc, moving_var, momentum, eps, cnnl_count_all_desc,
-          count_all, cnnl_mean_desc, mean, cnnl_invstd_desc, invstd),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpSyncBatchNormGatherStatsWithCounts] Internal error"
-      " accured in mluOpSyncBatchNormGatherStatsWithCounts.",
-      MLUOP_STATUS_INTERNAL_ERROR);
+          count_all, cnnl_mean_desc, mean, cnnl_invstd_desc, invstd));
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_mean_all_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_invstd_all_desc);

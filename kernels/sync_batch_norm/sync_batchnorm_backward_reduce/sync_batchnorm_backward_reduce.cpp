@@ -33,13 +33,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetSyncBatchNormBackwardReduceWorkspaceSize(
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_x, cnnl_desc_x);
 
-  CHECK_FUNC_RETURN(
+  CALL_CNNL(
       cnnlGetSyncBatchnormBackwardReduceWorkspaceSize(cnnl_handle, cnnl_desc_x,
-                                                      workspace_size),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpGetSyncBatchNormBackwardReduceWorkspaceSize] Internal error"
-      " accured in cnnlGetSyncBatchnormBackwardReduceWorkspaceSize.",
-      MLUOP_STATUS_INTERNAL_ERROR);
+                                                      workspace_size));
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_x);
   DESTROY_CNNL_HANDLE(cnnl_handle);
@@ -89,16 +85,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormBackwardReduce(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_sum_dy_xmu,
                                                cnnl_desc_sum_dy_xmu);
 
-  CHECK_FUNC_RETURN(
+  CALL_CNNL(
       cnnlSyncBatchnormBackwardReduce(
           cnnl_handle, cnnl_desc_dz, dz, cnnl_desc_x, x, cnnl_desc_mean, mean,
           cnnl_desc_invstd, invstd, cnnl_desc_dfilter, dfilter, cnnl_desc_dbias,
           dbias, cnnl_desc_sum_dy, sum_dy, cnnl_desc_sum_dy_xmu, sum_dy_xmu,
-          needs_input_grad0, needs_input_grad1, needs_input_grad2),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpSyncBatchNormBackwardReduce] Internal error"
-      " accured in cnnlSyncBatchnormBackwardReduce.",
-      MLUOP_STATUS_INTERNAL_ERROR);
+          needs_input_grad0, needs_input_grad1, needs_input_grad2));
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_dz);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_x);
@@ -170,17 +162,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormBackwardReduce_v2(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_sum_dy_xmu,
                                                cnnl_desc_sum_dy_xmu);
 
-  CHECK_FUNC_RETURN(
+  CALL_CNNL(
       cnnlSyncBatchnormBackwardReduce_v2(
           cnnl_handle, cnnl_desc_dz, dz, cnnl_desc_x, x, cnnl_desc_mean, mean,
           cnnl_desc_invstd, invstd, workspace, workspace_size,
           cnnl_desc_dfilter, dfilter, cnnl_desc_dbias, dbias, cnnl_desc_sum_dy,
           sum_dy, cnnl_desc_sum_dy_xmu, sum_dy_xmu, needs_input_grad0,
-          needs_input_grad1, needs_input_grad2),
-      CNNL_STATUS_SUCCESS,
-      "[mluOpSyncBatchNormBackwardReduce_v2] Internal error"
-      " accured in cnnlSyncBatchnormBackwardReduce_v2.",
-      MLUOP_STATUS_INTERNAL_ERROR);
+          needs_input_grad1, needs_input_grad2));
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_dz);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_x);

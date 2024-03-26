@@ -172,7 +172,6 @@ KERNEL_CHECK((KernelRoiAlignRotatedBackward(
 声明与定义位置：[kernels/utils/cnnl_helper.h](../kernels/utils/cnnl_helper.h)，
 [kernels/utils/cnnl_helper.cpp](../kernels/utils/cnnl_helper.cpp)<br>
 防呆返回值：<br>
-注意事项：v1.0 CHECK_FUNC_RETURN 待废弃
 [example](../kernels/dynamic_point_to_voxel/dynamic_point_to_voxel_forward/dynamic_point_to_voxel_forward.cpp)
 规范示例：
 ```c++
@@ -186,20 +185,7 @@ CALL_CNNL(cnnlScatterNd_v2(...));
 ```
 
 常见错误示例：
-```c++
-// 遗留问题 CHECK_FUNC_RETURN 宏将会废弃
-// dcn_backward_data.cpp 中
-CHECK_FUNC_RETURN(
-    cnnlDCNBackwardData(
-        cnnl_handle, dcn_desc, cnnl_input_desc, input, cnnl_offset_desc,
-        offset, cnnl_mask_desc, mask, cnnl_filter_desc, filter,
-        cnnl_grad_output_desc, grad_output, workspace, workspace_size,
-        cnnl_grad_input_desc, grad_input, cnnl_grad_offset_desc, grad_offset,
-        cnnl_grad_mask_desc, grad_mask),
-    CNNL_STATUS_SUCCESS,
-    "[mluOpDcnBackwardData] Internal error accured in cnnlDCNBackwardData.",
-    MLUOP_STATUS_INTERNAL_ERROR);
-```
+无
 
 ## 自定义防呆说明
 应用场景：适用于各种情况，自定义防呆更加灵活，可以检查复杂的条件，更准确地解释防呆信息。
