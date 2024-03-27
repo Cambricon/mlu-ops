@@ -55,7 +55,8 @@ set(PKG_DISTRIBUTION "${MAP_${DEB_DISTRO}}")
 
 execute_process(
   COMMAND head -n 1 "${CMAKE_SOURCE_DIR}/installer/independent/debian/changelog"
-  COMMAND cut -c 9-14
+  COMMAND cut -c 9-20
+  COMMAND cut -d - -f1
   COMMAND xargs
   OUTPUT_VARIABLE MLUOP_RELEASE_VERSION
   OUTPUT_STRIP_TRAILING_WHITESPACE
