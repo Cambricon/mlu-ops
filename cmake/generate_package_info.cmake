@@ -47,18 +47,27 @@ set(MAP_ubuntu16.04 "xenial")
 set(MAP_ubuntu18.04 "bionic")
 set(MAP_ubuntu20.04 "focal")
 set(MAP_ubuntu20.10 "groovy")
-set(MAP_ubuntu21.04 "hirsute")
+set(MAP_ubuntu22.04 "jammy")
 set(MAP_debian9 "stretch")
 set(MAP_debian10 "buster")
 set(MAP_debian11 "bullseye")
 set(PKG_DISTRIBUTION "${MAP_${DEB_DISTRO}}")
-# configure_file(
-#   "${CMAKE_SOURCE_DIR}/../installer/centos7.5/SPECS/mluops-independent.spec.in"
-#   "${CMAKE_SOURCE_DIR}/../installer/centos7.5/SPECS/mluops-independent.spec"
-#   @ONLY
-# )
-configure_file(
-  "${CMAKE_SOURCE_DIR}/installer/independent/debian/changelog.in"
-  "${CMAKE_SOURCE_DIR}/installer/independent/debian/changelog"
-  @ONLY
+
+execute_process(
+  COMMAND head -n 1 "${CMAKE_SOURCE_DIR}/installer/independent/debian/changelog"
+  COMMAND cut -c 9-14
+  COMMAND xargs
+  OUTPUT_VARIABLE MLUOP_RELEASE_VERSION
+  OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+
+message("current version: ${MLUOP_RELEASE_VERSION}")
+if("${PKG_VERSION}" MATCHES "${MLUOP_RELEASE_VERSION}")
+  message("build with mluops changelog")
+else()
+  configure_file(
+    "${CMAKE_SOURCE_DIR}/installer/independent/debian/changelog.in"
+    "${CMAKE_SOURCE_DIR}/installer/independent/debian/changelog"
+    @ONLY
+  )
+endif()
