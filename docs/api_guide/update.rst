@@ -325,7 +325,7 @@ This section lists contents that were made for each product release.
   - Added the following new operations:
 
     - three_interpolate_forward
-    - ball_qeury
+    - ball_query
 
 * V0.2.0
 
