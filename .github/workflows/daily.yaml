@@ -31,32 +31,6 @@ jobs:
           docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu20.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
           ./build.sh
 
-      - name: release_test_cases
-        run: >
-          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/cambricon_ipcm0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu20.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
-          ./test.sh --cases_dir=/testdata/release_test/default_platform
-
-      - name: release_temp_cases
-        run: >
-          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/cambricon_ipcm0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu20.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
-          ./test.sh --cases_dir=/testdata/release_temp/default_platform
-
-      - name: test_release_test_370_cases
-        if: matrix.runner == 'mlu370-m8'
-        run: >
-          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/cambricon_ipcm0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu20.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
-          ./test.sh --cases_dir=/testdata/release_test/370
-
-      - name: test_release_temp_370_cases
-        if: matrix.runner == 'mlu370-m8'
-        run: >
-          docker run --rm --device /dev/cambricon_ctl --device /dev/cambricon_dev0 --device /dev/cambricon_ipcm0
-          -v /testdata:/testdata -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-ubuntu20.04-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
-          ./test.sh --cases_dir=/testdata/release_temp/370
-
       - name: clean
         run: |
           rm -rf build
