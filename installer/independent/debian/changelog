@@ -1,6 +1,12 @@
-mluops (1.0.0-1.ubuntu16.04) xenial; urgency=medium
+mluops (1.1.0-1.ubuntu16.04) xenial; urgency=medium
 
   * Release mluops v1.1.0
+
+ -- Cambricon <service@cambricon.com>  Thu, 28 March 2024 00:00:00 +0100
+
+mluops (1.0.0-1.ubuntu16.04) xenial; urgency=medium
+
+  * Release mluops v1.0.0
 
  -- Cambricon <service@cambricon.com>  Tue, 6 Feb 2024 00:00:00 +0100
 
