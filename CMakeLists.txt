@@ -169,6 +169,12 @@ add_library(mluopscore STATIC ${core_src_files})
 
 target_link_libraries(mluopscore cnnl cnrt cndrv)
 bang_add_library(mluops SHARED ${src_files} ${src_helper_files})
+
+if(${MLUOP_BUILD_STATIC} MATCHES "ON")
+  message("-- Build MLUOP static")
+  bang_add_library(mluops_static STATIC ${src_files} ${src_helper_files} ${core_src_files})
+endif()
+
 target_link_libraries(mluops
   -Wl,--start-group
   ${arch_binary_files}
@@ -186,12 +192,21 @@ set_target_properties(mluops PROPERTIES
   SOVERSION   "${MAJOR_VERSION}"
 )
 
+if(${MLUOP_BUILD_STATIC} MATCHES "ON")
+  set_target_properties(mluops_static PROPERTIES
+    OUTPUT_NAME "mluops"
+    PREFIX      "lib"
+    VERSION     "${BUILD_VERSION}"
+    SOVERSION   "${MAJOR_VERSION}"
+  )
+endif()
+
 ################################################################################
 # Build MLUOP GTEST
 ################################################################################
-option(MLU_OP_BUILD_GTEST "Build mlu-ops gtest" ON)
-message("-- MLU_OP_BUILD_GTEST=${MLU_OP_BUILD_GTEST}")
-if(${MLU_OP_BUILD_GTEST} MATCHES "ON")
+option(MLUOP_BUILD_GTEST "Build mlu-ops gtest" ON)
+message("-- MLUOP_BUILD_GTEST=${MLUOP_BUILD_GTEST}")
+if(${MLUOP_BUILD_GTEST} MATCHES "ON")
   message("-- Build MLUOP Gtest")
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/test/mlu_op_gtest" "mlu_op_gtest")
 endif()
