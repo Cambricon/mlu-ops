@@ -21,6 +21,15 @@ mluOpAbs
 - ``i`` 表示一个多元组的索引，例如在4维时可以表示（n,c,h,w）。
 - ``xi`` 和 ``yi`` 表示多元组中 ``i`` 索引处的元素。
 
+
+.. _adam_w:
+
+mluOpAdamW
+------------
+该算子是一种自适应学习率优化算法，是对 Adam 算法的一个改进版本，它主要是为了解决 Adam 算法中的权重衰减问题。
+该算子引入了一种新的权重衰减方式，将权重衰减添加到损失函数中，提高了优化器的性能和稳定性。
+
+
 .. _active_rotated_filter_forward:
 
 mluOpActiveRotatedFilterForward
@@ -730,7 +739,7 @@ mluOpSyncBatchNormBackwardElemt
 ---------------------------------
 该算子用来计算输入的梯度，与 :ref:`sync_batchnorm_backward_reduce` 共同实现了sync_batchnorm_backward。
 
-.. _execFFT:
+.. _exec_fft:
 
 mluOpExecFFT
 ---------------
