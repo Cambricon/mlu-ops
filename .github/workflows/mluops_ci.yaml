@@ -33,6 +33,7 @@ on:
       - 'requirements.txt'
       - '.github/workflows/mluops_all_system_ci.yaml'
       - '.github/workflows/daily.yaml'
+    types: [opened, synchronize, reopened, review_requested]
 
 jobs:
   test:
