@@ -395,7 +395,7 @@ fi
 if [ "${MLUOP_BUILD_PREPARE_ONLY}" = "ON" ]; then
   prog_log_info "You have called prepare cntoolkit explicitly."
   prepare_cntoolkit
-  exit -1
+  exit 0
 elif [ "${MLUOP_BUILD_PREPARE}" = "ON" ]; then
   prepare_cntoolkit
   build_requires_version_check
