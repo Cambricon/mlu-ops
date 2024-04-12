@@ -246,12 +246,12 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
       return MLUOP_STATUS_ARCH_MISMATCH;
     }
     case CNRT_FUNC_TYPE_UNION1: {
-      VLOG(5) << "Launch Kernel MLUUnionKernelApplyAdamW<<<Union"
+      VLOG(5) << "Launch Kernel KernelApplyAdamW<<<Union"
               << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
               << k_dim.z << ">>>";
       CHECK_RETURN(
           "[mluOpAdamW]",
-          MLUUnionKernelApplyAdamW(
+          KernelApplyAdamW(
               k_dim, k_type, handle->queue, (void *)param, (void *)param_h,
               (void *)grad, (void *)momentum, (void *)velocity, lr, beta1,
               beta2, bias1, bias2, epsilon, adamw_desc->weight_decay,
