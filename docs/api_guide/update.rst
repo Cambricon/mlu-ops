@@ -3,6 +3,15 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V1.1.1
+
+  **Date:** April 12, 2024
+
+  **Changes:**
+
+  - None.
+
+
 * V1.1.0
 
   **Date:** March 28, 2024
