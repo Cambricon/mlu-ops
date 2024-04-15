@@ -1,3 +1,7 @@
+mluops (1.1.1-1.ubuntu16.04) xenial; urgency=medium
+
+  * Release mluops v1.1.1
+
 mluops (1.1.0-1.ubuntu16.04) xenial; urgency=medium
 
   * Release mluops v1.1.0
