@@ -46,10 +46,7 @@ endif()
 # setup cncc flags
 set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -fPIC -Wall -Werror -std=c++11 -pthread")
 set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -O3")
-set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_220"
-                                         "--bang-mlu-arch=mtp_270"
-                                         "--bang-mlu-arch=mtp_290"
-                                         "--bang-mlu-arch=mtp_372"
+set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_372"
                                          "--bang-mlu-arch=mtp_592"
 )
 

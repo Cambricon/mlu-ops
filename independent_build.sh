@@ -395,7 +395,7 @@ fi
 if [ "${MLUOP_BUILD_PREPARE_ONLY}" = "ON" ]; then
   prog_log_info "You have called prepare cntoolkit explicitly."
   prepare_cntoolkit
-  exit -1
+  exit 0
 elif [ "${MLUOP_BUILD_PREPARE}" = "ON" ]; then
   prepare_cntoolkit
   build_requires_version_check
@@ -452,8 +452,10 @@ if [ "${MLUOP_PACKAGE_INFO_SET}" = "ON" ]; then
   mkdir -p ${PACKAGE_DIR}
   mkdir -p ${PACKAGE_DIR}/include
   mkdir -p ${PACKAGE_DIR}/lib64
+  mkdir -p ${PACKAGE_DIR}/samples
 
   cp -rf ${BUILD_DIR}/lib/libmluops.so* ${PACKAGE_DIR}/lib64
+  cp -r samples/* ${PACKAGE_DIR}/samples
   cp mlu_op.h ${PACKAGE_DIR}/include
 
   TEST_DIR="test_workspace/mluops"

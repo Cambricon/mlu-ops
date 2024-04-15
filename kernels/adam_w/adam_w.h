@@ -33,7 +33,7 @@ struct mluOpAdamWStruct {
   bool use_nesterov = false;
 };
 
-mluOpStatus_t MLUOP_WIN_API MLUUnionKernelApplyAdamW(
+mluOpStatus_t MLUOP_WIN_API KernelApplyAdamW(
     const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
     const cnrtQueue_t queue, void *param, void *param_h, void *grad,
     void *momentum, void *velocity, float lr, float beta1, float beta2,
