@@ -1,0 +1,940 @@
+#include "cholesky.h"
+__nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
+    
+__mlu_func__ 
+void sgemm_fixwidth_device(int m, int k,
+        float* A0, const int lda,
+        float *sC, float  *sB)
+{
+    int id = taskId;
+    
+    int span = POTF_NB;
+    
+
+    __nram__ float rC[M * POTF_NB/TASK_NUM ];
+    __nram__ float rA[M * POTF_NB/TASK_NUM ];
+    __nram__ float rp[M * POTF_NB/TASK_NUM ];
+
+    __nram__ float rB[POTF_NB * POTF_NB];
+
+
+
+    if(id*span<m)
+        __memcpy(rp,OFFSET_ROW(A0,span*id,0),POTF_NB*sizeof(float),GDRAM2NRAM,POTF_NB*sizeof(float),lda*sizeof(float),span-1);
+    __memset_nram(rC,POTF_NB*span,(float)ZERO);
+    __sync_cluster();
+    
+
+
+    if(id == 0)
+    {
+        __memcpy(sB,rp,POTF_NB*POTF_NB*sizeof(float),NRAM2SRAM);
+    }
+
+
+
+    __sync_cluster();
+
+
+    for(int iter = 0; iter < k; iter+= POTF_NB)
+    {
+        __bang_move(rA,rp,POTF_NB*span*sizeof(float));
+        __memcpy(rB,sB,POTF_NB*POTF_NB*sizeof(float),SRAM2NRAM);
+        
+        __sync_cluster();
+        if(id*span<m)
+            __memcpy_async(rp,OFFSET_ROW(A0,span*id,iter+POTF_NB),POTF_NB*sizeof(float),GDRAM2NRAM,POTF_NB*sizeof(float),lda*sizeof(float),span-1);
+        if(id == 0)
+            __memcpy_async(sB,rp,POTF_NB*POTF_NB*sizeof(float),NRAM2SRAM);
+        for(int i = 0; i < span; i++)
+        {
+            for(int j = 0; j < POTF_NB; j++)
+            {
+                for(int h = 0; h < POTF_NB; h++)
+                {
+                    rC[i*POTF_NB+j] += rA[i*POTF_NB+h] * rB[j*POTF_NB+h];
+                }
+            }
+        }
+        __sync_cluster();
+    }
+
+    
+
+
+    __bang_sub(rp,rp,rC,POTF_NB * span);
+
+    if(id*span<m)
+        __memcpy(sC+coreId*span*POTF_NB,rp,POTF_NB* span *sizeof(float),NRAM2SRAM);
+    __sync_cluster();
+}  
+
+static __mlu_func__ void spotf2_sminout_fixsize_device(int m, float *A, int lda)
+{
+    float factor;
+    int id = coreId;
+    int span = POTF_NB;
+    float* diag = (float*)nram_buffer;
+    float* nram_src = diag + span * span;
+    __memcpy(diag,A,span*span*sizeof(float),SRAM2NRAM);
+    __memcpy(nram_src,A + id *span*POTF_NB,span*span*sizeof(float),SRAM2NRAM);
+    
+    for(int iter = 0; iter < POTF_NB; iter++)
+    {
+        factor=sqrt(diag[iter*POTF_NB+iter]);
+        factor = 1.0/factor;
+        for(int i = 0; i < span; i++)
+        {
+            nram_src[i*POTF_NB+iter] *= factor;
+            diag[i*POTF_NB+iter] *= factor;
+            
+        }
+        __sync();
+
+
+        for(int i = iter + 1; i < POTF_NB; i++)
+        {
+            for(int j = 0; j < span; j++)
+            {
+                diag[j * POTF_NB + i ] -= diag[i*POTF_NB+iter] * diag[j * POTF_NB + iter];
+                nram_src[j * POTF_NB + i ] -= diag[i*POTF_NB+iter] * nram_src[j * POTF_NB + iter];
+            }
+        }
+        
+        
+
+    }
+    __sync_cluster();
+    
+    if(id*span<m)
+        __memcpy(A + id *span * POTF_NB,nram_src,span*span*sizeof(float),NRAM2SRAM);
+    __sync_cluster();
+    
+}
+
+__mlu_func__ 
+void sgemm_anywidth_device(int m, int k,
+        float* A0, const int lda,
+        float *sC, float  *sB)
+{
+    int id = taskId;
+    
+
+    int remain = m - id * POTF_NB;
+    bool if_execute = remain > 0;
+    int span =  (remain > POTF_NB||remain <= 0) ? POTF_NB : remain;
+
+    float *rA = (float*)nram_buffer + id * NB * NB * 4;
+
+    float *rB = rA + NB * NB;
+
+    float *rC = rB + NB * NB;
+
+    float* rp = rC + NB * NB;
+
+    int span_b = POTF_NB > m ? m : POTF_NB;
+
+
+
+    __memset_nram(rC,span_b*span,(float)ZERO);
+
+    if(if_execute)
+    {
+        if(k>0)
+        {
+            __memcpy(rA,A0+id*POTF_NB*lda,k*sizeof(float),SRAM2NRAM,NB*sizeof(float),lda*sizeof(float),span-1);
+        }
+        __memcpy(rp,sC+id*POTF_NB*lda,span_b*sizeof(float),SRAM2NRAM,span_b*sizeof(float),lda*sizeof(float),span-1);
+
+    }
+        
+    if(k>0)
+    {
+        __memcpy(rB,A0,k*sizeof(float),SRAM2NRAM,NB*sizeof(float),lda*sizeof(float),span_b-1);
+        
+    }
+    
+
+    __sync_cluster();
+
+    for(int i = 0; i < span; i++)
+    {
+        for(int j = 0; j < span_b; j++)
+        {
+            for(int h = 0; h < k; h++)
+            {
+                rC[i*span_b+j] += rA[i*NB+h] * rB[j*NB+h];
+            }
+        }
+    }
+
+    __bang_sub(rp,rp,rC,span_b * span);
+
+    __sync_cluster();
+
+    if(id==0)
+    {
+        for(int i = 0; i < span; i++)
+        {
+            __memcpy(sC+(i*lda),rp+i*span_b,(i+1)*sizeof(float),NRAM2SRAM);
+        } 
+       
+    }
+    else if(if_execute)
+    {
+        __memcpy(sC+(id*POTF_NB*lda),rp,span_b*sizeof(float),NRAM2SRAM,lda*sizeof(float),span_b*sizeof(float),span-1);
+    }
+    
+
+
+
+
+
+} 
+
+static __mlu_func__ void spotf2_sminout_anysize_device(int m, float *A, int lda)
+{
+    float factor;
+    int id = coreId;
+    int finish = id * POTF_NB;
+    int remain = m - finish;
+    bool if_execute = remain > 0;
+    int span =  remain > POTF_NB ? POTF_NB : remain;
+    int iter_num = m > POTF_NB ? POTF_NB : m;
+    for(int iter = 0; iter < iter_num; iter++)
+    {
+        factor=sqrt(A[iter*lda+iter]);
+        factor = 1.0/factor;
+        __sync_cluster();
+        for(int i = 0; i < span; i++)
+        {
+            if(if_execute)
+                A[i*lda+iter+id*POTF_NB*lda] *= factor;
+            
+        }
+        __sync_cluster();
+
+        if(if_execute)
+        {
+            for(int i = iter + 1; i < iter_num; i++)
+            {
+                for(int j = finish; j < finish + span; j++)
+                {
+                    if(j < i)
+                        continue;
+                    A[j * lda + i ] -= A[i*lda+iter] * A[j * lda + iter];
+                }
+            }
+        }
+        
+        __sync_cluster();
+
+    }
+    
+}
+
+__mlu_func__ void spotf2_smlpout_fixwidth_device(const int m, float *A0, float *A, int lda, const int localstep, const int gbstep)
+{
+    int id = taskId;
+    __mlu_shared__  float shared_data[SHARED_MEM_SIZE];
+    float* sdata_A = shared_data;
+    float* sdata_B = shared_data + m *POTF_NB/TASK_NUM * 4;
+    sgemm_fixwidth_device(m, localstep, A0, lda, sdata_A, sdata_B);
+
+    __sync_cluster();
+    
+
+    spotf2_sminout_fixsize_device(m, sdata_A, m);
+
+    __sync_cluster();
+
+    int span = POTF_NB;
+
+
+    if(id==0)
+    {
+        for(int i = 0; i < span; i++)
+        {
+             __memcpy(A+(i*lda),sdata_A+i*POTF_NB,(i+1)*sizeof(float),SRAM2LDRAM);
+        }
+       
+    }
+    else if(id*span < m)
+    {
+        __memcpy(A+(id*POTF_NB*lda),sdata_A+coreId*POTF_NB*POTF_NB,POTF_NB*sizeof(float),SRAM2LDRAM,lda*sizeof(float),POTF_NB*sizeof(float),span-1);
+    }
+
+    __sync_cluster();
+
+
+}
+
+__mlu_func__ void spotf2_smlpout_anywidth_device(const int m, float *A0, float *A, int lda, const int localstep, const int gbstep)
+{
+
+    sgemm_anywidth_device(m, localstep, A0, lda, A, nullptr);
+    
+    spotf2_sminout_anysize_device(m, A, lda);
+
+    __sync_cluster();
+
+
+}
+__mlu_global__ void spotf2_smlpin_fixwidth_kernel(bool trans, int m, float *dA, int lda, int localstep, int gbstep)
+{
+    
+    for(int i = 0; i < m; i += POTF_NB)
+    {
+        spotf2_smlpout_fixwidth_device(m-i,OFFSET_ROW(dA, localstep + i,0), OFFSET_ROW(dA, localstep + i, localstep + i), lda, localstep+i, gbstep);
+    }
+
+}
+
+__mlu_global__ void spotf2_smlpin_anywidth_kernel(bool trans, int m, float *dA, int lda, int localstep, int gbstep)
+{
+    int id = taskId;
+
+    __mlu_shared__  float shared_data[NB * NB];
+
+    if(m%4==0)
+    {
+        for(int i = 0; i < m; i += POTF_NB)
+        {
+            spotf2_smlpout_fixwidth_device(m-i,OFFSET_ROW(dA, localstep + i,0), OFFSET_ROW(dA, localstep + i, localstep + i), lda, localstep+i, gbstep);
+        }
+    }
+    else
+    {
+        
+        if(id == 0)
+        {
+            __memcpy(shared_data,dA,m*sizeof(float),GDRAM2SRAM,NB*sizeof(float),lda*sizeof(float),m-1);
+        }
+        __sync_cluster();
+
+        for(int i = 0; i < m; i += POTF_NB)
+        {
+            spotf2_smlpout_anywidth_device(m-i,shared_data+i*NB, shared_data+i*NB+i, NB, localstep+i, gbstep);
+        }
+
+        __sync_cluster();
+
+        if(id == 0)
+        {
+            __memcpy(dA,shared_data,m*sizeof(float),SRAM2GDRAM,lda*sizeof(float),NB*sizeof(float),m-1);
+        }
+        __sync_cluster();
+    }
+    
+    
+    
+
+}
+
+mluOpStatus_t mlu_spotf2_lpin(bool trans,bool uplo, int n, int ldda, float* dA, int gbstep, cnrtQueue_t queue)
+{
+    cnrtDim3_t dim;
+    cnrtFunctionType_t func_type = __CNRT_FUNC_TYPE__;
+    dim.x = TASK_NUM;
+    dim.y = 1;
+    dim.z = 1;
+
+    KERNEL_CHECK(
+        spotf2_smlpin_anywidth_kernel<<<dim, func_type, queue>>>(trans, n, dA, ldda, 0,gbstep));
+    return MLUOP_STATUS_SUCCESS;
+}
+
+
+__mlu_entry__ void mlu_strsm_rectile_kernel(
+    int m,int n, bool trans,
+    float *dA, int32_t lda,
+    float *dB, int32_t ldb)
+{
+    int id = taskId;
+    
+
+    int span = n / 4;
+    int start = id * span;
+    if(id == 3)
+    {
+        span = n - 3 * span;
+    }
+    bool if_execute = span > 0;
+    __mlu_shared__ float sA[8*POTF_NB];
+    __nram__ float rB[4*POTF_NB * 8*POTF_NB];
+    __nram__ float rC[4*POTF_NB * 8*POTF_NB];
+    __nram__ float rBp[4*POTF_NB];
+    __nram__ float rA[8*POTF_NB];
+    int calc_length = (8 * POTF_NB) > m ? m : (8 * POTF_NB);
+    __memset_nram(rB,POTF_NB*calc_length,(float)ZERO);
+    __sramset(sA,calc_length*calc_length,0);
+
+
+    float temp_b = 0, factor = 0;
+    
+
+    if(id == 0)
+    {
+        __memcpy_async(sA,dA,sizeof(float),LDRAM2SRAM);
+    }
+    if(if_execute)
+    __memcpy(rBp,OFFSET_B_ROW(dB,start,0),sizeof(float),LDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
+    __sync_cluster();
+
+        
+    if(trans)
+    {
+        __memcpy_async(rA,sA,(1)*sizeof(float),SRAM2NRAM);
+        if(if_execute) 
+        __memcpy_async(rB,rBp,sizeof(float),NRAM2NRAM,calc_length * sizeof(float), sizeof(float), span - 1);
+        __sync_cluster();
+        if(id == 0)
+        {
+            __memcpy_async(sA,OFFSET_ROW(dA,1,0),2*sizeof(float),LDRAM2SRAM);
+        }
+        if(if_execute)
+        __memcpy_async(rBp,OFFSET_B_ROW(dB,start,1),sizeof(float),LDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
+        factor = 1.0 / rA[0];
+        for(int i = 0; i < span; i++)
+        {
+            rB[i*calc_length] *=  factor;
+        }
+
+        __sync_cluster();
+        
+        for(int iter = 1; iter < m - 1; iter++)
+        {
+            __memcpy_async(rA,sA,(iter+1)*sizeof(float),SRAM2NRAM);
+            if(if_execute)
+            __memcpy_async(rB+iter,rBp,sizeof(float),NRAM2NRAM,calc_length * sizeof(float), sizeof(float), span - 1);
+            __sync_cluster();
+            if(id == 0)
+            {
+                __memcpy_async(sA,OFFSET_ROW(dA,iter+1,0),(iter+2)*sizeof(float),LDRAM2SRAM);
+            }
+            if(if_execute)
+            __memcpy_async(rBp,OFFSET_B_ROW(dB,start,iter+1),sizeof(float),LDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
+            factor = 1.0 / rA[iter];
+            for(int i = 0; i < span; i++)
+            {
+                __bang_mul(rC+i*calc_length,rA,rB+i*calc_length,iter);
+                temp_b = 0;
+                for(int j = 0; j < iter; j++)
+                {
+                    temp_b += rC[i*calc_length+j];
+                }
+                temp_b = rB[i*calc_length+iter] - temp_b;
+                rB[i*calc_length+iter] = temp_b * factor;
+            }
+
+            __sync_cluster();
+        }
+
+        __memcpy_async(rA,sA,(m)*sizeof(float),SRAM2NRAM);
+        if(if_execute)
+        __memcpy_async(rB+m-1,rBp,sizeof(float),NRAM2NRAM,calc_length * sizeof(float), sizeof(float), span - 1);
+        __sync_cluster();
+        factor = 1.0 / rA[m-1];
+        for(int i = 0; i < span; i++)
+        {
+            __bang_mul(rC+i*calc_length,rA,rB+i*calc_length,m-1);
+
+            temp_b = 0;
+            for(int j = 0; j < m-1; j++)
+            {
+                temp_b += rC[i*calc_length+j];
+            }
+            temp_b = rB[i*calc_length+m-1] - temp_b;
+
+            rB[i*calc_length+m-1] = temp_b * factor;
+        }
+        __sync_cluster();
+
+
+        if(if_execute)
+        {
+            __memcpy(OFFSET_B_ROW(dB,start,0),rB,calc_length*sizeof(float),NRAM2LDRAM,ldb * sizeof(float), calc_length * sizeof(float), span - 1);
+        }
+        __sync_cluster();
+
+    }
+
+}
+
+
+
+mluOpStatus_t strsm_rectile(bool upper, bool trans, int m, int n, float *d_a, int lda, float *d_b, int lddb, cnrtQueue_t queue)
+{
+    cnrtDim3_t dim;
+    dim.x = TASK_NUM;
+    dim.y = 1;
+    dim.z = 1;
+    cnrtFunctionType_t func_type = __CNRT_FUNC_TYPE__;
+    if(!upper && trans)
+    {
+        KERNEL_CHECK(
+            mlu_strsm_rectile_kernel<<<dim, func_type, queue>>>(m,n,trans,d_a,lda,d_b,lddb));
+    }
+    return MLUOP_STATUS_SUCCESS;
+}
+
+__mlu_global__
+void add_c(float beta, float *d_c, float* src,int ldc, int ldsrc, int m, int n)
+{
+    
+
+  __mlu_shared__ uint8_t sram_buffer[MAX_SRAM_SIZE];
+    if (beta == 0.0f)
+    {
+        if(taskId == 0)
+        {
+            __memcpy(sram_buffer,src,n*sizeof(float),GDRAM2SRAM,n*sizeof(float),ldsrc*sizeof(float),m-1);
+            
+        }
+        __sync_cluster();
+        if(taskId == 0)
+        {
+            __memcpy(d_c,sram_buffer,n*sizeof(float),SRAM2LDRAM,ldc*sizeof(float),n*sizeof(float),m-1);
+        }
+        __sync_cluster();
+        return;
+    }
+
+    float* a_sram = (float*)sram_buffer + 3* m * n;
+
+    if (taskId == 0) {
+      __memcpy(sram_buffer,d_c,n*sizeof(float),GDRAM2SRAM,n*sizeof(float),ldc*sizeof(float),m-1);
+      __memcpy(a_sram,src,n*m*sizeof(float),GDRAM2SRAM);
+    }
+
+  __sync_cluster();
+
+
+  int32_t data_num = m*n;
+  int32_t data_per_core = data_num / taskDim;
+  int32_t data_last_core = data_per_core + data_num % taskDim;
+  const float *a_offset = a_sram + taskId * data_per_core;
+  const float *b_offset = (float*)sram_buffer + taskId * data_per_core;
+  float *output_offset = (float*)sram_buffer + taskId * data_per_core;
+
+  if (taskId == taskDim - 1) {
+    data_per_core = data_last_core;
+  }
+
+  int32_t align_num = NFU_ALIGN_SIZE / sizeof(float);
+
+  int32_t data_nram_num =
+    MAX_NRAM_SIZE / sizeof(float) / 2 / align_num * align_num;
+  float *a_nram = (float *)nram_buffer;
+  float *b_nram = (float *)a_nram + data_nram_num;
+  int32_t loop_num = data_per_core / data_nram_num;
+  int32_t rem_nram_num = data_per_core % data_nram_num;
+
+  for (int32_t i = 0; i < loop_num; i++) {
+    __memcpy(a_nram, a_offset + i * data_nram_num,
+             data_nram_num * sizeof(float), SRAM2NRAM);
+    __memcpy(b_nram, b_offset + i * data_nram_num,
+             data_nram_num * sizeof(float), SRAM2NRAM);
+    __bang_add(a_nram, a_nram, b_nram, data_nram_num);
+    __memcpy(output_offset + i * data_nram_num, a_nram,
+             data_nram_num * sizeof(float), NRAM2SRAM);
+  }
+  if (rem_nram_num != 0) {
+    int32_t rem_align_num =
+      (rem_nram_num + align_num - 1) / align_num * align_num;
+    __memcpy(a_nram, a_offset + loop_num * data_nram_num,
+             rem_nram_num * sizeof(float), SRAM2NRAM);
+    __memcpy(b_nram, b_offset + loop_num * data_nram_num,
+             rem_nram_num * sizeof(float), SRAM2NRAM);
+    __bang_add(a_nram, a_nram, b_nram, rem_align_num);
+    __memcpy(output_offset + loop_num * data_nram_num, a_nram,
+             rem_nram_num * sizeof(float), NRAM2SRAM);
+  }
+  __sync_cluster();
+
+  if (taskId == 0) {
+      __memcpy(d_c,sram_buffer,n*sizeof(float),SRAM2GDRAM,ldc*sizeof(float),n*sizeof(float),m-1);
+
+  }
+
+  __sync_cluster();
+
+}
+
+
+mluOpStatus_t sgemm(bool trans_a, bool trans_b, int m, int n, int k, float alpha, float beta, float* d_a,int lda, float* d_b, int ldb,  float* d_c, int ldc, mluOpHandle_t handle)
+{
+    if(k==0)
+        return MLUOP_STATUS_SUCCESS;
+    int matmul_is_transA = trans_a;
+    int matmul_is_transB = trans_b;
+
+    int matmul_requested_algo = 1;
+    int matmul_recieved_algo = 0;
+    size_t tempSize_matmulExtra = 0;
+    int matmul_computetype = MLUOP_DTYPE_FLOAT;
+    float *workspace;
+    int matmul_use_beta = beta == 0.0f ? 0 : 1;
+
+    cnrtQueue_t queue;
+    mluOpGetQueue(handle,&queue);
+
+    
+
+    
+
+    
+    mluOpTensorDescriptor_t matmul_a_desc, matmul_b_desc, matmul_c_desc;
+
+    cnnlMatMulDescriptor_t matmul_desc;
+    cnnlMatMulHeuristicResult_t heuristic_result;
+    cnnlMatMulAlgo_t matmul_algo;
+
+    std::string api_name = "Cholesky";
+
+    CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_a_desc));
+    CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_b_desc));;
+    CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_c_desc));
+
+    CALL_CNNL(cnnlMatMulDescCreate(&matmul_desc));
+    CALL_CNNL(cnnlMatMulAlgoCreate(&matmul_algo));
+    CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
+
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSA,
+                                  &matmul_is_transA, sizeof(int32_t)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSB,
+                                  &matmul_is_transB, sizeof(int32_t)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_COMPUTE_TYPE,
+                                    &matmul_computetype, sizeof(int32_t))); 
+
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_USE_BETA,
+                                    &matmul_use_beta, sizeof(int32_t))); 
+
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_USE_STRIDE,
+                                    &lda, sizeof(int32_t))); 
+
+    int32_t matmul_a_shape[2] = {m, lda};
+    int32_t matmul_b_shape[2] = {n, ldb};
+    int32_t matmul_c_shape[2] = {m, n};
+
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                               matmul_a_desc, MLUOP_LAYOUT_ARRAY,
+                               MLUOP_DTYPE_FLOAT, 2, matmul_a_shape));
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                               matmul_b_desc, MLUOP_LAYOUT_ARRAY,
+                               MLUOP_DTYPE_FLOAT, 2, matmul_b_shape));
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                               matmul_c_desc, MLUOP_LAYOUT_ARRAY,
+                               MLUOP_DTYPE_FLOAT, 2, matmul_c_shape));
+
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_a_desc, cnnl_a_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_b_desc, cnnl_b_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_c_desc, cnnl_c_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_c_desc, cnnl_d_desc);
+
+
+
+    CALL_CNNL(cnnlGetMatMulAlgoHeuristic(
+        cnnl_handle, matmul_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc,
+        cnnl_d_desc, nullptr, matmul_requested_algo, &heuristic_result,
+        &matmul_recieved_algo));
+
+    CALL_CNNL(cnnlGetMatMulHeuristicResult(heuristic_result, matmul_algo,
+                                           &tempSize_matmulExtra));
+
+    // CNRT_CHECK(cnrtMalloc((void **)&workspace, tempSize_matmulExtra));
+    CNRT_CHECK(cnrtMalloc((void **)&workspace, m*n*sizeof(float)));
+
+    cnnlStrideBatchMatMul(cnnl_handle, trans_a, trans_b, m, n, k, 1, alpha, cnnl_a_desc, d_a, lda, m*lda, cnnl_b_desc, d_b, ldb, ldb*n, 0.0f, cnnl_c_desc, workspace, n, m*n);
+
+    if ( beta == 1.0f || beta == 0.0f)
+    {
+        cnrtDim3_t dim;
+        cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+        dim.x = 4;
+        dim.y = 1;
+        dim.z = 1;
+        KERNEL_CHECK(add_c<<<dim, func_type, queue>>>(beta,d_c,workspace,ldc,n,m,n));
+
+    }
+
+    return MLUOP_STATUS_SUCCESS;
+}
+
+__mlu_global__
+void inverse_kernel(float *d_input, int ld_input, float* d_output, int ld_output, int m)
+{
+    
+    __mlu_shared__ uint8_t sram_buffer[MAX_SRAM_SIZE];
+    
+
+    if (taskId == 0) {
+      __memcpy(sram_buffer,d_input,m*sizeof(float),GDRAM2SRAM,m*sizeof(float),ld_input*sizeof(float),m-1);
+    }
+    __sync_cluster();
+
+    int id = taskId;
+    int span = m/taskDim;
+    int start = id * span;
+    if (id == 3)
+    {
+        span = m - 3 * span;
+    }
+    float* nram_offset = (float*)nram_buffer + id * 3 * m * m;
+    float* nram_src1 = nram_offset;
+    float* nram_src2 = nram_src1 + m * m;
+    float* mul_result = nram_src2 + m;
+    float* nram_dst = nram_src2 + m * m;
+    float* diag_start = ((float*)sram_buffer) + m * start + start;
+    int height = m - start;
+
+    __memset_nram(nram_offset, 3 * m * m, (float)ZERO);
+
+    float result = 0.0;
+    for(int i = 0; i < span; i++)
+    {
+        int off = i * m + i;
+        result = diag_start[off];
+        result = 1.0 / result;
+        nram_src1[i*height+i] = result;
+        nram_dst[i*span + i] = result;
+        diag_start[off] = result;
+
+    }
+    __sync_cluster();
+
+
+    for(int i = 1; i < height; i++)
+    {
+        __memcpy(nram_src2,diag_start+i*m,i*sizeof(float),SRAM2NRAM);
+        int num = std::min(i, span);
+        float diag_element = diag_start[i*m+i];
+        for(int j = 0; j < num; j++)
+        {
+            float temp = 0.0;
+            __bang_mul(mul_result,nram_src2,nram_src1+j*height,i);
+            for(int k = 0; k< i; k++)
+            {
+                temp += mul_result[k];
+            }
+            temp = temp * -1.0 * diag_element;
+            nram_dst[i*span+j] = temp;
+            nram_src1[j*height+i] = temp;
+        } 
+        __sync();
+        
+    }
+
+    __sync_cluster();
+
+    if (span > 0)
+        __memcpy(diag_start,nram_dst,span*sizeof(float),NRAM2SRAM,m*sizeof(float),span*sizeof(float),height-1);
+
+    __sync_cluster();
+
+    if (taskId == 0) {
+    //   __memcpy(d_input,sram_buffer,m*m*sizeof(float),SRAM2GDRAM);
+      __memcpy(d_output,sram_buffer,m*sizeof(float),SRAM2GDRAM,ld_output*sizeof(float), m*sizeof(float),m-1);
+    }
+    
+
+}
+
+__mlu_global__ void set_zero(bool upper, int m, float* d_c, int lddc)
+{
+    int id = taskId;
+    int span = m/taskDim;
+    int pre = id * span;
+    float* start_c = d_c + pre * lddc + pre;
+    float* temp_c = start_c;
+    if (id == 3)
+    {
+        span = m - 3 * span;
+    
+    }
+    for(int i = 0; i  < span - 1; i++)
+    {
+        temp_c = start_c + i * lddc + i;
+        int num = m - pre - i;
+        __ldramset(temp_c+1, num - 1, 0);
+    }
+    if (id != 3)
+    {
+        temp_c = start_c + (span - 1) * lddc + span - 1;
+        int num = m - pre - span + 1;
+        __ldramset(temp_c+1, num - 1, 0);
+    
+    }
+}
+
+
+
+mluOpStatus_t strsm(bool upper, bool trans, int m, int n, float* d_a, int lda, float* d_b, int ldb, mluOpHandle_t handle)
+{
+    if(n==0)
+        return MLUOP_STATUS_SUCCESS;
+    mluOpTensorDescriptor_t matmul_a_desc, matmul_b_desc, info_desc;
+    std::string api_name = "Cholesky";
+
+    cnrtQueue_t queue;
+    mluOpGetQueue(handle,&queue);
+
+    int32_t *info;
+    CNRT_CHECK(cnrtMalloc((void **)&info, sizeof(int32_t)));
+
+    CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_a_desc));
+    CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_b_desc));
+    CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&info_desc));
+    int32_t matmul_a_shape[2] = {m, m};
+    int32_t matmul_b_shape[2] = {n, ldb};
+    int32_t info_shape[1] = {1};
+
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                               matmul_a_desc, MLUOP_LAYOUT_ARRAY,
+                               MLUOP_DTYPE_FLOAT, 2, matmul_a_shape));
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                               matmul_b_desc, MLUOP_LAYOUT_ARRAY,
+                               MLUOP_DTYPE_FLOAT, 2, matmul_b_shape));
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                               info_desc, MLUOP_LAYOUT_ARRAY,
+                               MLUOP_DTYPE_INT32, 1, info_shape));
+
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_a_desc, cnnl_a_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_b_desc, cnnl_b_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(info_desc, cnnl_info_desc);
+
+    float* workspace;
+    CNRT_CHECK(cnrtMalloc((void **)&workspace, m*m*sizeof(float)));
+    CNRT_CHECK(cnrtMemset(workspace, 0.0, m*m*sizeof(float)));
+
+    
+
+    int m1 = m/2;
+    int m2 = m - m1;
+
+    float* workspace1 = workspace;
+    float* workspace2 = workspace1 + m1*m+m1;
+
+    cnrtDim3_t dim;
+    cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+    dim.x = 4;
+    dim.y = 1;
+    dim.z = 1;
+    KERNEL_CHECK(inverse_kernel<<<dim, func_type, queue>>>(d_a,lda,workspace1,m,m1));
+    KERNEL_CHECK(inverse_kernel<<<dim, func_type, queue>>>(d_a+m1*lda+m1,lda,workspace2,m,m2));
+
+    sgemm(false,false,m2,m1,m1,1.0f,0.0f,d_a+m1*lda,lda,workspace1,m,workspace1+m1*m,m,handle);
+    sgemm(false,false,m2,m2,m1,-1.0f,0.0f,workspace2,m,workspace1+m1*m,m,workspace1+m1*m,m,handle);
+
+    
+
+    cnnlStrideBatchMatMul(cnnl_handle, false, true, n,m, m, 1, 1.0, cnnl_b_desc, d_b, ldb, n*ldb, cnnl_a_desc, workspace, m, m*m, 0.0f, cnnl_b_desc, d_b, ldb, n*ldb);
+
+
+
+    return MLUOP_STATUS_SUCCESS;
+}
+
+
+
+mluOpStatus_t ssyrk(bool upper, bool trans,int n, int k, float* d_a, int ldda, float* d_c, int lddc, mluOpHandle_t handle)
+{
+    if(k==0)
+        return MLUOP_STATUS_SUCCESS;
+
+    sgemm(false,true,n,n,k,-1.0f,1.0f,d_a,ldda,d_a,ldda,d_c,lddc,handle);
+    cnrtQueue_t queue;
+    mluOpGetQueue(handle,&queue);
+    cnrtDim3_t dim;
+    cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+    dim.x = 4;
+    dim.y = 1;
+    dim.z = 1;
+    KERNEL_CHECK(set_zero<<<dim, func_type, queue>>>(upper, n, d_c,lddc));
+    
+    
+    return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t mlu_spotrf_rectile(bool trans, bool uplo, int n, int recnb, float* d_A, int lda, int gbstep, mluOpHandle_t handle)
+{
+    cnrtQueue_t queue;
+    mluOpGetQueue(handle,&queue);
+    if(n==0)
+        return MLUOP_STATUS_SUCCESS;
+    
+    if(n <=recnb)
+    {
+        // printf("n:%d, recnb:%d, mlu_spotf2_lpin\n",n,recnb);
+        mlu_spotf2_lpin(trans, uplo,n,lda,d_A,gbstep,queue);
+    }
+    else
+    {
+        int n1 = n/2;
+        int n2 = n-n1;
+        mlu_spotrf_rectile(trans,uplo,n1,recnb,OFFSET_ROW(d_A,0,0),lda,gbstep, handle);
+        strsm_rectile(uplo,trans,n1,n2,OFFSET_ROW(d_A,0,0),lda,OFFSET_ROW(d_A,n1,0),lda,queue);
+        ssyrk(uplo,trans,n2,n1,d_A+n1*lda,lda,OFFSET_ROW(d_A,n1,n1),lda,handle);
+        mlu_spotrf_rectile(trans,uplo,n2,recnb,OFFSET_ROW(d_A,n1,n1),lda,gbstep+n1,handle);
+
+        
+
+    }
+    return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t transpose(int m, float* d_input,float* d_output, mluOpHandle_t handle)
+{
+    if(m==0)
+        return MLUOP_STATUS_SUCCESS;
+    cnrtQueue_t queue;
+    mluOpGetQueue(handle,&queue);
+
+    mluOpTensorDescriptor_t trans_input_desc, trans_output_desc;
+    std::string api_name = "Cholesky";
+    const int input_dim = 2;
+
+    CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&trans_input_desc));
+    CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&trans_output_desc));
+
+    int32_t transpose_input_shape[2] = {m, m};
+    int32_t transpose_output_shape[2] = {m, m};
+
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                               trans_input_desc, MLUOP_LAYOUT_ARRAY,
+                               MLUOP_DTYPE_FLOAT, 2, transpose_input_shape));
+
+    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                               trans_output_desc, MLUOP_LAYOUT_ARRAY,
+                               MLUOP_DTYPE_FLOAT, 2, transpose_output_shape));
+
+    int permute[2] = {1, 0};
+
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(trans_input_desc, cnnl_in_desc);
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(trans_output_desc, cnnl_out_desc);
+
+    cnnlTransposeDescriptor_t cnnl_trans_desc = NULL;
+
+    CALL_CNNL(cnnlCreateTransposeDescriptor(&cnnl_trans_desc));
+
+    CALL_CNNL(cnnlSetTransposeDescriptor(cnnl_trans_desc, input_dim, permute));
+
+    size_t *size = NULL;
+    size = (size_t*)malloc(sizeof(size_t));
+    
+
+    CALL_CNNL(cnnlGetTransposeWorkspaceSize(cnnl_handle, cnnl_in_desc, cnnl_trans_desc, size));
+
+    float *workspace = NULL;
+
+    CALL_CNNL(cnnlTranspose_v2(cnnl_handle, cnnl_trans_desc, cnnl_in_desc,
+                             d_input, cnnl_out_desc, d_output,
+                             workspace, *size));
+
+    return MLUOP_STATUS_SUCCESS;
+
+}
+
