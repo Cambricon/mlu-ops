@@ -14523,6 +14523,59 @@ mluOpLgamma(mluOpHandle_t handle,
             const mluOpTensorDescriptor_t y_desc,
             void *y);
 
+/*!
+ * @brief Computes the Cholesky factorization of a Hermitian positive-definite matrix. 
+ *
+ * @param[in] handle
+ *   Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues in the
+ *   deformable convolution operation. For detailed information, see ::mluOpHandle_t.
+ *
+ * @param[in] input_desc
+ *  The descriptor of the input matrix to factorise, it is an n×n Hermitian matrix, 
+ *  only the lower or upper part is meaningful.
+ * 
+ * @param[in] d_input
+ * Pointer to the MLU memory that stores the input matrix.
+ * 
+ * @param[in] output_desc
+ * The descriptor of the result matrix, it is an n×n lower triangular matrix or an upper triangular matrix.
+ * 
+ * @param[out] d_output
+ * Pointer to the MLU memory that stores the result matrix.
+ * 
+ * @param[in] upper
+ * upper indicates which part of the matrix is used. 
+ * 
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
+ *
+ * @par Data Type
+ * - float32
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example.
+ * - None.
+ *
+ * @par Reference.
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API 
+mluOpCholesky(mluOpHandle_t handle,
+              const mluOpTensorDescriptor_t input_desc,
+              float* d_input, 
+              const mluOpTensorDescriptor_t output_desc, 
+              float* d_output,bool upper);
 #if defined(__cplusplus)
 }
 #endif
