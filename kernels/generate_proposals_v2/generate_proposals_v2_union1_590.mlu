@@ -226,7 +226,7 @@ __mlu_func__ void proposalBoxesDecode(
              deal_num * sizeof(T), GDRAM2NRAM);
     // filter bbox
     int32_t count = 0;
-    FilterBoxes(proposals_score_nram, proposals_box_nram, im_shape, temp_nram,
+    filterBoxes(proposals_score_nram, proposals_box_nram, im_shape, temp_nram,
                 variances_nram, &count, deal_num, min_size, pixel_offset);
 
     // store output:box and score.
@@ -301,7 +301,7 @@ __mlu_func__ void ProposalForOneImage(
   int *collect_num = (int *)proposals_temp + 5 * hwa;
   int proposals_num = 0;
   collect_num[taskId] = 0;
-  ProposalBoxesDecode(scores, scores_index, bbox_deltas, im_shape, anchors,
+  proposalBoxesDecode(scores, scores_index, bbox_deltas, im_shape, anchors,
                       variances, min_size, pixel_offset, proposals_score,
                       proposals_box, proposals_temp, topk, hwa, collect_num,
                       &proposals_num);
