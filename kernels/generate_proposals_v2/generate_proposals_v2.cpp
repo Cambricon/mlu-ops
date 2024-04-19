@@ -48,7 +48,6 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   }
   k_dim->y = 1;
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
   if (job < 4) {
     k_dim->x = 1;
     *k_type = CNRT_FUNC_TYPE_BLOCK;
