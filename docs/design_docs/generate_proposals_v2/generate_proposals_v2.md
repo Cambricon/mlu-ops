@@ -8,6 +8,7 @@
 | 版本号| 修订人 | 修订日期 | 修订描述 |
 | ----- | ------ | -------  | -------  |
 | V1.0  | 谷中豪   | 2022-08-22 | 首次提交 |
+| V1.1  | 马向军   | 2024-04-19 | nan/inf支持及性能优化 |
 
 * #### 内容描述
 本文档为`generate_proposals_v2`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录。
@@ -396,8 +397,8 @@ int rem_num = per_core_num % seg_pad_k;
 // |  HWA         | taskDim   |  taskDim  |
 ```
 
-#### 3.1.2 createAndRemoveBoxes 实现
-##### 3.1.2.1 createAndRemoveBoxes 过程中每个core上的数据量和偏移的计算
+#### 3.1.2 FilterBoxes 实现
+##### 3.1.2.1 FilterBoxes 过程中每个core上的数据量和偏移的计算
 ```c+
 // 计算每个cluster上的数据量
 int rem_num = pre_nms_top_n % taskDimY;
@@ -415,31 +416,31 @@ int repeat =  per_core_num / seg_pad_1;
 int rem_num = per_core_num % seg_pad_1;
 ```
 
-##### 3.1.2.2 createAndRemoveBox 实现过程
+##### 3.1.2.2 FilterBoxes 实现过程
 1. 从 GDRAM 上load scores、anchors、bbox_deltas、variances数据，平分到每个 core 上的 nram 空间，每个core上 load 的大小为 per_core_num, core 上每次循环load seg_pad_1 个数据;
 
 2. 单次循环load完数据后，使用bang_ge 获取 nram 上 scores 大于等于 k_score 的mask;
 
 3. 使用 bang_collect，根据 第2步的mask， 把 mask 等于1位置的`scores`、`anchors`、`bbox_deltas`、`variances`值collect到一起, `scores` 需要collect一次, `anchors`、`bbox_deltas`、`variances`需要对四个值分别进行collect, 每次循环 collect 数量为seg_pad_1;
 
-4. 用 collect 后的数据，根据 createbox 计算过程创建 proposals;
+4. 用 collect 后的数据，根据 proposalsBoxesDecode 计算过程创建 proposals;
 
 5. 根据 removeSmallBox 的计算方法，生成新的 mask2， 用 bang_collect 操作移除proposal中宽和高小于 min_size 的 proposal，把有效的 proposals 集中到一起，此时，单次循环内的计算过程结束；
 
 6. 把单次循环时创建好 proposal 数据，保存到 workspace 空间内， 若单 core 内数据未处理完，回到第 2 步；<br>
 
-##### 3.1.2.3 createAndRemoveBox 的nram空间和workspace划分
+##### 3.1.2.3 FilterBoxes 的nram空间和workspace划分
 ```c++
 // nram：重新从 worksapce 上 load scores、anchors、bbox_deltas、variance， seg_pad_1 = max_nram_size / (13 + X)
 // |  scores   | anchors       | bbox_deltas   | variances     | nram_temp     |
 // | seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | 4 * seg_pad_1 | X * seg_pad_1 |
 
-// workspace : createAndRemoveBox 后的 proposals 存放到 worksapce 中, 其对应的 scores 也存放在 worksapce 中
+// workspace : FilterBoxes 后的 proposals 存放到 worksapce 中, 其对应的 scores 也存放在 worksapce 中
 // | scores | proposals | scores_tmp | proposals_tmp | collect_num |
 // | AHW    | AHW * 4   | AHW        | AHW * 4       | taskDim     |
 ```
 
-##### 3.1.2.4 createbox 计算过程
+##### 3.1.2.4 proposalsBoxesDecode 计算过程
 a. 根据anchor 两个点坐标 (xmin，ymin，xmax，ymax) 计算 box_anchor的中心点坐标 (cx， cy) 及 anchor的宽高；<br>
 ```c++
 offset = pixes_offset? 1.0 : 0;
@@ -473,7 +474,7 @@ proposals[1] = Max(Min(oymin, im_shape[0] - offset), 0.);
 proposals[2] = Max(Min(oxmax, im_shape[1] - offset), 0.);
 proposals[3] = Max(Min(oymax, im_shape[0] - offset), 0.);
 ```
-##### 3.1.2.5 removeSmallBoxs 计算过程
+##### 3.1.2.5 filterBoxes 计算过程
 1. 通过proposals的两点坐标计算 proposal的宽 box_w和高 box_h；
 
 2. 用bang_ge方法，分别获取box_w 和 box_h 和 min_size 比较的mask，记为mask_w 和 mask_h;
@@ -556,7 +557,7 @@ __mlu_func__ void mluOpsGeneratorProposalsV2Kernel(){
     int core_offset =(coreId < rem_core_num) ? coreId * per_core_num : coreId * per_core_num + rem_core_num;
     ...
     getTopKVal();
-    createBox();
+    proposalsBoxesDecode();
     removeSmallBox();
     nms();
     ...
@@ -600,8 +601,8 @@ __mul_func__ void getTopKVal(T * scores, T * bbox_deltas, T *anchors, T *varianc
   }
 }
 
-// createbox实现
-// `createbox` 根据输入anchor、bbox_deltas、variances的坐标，生成proposals;
+// proposalsBoxesDecode实现
+// `proposalsBoxesDecode` 根据输入anchor、bbox_deltas、variances的坐标，生成proposals;
 
 // output = exp(input)
 __mlu__func void calcExp(T * output, const T * input, cpnst int length){
@@ -614,7 +615,7 @@ __mlu__func void calcExp(T * output, const T * input, cpnst int length){
 #endif
 }
 // 生成proposals
-__mlu__func void createBox(const T* anchor, const T *deltas, const T *var, const int deal_size, T * proposals, T *nram_temp, bool pixes_offset = true){
+__mlu__func void proposalsBoxesDecode(const T* anchor, const T *deltas, const T *var, const int deal_size, T * proposals, T *nram_temp, bool pixes_offset = true){
   T *axmin = anchor;
   T *aymin = anchor + deal_size;
   T *axmax= anchor + 2 * deal_size;
@@ -768,6 +769,15 @@ __mlu_func__ void removeSmallBox(T * boxes, T *scores, const T *im_size,
  __bang_collect(scores, scores, mask_result, deal_size);
 }
 ```
+### 优化方案
+1. host调用topk kernel，输出按照降序排序的前topk大的scores和对应的indexes，替换在nram实现的只输出第topk大的score的kernel。原实现top标量计算及分支判断较多，性能较差。优化前后Load的IO数据量相同。主要优化点为计算效率提升。
+
+2. 根据indexes只gather前topk个scores。具体步骤为：
+- 根据indexes计算gather score的offset_score，gather对应的score到nram
+- 计算gather deltaboxes，anchors，variances对应的offset，offset = 4 * offset_score，
+- 对gather到nram的deltaboxes，anchors，variances进行transpose操作，使x1，y1，x2，y2连续
+- 计算部分不再需要比较和select操作，其它同proposalsBoxesDecode计算一样，减少计算量
+- Load IO量减少到N * topk + 4 * N * topk + topk + topk（topk <= H * W * A。 实际网络中H * W * A远大与topk)
 
 ### 3.3 拆分(任务拆分，多核拆分)
 **拆分策略**
