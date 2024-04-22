@@ -769,6 +769,9 @@ __mlu_func__ void removeSmallBox(T * boxes, T *scores, const T *im_size,
  __bang_collect(scores, scores, mask_result, deal_size);
 }
 ```
+### 优化方案
+1. host调用topk kernel, 输出前topk大的scores和对应的indexes.　Load IO量: N * H * W * A．
+2. 根据indexes只gather前topk个scores，deltaboxes，anchors，variances，计算部分无需比较和select．Load IO量：N * topk + 4 * N * topk + topk + topk．（topk <= H * W * A. 实际网络中H * W * A远大与topk).
 
 ### 3.3 拆分(任务拆分，多核拆分)
 **拆分策略**
