@@ -28,7 +28,7 @@
 __nram__ char nram_buffer[PROPOSAL_NRAM_SIZE];
 __mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
 
-#define FLOAT_MIN (-(float)FLT_MAX)
+#define FLOAT_MIN_GPV2 (-(float)FLT_MAX)
 
 template <typename T>
 __mlu_func__ void calcExp(T *output, T *input, int length) {
@@ -48,7 +48,7 @@ __mlu_func__ void findCoreMaxBox(T *input_score_ptr, T *score, T *inter_x1,
   if (__is_mpu()) {
     return;
   }
-  T local_max_score = FLOAT_MIN;
+  T local_max_score = FLOAT_MIN_GPV2;
   for (int i = 0; i <= repeat; i++) {
     if (i == repeat && remain == 0) {
       break;
@@ -57,13 +57,13 @@ __mlu_func__ void findCoreMaxBox(T *input_score_ptr, T *score, T *inter_x1,
     const int actual_num_align = CEIL_ALIGN(actual_num, ALIGN_NUM);
     const int seg_offset = input_offset + i * max_seg_num;
     /******nms load start******/
-    __bang_write_value(score, actual_num_align, FLOAT_MIN);
+    __bang_write_value(score, actual_num_align, FLOAT_MIN_GPV2);
     __memcpy(score, input_score_ptr + seg_offset, actual_num * sizeof(T),
              GDRAM2NRAM);
     /******nms load end******/
     __bang_argmax(inter_x1, score, actual_num_align);
     if (inter_x1[0] >= local_max_score) {
-      if (inter_x1[0] == FLOAT_MIN) {
+      if (inter_x1[0] == FLOAT_MIN_GPV2) {
         local_max_score = inter_x1[0];
         local_max_index = ((int *)inter_x1)[1] + seg_offset;
         continue;
@@ -106,7 +106,7 @@ __mlu_func__ void findClusterMaxBox(T *sram, T *max_box, T *inter_x1,
    * size: sizeof(T)
    * seg_num: 3
   ***************************************************/
-  __bang_write_value(inter_x1, 64, FLOAT_MIN);
+  __bang_write_value(inter_x1, 64, FLOAT_MIN_GPV2);
   __memcpy(inter_x1, sram, sizeof(T), SRAM2NRAM, sizeof(T), 6 * sizeof(T),
            coreDim - 1);
   __bang_argmax(max_box, inter_x1, 64);
@@ -137,7 +137,7 @@ __mlu_func__ void storeResult(T *max_box, T *nram_save, T *&output_boxes_tmp,
                               int &nram_save_count, int &output_box_num) {
   /*****NMS STORE START*****/
   // store to nram
-  if (max_box[0] > FLOAT_MIN) {
+  if (max_box[0] > FLOAT_MIN_GPV2) {
     if (clusterId == 0 && coreId == 0) {
       __memcpy(nram_save + nram_save_count * 5, max_box, 5 * sizeof(T),
                NRAM2NRAM, 5 * sizeof(T), 5 * sizeof(T), 0);
@@ -148,7 +148,7 @@ __mlu_func__ void storeResult(T *max_box, T *nram_save, T *&output_boxes_tmp,
   // store to sram/gdram
   if (output_box_num != 0) {
     if ((nram_save_count == nram_save_limit_count) ||
-        (float(max_box[0]) <= FLOAT_MIN) || keep == nms_num - 1) {
+        (float(max_box[0]) <= FLOAT_MIN_GPV2) || keep == nms_num - 1) {
       if (nram_save_count != 0) {
         if (clusterId == 0 && coreId == 0) {
           pvLock();
@@ -254,7 +254,7 @@ __mlu_func__ void scoreUpdate(
     __bang_le(inter_y1, inter_x1, inter_x2, actual_num_align);
     __bang_gt(inter_y2, inter_x1, inter_x2, actual_num_align);
     __bang_mul(inter_y1, scores, inter_y1, actual_num_align);
-    __bang_mul_scalar(inter_y2, inter_y2, FLOAT_MIN, actual_num_align);
+    __bang_mul_scalar(inter_y2, inter_y2, FLOAT_MIN_GPV2, actual_num_align);
     __bang_add(scores, inter_y1, inter_y2, actual_num_align);
     /*****NMS COMPUTE END*****/
     __memcpy(input_score_ptr + seg_offset, scores, actual_num * sizeof(T),
@@ -355,17 +355,17 @@ __mlu_func__ void nonMaximumSuppress(
       __sync_all_ipu();
     }
     /*****Find MaxBox Box*****/
-    int max_index = 0;         // the max score index.
-    int global_max_index = 0;  // for u1.
-    T max_area = 0;            // the max score area.
-    max_box[0] = FLOAT_MIN;    // init 0.
+    int max_index = 0;            // the max score index.
+    int global_max_index = 0;     // for u1.
+    T max_area = 0;               // the max score area.
+    max_box[0] = FLOAT_MIN_GPV2;  // init 0.
     findCoreMaxBox(input_scores_ptr, scores, inter_x1, inter_y1, inter_x2,
                    max_box, input_x1_ptr, input_y1_ptr, input_x2_ptr,
                    input_y2_ptr, core_offset, repeat, remain_num, max_seg_num,
                    max_index);
     if (taskDim == 1) {
       calMaxArea(max_box, pixel_offset, &max_area);
-      input_scores_ptr[max_index] = FLOAT_MIN;
+      input_scores_ptr[max_index] = FLOAT_MIN_GPV2;
       global_max_index = max_index;
     } else if (taskDim == 4) {
       __sync_all_ipu();
@@ -378,11 +378,11 @@ __mlu_func__ void nonMaximumSuppress(
                 nram_save_limit_count, nms_num, nms_thresh, nram_save_count,
                 *output_num);
     if (taskDim == 1) {
-      if (float(max_box[0]) <= FLOAT_MIN || (nms_id == nms_num - 1)) {
+      if (float(max_box[0]) <= FLOAT_MIN_GPV2 || (nms_id == nms_num - 1)) {
         break;
       }
     } else {
-      if (float(max_box[0]) <= FLOAT_MIN || (nms_id == nms_num - 1)) {
+      if (float(max_box[0]) <= FLOAT_MIN_GPV2 || (nms_id == nms_num - 1)) {
         if (coreId == 0) {
           loop_end_flag[0] = 1;
         }

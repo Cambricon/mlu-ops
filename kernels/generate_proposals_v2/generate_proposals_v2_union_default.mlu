@@ -67,11 +67,11 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
   T *scores = result + ALIGN_NUM;
   T *ge_mask = scores + max_seg_num;
 
-  T global_max_value = FLOAT_MIN;
-  T local_max_value = FLOAT_MIN;
+  T global_max_value = FLOAT_MIN_GPV2;
+  T local_max_value = FLOAT_MIN_GPV2;
 
   const int align_write_num = CEIL_ALIGN(max_seg_num, ALIGN_NUM);
-  __bang_write_value(scores, align_write_num, FLOAT_MIN);
+  __bang_write_value(scores, align_write_num, FLOAT_MIN_GPV2);
   for (int seg_id = 0; seg_id <= repeat; ++seg_id) {
     if (seg_id == repeat && remain_num == 0) {
       break;
@@ -104,7 +104,7 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
 
   // look for k_score
   T up = global_max_value;
-  T dn = FLOAT_MIN;
+  T dn = FLOAT_MIN_GPV2;
   T mid = dn + (up - dn) * 0.5;
 
   int ge_count = 0;
@@ -121,7 +121,7 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
       const int actual_num = (seg_id == repeat) ? remain_num : max_seg_num;
       const int actual_num_align = CEIL_ALIGN(actual_num, ALIGN_NUM);
 
-      __bang_write_value(scores, actual_num_align, FLOAT_MIN);
+      __bang_write_value(scores, actual_num_align, FLOAT_MIN_GPV2);
       __memcpy(scores, intput_scores_ptr + core_offset + seg_id * max_seg_num,
                sizeof(T) * actual_num, GDRAM2NRAM);
 
@@ -206,13 +206,13 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
       }
 
       // Set the scores of the last `diff` positions of the `mask_eq` equal to 1
-      // to FLOAT_MIN
+      // to FLOAT_MIN_GPV2
       const int count = __bang_count(mask_eq, actual_num_align);
       for (int j = 0; j < count; j++) {
         int eq_score_index = __bang_findlast1(mask_eq, actual_num_align);
         mask_eq[eq_score_index] = 0;
         eq_score_index = eq_score_index + seg_id * max_seg_num;
-        workspace[eq_score_index] = FLOAT_MIN;
+        workspace[eq_score_index] = FLOAT_MIN_GPV2;
         diff_deal_num++;
         if (diff_deal_num == diff) {
           return;
@@ -516,7 +516,7 @@ __mlu_func__ void createAndRemoveBox(
     const int anchor_offset = (core_offset + seg_id * max_seg_num) * 4;
 
     // load anchors, bbox_deltals, scores, variances
-    __bang_write_value(scores, actual_num_align, FLOAT_MIN);
+    __bang_write_value(scores, actual_num_align, FLOAT_MIN_GPV2);
     __memcpy(scores, intput_scores_ptr + scores_offset, sizeof(T) * actual_num,
              GDRAM2NRAM);
 

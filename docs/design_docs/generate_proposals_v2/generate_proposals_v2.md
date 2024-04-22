@@ -770,8 +770,14 @@ __mlu_func__ void removeSmallBox(T * boxes, T *scores, const T *im_size,
 }
 ```
 ### 优化方案
-1. host调用topk kernel, 输出前topk大的scores和对应的indexes.　Load IO量: N * H * W * A．
-2. 根据indexes只gather前topk个scores，deltaboxes，anchors，variances，计算部分无需比较和select．Load IO量：N * topk + 4 * N * topk + topk + topk．（topk <= H * W * A. 实际网络中H * W * A远大与topk).
+1. host调用topk kernel，输出按照降序排序的前topk大的scores和对应的indexes，替换在nram实现的只输出第topk大的score的kernel。原实现top标量计算及分支判断较多，性能较差。优化前后Load的IO数据量相同。主要优化点为计算效率提升。
+
+2. 根据indexes只gather前topk个scores。具体步骤为：
+- 根据indexes计算gather score的offset_score，gather对应的score到nram
+- 计算gather deltaboxes，anchors，variances对应的offset，offset = 4 * offset_score，
+- 对gather到nram的deltaboxes，anchors，variances进行transpose操作，使x1，y1，x2，y2连续
+- 计算部分不再需要比较和select操作，其它同proposalsBoxesDecode计算一样，减少计算量
+- Load IO量减少到N * topk + 4 * N * topk + topk + topk（topk <= H * W * A。 实际网络中H * W * A远大与topk)
 
 ### 3.3 拆分(任务拆分，多核拆分)
 **拆分策略**
