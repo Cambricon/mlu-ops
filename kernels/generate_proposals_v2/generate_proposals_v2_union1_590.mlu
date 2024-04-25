@@ -149,7 +149,6 @@ __mlu_func__ void proposalBoxesDecode(
     const int32_t deal_num = (iter == repeat) ? rem : align_count;
     const int64_t core_iter_offset = num_offset + align_count * iter;
     // gather anchors:x1,y1,x2,y2 by correspond sorted_index.
-
     __memcpy(sorted_index_nram, sorted_index + core_iter_offset,
              deal_num * sizeof(T), GDRAM2NRAM);
     // sorted_index->anchors_index ([HWA,1]->[HWA,4])
