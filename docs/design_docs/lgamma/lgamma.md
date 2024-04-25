@@ -1,0 +1,309 @@
+# lgamma 算子开发设计方案
+
+
+- #### 文档基本信息
+
+| 算子名称    | lgamma                 |
+| --------- | -------------------------------------|
+| 编制人/日期 | 代韵涛/2024-04-25                      |
+
+- #### 修改记录
+
+| 版本号| 修订人 | 修订日期 | 修订描述 |
+| ----- | ------ | -------  | -------  |
+| V1.0  | 代韵涛    | 2024-04-25   | 首次提交 |
+
+- #### 内容描述
+
+本文档为`lgamma`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录。
+
+- #### 算子需求 checklist
+
+* 算子接口描述
+* 功能描述
+* 框架版本 + 对应源码路径
+* 需求对应网络
+* 网络中用到的规模
+* 是否需要支持原位
+* 是否需要支持 stride 机制
+* 框架单元测试阈值指标（可选）
+
+## 1 需求分析
+
+### 1.1 算子需求分析
+
+该需求分析为 FIXME
+
+
+| 算子功能简介| 该算子根据lgamma函数计算输入张量input中每个元素作为输出，输出相同Shape的张量                  |
+|-------------|--------------------------------------------------------------|
+| 需求来源    | Pytorch                                                       |
+| 应用网络    | LDA模型（隐式狄利克雷分布）                                     |
+| 输入数据类型|     half, float                                               |
+| 输入Shape   | input: 任意Tensor                                             |
+| 输入Layout  | Array                                                         |
+| 输出数据类型| half, float                                                   |
+| 输出Shape   | 同输入                                                        |
+| 输出Layout  | 无要求                                                        |
+| 模式(可选） |                                                               |
+| 是否含有dim/axis等类似语义的参数且该参数支持负数/其他特殊处理 | 否              |
+| 是否含有labels/index等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 否  |
+| 是否需要支持原位        | 是                                                  |
+| 是否需要支持stride机制  | 否                                                  |
+| 是否需要支持广播  | 否                      |
+| 0元素检查是否直接返回  | 输入为空 Tensor 直接返回  |
+
+### 1.2 算子功能和应用场景描述
+
+
+- 算子功能：该算子根据lgamma函数计算输入张量中每个元素作为输出，输出相同Shape的张量
+
+    lgamma函数计算输入的绝对值的gamma函数的自然对数，其公式如下
+
+    $lgamma(x) = ln | \Gamma (x)|$
+
+   gamma函数计算公式如下：
+   $\Gamma(x) =  \int_{0}^{+\infty} t^{x-1} e^{-t} dt (x>0)$
+
+- 备注：
+
+- 1、输入存在nan/inf的，不影响其他位置计算结果，原nan/inf在输出后不变
+
+### 1.3 算子输入输出参数要求
+
+| 参数             | 语义                                                         | 类型（输入/输出） | 支持类型               | 物理布局 | 规模限制 |
+| ---------------- | ------------------------------------------------------------ | ----------------- | ---------------------- | -------- | -------- |
+| handle           |  操作句柄                  | 输入              |    mluOpHandle_t      | /        | 无       |
+| x_desc    | 输入向量 x 的描述信息         | 输入              | mluOpTensorDescriptor_t  | 无       | 无       |
+| x         | 指向 x 的 mlu 地址的指针    | 输入       | const void*                   | Array       | 无       |
+| y_desc    | 输出向量 y 的描述信息         | 输出              | mluOpTensorDescriptor_t  | 无       | 无       |
+| y         | 指向 y 的 mlu 地址的指针    | 输入       | void*                   | Array       | 无       |
+
+### 1.4 算子限制
+
+| 限制类型    | 详细说明                                            |
+| ----------- | ------------------------------------------------------------ |
+| 数据类型限制| input仅支持half和float |
+| 布局限制    | Array             |
+| 规模限制    | 无               |
+| 功能限制    | 无                         |
+| 数据范围限制|  无     |
+| 原位限制    | 支持原位|
+| stride限制  | 不支持stride机制|
+| 广播限制    | 不支持广播|
+
+### 1.5 验收标准
+
+#### 1.5.1 精度验收标准
+
+本算子属于算数类算子，验收标准为 diff3=0。
+
+#### 1.5.2 性能验收标准
+
+见 [MLU-OPS 性能验收标准](../MLU-OPS-Performance-Acceptance-Standard.md)。
+
+## 2 算子接口设计
+
+### 2.1 参考接口
+
+- torch
+```python
+torch.lgamma(input, *, out=None) → Tensor
+```
+
+### 2.2 接口设计
+
+```c++
+mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
+                                      const mluOpTensorDescriptor_t x_desc,
+                                      const void *x,
+                                      const mluOpTensorDescriptor_t y_desc,
+                                      void *y)；
+```
+
+
+## 3 实现方案设计
+
+### 3.1 实现方案
+
+- step1 将输入张量 input 看做是一个一维数组，平均分配到所有可用的计算核上进行计算
+- step2 每个core执行task任务时，将该次任务对应的输入部分从 GDRAM 拷贝至 NRAM，使用兰克泽斯逼进(Lanczos approximation)法进行计算，该算法实现参考 [MindSpore 实现](https://github.com/mindspore-ai/mindspore/blob/master/mindspore/ccsrc/plugin/device/ascend/kernel/aicpu/aicpu_ops/cpu_kernel/utils/igamma_utils.h#L58)，并在本算子中实现了 simd 版本
+- step3 将计算完成后的数据从 NRAM 拷贝回 GDRAM 
+
+### 3.2 伪代码实现
+
+以下是兰克泽斯逼进算法实现的 C++ 版本，本算子根据 BANG C 提供的 api 将其翻译为了 simd 版本
+```C++
+T Lgamma(const T &input) {
+  T log_pi = std::log(M_PI);
+  T log_sqrt_two_pi = (std::log(2) + std::log(M_PI)) / 2;
+
+  /** If the input is less than 0.5 use Euler's reflection formula:
+   * gamma(x) = pi / (sin(pi * x) * gamma(1 - x))
+   */
+  bool need_to_reflect = (input < 0.5);
+  T input_after_reflect = need_to_reflect ? -input : input - 1;  // aka z
+
+  T sum = kBaseLanczosCoeff;  // aka x
+  for (int i = 0, end = kLanczosCoefficients.size(); i < end; ++i) {
+    T lanczos_coefficient = kLanczosCoefficients[i];
+
+    sum += lanczos_coefficient / (input_after_reflect + i + 1);
+  }
+
+  /** To improve accuracy on platforms with less-precise log implementations,
+   * compute log(lanczos_gamma_plus_one_half) at compile time and use log1p on
+   * the device.
+   * log(t) = log(kLanczosGamma + 0.5 + z)
+   *        = log(kLanczosGamma + 0.5) + log1p(z / (kLanczosGamma + 0.5))
+   * */
+  T gamma_plus_onehalf_plus_z = kLanczosGamma + 0.5 + input_after_reflect;  // aka t
+
+  T log_t = log_lanczos_gamma_plus_one_half + std::log1pf(input_after_reflect / (kLanczosGamma + 0.5));
+
+  /** Compute the final result (modulo reflection).  t(z) may be large, and we
+   * need to be careful not to overflow to infinity in the first term of
+   *   (z + 1/2) * log(t(z)) - t(z).
+   * Therefore we compute this as
+   *   (z + 1/2 - t(z) / log(t(z))) * log(t(z)).
+   */
+  T log_y = log_sqrt_two_pi + (input_after_reflect + 0.5 - gamma_plus_onehalf_plus_z / log_t) * log_t + std::log(sum);
+
+  /** Compute the reflected value, used when x < 0.5:
+   *
+   *   lgamma(x) = log(pi) - lgamma(1-x) - log(abs(sin(pi * x))).
+   *
+   * (The abs is because lgamma is the log of the absolute value of the gamma
+   * function.)
+   *
+   * We have to be careful when computing the final term above. gamma(x) goes
+   * to +/-inf at every integer x < 0, and this is controlled by the
+   * sin(pi * x) term.  The slope is large, so precision is particularly
+   * important.
+   *
+   * Because abs(sin(pi * x)) has period 1, we can equivalently use
+   * abs(sin(pi * frac(x))), where frac(x) is the fractional part of x.  This
+   * is more numerically accurate: It doesn't overflow to inf like pi * x can,
+   * and if x is an integer, it evaluates to 0 exactly, which is significant
+   * because we then take the log of this value, and log(0) is inf.
+   *
+   * We don't have a frac(x) primitive in XLA and computing it is tricky, but
+   * because abs(sin(pi * x)) = abs(sin(pi * abs(x))), it's good enough for
+   * our purposes to use abs(frac(x)) = abs(x) - floor(abs(x)).
+   *
+   * Furthermore, pi * abs(frac(x)) loses precision when abs(frac(x)) is close
+   * to 1.  To remedy this, we can use the fact that sin(pi * x) in the domain
+   * [0, 1] is symmetric across the line Y=0.5.
+   */
+  T abs_input = std::abs(input);
+  T abs_frac_input = abs_input - std::floor(abs_input);
+
+  /* Convert values of abs_frac_input > 0.5 to (1 - frac_input) to improve
+   * precision of pi * abs_frac_input for values of abs_frac_input close to 1.
+   */
+  T reduced_frac_input = (abs_frac_input > 0.5) ? 1 - abs_frac_input : abs_frac_input;
+  T reflection_denom = std::log(std::sin(M_PI * reduced_frac_input));
+
+  /* Avoid computing -inf - inf, which is nan.  If reflection_denom is +/-inf,
+   * then it "wins" and the result is +/-inf.
+   */
+  T reflection = std::isfinite(reflection_denom) ? log_pi - reflection_denom - log_y : -reflection_denom;
+
+  T result = need_to_reflect ? reflection : log_y;
+
+  return std::isinf(input) ? std::numeric_limits<T>::infinity() : result;
+}
+
+```
+
+### 3.3 拆分(任务拆分，多核拆分)
+
+1、基本任务类型是Block
+
+2、对 input 进行数据拆分，当前可获得 MLU 核心数决定了任务数量 taskDim，将 input 平均分为 $\lfloor len(input) / taskDim \rfloor$ 个，每次任务分配给核心进行计算
+
+3、对不能均匀拆分的情况下，最后一次任务将计算所有未处理的元素
+
+
+### 3.4 性能优化设计
+1、资源分配
+
+| 表项            | 分配策略   |
+| ----------------| -----------|
+| NRAM            | 存放一次 task 中输入数据、中间数据、结果数据 |
+| WRAM            |  |
+| SRAM            |  |
+| DRAM(workspace) | 用于存放输入张量 input 的内存空间 |
+
+2、NRAM 分配策略
+
+本算子是 element-wise 算子，加速比与执行 simd 运算的元素数量成正相关，simd 一次可以计算的元素数量受到 NRAM 的限制
+
+在算子计算过程中，有非常的多的中间变量存储，由于实现 simd ，所以每个中间变量在 NRAM 中占据的大小都是 sizeof(T) * simd 一次计算的元素数量，同时，NRAM 空间有限，NRAM 和 中间变量 buffer 的长度 buffer_size 和 buffer 数量 n_buffer 关系如下
+
+nram_size = buffer_size * n_buffer
+
+用于存储中间变量的 buffer 数与 simd 一次可以计算的元素数量成反比。想要 simd 一次能够计算更多的数据，就要对存储中间变量的 buffer 进行复用，使用尽可能少的 buffer，最终结果为至少需要 5 个 buffer 同时存储中间变量。所以，每个 task 在计算过程中除预留 5 KB 作为栈预留空间外，所有的 NRAM 资源全部平均分配给 5 个中间变量 buffer
+
+2、流水设计
+本算子是 element-wise 算子，同时计算每一个元素的步骤较复杂，所以瓶颈主要在于计算侧，数据存取的时间在整个运算时间中占比不大；同时，软件流水需要使用 NRAM 空间，在本算子对 NRAM 需求较大，由于可以使用的 NRAM 空间有限，使用软件流水将导致一次 simd 计算中可以处理的元素数量减少，所以未采用软件流水
+
+
+
+
+### 3.5 可维护性设计
+
+1、bangc 代码中加入必要的 log 信息，比如输入的规模、数据类型、layout 这些，以及如果出错会导致程序 core dump 的变量，比如 IO 指令的 data_size、dim xyz 的值等，这些信息都是有利于快速定位问题；
+
+2、对每一个函数命名变量命名都有充分的注释；
+
+3、避免魔鬼数字，对于确定的数字尽量使用公共宏来替代。
+
+### 3.6 测试用例设计
+
+- 算子在网络中用到的规模：
+  - case0: float，input: [ 128, 748, 80 ]
+  - case1: float，input: [ 8, 65536, 10 ]
+  - case2: float，input: [ 273600, 4 ]
+  - case3: float，input: [ 8, 32768, 1 ]
+  - case4: float，input: [ 1179648 ]
+  - case5: half, input: [ 16646144 ]
+  - case6: half, input: [ 18, 48000 ]
+  - case7: half, input: [ 10, 65536, 1]
+  - case8: half, input: [ 7020, 1000]
+  - case9: half, input: [ 57145500 ]
+
+- 边界case：
+  - case0: 负整数产生 inf 值 - not pass
+  - case1: 输入 nan\inf，正确产生输出 - not test 
+  - case2: 输入空向量，正确产生输出 - not test 
+
+  
+  
+### 3.7 算子防呆检查
+
+- 列出算子需要做的防呆，比如
+
+1、指针为空防呆；
+
+2、0 元素检查防呆，VLOG(5)打印信息，是否返回与框架沟通；
+
+3、涉及 workspace 算子对于 workspace_size 的检查防呆；
+
+4、是否需要对输入输出支持的 dtype、layout 以及 shape 进行防呆；
+
+5、elementwise 算子则需要保证输入输出的每一个维度都要一样；
+
+6、算子存在的自身的相关参数防呆。
+
+主要是列出 4,5,6 防呆内容，方便 review。
+
+## 4 算子性能/精度问题 & 优化记录
+
+### 4.1 当前存在问题的规模说明
+
+需要支持 stride 机制
+
+### 4.2 已经过优化的规模说明
+
+新算子暂无
