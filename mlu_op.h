@@ -3998,9 +3998,10 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  * - None.
  *
  * @par Note
- * - This commit does not support NAN/INF or adaptive NMS.
+ * - The operater does not support adaptive NMS.
  * - The attribute `eta` should not be less than 1.
  * - ``nms_thresh`` should be more than 0.
+ * - On MLU300 series and above, the input \b scores with NaN is not supported.
  *
  * @par Example
  * - None.
@@ -4133,7 +4134,7 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  * - None.
  *
  * @par Note
- * - This commit does not support NAN/INF.
+ * - The operator does not support NAN/INF.
  * - The coordinates of the input boxes must all be sorted clockwise or
  *   counterclockwise. If the coordinates of the boxes are out of order,
  *   the calculation result is not guaranteed and is consistent with the
