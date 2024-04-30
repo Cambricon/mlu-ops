@@ -1,0 +1,123 @@
+
+#include "sgetrf.h"
+
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+
+#define MAX_SIZE 1024
+#define ZERO 0
+#define CEILDIV(x, y) ((x + y - 1) / y)
+#define ROUNDUP(x, y) (CEILDIV(x, y) * y)
+
+__mlu_global__ void MLUKernelInverse(int batch,
+                                     float *d_input, int ld_input, int stride_input,
+                                     float *d_output, int ld_output, int stride_output,
+                                     int m)
+{
+    int id = taskId;
+    int batch_id = id / 4;
+    if (batch_id >= batch)
+        return;
+    id = taskId % 4;
+    float *orignInput = d_input;
+    float *orignOutput = d_output;
+    d_input = orignInput + batch_id * stride_input;
+    d_output = orignOutput + batch_id * stride_output;
+    __nram__ float nram_buffer[MAX_NRAM_SIZE / sizeof(float)];
+    __mlu_shared__ float sram_buffer[MAX_SRAM_SIZE / sizeof(float)];
+
+    if (id == 0)
+    {
+        __sramset(sram_buffer, m * m, 0);
+        __sramset(sram_buffer, 1, 1.f, m, 0);
+        for (int i = 1; i < m; i++)
+        {
+            __sramset(sram_buffer + i * m + i, 1, 1.f, m, 0);
+            __memcpy(sram_buffer + i * m, d_input + i * ld_input, i * sizeof(float), GDRAM2SRAM, m * sizeof(float), ld_input * sizeof(float), 0);
+        }
+        // __memcpy(sram_buffer, d_input, m * sizeof(float), GDRAM2SRAM, m * sizeof(float), ld_input * sizeof(float), m - 1);
+    }
+    __sync_cluster();
+
+    int span = m / taskDim;
+    int start = id * span;
+    if (id == 3)
+    {
+        span = m - 3 * span;
+    }
+    float *nram_offset = (float *)nram_buffer + id * 3 * m * m;
+    //nram_src1存放列主序的计算完成的矩阵
+    float *nram_src1 = nram_offset;
+    float *nram_src2 = nram_src1 + m * m;
+    float *mul_result = nram_src2 + m;
+    float *nram_dst = nram_src2 + m * m;
+    float *diag_start = ((float *)sram_buffer) + m * start + start;
+    int height = m - start;
+
+    __memset_nram(nram_offset, 3 * m * m, (float)ZERO);
+
+    float result = 0.0;
+    for (int i = 0; i < span; i++)
+    {
+        int off = i * m + i;
+        result = diag_start[off];
+        result = 1.0 / result;
+        nram_src1[i * height + i] = result;
+        nram_dst[i * span + i] = result;
+        diag_start[off] = result;
+    }
+    __sync_cluster();
+
+    for (int i = 1; i < height; i++)
+    {
+        __memcpy(nram_src2, diag_start + i * m, i * sizeof(float), SRAM2NRAM);
+        int num = std::min(i, span);
+        float diag_element = diag_start[i * m + i];
+        for (int j = 0; j < num; j++)
+        {
+            float temp = 0.0;
+
+            __bang_mul(mul_result, nram_src2, nram_src1 + j * height, i);
+            for (int k = 0; k < i; k++)
+            {
+                temp += mul_result[k];
+            }
+            temp = temp * -1.0 * diag_element;
+            nram_dst[i * span + j] = temp;
+            nram_src1[j * height + i] = temp;
+        }
+        __sync();
+    }
+
+    __sync_cluster();
+
+    if (span > 0)
+        __memcpy(diag_start, nram_dst, span * sizeof(float), NRAM2SRAM, m * sizeof(float), span * sizeof(float), height - 1);
+
+    __sync_cluster();
+
+    if (id == 0)
+    {
+        //   __memcpy(d_input,sram_buffer,m*m*sizeof(float),SRAM2GDRAM);
+        __memcpy(d_output, sram_buffer, m * sizeof(float), SRAM2GDRAM, ld_output * sizeof(float), m * sizeof(float), m - 1);
+    }
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelInverse(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                                          cnrtQueue_t queue,
+                                          int batch,
+                                          float *d_input, int ld_input, int stride_input,
+                                          float *d_output, int ld_output, int stride_output,
+                                          int m)
+{
+
+    // KERNEL_CHECK(
+    //     MLUKernelInverse<<<k_dim, k_type, queue>>>(d_a, m));
+    KERNEL_CHECK(
+        MLUKernelInverse<<<k_dim, k_type, queue>>>(batch,
+                                                   d_input, ld_input, stride_input,
+                                                   d_output, ld_output, stride_output,
+                                                   m));
+    return MLUOP_STATUS_SUCCESS;
+}

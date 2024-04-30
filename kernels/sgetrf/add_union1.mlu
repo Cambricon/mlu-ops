@@ -1,0 +1,132 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "sgetrf.h"
+
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+
+#define NRAM_BUFFER_SIZE MAX_NRAM_SIZE / 4
+#define SRAM_BUFFER_SIZE MAX_SRAM_SIZE / 4
+#define CEILDIV(x, y) ((x + y - 1) / y)
+#define ROUNDUP(x, y) (CEILDIV(x, y) * y)
+
+//---------NRAM ------//
+__mlu_entry__ void MLUKernelMatrixAdd(
+    float *dst, float *src, int lddst, int ldsrc, int m, int n)
+{
+    __nram__ float nram_buffer[NRAM_BUFFER_SIZE];
+
+    int32_t m_per_core = m / taskDim;
+    int32_t m_last_core = m_per_core + m % taskDim;
+    const float *a_offset = src + taskId * ldsrc * m_per_core;
+    const float *b_offset = dst + taskId * lddst * m_per_core;
+    float *output_offset = dst + taskId * lddst * m_per_core;
+
+    if (taskId == taskDim - 1)
+    {
+        m_per_core = m_last_core;
+    }
+
+    // int32_t loop_num = m_per_core;
+
+    // int m_a = 24;
+    int m_a = NRAM_BUFFER_SIZE/2/n;
+    // if (taskId == 0)
+    //     printf("m n m_a: %d %d %d\n", m, n, m_a);
+    int32_t loop_a = m_per_core / m_a;
+    int32_t remain_a = m_per_core % m_a;
+
+    float *a_nram = (float *)nram_buffer;
+    float *b_nram = (float *)a_nram + (NRAM_BUFFER_SIZE >> 1);
+
+    // printf("m_a loop_a remain_a %d %d %d\n", m_a, loop_a, remain_a);
+    for (int k = 0; k < loop_a; k++)
+    {
+        // __memcpy(a_nram, a_offset + k * m_a * ldsrc,
+        //          n * sizeof(float),
+        //          GDRAM2NRAM,
+        //          n * sizeof(float), ldsrc * sizeof(float),
+        //          m_a - 1);
+        __memcpy(b_nram, b_offset + k * m_a * lddst,
+                 n * sizeof(float),
+                 GDRAM2NRAM,
+                 n * sizeof(float), lddst * sizeof(float),
+                 m_a - 1);
+        __memcpy(a_nram, a_offset + k * m_a * ldsrc, m_a * n * sizeof(float), GDRAM2NRAM);
+        // __memcpy(b_nram, b_offset + k * m_a * lddst, m_a * n * sizeof(float), GDRAM2NRAM);
+
+        __bang_add(a_nram, a_nram, b_nram, m_a * n);
+        // __memcpy(output_offset + k * m_a * lddst, a_nram, m_a * n * sizeof(float), NRAM2GDRAM);
+        __memcpy(output_offset + k * m_a * lddst, a_nram,
+                 n * sizeof(float),
+                 NRAM2GDRAM,
+                 lddst * sizeof(float), n * sizeof(float),
+                 m_a - 1);
+       
+    }
+    if (remain_a != 0)
+    {
+        // __memcpy(a_nram, a_offset + loop_a * m_a * ldsrc,
+        //          n * sizeof(float),
+        //          GDRAM2NRAM,
+        //          n * sizeof(float), ldsrc * sizeof(float),
+        //          remain_a - 1);
+        __memcpy(b_nram, b_offset + loop_a * m_a * lddst,
+                 n * sizeof(float),
+                 GDRAM2NRAM,
+                 n * sizeof(float), lddst * sizeof(float),
+                 remain_a - 1);
+        __memcpy(a_nram, a_offset + loop_a * m_a * ldsrc, remain_a * n * sizeof(float), GDRAM2NRAM);
+        // __memcpy(b_nram, b_offset + loop_a * m_a * lddst, remain_a * n * sizeof(float), GDRAM2NRAM);
+
+        __bang_add(a_nram, a_nram, b_nram, remain_a * n);
+
+        // __memcpy(output_offset + loop_a * m_a * lddst, a_nram, remain_a * n * sizeof(float), NRAM2GDRAM);
+        __memcpy(output_offset + loop_a * m_a * lddst, a_nram,
+                 n * sizeof(float),
+                 NRAM2GDRAM,
+                 lddst * sizeof(float), n * sizeof(float),
+                 remain_a - 1);
+        
+    }
+
+    
+}
+
+
+
+mluOpStatus_t MLUOP_WIN_API KernelMatrixAdd(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                                            cnrtQueue_t queue, mluOpDataType_t d_type,
+                                            int m, int n,
+                                            float *dA, int ldda,
+                                            float *dB, int lddb,
+                                            float *dC, int lddc)
+{
+
+    
+    KERNEL_CHECK(
+        MLUKernelMatrixAdd<<<k_dim, k_type, queue>>>(dC, dA, lddc, ldda, m, n));
+
+    return MLUOP_STATUS_SUCCESS;
+}
