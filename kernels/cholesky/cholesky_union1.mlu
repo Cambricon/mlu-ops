@@ -1,6 +1,6 @@
 #include "cholesky.h"
 __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
-    
+     
 __mlu_func__ 
 void sgemm_fixwidth_device(int m, int k,
         float* A0, const int lda,
