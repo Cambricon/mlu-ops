@@ -1,0 +1,34 @@
+op_name: "test_sgetrf"
+input {
+  id: "input"
+  shape: {
+    dims: 256
+    dims: 128
+ 
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 25
+    upper_bound: 10.0
+    lower_bound: -10.0
+    distribution: UNIFORM
+  }
+}
+output {
+  id: "output"
+  shape: {
+    dims: 256
+    dims: 128
+   
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.000003
+  error_threshold: 0.000003
+  baseline_device: CPU
+}
