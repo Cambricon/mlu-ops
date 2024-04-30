@@ -4002,8 +4002,8 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  * - The attribute `eta` should not be less than 1.
  * - ``nms_thresh`` should be more than 0.
  * - On MLU300 series and above:
- * - If \b pixel_offset is false, input \b scores with NaN/INF is not supported.
- * - If \b pixel_offset is true, NaN/INF is not supported.
+ *   - If \b pixel_offset is false, input \b scores with NaN/INF is not supported.
+ *   - If \b pixel_offset is true, NaN/INF is not supported.
  *
  * @par Example
  * - None.
