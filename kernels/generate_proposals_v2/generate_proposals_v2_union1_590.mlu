@@ -246,7 +246,7 @@ __mlu_func__ void proposalBoxesDecode(
 
     // store output:box and score.
     if (count == 0) {
-      return;
+      continue;
     }
     __memcpy(proposals_score_temp + num_offset + core_store_offset,
              proposals_score_nram, count * sizeof(T), NRAM2GDRAM);
