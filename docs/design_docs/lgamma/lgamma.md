@@ -43,7 +43,7 @@
 | 输入Shape   | input: 任意Tensor                                             |
 | 输入Layout  | Array                                                         |
 | 输出数据类型| half, float                                                   |
-| 输出Shape   | 同输入                                                        |
+| 输出Shape   | Array                                                        |
 | 输出Layout  | 无要求                                                        |
 | 模式(可选） |                                                               |
 | 是否含有dim/axis等类似语义的参数且该参数支持负数/其他特殊处理 | 否              |
@@ -115,10 +115,10 @@ torch.lgamma(input, *, out=None) → Tensor
 
 ```c++
 mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
-                                      const mluOpTensorDescriptor_t x_desc,
-                                      const void *x,
-                                      const mluOpTensorDescriptor_t y_desc,
-                                      void *y)；
+                                        const mluOpTensorDescriptor_t x_desc,
+                                        const void *x,
+                                        const mluOpTensorDescriptor_t y_desc,
+                                        void *y)；
 ```
 
 
@@ -126,9 +126,54 @@ mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
 
 ### 3.1 实现方案
 
-- step1 将输入张量 input 看做是一个一维数组，平均分配到所有可用的计算核上进行计算
-- step2 每个core执行task任务时，将该次任务对应的输入部分从 GDRAM 拷贝至 NRAM，使用兰克泽斯逼进(Lanczos approximation)法进行计算，该算法实现参考 [MindSpore 实现](https://github.com/mindspore-ai/mindspore/blob/master/mindspore/ccsrc/plugin/device/ascend/kernel/aicpu/aicpu_ops/cpu_kernel/utils/igamma_utils.h#L58)，并在本算子中实现了 simd 版本
-- step3 将计算完成后的数据从 NRAM 拷贝回 GDRAM 
+- step1 
+将输入张量 input 看做是一个一维数组, 设其长度为 total, 将 total 均分给每个core处理, 使用 total 整除 taskDim 得到结果 core_n，余数记为 rem_n，前 rem_n 个 task 多计算一个元素，以处理不能平均分配到每个 task 的部分
+```C++
+  int core_n = total / taskDim;
+  int rem_n = total % taskDim;    
+```
+- step2 
+计算每个 core 需要处理的数据的位置: 输入向量起始地址为 x, 输出向量起始地址为 y,根据 taskId 计算偏移
+```C++
+  if (taskId <= rem_n) {
+    core_n += 1;
+    x += core_n*taskId;
+    y += core_n*taskId;
+  } else {
+    x += (core_n + 1) * rem_n + core_n * (taskId - rem_n);
+    y += (core_n + 1) * rem_n + core_n * (taskId - rem_n);
+  }
+```
+ - step3 根据 NRAM 大小计算一次最多能处理的数量 arr_size, 若处理不下, 循环处理, 每个循环中可以并行处理的数据量为处理的 num_deal, 将从偏移处开始的 num_deal 个数据从 GDRAM 拷贝至 NRAM, 如果类型为 half, 需要转换为 float 进行计算
+```C++
+  for (size_t i = 0; i < core_n; i += arr_size) {
+    int num_deal = i + arr_size > core_n ? core_n - i : arr_size;
+
+    if (sizeof(T) == sizeof(float)) {
+      __memcpy(buf1, x + i, num_deal*sizeof(float), GDRAM2NRAM);  
+    } else if (sizeof(T) == sizeof(half)) {  // half
+      __memcpy(buf0, x + i, num_deal*sizeof(half), GDRAM2NRAM);  
+      __bang_half2float(buf1, (half *)buf0, num_deal);
+    }
+    ...
+  }
+
+```
+- step4 每个数据使用 [兰克泽斯逼进(Lanczos approximation)法](https://en.wikipedia.org/wiki/Lanczos_approximation) 进行计算，其本质上一种数值逼近算法，在下一节中将给出伪代码，该算法实现参考 [MindSpore 实现](https://github.com/mindspore-ai/mindspore/blob/master/mindspore/ccsrc/plugin/device/ascend/kernel/aicpu/aicpu_ops/cpu_kernel/utils/igamma_utils.h#L58)，并在本算子中实现了 simd 版本
+
+- step5 将计算完成后的数据从 NRAM 拷贝回 GDRAM 
+```C++
+  for (size_t i = 0; i < core_n; i += arr_size) {
+    ...
+    if (sizeof(T) == sizeof(float)) {
+      __memcpy(y + i, buf1, num_deal*sizeof(float), NRAM2GDRAM);  
+    } else if (sizeof(T) == sizeof(half)) {  // half
+      __mluop_float2half((half *)buf1, buf1, num_deal);
+      __memcpy(y + i, buf1, num_deal*sizeof(half), NRAM2GDRAM);  
+    }
+  }
+```
+
 
 ### 3.2 伪代码实现
 
@@ -222,7 +267,7 @@ T Lgamma(const T &input) {
 
 2、对 input 进行数据拆分，当前可获得 MLU 核心数决定了任务数量 taskDim，将 input 平均分为 $\lfloor len(input) / taskDim \rfloor$ 个，每次任务分配给核心进行计算
 
-3、对不能均匀拆分的情况下，最后一次任务将计算所有未处理的元素
+3、对不能均匀拆分的情况下，前 $ len(input) $% taskDim$ 个 task 每个多处理一个数据 
 
 
 ### 3.4 性能优化设计
@@ -237,13 +282,15 @@ T Lgamma(const T &input) {
 
 2、NRAM 分配策略
 
-本算子是 element-wise 算子，加速比与执行 simd 运算的元素数量成正相关，simd 一次可以计算的元素数量受到 NRAM 的限制
+本算子是 element-wise 算子，加速比与执行 simd 运算的元素数量成正相关，simd 一次可以计算的元素数量受到 NRAM 大小的限制
 
-在算子计算过程中，有非常的多的中间变量存储，由于实现 simd ，所以每个中间变量在 NRAM 中占据的大小都是 sizeof(T) * simd 一次计算的元素数量，同时，NRAM 空间有限，NRAM 和 中间变量 buffer 的长度 buffer_size 和 buffer 数量 n_buffer 关系如下
+在算子计算过程中，有非常的多的中间变量，设 simd 一次计算的元素数量为 num_deal, 每个中间变量都需要长为 num_deal 的 buffer 进行存储, 由于 NRAM 空间有限，中间变量 buffer 的长度 num_deal 和 buffer 数量 n_buffer 关系如下
 
-nram_size = buffer_size * n_buffer
+nram_size = num_deal * n_buffer
 
-用于存储中间变量的 buffer 数与 simd 一次可以计算的元素数量成反比。想要 simd 一次能够计算更多的数据，就要对存储中间变量的 buffer 进行复用，使用尽可能少的 buffer，最终结果为至少需要 5 个 buffer 同时存储中间变量。所以，每个 task 在计算过程中除预留 5 KB 作为栈预留空间外，所有的 NRAM 资源全部平均分配给 5 个中间变量 buffer
+用于存储中间变量的 buffer 数与 simd 一次可以计算的元素数量成反比。想要一次能够计算更多的数据，就要使用尽可能少的 buffer,对存储中间变量的 buffer 进行复用，复用后至少需要 5 个 buffer 同时存储中间变量。所以，每个 task 在计算过程中除预留 5 KB 作为栈预留空间外，所有的 NRAM 资源全部平均分配给 5 个中间变量 buffer
+
+```
 
 2、流水设计
 本算子是 element-wise 算子，同时计算每一个元素的步骤较复杂，所以瓶颈主要在于计算侧，数据存取的时间在整个运算时间中占比不大；同时，软件流水需要使用 NRAM 空间，在本算子对 NRAM 需求较大，由于可以使用的 NRAM 空间有限，使用软件流水将导致一次 simd 计算中可以处理的元素数量减少，所以未采用软件流水
@@ -274,7 +321,7 @@ nram_size = buffer_size * n_buffer
   - case9: half, input: [ 57145500 ]
 
 - 边界case：
-  - case0: 负整数产生 inf 值 - not pass
+  - case0: 负整数产生 inf 值 - pass
   - case1: 输入 nan\inf，正确产生输出 - not test 
   - case2: 输入空向量，正确产生输出 - not test 
 
