@@ -61,7 +61,7 @@ roi_align_rotated算子应用于FOTS网络结构中，以双线性插值的方�
 | spatial_scale | rois在feature map上的缩放比例     | 输入              | float       | /        | 无       |
 | aligned       | 决定rois中的像素是否需要偏移     | 输入              | bool        | /        | 无       |
 | clockwise     | 是否顺时针旋转     | 输入              | bool        | /        | 无       |
-| output_desc   | 输出数据的描述信息     | 输入              |             | /        | output的维度必须是4，且第一维大小与rois的第一维大小一致，第二维大小与pooled_height一致，第三维大小与pooled_width一致，第四维大小与featrues的第四维大小一致       |
+| output_desc   | 输出数据的描述信息     | 输入              |             | /        | output的维度必须是4，且第一维大小与rois的第一维大小一致，第二维大小与pooled_height一致，第三维大小与pooled_width一致，第四维大小与features的第四维大小一致       |
 | output        | 指向输出数据的mlu首地址     | 输出              | half, float | NHWC     | 无       |
 #### 1.3.1 roi_align_rotated_backward
 | 参数          | 语义 | 类型（输入/输出） | 支持类型    | 物理布局 | 规模限制 |
