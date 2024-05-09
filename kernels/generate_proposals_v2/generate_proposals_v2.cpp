@@ -46,6 +46,7 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
     per_core_num *= 2;
     job /= 2;
   }
+
   k_dim->y = 1;
   k_dim->z = 1;
   if (job < 4) {
