@@ -366,7 +366,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreateGroupTensorDescriptors(
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mluOpSetTensorDescriptorZeroDim(mluOpTensorDescriptor_t desc) {
+static inline mluOpStatus_t mluOpSetTensorDescriptorZeroDim(mluOpTensorDescriptor_t desc) {
   if (desc->pointer_mode == MLUOP_POINTER_MODE_HOST) {
     desc->dim = 0;
     desc->total_element_num = 1;
@@ -422,12 +422,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptor_v2(
   }
 }
 
-mluOpStatus_t mluOpSetTensorDescriptorDimBase(mluOpTensorDescriptor_t desc,
-                                              int dimNb, const void *dimSize) {
-  PARAM_CHECK("[mluOpSetTensorDescriptorDim]", desc != NULL);
-  PARAM_CHECK("[mluOpSetTensorDescriptorDim]", dimNb > 0);
-  PARAM_CHECK("[mluOpSetTensorDescriptorDim]", dimSize != NULL);
-
+// Internal interface. Caller should guarantee parameter validity.
+static inline void mluOpSetTensorDescriptorDimBase(
+  mluOpTensorDescriptor_t desc, int dimNb) {
   desc->dim = dimNb;
 
   if (MLUOP_PREDICT_FALSE(desc->larger_dims != NULL)) {
@@ -447,7 +444,8 @@ mluOpStatus_t mluOpSetTensorDescriptorDimBase(mluOpTensorDescriptor_t desc,
     desc->dims = desc->normal_dims;
     desc->strides = desc->normal_strides;
   }
-  return MLUOP_STATUS_SUCCESS;
+
+  return;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorDim(
@@ -456,8 +454,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorDim(
     CHECK_RETURN("[mluOpSetTensorDescriptorDim]",
                  mluOpSetTensorDescriptorZeroDim(desc));
   } else {
-    CHECK_RETURN("[mluOpSetTensorDescriptorDim]",
-                 mluOpSetTensorDescriptorDimBase(desc, dimNb, (void *)dimSize));
+    mluOpSetTensorDescriptorDimBase(desc, dimNb);
     std::copy(dimSize, dimSize + dimNb, desc->dims);
   }
 
@@ -493,8 +490,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorDim(
 
 mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorDim_v2(
     mluOpTensorDescriptor_t desc, int dimNb, const int64_t *dimSize) {
-  CHECK_RETURN("[mluOpSetTensorDescriptorDim]",
-               mluOpSetTensorDescriptorDimBase(desc, dimNb, (void *)dimSize));
+  mluOpSetTensorDescriptorDimBase(desc, dimNb);
 
   memcpy(desc->dims, dimSize, dimNb * sizeof(int64_t));
 
@@ -653,7 +649,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorEx(
     PARAM_CHECK("[mluOpSetTensorDescriptorEx]", dimStride != NULL);
     PARAM_CHECK("[mluOpSetTensorDescriptorEx]", dimNb > 0);
 
-    mluOpSetTensorDescriptorDimBase(desc, dimNb, (void *)dimSize);
+    mluOpSetTensorDescriptorDimBase(desc, dimNb);
     std::copy(dimSize, dimSize + dimNb, desc->dims);
     std::copy(dimStride, dimStride + dimNb, desc->strides);
 
@@ -680,14 +676,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorEx_v2(
   desc->dtype = dtype;
   desc->layout = layout;
 
-  if (dimNb == 0) {
+  if MLUOP_PREDICT_FALSE(dimNb == 0) {
     return mluOpSetTensorDescriptorZeroDim(desc);
   } else {
     PARAM_CHECK("[mluOpSetTensorDescriptorEx]", dimSize != NULL);
     PARAM_CHECK("[mluOpSetTensorDescriptorEx]", dimStride != NULL);
     PARAM_CHECK("[mluOpSetTensorDescriptorEx]", dimNb > 0);
 
-    mluOpSetTensorDescriptorDimBase(desc, dimNb, (void *)dimSize);
+    mluOpSetTensorDescriptorDimBase(desc, dimNb);
     memcpy(desc->dims, dimSize, dimNb * sizeof(int64_t));
     memcpy(desc->strides, dimStride, dimNb * sizeof(int64_t));
 
@@ -696,6 +692,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorEx_v2(
     for (int i = 0; i < dimNb; ++i) {
       desc->total_element_num *= dimSize[i];
     }
+
     desc->total_tensor_size =
         desc->total_element_num * mluop::getSizeOfDataType(dtype);
 
@@ -913,9 +910,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDestroyGroupTensorDescriptors(
 uint64_t MLUOP_WIN_API
 mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc) {
   CHECK(desc != NULL);
-  uint64_t tensor_num = 1;
-  auto return_status = desc->tensorElementsNumber(tensor_num);
-  return tensor_num;
+  return desc->total_element_num;
 }
 
 uint64_t mluOpGetSeqDataElementNum(mluOpSeqDataDescriptor_t desc) {
