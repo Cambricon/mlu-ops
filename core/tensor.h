@@ -38,7 +38,7 @@
 
 #define QUEUE_ARRAY_LENGTH 4
 
-struct mluOpTensorStruct {
+struct alignas(64) mluOpTensorStruct {
   mluOpTensorStruct()
       : dim(0),
         dtype(MLUOP_DTYPE_FLOAT),
@@ -47,92 +47,80 @@ struct mluOpTensorStruct {
         pointer_mode(MLUOP_POINTER_MODE_DEVICE),
         position(0),
         scale(1.0),
-        offset(0) {
-    /* explicit set initial values for document use.
-     */
-  }
-  ~mluOpTensorStruct() {
-    /* please do NOT implement any codes here.
-     * a state-less struct should not hold any resources.
-     */
-  }
+        offset(0) {}
+
   /* methods */
   mluOpStatus_t tensorDimN(size_t &dim);
   mluOpStatus_t tensorDimC(size_t &dim);
   mluOpStatus_t tensorDimH(size_t &dim);
   mluOpStatus_t tensorDimW(size_t &dim);
-  inline mluOpStatus_t tensorElementsNumber(size_t &elements) const {
-    elements = total_element_num;
-    return MLUOP_STATUS_SUCCESS;
-  }
-  inline mluOpStatus_t tensorSize(size_t &tensor_size) const {
-    tensor_size = total_tensor_size;
-    return MLUOP_STATUS_SUCCESS;
-  }
+
   inline bool isSameDims(const mluOpTensorStruct &other) const;
   inline bool isSameDims(const mluOpTensorStruct *other) const;
   inline bool isCpuScalar() const;
 
-  /* struct */
-  int dim = 0;
+  // In reset we only reset user invisible fields
+  // becasue for user visible part it is USER's responsibilty
+  // to set those fields since they should make no assumption
+  // that the descriptor is initialized with default value.
+  inline void reset() {  // reset variable as default.
+    if (MLUOP_PREDICT_FALSE(larger_dims != nullptr)) {
+      delete[] larger_dims;
+      larger_dims = nullptr;
+      dims = normal_dims;
+    }
+    if (MLUOP_PREDICT_FALSE(larger_strides != nullptr)) {
+      delete[] larger_strides;
+      larger_strides = nullptr;
+      strides = normal_strides;
+    }
+    pointer_mode = MLUOP_POINTER_MODE_DEVICE;
+
+    // dtype = MLUOP_DTYPE_FLOAT;
+    // onchip_dtype = MLUOP_DTYPE_INVALID;
+    // layout = MLUOP_LAYOUT_ARRAY;
+    // dim = 0;
+    // total_element_num = 0;
+    // total_tensor_size = 0;
+  }
+
+  /* Try to pack and align the struct */
+  /*  ------------------- 64 Bytes - 1 -------------------*/
+  int64_t normal_dims[MLUOP_DIM_MAX] = {-1};
+
+  /*  ------------------- 64 Bytes - 2 -------------------*/
+  int64_t normal_strides[MLUOP_DIM_MAX] = {-1};
+
+  /*  ------------------- 64 Bytes - 3 -------------------*/
+  /* Offset - 0 */
+  uint8_t dim = 0;
+
+  // Default member initializers for bit-fields only available with ‘-std=c++2a’ or ‘-std=gnu++2a’
+  // Initialized by intializer list
+  mluOpDataType_t dtype:8;
+  mluOpDataType_t onchip_dtype:8;
+  mluOpTensorLayout_t layout:6;
+  mluOpPointerMode_t pointer_mode:2;
+
+  /* Offset - 4 */
   uint64_t total_element_num = 0;
   uint64_t total_tensor_size = 0;
   // if dimNb > MLUOP_DIM_MAX (8), using larger_dims, malloc it and dims point
   // it. else, using normal_dims, dont need malloc and free.
-  int64_t normal_dims[MLUOP_DIM_MAX] = {-1};
-  int64_t *larger_dims = NULL;
   int64_t *dims = normal_dims;  // point the normal dims as default
-
-  int64_t normal_strides[MLUOP_DIM_MAX] = {-1};
-  int64_t *larger_strides = NULL;
   int64_t *strides = normal_strides;  // point the normal strides as default
 
-  mluOpDataType_t dtype;
-  mluOpDataType_t onchip_dtype;
-  mluOpTensorLayout_t layout;
-  mluOpPointerMode_t pointer_mode;
-  int position;
-  float scale;
-  int offset;
+  /* Offset - 36 */
+  int64_t *larger_strides = nullptr;
+  int64_t *larger_dims = nullptr;
+
+  /* To be removed*/
+  int position = 0;
+  float scale = 1.0;
+  int offset = 0;
   std::vector<int> positions;
   std::vector<float> scales;
   std::vector<int> offsets;
-  inline void init() {  // reset random value after malloc.
-    // init these pointer.
-    // if not, when call reset() will free invalid pointer.
-    larger_dims = NULL;
-    larger_strides = NULL;
-
-    dim = 0;
-    total_element_num = 0;
-    total_tensor_size = 0;
-    dims = normal_dims;
-    strides = normal_strides;
-  }
-  inline void reset() {  // reset variable as default.
-    if (MLUOP_PREDICT_FALSE(larger_dims != NULL)) {
-      delete[] larger_dims;
-      larger_dims = NULL;
-    }
-    if (MLUOP_PREDICT_FALSE(larger_strides != NULL)) {
-      delete[] larger_strides;
-      larger_strides = NULL;
-    }
-    dims = normal_dims;
-    strides = normal_strides;
-    dtype = MLUOP_DTYPE_FLOAT;
-    onchip_dtype = MLUOP_DTYPE_INVALID;
-    layout = MLUOP_LAYOUT_ARRAY;
-    pointer_mode = MLUOP_POINTER_MODE_DEVICE;
-
-    position = 0;
-    scale = 1.0f;
-    offset = 0;
-
-    dim = 0;
-    total_element_num = 0;
-    total_tensor_size = 0;
-  }
 };
 
 // dim_set(rnn)     [layer_num, direction, cap_of_cell]
@@ -156,9 +144,7 @@ struct mluOpTensorSetStruct {
     CHECK(!this->tensor_set.empty());
     size_t tensor_set_size = 0;
     for (int i = 0; i < tensor_set.size(); i++) {
-      size_t size = 0;
-      tensor_set[i]->tensorSize(size);
-      tensor_set_size += size;
+      tensor_set_size += tensor_set[i]->total_tensor_size;
     }
     return tensor_set_size;
   }
@@ -175,9 +161,7 @@ struct mluOpTensorSetStruct {
     int64_t offset = 0;
     int index = this->getIndex(tensorIndex);
     for (int i = 0; i < index; i++) {
-      size_t ts_size = 0;
-      this->tensor_set[i]->tensorSize(ts_size);
-      offset += ts_size;
+      offset += tensor_set[i]->total_tensor_size;
     }
     data_offset[index] = offset;
     return offset;
@@ -220,9 +204,7 @@ struct mluOpTensorSetStruct {
     int offset = 0;
     data_offset[0] = offset;
     for (int i = 0; i < tensor_num - 1; i++) {
-      size_t ts_size = 0;
-      this->tensor_set[i]->tensorSize(ts_size);
-      offset += ts_size;
+      offset += tensor_set[i]->total_tensor_size;
       data_offset[i + 1] = offset;
     }
     return data_offset;
@@ -247,7 +229,7 @@ struct mluOpSeqDataStruct {
         position(0),
         scale(1.0),
         offset(0),
-        padding_fill(NULL) {
+        padding_fill(nullptr) {
     /* explicit set initial values for document use.
      */
   }
@@ -286,48 +268,6 @@ struct mluOpSeqDataStruct {
   int offset;
   void *padding_fill;
 };
-
-#ifndef MLUOP_TENSOR_QUEUE_ENABLE
-#define MLUOP_TENSOR_QUEUE_ENABLE 1
-#endif
-
-#if MLUOP_TENSOR_QUEUE_ENABLE
-struct mluOpTensorDescriptorQueueStruct {
-  mluOpTensorDescriptorQueueStruct() {
-    extend(extend_num);
-    extend_num *= 2;
-  }
-  explicit mluOpTensorDescriptorQueueStruct(size_t n) {
-    extend_num = n;
-    extend(extend_num);
-    extend_num *= 2;
-  }
-  ~mluOpTensorDescriptorQueueStruct() {
-    for (auto it : this->headers) {
-      delete[] it;
-    }
-  }
-  std::queue<mluOpTensorDescriptor_t> queue;
-  std::list<mluOpTensorStruct *> headers;
-  std::atomic_flag flag = ATOMIC_FLAG_INIT;
-  inline void lock() {
-    while (flag.test_and_set(std::memory_order_acquire)) {
-      std::this_thread::yield();
-    }
-  }
-  inline void unlock() { flag.clear(std::memory_order_release); }
-  inline void extend(size_t n) {
-    mluOpTensorStruct *header = new (std::nothrow) mluOpTensorStruct[n];
-    headers.emplace_back(header);
-    for (size_t i = 0; i < n; ++i) {
-      mluOpTensorStruct *desc = header + i;
-      desc->init();  // reset random value.
-      queue.emplace(desc);
-    }
-  }
-  size_t extend_num = 100;
-};
-#endif
 
 inline int mluOpDataTypeBytes(const mluOpDataType_t dt) {
   return mluop::getSizeOfDataType(dt);

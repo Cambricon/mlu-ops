@@ -40,7 +40,7 @@ static mluOpStatus_t getIndiceMaskAll(
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
   total_size =
-      kernel_volume * input_active_site * sizeof(indice_pairs_desc->dtype);
+      kernel_volume * input_active_site * mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -50,7 +50,7 @@ static mluOpStatus_t getIndiceIndexIn(
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
   total_size =
-      kernel_volume * input_active_site * sizeof(indice_pairs_desc->dtype);
+      kernel_volume * input_active_site * mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -60,7 +60,7 @@ static mluOpStatus_t getIndiceIndexOut(
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
   total_size =
-      kernel_volume * input_active_site * sizeof(indice_pairs_desc->dtype);
+      kernel_volume * input_active_site * mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -70,7 +70,7 @@ static mluOpStatus_t getIndiceOutExpand(
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
   total_size =
-      kernel_volume * input_active_site * sizeof(indice_pairs_desc->dtype);
+      kernel_volume * input_active_site * mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -79,7 +79,7 @@ static mluOpStatus_t getIndiceInExpand(
     const mluOpTensorDescriptor_t indice_pairs_desc,
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
-  total_size = input_active_site * sizeof(indice_pairs_desc->dtype);
+  total_size = input_active_site * mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -89,7 +89,7 @@ static mluOpStatus_t getIndiceUnique(
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
   total_size = (kernel_volume * input_active_site + 1) *
-               sizeof(indice_pairs_desc->dtype);
+               mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -97,7 +97,7 @@ static mluOpStatus_t getIndiceUnique(
 static mluOpStatus_t getGridOut(const mluOpTensorDescriptor_t indice_pairs_desc,
                                 int output_size, size_t *size) {
   size_t total_size = 0;
-  total_size = output_size * sizeof(indice_pairs_desc->dtype);
+  total_size = output_size * mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
