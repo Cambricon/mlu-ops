@@ -84,36 +84,4 @@ std::string MLUOP_WIN_API MLUOP_ATTRIBUTE_FLATTEN getNameOfTensorLayout(mluOpTen
   return mluOpGetNameOfTensorLayout(layout);
 }
 
-size_t getSizeOfDataType(mluOpDataType_t dtype) {
-  switch (dtype) {
-    default: {
-      return 0;
-    }
-    case MLUOP_DTYPE_BOOL:
-    case MLUOP_DTYPE_INT8:
-    case MLUOP_DTYPE_UINT8: {
-      return 1;
-    }
-    case MLUOP_DTYPE_INT16:
-    case MLUOP_DTYPE_UINT16:
-    case MLUOP_DTYPE_HALF:
-    case MLUOP_DTYPE_BFLOAT16: {
-      return 2;
-    }
-    case MLUOP_DTYPE_INT31:
-    case MLUOP_DTYPE_INT32:
-    case MLUOP_DTYPE_UINT32:
-    case MLUOP_DTYPE_FLOAT:
-    case MLUOP_DTYPE_COMPLEX_HALF: {
-      return 4;
-    }
-    case MLUOP_DTYPE_UINT64:
-    case MLUOP_DTYPE_INT64:
-    case MLUOP_DTYPE_DOUBLE:
-    case MLUOP_DTYPE_COMPLEX_FLOAT: {
-      return 8;
-    }
-  }
-}
-
 }  // namespace mluop
