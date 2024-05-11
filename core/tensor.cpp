@@ -411,22 +411,11 @@ static inline void mluOpSetTensorDescriptorDimBase(
   mluOpTensorDescriptor_t desc, int dimNb) {
   desc->dim = dimNb;
 
-  if (MLUOP_PREDICT_FALSE(desc->larger_dims != NULL)) {
-    delete[] desc->larger_dims;
-    desc->larger_dims = NULL;
-  }
-  if (MLUOP_PREDICT_FALSE(desc->larger_strides != NULL)) {
-    delete[] desc->larger_strides;
-    desc->larger_strides = NULL;
-  }
   if (MLUOP_PREDICT_FALSE(dimNb > MLUOP_DIM_MAX)) {
     desc->larger_dims = new (std::nothrow) int64_t[dimNb];
     desc->larger_strides = new (std::nothrow) int64_t[dimNb];
     desc->dims = desc->larger_dims;
     desc->strides = desc->larger_strides;
-  } else {
-    desc->dims = desc->normal_dims;
-    desc->strides = desc->normal_strides;
   }
 
   return;

@@ -59,42 +59,29 @@ struct alignas(64) mluOpTensorStruct {
   inline bool isSameDims(const mluOpTensorStruct *other) const;
   inline bool isCpuScalar() const;
 
-  inline void init() {  // reset random value after malloc.
-    // init these pointer.
-    // if not, when call reset() will free invalid pointer.
-    larger_dims = nullptr;
-    larger_strides = nullptr;
-
-    dim = 0;
-    total_element_num = 0;
-    total_tensor_size = 0;
-    dims = normal_dims;
-    strides = normal_strides;
-  }
-
+  // In reset we only reset user invisible fields
+  // becasue for user visible part it is USER's responsibilty
+  // to set those fields since they should make no assumption
+  // that the descriptor is initialized with default value.
   inline void reset() {  // reset variable as default.
     if (MLUOP_PREDICT_FALSE(larger_dims != nullptr)) {
       delete[] larger_dims;
       larger_dims = nullptr;
+      dims = normal_dims;
     }
     if (MLUOP_PREDICT_FALSE(larger_strides != nullptr)) {
       delete[] larger_strides;
       larger_strides = nullptr;
+      strides = normal_strides;
     }
-    dims = normal_dims;
-    strides = normal_strides;
-    dtype = MLUOP_DTYPE_FLOAT;
-    onchip_dtype = MLUOP_DTYPE_INVALID;
-    layout = MLUOP_LAYOUT_ARRAY;
     pointer_mode = MLUOP_POINTER_MODE_DEVICE;
 
-    position = 0;
-    scale = 1.0f;
-    offset = 0;
-
-    dim = 0;
-    total_element_num = 0;
-    total_tensor_size = 0;
+    // dtype = MLUOP_DTYPE_FLOAT;
+    // onchip_dtype = MLUOP_DTYPE_INVALID;
+    // layout = MLUOP_LAYOUT_ARRAY;
+    // dim = 0;
+    // total_element_num = 0;
+    // total_tensor_size = 0;
   }
 
   /* Try to pack and align the struct */
@@ -316,7 +303,6 @@ struct mluOpTensorDescriptorQueueStruct {
     headers.emplace_back(header);
     for (size_t i = 0; i < n; ++i) {
       mluOpTensorStruct *desc = header + i;
-      desc->init();  // reset random value.
       queue.emplace(desc);
     }
   }
