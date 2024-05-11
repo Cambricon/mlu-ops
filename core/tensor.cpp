@@ -310,7 +310,7 @@ mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc) {
     queue_array.extend_num *= 2;
   }
   *desc = queue_array.queue.front();
-  queue_array.queue.pop();
+  queue_array.queue.pop_front();
   queue_array.unlock();
 #else
   mluOpTensorStruct *ts = new (std::nothrow) mluOpTensorStruct();
@@ -337,7 +337,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreateGroupTensorDescriptors(
   }
   for (int i = 0; i < desc_num; ++i) {
     *(group_desc[i]) = queue_array.queue.front();
-    queue_array.queue.pop();
+    queue_array.queue.pop_front();
   }
   queue_array.unlock();
 #else
@@ -846,7 +846,7 @@ mluOpDestroyTensorDescriptor(mluOpTensorDescriptor_t desc) {
 
 #if MLUOP_TENSOR_QUEUE_ENABLE
   queue_array.lock();
-  queue_array.queue.emplace(desc);
+  queue_array.queue.push_front(desc);
   queue_array.unlock();
 #else
   delete desc;
@@ -864,7 +864,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDestroyGroupTensorDescriptors(
   queue_array.lock();
   for (int i = 0; i < desc_num; ++i) {
     (*(group_desc[i]))->reset();
-    queue_array.queue.emplace(*(group_desc[i]));
+    queue_array.queue.push_front(*(group_desc[i]));
   }
   queue_array.unlock();
 #else

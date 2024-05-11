@@ -289,7 +289,7 @@ struct mluOpTensorDescriptorQueueStruct {
       delete[] it;
     }
   }
-  std::queue<mluOpTensorDescriptor_t> queue;
+  std::deque<mluOpTensorDescriptor_t> queue;
   std::list<mluOpTensorStruct *> headers;
   std::atomic_flag flag = ATOMIC_FLAG_INIT;
   inline void lock() {
@@ -303,7 +303,7 @@ struct mluOpTensorDescriptorQueueStruct {
     headers.emplace_back(header);
     for (size_t i = 0; i < n; ++i) {
       mluOpTensorStruct *desc = header + i;
-      queue.emplace(desc);
+      queue.push_front(desc);
     }
   }
   size_t extend_num = 100;
