@@ -294,9 +294,46 @@ mluOpDestroySeqDataDescriptor(mluOpSeqDataDescriptor_t seq_data_desc) {
   return MLUOP_STATUS_SUCCESS;
 }
 
+namespace {
+
+#define MLUOP_TENSOR_QUEUE_ENABLE 1
+
 #if MLUOP_TENSOR_QUEUE_ENABLE
+struct mluOpTensorDescriptorQueueStruct {
+  mluOpTensorDescriptorQueueStruct() {
+    extend(extend_num);
+    extend_num *= 2;
+  }
+  explicit mluOpTensorDescriptorQueueStruct(size_t n) {
+    extend_num = n;
+    extend(extend_num);
+    extend_num *= 2;
+  }
+
+  // Let the OS do the cleanup since it's a global variable
+  ~mluOpTensorDescriptorQueueStruct() {}
+
+  std::deque<mluOpTensorDescriptor_t> queue;
+  std::atomic_flag flag = ATOMIC_FLAG_INIT;
+  inline void lock() {
+    while (flag.test_and_set(std::memory_order_acquire)) {
+      std::this_thread::yield();
+    }
+  }
+  inline void unlock() { flag.clear(std::memory_order_release); }
+  inline void extend(size_t n) {
+    mluOpTensorStruct *header = new (std::nothrow) mluOpTensorStruct[n];
+    for (size_t i = 0; i < n; ++i) {
+      mluOpTensorStruct *desc = header + i;
+      queue.push_front(desc);
+    }
+  }
+  size_t extend_num = 100;
+};
+
 static mluOpTensorDescriptorQueueStruct queue_array;
 #endif
+}  // anonymous namespace
 
 /* MLUOP interface */
 mluOpStatus_t MLUOP_WIN_API

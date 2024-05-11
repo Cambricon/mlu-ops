@@ -269,47 +269,6 @@ struct mluOpSeqDataStruct {
   void *padding_fill;
 };
 
-#ifndef MLUOP_TENSOR_QUEUE_ENABLE
-#define MLUOP_TENSOR_QUEUE_ENABLE 1
-#endif
-
-#if MLUOP_TENSOR_QUEUE_ENABLE
-struct mluOpTensorDescriptorQueueStruct {
-  mluOpTensorDescriptorQueueStruct() {
-    extend(extend_num);
-    extend_num *= 2;
-  }
-  explicit mluOpTensorDescriptorQueueStruct(size_t n) {
-    extend_num = n;
-    extend(extend_num);
-    extend_num *= 2;
-  }
-  ~mluOpTensorDescriptorQueueStruct() {
-    for (auto it : this->headers) {
-      delete[] it;
-    }
-  }
-  std::deque<mluOpTensorDescriptor_t> queue;
-  std::list<mluOpTensorStruct *> headers;
-  std::atomic_flag flag = ATOMIC_FLAG_INIT;
-  inline void lock() {
-    while (flag.test_and_set(std::memory_order_acquire)) {
-      std::this_thread::yield();
-    }
-  }
-  inline void unlock() { flag.clear(std::memory_order_release); }
-  inline void extend(size_t n) {
-    mluOpTensorStruct *header = new (std::nothrow) mluOpTensorStruct[n];
-    headers.emplace_back(header);
-    for (size_t i = 0; i < n; ++i) {
-      mluOpTensorStruct *desc = header + i;
-      queue.push_front(desc);
-    }
-  }
-  size_t extend_num = 100;
-};
-#endif
-
 inline int mluOpDataTypeBytes(const mluOpDataType_t dt) {
   return mluop::getSizeOfDataType(dt);
 }
