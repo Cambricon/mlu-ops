@@ -25,9 +25,48 @@ void LogspacePolicyFunc(const mluOpHandle_t &handle, const int steps,
   uint32_t core_used=core_max>steps? steps:core_max;
 
   k_dim->x = core_used;
-  k_dim->x = 12;
+  //k_dim->x = 12;
   k_dim->y = 1;
   k_dim->z = 1;
+}
+
+static inline bool isSupportType(const mluOpDataType_t check_type,
+                                 const mluOpDataType_t support_type[],
+                                 const int len) {
+  for (int i = 0; i < len; ++i) {
+    if (check_type == support_type[i]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+
+mluOpStatus_t LogspaceParamCheck(
+    const mluOpHandle_t &handle, const float start, const float end, const int steps, const float base,
+    const mluOpTensorDescriptor_t &res_desc, const void *res) {
+
+  PARAM_CHECK("[mluOpLogspace]", handle != nullptr);
+  PARAM_CHECK("[mluOpLogspace]", res_desc != nullptr);
+
+  //float参数不能是nan或inf，且base大于0
+  PARAM_CHECK("[mluOpLogspace]", (start != NAN)&&(start != INFINITY));
+  PARAM_CHECK("[mluOpLogspace]", (end != NAN)&&(end != INFINITY));
+  PARAM_CHECK("[mluOpLogspace]", (base != NAN)&&(base != INFINITY));
+  PARAM_CHECK("[mluOpLogspace]", base > 0);
+
+  PARAM_CHECK("[mluOpLogspace]", steps > 0);
+  size_t element_num = mluOpGetTensorElementNum(res_desc);
+  PARAM_CHECK("[mluOpLogspace]", steps <= element_num);
+
+  //数据类型检查
+  mluOpDataType_t support_type[4] = {MLUOP_DTYPE_FLOAT, MLUOP_DTYPE_BFLOAT16, MLUOP_DTYPE_HALF, MLUOP_DTYPE_INT32};
+  if (!isSupportType(res_desc->dtype, support_type, 4)) {
+    LOG(ERROR) << "[mluOpLogspace]" << ":res_desc's data type is not supported.";
+    return MLUOP_STATUS_BAD_PARAM;
+  }
+
+  return MLUOP_STATUS_SUCCESS;
 }
 
 
@@ -35,8 +74,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpLogspace(mluOpHandle_t handle, const float star
                                       const mluOpTensorDescriptor_t res_desc, void *res) {
   // param check
   //由于只有单向量输入unaryOpParamCheck和双向量输入的参数检查api，因此需要自己去写
-  //todo
-
+  mluOpStatus_t param_check =
+      LogspaceParamCheck(handle, start, end, steps, base, res_desc, res);
+  if (param_check != MLUOP_STATUS_SUCCESS) {
+    return param_check;
+  }
 
 
   // policy select
