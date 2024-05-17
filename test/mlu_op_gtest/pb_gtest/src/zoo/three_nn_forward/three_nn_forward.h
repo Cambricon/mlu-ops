@@ -29,7 +29,7 @@ namespace mluoptest {
 class ThreeNnForwardExecutor : public Executor {
  public:
   ThreeNnForwardExecutor() {}
-  ~ThreeNnForwardExecutor() {}
+  ~ThreeNnForwardExecutor() { workspaceFree(); }
 
   void paramCheck() override;
   void compute() override;

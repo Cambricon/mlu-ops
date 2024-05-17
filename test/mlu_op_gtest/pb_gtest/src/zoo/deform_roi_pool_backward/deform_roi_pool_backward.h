@@ -34,7 +34,6 @@ class DeformRoiPoolBackwardExecutor : public Executor {
   void paramCheck() override;
   void compute() override;
   void cpuCompute() override;
-  int64_t getTheoryOps() override;
 
  private:
   int batchs;
@@ -53,12 +52,6 @@ class DeformRoiPoolBackwardExecutor : public Executor {
   mluOpTensorDescriptor_t offset_desc = NULL;
   mluOpTensorDescriptor_t grad_input_desc = NULL;
   mluOpTensorDescriptor_t grad_offset_desc = NULL;
-  int64_t theory_ops_ = 0;
-
-  // CPU mode requires truth value-related computations,
-  // while other modes do not.
-  template <bool cpu_mode>
-  void computeWithTheoryOps();
 };
 }  // namespace mluoptest
 #endif

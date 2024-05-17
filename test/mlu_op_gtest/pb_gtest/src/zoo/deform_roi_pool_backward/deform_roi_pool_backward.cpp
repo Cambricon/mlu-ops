@@ -73,7 +73,6 @@ void DeformRoiPoolBackwardExecutor::initData() {
   pooled_height = deform_roi_pool_backward_proto_desc.pooled_height();
   pooled_width = deform_roi_pool_backward_proto_desc.pooled_width();
 }
-
 void DeformRoiPoolBackwardExecutor::paramCheck() {
   if (!(parser_->getInputNum() == 4 && parser_->getOutputNum() == 2) &&
       !(parser_->getInputNum() == 3 && parser_->getOutputNum() == 1)) {
@@ -111,7 +110,6 @@ void DeformRoiPoolBackwardExecutor::compute() {
   interface_timer_.stop();
 }
 
-// 26 ops
 void bilinear_interpolate_gradient(const int height, const int width,
                                    const int channels, float y, float x, int c,
                                    float &w1, float &w2, float &w3, float &w4,
@@ -152,37 +150,7 @@ void bilinear_interpolate_gradient(const int height, const int width,
   w1 = hy * hx, w2 = hy * lx, w3 = ly * hx, w4 = ly * lx;
 }
 
-template <bool cpu_mode>
-void DeformRoiPoolBackwardExecutor::computeWithTheoryOps() {
-  // 1.Get basic information about proto
-  // It has already been obtained in another function;
-  // it is a member variable of the class.
-
-  // 2.Selectively load data based on the pattern
-  float *rois;
-  if (cpu_mode) {
-    rois = cpu_fp32_input_[2];
-  } else {
-    // Only load the data that affects computation.
-    auto *ts = parser_->input(2);
-    if (unlikely(ts->empty())) {
-      return;
-    }
-    // Load data as float type.
-    if (ts->dtype == MLUOP_DTYPE_FLOAT) {
-      rois = (float *)cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
-      parser_->getInputTensorValue(2, (void *)rois, ts->shape_count);
-    } else {
-      void *temp = cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
-      parser_->getInputTensorValue(2, temp, ts->shape_count);
-      rois = (float *)cpu_runtime_.allocate(ts->shape_count * sizeof(float));
-      castDataOut(temp, ts->dtype, rois, MLUOP_DTYPE_FLOAT, ts->shape_count,
-                  NO_QUANT);
-      cpu_runtime_.deallocate(temp);
-    }
-  }
-
-  // 3.Control flow section
+void DeformRoiPoolBackwardExecutor::cpuCompute() {
   int grad_output_size = parser_->getInputDataCount(0);
   for (int index = 0; index < grad_output_size; index++) {
     // (n, ph, pw, c) is an element in the pooled output
@@ -190,11 +158,13 @@ void DeformRoiPoolBackwardExecutor::computeWithTheoryOps() {
     const int pw = (index / channels) % pooled_width;
     const int ph = (index / channels / pooled_width) % pooled_height;
     const int n = index / channels / pooled_width / pooled_height;
-    const float *offset_rois = rois + n * 5;
+    const float *offset_rois = cpu_fp32_input_[2] + n * 5;
     const int roi_batch_ind = offset_rois[0];
+    const float *offset_input =
+        cpu_fp32_input_[1] + roi_batch_ind * height * width * channels;
+    float *offset_grad_input =
+        cpu_fp32_output_[0] + roi_batch_ind * height * width * channels;
     // Do not using rounding; this implementation detail is critical
-
-    theory_ops_ += 12;
     float roi_start_w = offset_rois[1] * spatial_scale - 0.5;
     float roi_start_h = offset_rois[2] * spatial_scale - 0.5;
     float roi_end_w = offset_rois[3] * spatial_scale - 0.5;
@@ -207,7 +177,6 @@ void DeformRoiPoolBackwardExecutor::computeWithTheoryOps() {
         static_cast<float>(roi_width) / static_cast<float>(pooled_width);
 
     // We use roi_bin_grid to sample the grid and mimic integral
-    theory_ops_ += (sampling_ratio > 0) ? 2 : 4;
     int roi_bin_grid_h =
         (sampling_ratio > 0)
             ? sampling_ratio
@@ -217,109 +186,67 @@ void DeformRoiPoolBackwardExecutor::computeWithTheoryOps() {
             ? sampling_ratio
             : static_cast<int>(ceilf(roi_width / pooled_width));
 
+    // Compute roi offset
+    if (offset_desc != NULL && cpu_fp32_input_[3] != NULL) {
+      const float *offset_cur_w = cpu_fp32_input_[3] +
+                                  n * pooled_width * pooled_height * 2 +
+                                  ph * pooled_width + pw;
+      float offset_roi_w = gamma * roi_width * offset_cur_w[0];
+      float offset_roi_h =
+          gamma * roi_height * offset_cur_w[pooled_width * pooled_height];
+      roi_start_w += offset_roi_w;
+      roi_start_h += offset_roi_h;
+    }
     // We do average pooling inside a bin
-    theory_ops_ += 2;
     const float count = std::max(roi_bin_grid_h * roi_bin_grid_w, 1);
-    float grad_output_this_bin = 0;
-
-    // 4.Computation flow based on truth value dependencies
-    theory_ops_ += 7 + roi_bin_grid_h * roi_bin_grid_w * 69;
-    if (cpu_mode) {
-      if (offset_desc != NULL && cpu_fp32_input_[3] != NULL) {
-        // Compute roi offset
-        // Addressing is not counted as ops
-        const float *offset_cur_w = cpu_fp32_input_[3] +
-                                    n * pooled_width * pooled_height * 2 +
-                                    ph * pooled_width + pw;
-        // regard as 6 theory_ops
-        float offset_roi_w = gamma * roi_width * offset_cur_w[0];
-        float offset_roi_h =
-            gamma * roi_height * offset_cur_w[pooled_width * pooled_height];
-        roi_start_w += offset_roi_w;
-        roi_start_h += offset_roi_h;
-      }
-      // regard as 1 theory_ops
-      grad_output_this_bin = cpu_fp32_input_[0][index] / count;
-      const float *offset_input =
-          cpu_fp32_input_[1] + roi_batch_ind * height * width * channels;
-      float *offset_grad_input =
-          cpu_fp32_output_[0] + roi_batch_ind * height * width * channels;
-      // regard as 68 theory_ops at once
-      // 26 + 8 + 4 + 28 + 2
-      for (int iy = 0; iy < roi_bin_grid_h; iy++) {
-        const float y = roi_start_h + ph * bin_size_h +
-                        static_cast<float>(iy + .5f) * bin_size_h /
-                            static_cast<float>(roi_bin_grid_h);
-        for (int ix = 0; ix < roi_bin_grid_w; ix++) {
-          const float x = roi_start_w + pw * bin_size_w +
-                          static_cast<float>(ix + .5f) * bin_size_w /
-                              static_cast<float>(roi_bin_grid_w);
-          float w1, w2, w3, w4;
-          int x_low, x_high, y_low, y_high;
-          // 26 theory_ops
-          bilinear_interpolate_gradient(height, width, channels, y, x, c, w1,
-                                        w2, w3, w4, x_low, x_high, y_low,
-                                        y_high, index);
-          if (x_low >= 0 && x_high >= 0 && y_low >= 0 && y_high >= 0) {
-            // Addressing is not counted as ops
-            // 8 theory_ops
-            offset_grad_input[y_low * width * channels + x_low * channels +
-                              c] += grad_output_this_bin * w1;
-            offset_grad_input[y_low * width * channels + x_high * channels +
-                              c] += grad_output_this_bin * w2;
-            offset_grad_input[y_high * width * channels + x_low * channels +
-                              c] += grad_output_this_bin * w3;
-            offset_grad_input[y_high * width * channels + x_high * channels +
-                              c] += grad_output_this_bin * w4;
-            if (offset_desc != NULL && cpu_fp32_input_[3] != NULL) {
-              // 4 theory_ops
-              float input_00 =
-                  offset_input[y_low * width * channels + x_low * channels + c];
-              float input_10 = offset_input[y_low * width * channels +
-                                            x_high * channels + c];
-              float input_01 = offset_input[y_high * width * channels +
-                                            x_low * channels + c];
-              float input_11 = offset_input[y_high * width * channels +
-                                            x_high * channels + c];
-              // 28 theory_ops
-              float ogx = gamma * roi_width * grad_output_this_bin *
-                          (input_11 * (y - y_low) + input_10 * (y_high - y) +
-                           input_01 * (y_low - y) + input_00 * (y - y_high));
-              float ogy = gamma * roi_height * grad_output_this_bin *
-                          (input_11 * (x - x_low) + input_01 * (x_high - x) +
-                           input_10 * (x_low - x) + input_00 * (x - x_high));
-              // 2 theory_ops
-              cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 +
-                                  ph * pooled_width + pw] += ogx;
-              cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 +
-                                  pooled_width * pooled_height +
-                                  ph * pooled_width + pw] += ogy;
-            }
+    float grad_output_this_bin = cpu_fp32_input_[0][index] / count;
+    for (int iy = 0; iy < roi_bin_grid_h; iy++) {
+      const float y = roi_start_h + ph * bin_size_h +
+                      static_cast<float>(iy + .5f) * bin_size_h /
+                          static_cast<float>(roi_bin_grid_h);
+      for (int ix = 0; ix < roi_bin_grid_w; ix++) {
+        const float x = roi_start_w + pw * bin_size_w +
+                        static_cast<float>(ix + .5f) * bin_size_w /
+                            static_cast<float>(roi_bin_grid_w);
+        float w1, w2, w3, w4;
+        int x_low, x_high, y_low, y_high;
+        bilinear_interpolate_gradient(height, width, channels, y, x, c, w1, w2,
+                                      w3, w4, x_low, x_high, y_low, y_high,
+                                      index);
+        if (x_low >= 0 && x_high >= 0 && y_low >= 0 && y_high >= 0) {
+          offset_grad_input[y_low * width * channels + x_low * channels + c] +=
+              grad_output_this_bin * w1;
+          offset_grad_input[y_low * width * channels + x_high * channels + c] +=
+              grad_output_this_bin * w2;
+          offset_grad_input[y_high * width * channels + x_low * channels + c] +=
+              grad_output_this_bin * w3;
+          offset_grad_input[y_high * width * channels + x_high * channels +
+                            c] += grad_output_this_bin * w4;
+          if (offset_desc != NULL && cpu_fp32_input_[3] != NULL) {
+            float input_00 =
+                offset_input[y_low * width * channels + x_low * channels + c];
+            float input_10 =
+                offset_input[y_low * width * channels + x_high * channels + c];
+            float input_01 =
+                offset_input[y_high * width * channels + x_low * channels + c];
+            float input_11 =
+                offset_input[y_high * width * channels + x_high * channels + c];
+            float ogx = gamma * roi_width * grad_output_this_bin *
+                        (input_11 * (y - y_low) + input_10 * (y_high - y) +
+                         input_01 * (y_low - y) + input_00 * (y - y_high));
+            float ogy = gamma * roi_height * grad_output_this_bin *
+                        (input_11 * (x - x_low) + input_01 * (x_high - x) +
+                         input_10 * (x_low - x) + input_00 * (x - x_high));
+            cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 +
+                                ph * pooled_width + pw] += ogx;
+            cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 +
+                                pooled_width * pooled_height +
+                                ph * pooled_width + pw] += ogy;
           }
         }
       }
     }
   }
-
-  // 5.Free memory
-  if (!cpu_mode) {
-    cpu_runtime_.deallocate(rois);
-  }
-}
-
-void DeformRoiPoolBackwardExecutor::cpuCompute() {
-  computeWithTheoryOps<true>();
-}
-
-int64_t DeformRoiPoolBackwardExecutor::getTheoryOps() {
-#if 0
-  // When debugging, used for getting theory_ops on the GPU.
-  if (parser_->device() != CPU) {
-    computeWithTheoryOps<false>();
-  }
-#endif
-  VLOG(4) << "getTheoryOps: " << theory_ops_ << " ops";
-  return theory_ops_;
 }
 
 }  // namespace mluoptest

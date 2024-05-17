@@ -208,7 +208,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPointsInBoxes(
   }
   // generate points_in_boxes prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("points_in_boxes", "POINTS_IN_BOXES");
+    GEN_CASE_START("points_in_boxes");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "points", points, points_desc, 100.0, 0.0);
     GEN_CASE_DATA(true, "boxes", boxes, boxes_desc, 100.0, 0.0);

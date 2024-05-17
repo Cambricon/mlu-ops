@@ -46,8 +46,8 @@ __mlu_func__ void check_point_in_box(
                    points_compute_num);
   __bang_not(temp0_nram_buffer, temp0_nram_buffer, points_compute_num);
 
-  float cosa = __cn_scalar_cos_f32(-rz);
-  float sina = __cn_scalar_sin_f32(-rz);
+  float cosa = std::cos(-rz);
+  float sina = std::sin(-rz);
 
   __bang_sub_scalar(temp1_nram_buffer, x_nram_buffer, cx, points_compute_num);
   __bang_sub_scalar(temp2_nram_buffer, y_nram_buffer, cy, points_compute_num);

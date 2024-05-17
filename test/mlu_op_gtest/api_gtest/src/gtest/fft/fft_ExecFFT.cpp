@@ -91,7 +91,7 @@ class fft_ExecFFT : public testing::Test {
     if (handle_ != nullptr && fft_plan_ != nullptr) {
       status =
           mluOpMakeFFTPlanMany(handle_, fft_plan_, input_desc_, output_desc_,
-                               rank, n, reservespace_size, workspace_size);
+                               rank, n, reservespace_size, workspace_size, direction_);
 
       if (status != MLUOP_STATUS_SUCCESS) {
         destroy();

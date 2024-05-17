@@ -102,8 +102,7 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
   // check param depand
 
   for (int i = 0; i < output_desc->dim; i++) {
-    std::string i_str = "i: " + std::to_string(i);
-    PARAM_CHECK(api, output_desc->dims[i] == var_desc->dims[i], i_str);
+    PARAM_CHECK(api, output_desc->dims[i] == var_desc->dims[i]);
   }
   if (max_sizes_desc->total_element_num != 0) {
     PARAM_CHECK(api, max_sizes_desc->dims[0] == min_sizes_desc->dims[0]);
@@ -193,7 +192,7 @@ mluOpStatus_t mluOpPriorBox(
                              : min_sizes_num * aspect_ratios_num;
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("prior_box", "PRIOR_BOX");
+    GEN_CASE_START("prior_box");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "input1", min_sizes, min_sizes_desc);
     GEN_CASE_DATA_REAL(true, "input2", aspect_ratios, aspect_ratios_desc);
@@ -214,6 +213,7 @@ mluOpStatus_t mluOpPriorBox(
     GEN_CASE_DATA(false, "var", var, var_desc, 0, 0);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
+  GEN_CASE_END();
   cnrtDim3_t k_dim_box;
   cnrtFunctionType_t k_type;
   policyFuncPriorBox(handle, &k_dim_box, &k_type, height);
@@ -228,6 +228,5 @@ mluOpStatus_t mluOpPriorBox(
                      min_max_aspect_ratios_order, output, output_size, var,
                      var_size));
   VLOG(5) << "End KernelPriorBox kernel";
-  GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

@@ -201,7 +201,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
 
   // generate mluOpThreeNNForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("three_nn_forward", "THREE_NN_FORWARD");
+    GEN_CASE_START("three_nn_forward");
     // set handle dump mlu output
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "unknown", unknown, unknown_desc, 100, -100);
@@ -234,20 +234,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
   }
 
   mluOpTensorDescriptor_t known_desc_tmp = NULL;
-  CHECK_RETURN("[mluOpThreeNNForward]",
-               mluOpCreateTensorDescriptor(&known_desc_tmp));
-  CHECK_RETURN(
+  MLUOP_CHECK(mluOpCreateTensorDescriptor(&known_desc_tmp));
+  PARAM_CHECK(
       "[mluOpThreeNNForward]",
-      mluOpSetTensorDescriptor(known_desc_tmp, MLUOP_LAYOUT_ARRAY,
-                               input_dtype, known_dim, known_tmp_dims));
-  CHECK_RETURN(
+      MLUOP_STATUS_SUCCESS ==
+          mluOpSetTensorDescriptor(known_desc_tmp, MLUOP_LAYOUT_ARRAY,
+                                   input_dtype, known_dim, known_tmp_dims));
+  PARAM_CHECK(
       "[mluOpThreeNNForward]",
-      transposeTensor(handle, known_desc, known, known_permute,
-                      known_desc_tmp, known_workspace, transpose_workspace,
-                      workspace_size - known_desc->total_tensor_size));
-  CHECK_RETURN(
+      MLUOP_STATUS_SUCCESS ==
+          transposeTensor(handle, known_desc, known, known_permute,
+                          known_desc_tmp, known_workspace, transpose_workspace,
+                          workspace_size - known_desc->total_tensor_size));
+  PARAM_CHECK(
       "[mluOpThreeNNForward]",
-      mluOpDestroyTensorDescriptor(known_desc_tmp));
+      MLUOP_STATUS_SUCCESS == mluOpDestroyTensorDescriptor(known_desc_tmp));
 
   VLOG(5) << "[mluOpThreeNNForward] cnnlTranspose_v2 feature end.";
   VLOG(5) << "Launch Kernel KernelThreeNNForward<<<Union" << k_type / CORE_DIM

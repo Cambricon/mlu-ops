@@ -117,7 +117,7 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
 
   // generate prototxt
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("poly_nms", "POLY_NMS");
+    GEN_CASE_START("poly_nms");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input1", boxes, boxes_desc, 10, 0);
     GEN_CASE_DATA(false, "output1", output, output_desc, 0, 0);

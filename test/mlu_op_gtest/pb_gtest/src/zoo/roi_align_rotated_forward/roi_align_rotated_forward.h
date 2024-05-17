@@ -61,12 +61,6 @@ class RoiAlignRotatedForwardExecutor : public Executor {
       const float roi_start_y, const float bin_size_h, const float bin_size_w,
       const float roi_center_x, const float roi_center_y, const float cos_theta,
       const float sin_theta, std::vector<PreCalc> &pre_calc);
-
-  // CPU mode requires truth value-related computations,
-  // while other modes do not.
-  template <bool cpu_mode>
-  void computeWithTheoryOps();
-
   int64_t theory_ops_ = 0;
 };
 

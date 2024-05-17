@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "fft.h"
-
+#include <fftw3.h>
 namespace mluoptest {
 
 void FftExecutor::paramCheck() {
@@ -39,11 +39,12 @@ void FftExecutor::workspaceMalloc() {
   for (int i = 0; i < rank; i++) {
     n.push_back(fft_param.n(i));
   }
+  int direction = fft_param.direction();
 
   MLUOP_CHECK(mluOpCreateFFTPlan(&fft_plan_));
-  MLUOP_CHECK(mluOpMakeFFTPlanMany(handle_, fft_plan_, input_tensor,
-                                   output_tensor, rank, n.data(),
-                                   &reservespace_size_, &workspace_size_));
+  MLUOP_CHECK(mluOpMakeFFTPlanMany(
+      handle_, fft_plan_, input_tensor, output_tensor, rank, n.data(),
+      &reservespace_size_, &workspace_size_, direction));
 
   VLOG(4) << "reserve space size: " << reservespace_size_;
   VLOG(4) << "workspace size: " << workspace_size_;
@@ -66,7 +67,8 @@ void FftExecutor::compute() {
   VLOG(4) << "FftExecutor compute ";
   auto input_dev = data_vector_[0].device_ptr;
   auto output_dev = data_vector_[1].device_ptr;
-
+  // auto input_tensor = tensor_desc_[0].tensor;
+  // auto output_tensor = tensor_desc_[1].tensor;
   auto fft_param = parser_->getProtoNode()->fft_param();
   int direction = fft_param.direction();
   float scale_factor = fft_param.scale_factor();
@@ -81,7 +83,7 @@ void FftExecutor::compute() {
 
 void FftExecutor::workspaceFree() {
   MLUOP_CHECK(mluOpDestroyFFTPlan(fft_plan_));
-  for (auto &addr : workspace_) {
+  for (auto& addr : workspace_) {
     mlu_runtime_.deallocate(addr);
   }
   workspace_.clear();
@@ -89,6 +91,23 @@ void FftExecutor::workspaceFree() {
 
 void FftExecutor::cpuCompute() {
   // TODO(sunhui): use fftw? librosa? OTFFT? other thrid-party library.
+  auto count = parser_->getInputDataCount(0);
+  for (int i = 0; i < count; ++i) {
+    cpu_fp32_output_[0][i] = (cpu_fp32_input_[0][i]);
+  }
+
+  auto size = count;
+  fftwf_plan fft;
+
+  fftwf_complex* fftw_out = ((fftwf_complex*)cpu_fp32_output_[0]);
+  fftwf_complex* fftw_in = ((fftwf_complex*)cpu_fp32_input_[0]);
+
+  fft = fftwf_plan_dft_1d(size, fftw_in, fftw_out, FFTW_FORWARD,
+                          FFTW_ESTIMATE);  // Setup fftw plan for fft
+
+  fftwf_execute(fft);
+
+  fftwf_destroy_plan(fft);
 }
 
 int64_t FftExecutor::getTheoryOps() {

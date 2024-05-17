@@ -133,7 +133,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelPoolingForward(
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("voxel_pooling_forward", "VOXEL_POOLING_FORWARD");
+    GEN_CASE_START("voxel_pooling_forward");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "geom_xyz", geom_xyz, geom_xyz_desc);
     GEN_CASE_DATA_REAL(true, "input_features", input_features,

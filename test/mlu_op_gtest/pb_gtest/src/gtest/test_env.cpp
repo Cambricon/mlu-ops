@@ -424,7 +424,7 @@ bool TestEnvironment::getComputeMode(std::string bus_id_str, char &mode) {
   compute_mode_file_ss << "/proc/driver/cambricon/mlus/" << bus_id_str
                        << "/exclusive_mode";
   int fd =
-      open(compute_mode_file_ss.str().c_str(), O_CLOEXEC | O_SYNC | O_RDONLY);
+      open(compute_mode_file_ss.str().c_str(), O_CLOEXEC | O_SYNC | O_RDWR);
   char compute_mode[1];
   ssize_t stat = read(fd, compute_mode, 1);
   if (stat == -1) {
@@ -505,9 +505,8 @@ void TestEnvironment::setDevice() {
       device_id = sorted_device_ids[i].device_id;
       process_count = sorted_device_ids[i].process_count;
       std::string bus_id = sorted_device_ids[i].bus_id;
-      if ((process_count == 0 && (global_var.run_on_jenkins_ ||
-                                  sorted_device_ids[i].compute_mode == '0' ||
-                                  setComputeMode(bus_id, '0'))) ||
+      if ((process_count == 0 &&
+           (global_var.run_on_jenkins_ || setComputeMode(bus_id, '0'))) ||
           process_count > 0) {
         is_picked = true;
         break;

@@ -1,0 +1,558 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include <algorithm>
+
+#include "core/logging.h"
+#include "kernels/get_indice_pairs/get_indice_pairs_utils.h"
+#include "kernels/get_indice_pairs/normal_get_indice_pairs.h"
+#include "kernels/kernel.h"
+
+#define KERNEL_V (4096)
+#define NRAM_LIMIT \
+  (MAX_NRAM_SIZE + REM_FOR_STACK - 12 * 1024 - 3 * KERNEL_V * sizeof(float))
+
+#define Ndim (4)
+__nram__ float filter_kd_index[KERNEL_V];
+__nram__ float filter_kh_index[KERNEL_V];
+__nram__ float filter_kw_index[KERNEL_V];
+
+__nram__ char nbuf_total[NRAM_LIMIT];
+
+__mlu_func__ void computeIndex(int32_t *nram_output, int32_t *nram_input,
+                               int32_t *nram_aux_a, float *nram_aux_b,
+                               OutputSpace output_space, Stride stride,
+                               Dilation dilation, Padding padding,
+                               int32_t deal_num, int32_t step_index_start,
+                               int32_t k_dhw, int32_t batch) {
+#if __BANG_ARCH__ >= 370
+  int32_t len_l_dim = deal_num * (Ndim + 1);
+  int32_t deal_num_lk = deal_num * k_dhw;
+  int32_t output_size =
+      batch * output_space.o_d * output_space.o_h * output_space.o_w + 1;
+  __bang_transpose((int32_t *)nram_aux_a, (int32_t *)nram_input, deal_num,
+                   Ndim);
+  stepIndex((int32_t *)nram_aux_a + deal_num * Ndim, step_index_start,
+            deal_num);
+  expandInput((int32_t *)nram_aux_a, len_l_dim, k_dhw);
+  __bang_transpose((int32_t *)nram_aux_b, (int32_t *)nram_aux_a, k_dhw,
+                   len_l_dim);
+  __bang_transpose((int32_t *)nram_output + deal_num_lk,
+                   (int32_t *)nram_aux_b + deal_num_lk * Ndim, deal_num, k_dhw);
+  __bang_int322float_rn((float *)nram_aux_b, (int32_t *)nram_aux_b,
+                        k_dhw * len_l_dim, 0);
+  computeOutputIndex((float *)nram_aux_b + k_dhw * len_l_dim,
+                     (float *)nram_aux_b, (float *)nram_aux_a, filter_kd_index,
+                     filter_kh_index, filter_kw_index, deal_num_lk, k_dhw,
+                     stride, dilation, padding);
+  computeMask((float *)nram_aux_a + deal_num_lk * Ndim,
+              (float *)nram_aux_b + k_dhw * len_l_dim,
+              (float *)nram_aux_a + deal_num_lk, deal_num_lk, output_space);
+  __bang_float2int32_tz((int32_t *)nram_aux_a,
+                        (float *)nram_aux_a + deal_num_lk * Ndim, deal_num_lk,
+                        0);
+  __bang_transpose((int32_t *)nram_output, (int32_t *)nram_aux_a, deal_num,
+                   k_dhw);
+  genIndiceOutput((int32_t *)nram_aux_a + deal_num_lk, (float *)nram_aux_b,
+                  (float *)nram_aux_b + k_dhw * len_l_dim,
+                  (int32_t *)nram_aux_a + 2 * deal_num_lk, deal_num_lk,
+                  output_space);
+  genIndiceOutExpand((int32_t *)nram_aux_a + 2 * deal_num_lk,
+                     (int32_t *)nram_aux_a, (int32_t *)nram_aux_a + deal_num_lk,
+                     (int32_t *)nram_aux_a + 3 * deal_num_lk, deal_num_lk,
+                     output_size);
+  __bang_transpose((int32_t *)nram_output + 2 * deal_num_lk,
+                   (int32_t *)nram_aux_a + 2 * deal_num_lk, deal_num, k_dhw);
+#endif
+}
+
+__mlu_global__ void MLUBlockDefaultGetIndicePairKernel1(
+    void *mask_all_ws, void *indice_index_in_ws, void *indice_out_expand_ws,
+    void *indices_in, FilterSpace host_filter_space,
+    InputSpace host_input_space, OutputSpace host_output_space,
+    Stride host_stride, Dilation host_dilation, Padding host_padding,
+    int32_t core_num_l, int32_t input_active_site, int32_t batch) {
+#if __BANG_ARCH__ >= 370
+  /*  nram_space
+   |input| mask_all | indice_index_in | indice_out_expand |  4l +  3 k l
+   |input| mask_all | indice_index_in | indice_out_expand |  4l +  3 k l
+   | nram_aux_a  5 l k | nram_aux_b 8 l k
+  */
+  FilterSpace filter_space = host_filter_space;
+  // InputSpace input_space = host_input_space;
+  OutputSpace output_space = host_output_space;
+  Stride stride = host_stride;
+  Dilation dilation = host_dilation;
+  Padding padding = host_padding;
+  int32_t k_d = filter_space.k_d, k_h = filter_space.k_h,
+          k_w = filter_space.k_w;
+  int32_t k_dhw = k_d * k_h * k_w;
+  genFilterIndex(filter_kd_index, filter_kh_index, filter_kw_index, k_d, k_h,
+                 k_w);
+  int32_t len_l_job = 0, offset_l_job = 0;
+  assignTask(input_active_site, taskIdY, taskDimY, offset_l_job, len_l_job);
+  int32_t repeat = (len_l_job + core_num_l - 1) / core_num_l;
+  int32_t rem_num_l =
+      len_l_job % core_num_l == 0 ? core_num_l : len_l_job % core_num_l;
+  int32_t *nram_input = (int32_t *)nbuf_total;
+  int32_t load_num = core_num_l * Ndim;
+  float *nram_output = (float *)nbuf_total + load_num;
+  int32_t len_l_k = core_num_l * k_dhw;
+  int32_t ping_pong_num = load_num + len_l_k * 3;
+  float *nram_aux_a = (float *)nbuf_total + 2 * ping_pong_num;
+  float *nram_aux_b = (float *)nram_aux_a + len_l_k * (Ndim + 1);
+  int step_index_start = offset_l_job;
+  for (int i = 0; i < repeat + 2; ++i) {
+    if (i < repeat) {
+      int32_t *indices_in_addr =
+          (int32_t *)indices_in + (offset_l_job + i * core_num_l) * Ndim;
+      int32_t *nram_input_t = (int32_t *)nram_input + (i % 2) * ping_pong_num;
+      int32_t deal_num = i == repeat - 1 ? rem_num_l : core_num_l;
+      __memcpy_async((char *)nram_input_t, (char *)indices_in_addr,
+                     deal_num * Ndim * sizeof(int), GDRAM2NRAM);
+    }
+    if (1 <= i && i < (repeat + 1)) {
+      int32_t deal_num = (i - 1) == repeat - 1 ? rem_num_l : core_num_l;
+      int32_t *nram_input_t =
+          (int32_t *)nram_input + ((i - 1) % 2) * ping_pong_num;
+      int32_t *nram_output_t =
+          (int32_t *)nram_output + ((i - 1) % 2) * ping_pong_num;
+      computeIndex(nram_output_t, nram_input_t, (int32_t *)nram_aux_a,
+                   nram_aux_b, output_space, stride, dilation, padding,
+                   deal_num, step_index_start, k_dhw, batch);
+      step_index_start += deal_num;
+    }
+    if (i >= 2) {
+      int32_t deal_num = (i - 2) == repeat - 1 ? rem_num_l : core_num_l;
+      uint64_t gdram_offset =
+          (offset_l_job + (i - 2) * core_num_l) * sizeof(int);
+      int32_t *nram_output_t =
+          (int32_t *)nram_output + ((i - 2) % 2) * ping_pong_num;
+      __memcpy_async((char *)mask_all_ws + gdram_offset,
+                     (char *)(nram_output_t), deal_num * sizeof(int),
+                     NRAM2GDRAM, input_active_site * sizeof(int),
+                     deal_num * sizeof(int), k_dhw - 1);
+      __memcpy_async((char *)indice_index_in_ws + gdram_offset,
+                     (char *)(nram_output_t + deal_num * k_dhw),
+                     deal_num * sizeof(int), NRAM2GDRAM,
+                     input_active_site * sizeof(int), deal_num * sizeof(int),
+                     k_dhw - 1);
+      __memcpy_async((char *)indice_out_expand_ws + gdram_offset,
+                     (char *)(nram_output_t + 2 * deal_num * k_dhw),
+                     deal_num * sizeof(int), NRAM2GDRAM,
+                     input_active_site * sizeof(int), deal_num * sizeof(int),
+                     k_dhw - 1);
+    }
+    __sync();
+  }
+#endif
+}
+
+__mlu_global__ void MLUBlockDefaultGetIndicePairKernel2(void *index_output_ptr,
+                                                        int32_t num_act_out,
+                                                        int32_t core_num_l) {
+#if __BANG_ARCH__ >= 370
+  int32_t len_job = 0, offset_job = 0;
+  assignTask(num_act_out, taskIdY, taskDimY, offset_job, len_job);
+  int32_t repeat = (len_job + core_num_l - 1) / core_num_l;
+  int32_t rem_num_l =
+      len_job % core_num_l == 0 ? core_num_l : len_job % core_num_l;
+  int32_t *nram_input = (int32_t *)nbuf_total;
+  for (int i = 0; i < repeat; ++i) {
+    int32_t start_index = offset_job + i * core_num_l;
+    int32_t length = i == (repeat - 1) ? rem_num_l : core_num_l;
+    stepIndex((int32_t *)nram_input, start_index, length);  //  sync
+    int32_t *output_ptr = (int32_t *)index_output_ptr + start_index;
+    __memcpy((char *)output_ptr, nram_input, length * sizeof(int), NRAM2GDRAM);
+  }
+#endif
+}
+
+__mlu_global__ void MLUBlockBalanceGetIndicePairKernel(
+    void *balance_input, void *balance_mask, void *balance_output,
+    int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
+    int32_t output_size) {
+#if __BANG_ARCH__ >= 370
+  int32_t len_job, offset_job = 0;
+  assignTask(len_l * kernel_volume, taskIdY, taskDimY, offset_job, len_job);
+  int32_t repeat = (len_job + core_num_l - 1) / core_num_l;
+  int32_t rem_num_l =
+      len_job % core_num_l == 0 ? core_num_l : len_job % core_num_l;
+  int32_t *nram_random_num = (int32_t *)nbuf_total;
+  int32_t *nram_input = (int32_t *)nbuf_total + core_num_l;
+  int32_t *nram_mask = (int32_t *)nbuf_total + 2 * core_num_l;
+  int32_t *nram_output = (int32_t *)nbuf_total + 3 * core_num_l;
+  int32_t ping_pong_num = 3 * core_num_l;
+  int32_t *nram_aux = (int32_t *)nbuf_total + 7 * core_num_l;
+  int32_t multi_max = output_size / taskDimY;
+  stepIndex(nram_random_num, taskId * multi_max, core_num_l);
+  for (int i = 0; i < repeat + 2; ++i) {
+    if (i < repeat) {
+      int32_t deal_num = i == repeat - 1 ? rem_num_l : core_num_l;
+      int32_t *balance_input_ptr =
+          (int32_t *)balance_input + offset_job + i * core_num_l;
+      int32_t *balance_mask_ptr =
+          (int32_t *)balance_mask + offset_job + i * core_num_l;
+      int32_t *nram_input_t = (int32_t *)nram_input + (i % 2) * ping_pong_num;
+      int32_t *nram_mask_t = (int32_t *)nram_mask + (i % 2) * ping_pong_num;
+      __memcpy_async((char *)nram_input_t, (char *)balance_input_ptr,
+                     deal_num * sizeof(int), GDRAM2NRAM);
+      __memcpy_async((char *)nram_mask_t, (char *)balance_mask_ptr,
+                     deal_num * sizeof(int), GDRAM2NRAM);
+    }
+    if (1 <= i && i <= repeat) {
+      int32_t deal_num = (i - 1) == repeat - 1 ? rem_num_l : core_num_l;
+      int32_t *nram_input_t =
+          (int32_t *)nram_input + ((i - 1) % 2) * ping_pong_num;
+      int32_t *nram_mask_t =
+          (int32_t *)nram_mask + ((i - 1) % 2) * ping_pong_num;
+      int32_t *nram_output_t =
+          (int32_t *)nram_output + ((i - 1) % 2) * ping_pong_num;
+      __bang_mul_scalar((int32_t *)nram_aux, (int32_t *)nram_mask_t, int(-1),
+                        deal_num);
+      __bang_band((char *)nram_output_t, (char *)nram_input_t, (char *)nram_aux,
+                  deal_num * sizeof(int));
+      __bang_sub_scalar((int32_t *)nram_aux, (int32_t *)nram_mask_t, int(1),
+                        deal_num);
+      __bang_band((char *)nram_aux, (char *)nram_aux, (char *)nram_random_num,
+                  deal_num * sizeof(int));
+      __bang_add((int32_t *)nram_output_t, (int32_t *)nram_output_t,
+                 (int32_t *)nram_aux, deal_num);
+    }
+    if (i >= 2) {
+      int32_t deal_num = (i - 2) == repeat - 1 ? rem_num_l : core_num_l;
+      uint64_t gdram_offset = (offset_job + (i - 2) * core_num_l) * sizeof(int);
+      int32_t *nram_output_t =
+          (int32_t *)nram_output + ((i - 2) % 2) * ping_pong_num;
+      __memcpy_async((char *)balance_output + gdram_offset,
+                     (char *)nram_output_t, deal_num * sizeof(int), NRAM2GDRAM);
+    }
+    __sync();
+  }
+#endif
+}
+
+__mlu_global__ void MLUBlockDefaultGetIndicePairKernel3(
+    void *indice_pair, void *indice_index_ptr, void *mask_all, int32_t len_l,
+    int32_t kernel_volume, int32_t core_num_l) {
+#if __BANG_ARCH__ >= 370
+  int32_t len_l_job = 0, offset_l_job = 0;
+  assignTask(2 * kernel_volume, taskIdY, taskDimY, offset_l_job, len_l_job);
+  float *nram_input = (float *)nbuf_total;
+  float *nram_mask = (float *)nram_input + core_num_l;
+  float *nram_output = (float *)nram_input + core_num_l * 2;
+  float *nram_aux = (float *)nram_input + core_num_l * 3;
+  // | nram_input  | nram_mask | nram_output  | nram_aux |
+  for (int j = 0; j < len_l_job; ++j) {
+    int32_t mask_offset = (offset_l_job + j) % kernel_volume;
+    int32_t indice_store = ((offset_l_job + j) % kernel_volume) * 2;
+    int32_t store_offset =
+        (offset_l_job + j) < kernel_volume ? indice_store : indice_store + 1;
+    int32_t *index_job_start =
+        (int32_t *)indice_index_ptr + (offset_l_job + j) * len_l;
+    int32_t *mask_job_start = (int32_t *)mask_all + mask_offset * len_l;
+    int32_t core_offset_l_valid = 0;
+    int32_t valid_l_num_now = 0;
+    int32_t repeat = (len_l + core_num_l - 1) / core_num_l;
+    int32_t rem_num_l =
+        len_l % core_num_l == 0 ? core_num_l : len_l % core_num_l;
+    for (int i = 0; i < repeat; ++i) {
+      int32_t load_l_num = i == (repeat - 1) ? rem_num_l : core_num_l;
+      int32_t *index_start = (int32_t *)index_job_start + i * core_num_l;
+      int32_t *mask_start = (int32_t *)mask_job_start + i * core_num_l;
+      __memcpy(nram_input, index_start, load_l_num * sizeof(int), GDRAM2NRAM);
+      __memcpy(nram_mask, mask_start, load_l_num * sizeof(int), GDRAM2NRAM);
+      __bang_int322float_rn((float *)nram_aux, (int32_t *)nram_mask, load_l_num,
+                            0);
+      valid_l_num_now = __bang_count((float *)nram_aux, load_l_num);
+      __bang_collect((float *)nram_output, (float *)nram_input,
+                     (float *)nram_aux, load_l_num);
+      int32_t *store_valid_ptr =
+          (int32_t *)indice_pair + store_offset * len_l + core_offset_l_valid;
+      core_offset_l_valid += valid_l_num_now;
+      if (valid_l_num_now > 0) {
+        __memcpy((char *)store_valid_ptr, (char *)nram_output,
+                 valid_l_num_now * sizeof(int32_t), NRAM2GDRAM);
+      }
+    }
+  }
+#endif
+}
+
+__mlu_global__ void MLUBlockDefaultGetIndicePairKernel4(
+    void *indice_out, void *input_ptr, OutputSpace host_output_space,
+    int32_t len_l, int32_t core_num_l) {
+#if __BANG_ARCH__ >= 370
+  OutputSpace output_space = host_output_space;
+  int32_t len_l_job = 0, offset_l_job = 0;
+  assignTask(len_l, taskIdY, taskDimY, offset_l_job, len_l_job);
+  int32_t ping_pong_num = core_num_l * 5;
+  int32_t *nram_input = (int32_t *)nbuf_total;
+  int32_t *nram_output = (int32_t *)nbuf_total + core_num_l;
+  int32_t *nram_aux = (int32_t *)nbuf_total + 2 * ping_pong_num;
+  int32_t *input_start_core = (int32_t *)input_ptr + offset_l_job;
+  // |nram_input | nram_output * 4 | nram_input | nram_output * 4 | nram_aux|
+  int32_t rem_num_l =
+      len_l_job % core_num_l == 0 ? core_num_l : len_l_job % core_num_l;
+  int32_t repeat = (len_l_job + core_num_l - 1) / core_num_l;
+  for (int i = 0; i < repeat + 2; ++i) {
+    if (i < repeat) {
+      int32_t load_num_l = i == (repeat - 1) ? rem_num_l : core_num_l;
+      int32_t *input_start_ptr = input_start_core + i * core_num_l;
+      int32_t *nram_input_load = nram_input + (i % 2) * ping_pong_num;
+      __memcpy_async((char *)nram_input_load, (char *)input_start_ptr,
+                     load_num_l * sizeof(int32_t), GDRAM2NRAM);
+    }
+    if (1 <= i && i < (repeat + 1)) {
+      int32_t load_num_l = (i - 1) == (repeat - 1) ? rem_num_l : core_num_l;
+      int32_t *nram_output_t = nram_output + ((i - 1) % 2) * ping_pong_num;
+      int32_t *nram_input_t = nram_input + ((i - 1) % 2) * ping_pong_num;
+      genIndiceOutLast((int32_t *)nram_output_t, (int32_t *)nram_input_t,
+                       (int32_t *)nram_aux, output_space, load_num_l);
+    }
+    if (i >= 2) {
+      int32_t load_num_l = (i - 2) == (repeat - 1) ? rem_num_l : core_num_l;
+      int32_t *nram_output_t = nram_output + ((i - 2) % 2) * ping_pong_num;
+      int32_t *indice_out_t =
+          (int32_t *)indice_out + (offset_l_job + (i - 2) * core_num_l) * 4;
+      __memcpy_async((char *)indice_out_t, (char *)nram_output_t,
+                     load_num_l * 4 * sizeof(int32_t), NRAM2GDRAM);
+    }
+    __sync();
+  }
+#endif
+}
+
+__mlu_global__ void MLUBlockSubmGetIndicePairKernel1(
+    void *mask_all_ptr, void *indice_index_in_ptr, void *indice_in_expand_ptr,
+    void *indice_out_expand_ptr, void *indices_in,
+    FilterSpace host_filter_space, InputSpace host_input_space,
+    OutputSpace host_output_space, Stride host_stride, Dilation host_dilation,
+    Padding host_padding, int32_t core_num_l, int32_t input_active_site,
+    int32_t batch) {
+#if __BANG_ARCH__ >= 370
+  /*  nram_space
+  |input| mask_all | indice_index_in |  indice_out_expand | indice_in_expand |
+  4l + l + 3kl |input| mask_all | indice_index_in |  indice_out_expand |
+  indice_in_expand | 4l + l + 3kl | nram_aux_a  5lk | nram_aux_b 8lk |
+ */
+  FilterSpace filter_space = host_filter_space;
+  InputSpace input_space = host_input_space;
+  OutputSpace output_space = host_output_space;
+  Stride stride = host_stride;
+  Dilation dilation = host_dilation;
+  Padding padding = host_padding;
+  int32_t k_d = filter_space.k_d, k_h = filter_space.k_h,
+          k_w = filter_space.k_w;
+  int32_t k_dhw = k_d * k_h * k_w;
+  genFilterIndex((float *)filter_kd_index, (float *)filter_kh_index,
+                 (float *)filter_kw_index, k_d, k_h, k_w);
+  int32_t len_l_job = 0, offset_l_job = 0;
+  assignTask(input_active_site, taskIdY, taskDimY, offset_l_job, len_l_job);
+  int32_t repeat = (len_l_job + core_num_l - 1) / core_num_l;
+  int32_t rem_num_l =
+      len_l_job % core_num_l == 0 ? core_num_l : len_l_job % core_num_l;
+  int32_t *nram_input = (int32_t *)nbuf_total;
+  int32_t load_num = core_num_l * Ndim;
+  float *nram_output = (float *)nbuf_total + load_num;
+  int32_t len_l_k = core_num_l * k_dhw;
+  int32_t ping_pong_num = load_num + core_num_l + len_l_k * 3;
+  float *nram_aux_a = (float *)nbuf_total + 2 * ping_pong_num;
+  float *nram_aux_b = (float *)nram_aux_a + len_l_k * (Ndim + 1);
+  int step_index_start = offset_l_job;
+  for (int i = 0; i < repeat + 2; ++i) {
+    if (i < repeat) {
+      float *indices_in_addr =
+          (float *)indices_in + (offset_l_job + i * core_num_l) * Ndim;
+      int32_t *nram_input_t = (int32_t *)nram_input + (i % 2) * ping_pong_num;
+      int32_t deal_num = i == repeat - 1 ? rem_num_l : core_num_l;
+      __memcpy_async((char *)nram_input_t, (char *)indices_in_addr,
+                     deal_num * Ndim * sizeof(int), GDRAM2NRAM);
+    }
+    if (1 <= i && i < (repeat + 1)) {
+      int32_t deal_num = (i - 1) == repeat - 1 ? rem_num_l : core_num_l;
+      int32_t *nram_input_t =
+          (int32_t *)nram_input + ((i - 1) % 2) * ping_pong_num;
+      int32_t *nram_output_t =
+          (int32_t *)nram_output + ((i - 1) % 2) * ping_pong_num;
+      genIndiceInExpand(nram_output_t + 3 * deal_num * k_dhw, nram_input_t,
+                        (int32_t *)nram_aux_a, deal_num, input_space);
+      computeIndex(nram_output_t, nram_input_t, (int32_t *)nram_aux_a,
+                   nram_aux_b, output_space, stride, dilation, padding,
+                   deal_num, step_index_start, k_dhw, batch);
+      step_index_start += deal_num;
+    }
+    if (i >= 2) {
+      int32_t deal_num = (i - 2) == repeat - 1 ? rem_num_l : core_num_l;
+      uint64_t gdram_offset =
+          (offset_l_job + (i - 2) * core_num_l) * sizeof(int32_t);
+      int32_t *nram_output_t =
+          (int32_t *)nram_output + ((i - 2) % 2) * ping_pong_num;
+      __memcpy_async((char *)mask_all_ptr + gdram_offset,
+                     (char *)(nram_output_t), deal_num * sizeof(int),
+                     NRAM2GDRAM, input_active_site * sizeof(int),
+                     deal_num * sizeof(int32_t), k_dhw - 1);
+      __memcpy_async((char *)indice_index_in_ptr + gdram_offset,
+                     (char *)(nram_output_t + deal_num * k_dhw),
+                     deal_num * sizeof(int), NRAM2GDRAM,
+                     input_active_site * sizeof(int),
+                     deal_num * sizeof(int32_t), k_dhw - 1);
+      __memcpy_async((char *)indice_out_expand_ptr + gdram_offset,
+                     (char *)(nram_output_t + 2 * deal_num * k_dhw),
+                     deal_num * sizeof(int), NRAM2GDRAM,
+                     input_active_site * sizeof(int),
+                     deal_num * sizeof(int32_t), k_dhw - 1);
+      __memcpy_async((char *)indice_in_expand_ptr + gdram_offset,
+                     (char *)(nram_output_t + 3 * deal_num * k_dhw),
+                     deal_num * sizeof(int), NRAM2GDRAM);
+    }
+    __sync();
+  }
+#endif
+}
+
+__mlu_global__ void MLUBlockSubmGetIndicePairKernel2(
+    void *indice_out, void *mask_all_ptr, void *indice_out_index_ptr,
+    void *indices_in, int32_t len_1_one, int32_t len_l_two,
+    int32_t core_num_1_one, int32_t core_num_l_two) {
+#if __BANG_ARCH__ >= 370
+  int32_t len_job = 0, offset_job = 0;
+  assignTask(len_1_one, taskIdY, taskDimY, offset_job, len_job);
+  int32_t repeat = (len_job + core_num_1_one - 1) / core_num_1_one;
+  int32_t rem_num_l =
+      len_job % core_num_1_one == 0 ? core_num_1_one : len_job % core_num_1_one;
+  int32_t *nram_input = (int32_t *)nbuf_total;
+  int32_t bit_width = sizeof(int32_t);
+  int32_t *indices_in_offset = (int32_t *)indices_in + offset_job;
+  int32_t *indice_out_offset = (int32_t *)indice_out + offset_job;
+  for (int i = 0; i < repeat; ++i) {
+    int32_t offset = i * core_num_1_one;
+    int32_t deal_num = i == repeat - 1 ? rem_num_l : core_num_1_one;
+    __memcpy_async((char *)nram_input, (char *)(indices_in_offset + offset),
+                   deal_num * bit_width, GDRAM2NRAM);
+    __memcpy_async((char *)(indice_out_offset + offset), (char *)nram_input,
+                   deal_num * bit_width, NRAM2GDRAM);
+  }
+
+  assignTask(len_l_two, taskIdY, taskDimY, offset_job, len_job);
+  repeat = (len_job + core_num_l_two - 1) / core_num_l_two;
+  rem_num_l =
+      len_job % core_num_l_two == 0 ? core_num_l_two : len_job % core_num_l_two;
+  int32_t *mask_all_ptr_offset = (int32_t *)mask_all_ptr + offset_job;
+  int32_t *indice_out_index_ptr_offset =
+      (int32_t *)indice_out_index_ptr + offset_job;
+  int32_t *nram_output = (int32_t *)nbuf_total + core_num_l_two;
+  for (int i = 0; i < repeat; ++i) {
+    int32_t offset = i * core_num_l_two;
+    int32_t deal_num = i == repeat - 1 ? rem_num_l : core_num_l_two;
+    __memcpy((char *)nram_input, (char *)(mask_all_ptr_offset + offset),
+             deal_num * bit_width, GDRAM2NRAM);
+    __memcpy((char *)nram_output,
+             (char *)(indice_out_index_ptr_offset + offset),
+             deal_num * bit_width, GDRAM2NRAM);
+    __bang_ge_scalar((int32_t *)nram_output, (int32_t *)nram_output, (int)0,
+                     deal_num);
+    __bang_and((int32_t *)nram_output, (int32_t *)nram_output,
+               (int32_t *)nram_input, deal_num);
+    __memcpy((char *)(mask_all_ptr_offset + offset), (char *)nram_output,
+             deal_num * bit_width, NRAM2GDRAM);
+  }
+#endif
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelDefaultGetIndicePairKl1(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *mask_all_ws, void *indice_index_in_ws, void *out_indices_expand_ws,
+    void *indices, FilterSpace filter_space, InputSpace input_space,
+    OutputSpace output_space, Stride stride, Dilation dilation, Padding padding,
+    int32_t core_num_l, int32_t input_active_site, int32_t batch) {
+  KERNEL_CHECK(MLUBlockDefaultGetIndicePairKernel1<<<k_dim, k_type, queue>>>(
+      (void *)mask_all_ws, (void *)indice_index_in_ws,
+      (void *)out_indices_expand_ws, (void *)indices, filter_space, input_space,
+      output_space, stride, dilation, padding, core_num_l, input_active_site,
+      batch));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelDefaultGetIndicePairKl2(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *step_index_ptr, int32_t num_act_out, int32_t core_num_l) {
+  KERNEL_CHECK(MLUBlockDefaultGetIndicePairKernel2<<<k_dim, k_type, queue>>>(
+      step_index_ptr, num_act_out, core_num_l));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelDefaultGetIndicePairKl3(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *indice_pairs, void *input_addr, void *mask_addr,
+    int32_t input_active_site, int32_t kernel_volume, int32_t core_num_l) {
+  KERNEL_CHECK(MLUBlockDefaultGetIndicePairKernel3<<<k_dim, k_type, queue>>>(
+      indice_pairs, input_addr, mask_addr, input_active_site, kernel_volume,
+      core_num_l));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelDefaultGetIndicePairKl4(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *out_indices, void *input_addr, OutputSpace output_space,
+    int32_t len_l, int32_t core_num_l) {
+  KERNEL_CHECK(MLUBlockDefaultGetIndicePairKernel4<<<k_dim, k_type, queue>>>(
+      out_indices, input_addr, output_space, len_l, core_num_l));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelBalanceGetIndicePair(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *balance_input, void *balance_mask, void *balance_output,
+    int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
+    int32_t output_size) {
+  KERNEL_CHECK(MLUBlockBalanceGetIndicePairKernel<<<k_dim, k_type, queue>>>(
+      balance_input, balance_mask, balance_output, len_l, kernel_volume,
+      core_num_l, output_size));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelSubmGetIndicePairKl1(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *mask_all_ptr, void *indice_index_in_ptr, void *indice_in_expand_ptr,
+    void *out_indices_expand_ptr, void *indices, FilterSpace filter_space,
+    InputSpace input_space, OutputSpace output_space, Stride stride,
+    Dilation dilation, Padding padding, int32_t core_num_l,
+    int32_t input_active_site, int32_t batch) {
+  KERNEL_CHECK(MLUBlockSubmGetIndicePairKernel1<<<k_dim, k_type, queue>>>(
+      (void *)mask_all_ptr, (void *)indice_index_in_ptr,
+      (void *)indice_in_expand_ptr, (void *)out_indices_expand_ptr,
+      (void *)indices, filter_space, input_space, output_space, stride,
+      dilation, padding, core_num_l, input_active_site, batch));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelSubmGetIndicePairKl2(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    void *out_indices, void *mask_all_ptr, void *out_indices_index_ptr,
+    void *indices, int32_t len_1_one, int32_t len_l_two, int32_t core_num_l_one,
+    int32_t core_num_l_two) {
+  KERNEL_CHECK(MLUBlockSubmGetIndicePairKernel2<<<k_dim, k_type, queue>>>(
+      (void *)out_indices, (void *)mask_all_ptr, (void *)out_indices_index_ptr,
+      (void *)indices, len_1_one, len_l_two, core_num_l_one, core_num_l_two));
+  return MLUOP_STATUS_SUCCESS;
+}

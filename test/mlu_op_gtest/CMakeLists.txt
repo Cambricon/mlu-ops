@@ -33,6 +33,9 @@ find_path(LIBXML2_INCLUDE_DIR libxml/xpath.h
 find_library(LIBXML2_LIBRARY NAMES xml2 libxml2
   HINTS ${PC_LIBXML_LIBDIR} ${PC_LIBXML_LIBRARY_DIRS}
 )
+find_library(LIBFFTWF_LIBRARY NAMES fftwf
+  HINTS ${PC_LIBFFTWF_LIBDIR} ${PC_LIBFFTWF_LIBRARY_DIRS}
+)
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(LibXml2 DEFAULT_MSG
   LIBXML2_LIBRARY LIBXML2_INCLUDE_DIR
@@ -56,11 +59,28 @@ if(NOT ${EIGEN3_INCLUDE_DIRS})
     message( FATAL_ERROR "Cannot find eigen3, CMake will exit." )
   endif()
 endif()
+
+# set(FFTW3F_INCLUDE_DIRS "/opt/fftwf/include")
+# SET(FFTW3F_PATH  /opt/fftw-3.3.9-float)
+# SET(FFTW_DOUBLE_PATH /opt/fftw-3.3.9-double)
+# SET(FFTW_LIB_NAME    fftw3 fftw3f m)
+# SET(FFTW_LIB_NAME    fftw3f)
+
+# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFFTW_BASELINE")
+# SET(OPENFFT_LINKER_TEST_LIBS ${OPENFFT_LINKER_TEST_LIBS} ${FFTW_LIB_NAME})
+# SET(OPENFFT_TEST_LIBS_PATH ${OPENFFT_TEST_LIBS_PATH} ${FFTW_FLOAT_PATH}/lib ${FFTW_DOUBLE_PATH}/lib)
+# SET(OPENFFT_TEST_INCLUDE_DIRECTORIES ${OPENFFT_TEST_INCLUDE_DIRECTORIES} ${FFTW_FLOAT_PATH}/include ${FFTW_DOUBLE_PATH}/include)
+
+
 # FindProtobuf will generate important variables (could be overrided):
 # (cache) PROTOBUF_LIBRARY, (set) PROTOBUF_LIBRARIES
 # (cache) PROTOBUF_INCLUDE_DIR, (set) PROTOBUF_INCLUDE_DIRS
 # PROTOBUF_PROTOC_EXECUTABLE
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${ORIG_FIND_LIBRARY_SUFFIXES})
+
+set(LIBFFTWF_INCLUDE_DIRS "/opt/fftwf/include")
+set(LIBFFTWF_LIBRARY "/opt/fftwf/lib")
+
 
 message(STATUS "libxml2 include: " ${LIBXML2_INCLUDE_DIRS})
 message(STATUS "libxml2 library: " ${LIBXML2_LIBRARIES})
@@ -68,10 +88,15 @@ message(STATUS "protobuf include: " ${PROTOBUF_INCLUDE_DIRS})
 message(STATUS "protobuf libraries: " ${PROTOBUF_LIBRARIES})
 message(STATUS "protoc executable: " ${PROTOBUF_PROTOC_EXECUTABLE})
 message(STATUS "libeigen3 include: " ${LIBEIGEN3_INCLUDE_DIRS})
+# message(STATUS "fftwf include: " ${LIBFFTWF_LIBRARY})
 
 include_directories(${LIBXML2_INCLUDE_DIRS})
 include_directories(${PROTOBUF_INCLUDE_DIR})
 include_directories(${LIBEIGEN3_INCLUDE_DIRS})
+include_directories(${LIBFFTWF_INCLUDE_DIRS})
+# include_directories(${FFTW3F_INCLUDE_DIRS})
+# include_directories(${LIBFFTWF_INCLUDE_DIRS})
+
 
 if(${MLUOP_TARGET_CPU_ARCH} MATCHES "aarch64")
   # set(DEFAULT_PROTOBUF_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/include/")
@@ -183,7 +208,7 @@ add_library(mluop_pb_gtest_obj OBJECT ${MLUOP_PB_TEST_DIR} ${MLUOP_PB_GTEST_DIR}
 target_include_directories(mluop_pb_gtest_obj PRIVATE ${MLUOP_PB_GTEST_INCLUDE} ${PROTO_PATH})
 add_dependencies(mluop_pb_gtest_obj mluop_build_proto)
 add_executable(mluop_gtest $<TARGET_OBJECTS:mluop_pb_gtest_obj>)
-target_link_libraries(mluop_gtest mluops)
+target_link_libraries(mluop_gtest mluops )
 set(targets_mluop_gtest mluop_gtest)
 
 message(STATUS "EXTRA_LIBS: ${EXTRA_LIBS}")
@@ -191,8 +216,9 @@ foreach(target_gtest ${targets_mluop_gtest})
   target_link_libraries(${target_gtest} mluop_gtest_kernels)
   target_link_libraries(${target_gtest} -Wl,--no-as-needed cnbin -Wl,--as-needed)
   target_link_libraries(${target_gtest} cnrt cndev cndrv pthread gtest_shared stdc++ m dl)
-  target_link_libraries(${target_gtest} ${LIBXML2_LIBRARIES} ${PROTOBUF_LIBRARIES} ${EXTRA_LIBS})
+  target_link_libraries(${target_gtest} ${LIBFFTWF_LIBRARY} ${LIBXML2_LIBRARIES} ${PROTOBUF_LIBRARIES} ${EXTRA_LIBS})
   target_link_libraries(${target_gtest} mluop_test_proto)
+  target_link_libraries(${target_gtest} /opt/fftwf/lib/libfftw3f.a)
   set_target_properties(${target_gtest}
     PROPERTIES
     INSTALL_RPATH "$ORIGIN/../../$LIB;../../lib${LIB_SUFFIX}"

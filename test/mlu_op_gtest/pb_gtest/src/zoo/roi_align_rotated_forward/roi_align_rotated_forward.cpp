@@ -26,8 +26,6 @@
 #include <string>
 
 namespace mluoptest {
-// Calculate based on the branch with the maximum computational load.
-// The theory_ops per single loop iteration is 50.
 void RoiAlignRotatedForwardExecutor::preCalcForBilinearInterpolate(
     const int height, const int width, const int channel,
     const int pooled_height, const int pooled_width, const int roi_bin_grid_h,
@@ -148,9 +146,8 @@ void RoiAlignRotatedForwardExecutor::compute() {
   interface_timer_.stop();
 }
 
-template <bool cpu_mode>
-void RoiAlignRotatedForwardExecutor::computeWithTheoryOps() {
-  // 1.Get basic information about proto
+void RoiAlignRotatedForwardExecutor::cpuCompute() {
+  VLOG(4) << "RoiAlignRotatedForwardExecutor cpu compute ";
   const int pooled_height = parser_->getProtoNode()
                                 ->roi_align_rotated_forward_param()
                                 .pooled_height();
@@ -170,32 +167,9 @@ void RoiAlignRotatedForwardExecutor::computeWithTheoryOps() {
   auto rois_desc = parser_->getMetaTensor(1).tensor;
   auto output_desc = parser_->getMetaTensor(2).tensor;
 
-  // 2.Selectively load data based on the pattern
-  float *features, *rois, *output;
-  if (cpu_mode) {
-    VLOG(4) << "RoiAlignRotatedForwardExecutor cpu compute ";
-    features = cpu_fp32_input_[0];
-    rois = cpu_fp32_input_[1];  // (n, 6) [batch_id, x, y, w, h, Θ]
-    output = cpu_fp32_output_[0];
-  } else {
-    // Only load the data that affects computation.
-    auto *ts = parser_->input(1);
-    if (unlikely(ts->empty())) {
-      return;
-    }
-    // Load data as float type.
-    if (ts->dtype == MLUOP_DTYPE_FLOAT) {
-      rois = (float *)cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
-      parser_->getInputTensorValue(1, (void *)rois, ts->shape_count);
-    } else {
-      void *temp = cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
-      parser_->getInputTensorValue(1, temp, ts->shape_count);
-      rois = (float *)cpu_runtime_.allocate(ts->shape_count * sizeof(float));
-      castDataOut(temp, ts->dtype, rois, MLUOP_DTYPE_FLOAT,
-                  ts->shape_count, NO_QUANT);
-      cpu_runtime_.deallocate(temp);
-    }
-  }
+  float *features = cpu_fp32_input_[0];
+  float *rois = cpu_fp32_input_[1];  // (n, 6) [batch_id, x, y, w, h, Θ]
+  float *output = cpu_fp32_output_[0];
 
   const int channel = features_desc->dims[3];
   const int width = features_desc->dims[2];
@@ -207,41 +181,34 @@ void RoiAlignRotatedForwardExecutor::computeWithTheoryOps() {
     return;
   }
 
-  // 3.Control flow section
   for (int n_idx = 0; n_idx < rois_nums; ++n_idx) {
     const int output_nidx = n_idx * pooled_height * pooled_width * channel;
 
     const float *current_roi = rois + n_idx * ROI_OFFSET;
     const int roi_batch_idx = (int)current_roi[0];
 
-    theory_ops_ += 8;
     const float offset = aligned ? 0.5 : 0.0;
     const float roi_center_x = current_roi[1] * spatial_scale - offset;
     const float roi_center_y = current_roi[2] * spatial_scale - offset;
     float roi_width = current_roi[3] * spatial_scale;
     float roi_height = current_roi[4] * spatial_scale;
     float theta = current_roi[5];
-
     if (clockwise) {
-      theory_ops_ += 1;
       theta = -theta;
     }
-    theory_ops_ += 2;
     const float cos_theta = cos(theta);
     const float sin_theta = sin(theta);
 
     if (aligned) {
       if (roi_width < 0 || roi_height < 0) {
         VLOG(4) << "ROIs do not have non-negative value.";
-        continue;
+        throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                    std::to_string(__LINE__));
       }
     } else {
-      theory_ops_ += 2;
       roi_width = std::max(roi_width, (float)1.0);
       roi_height = std::max(roi_height, (float)1.0);
     }
-
-    theory_ops_ += (sample_ratio > 0) ? 7 : 9;
     const float bin_size_h = roi_height / static_cast<float>(pooled_height);
     const float bin_size_w = roi_width / static_cast<float>(pooled_width);
     int roi_bin_grid_h =
@@ -249,71 +216,53 @@ void RoiAlignRotatedForwardExecutor::computeWithTheoryOps() {
     int roi_bin_grid_w =
         (sample_ratio > 0) ? sample_ratio : ceilf(roi_width / pooled_width);
     const float count = std::max(roi_bin_grid_h * roi_bin_grid_w, 1);
+    std::vector<PreCalc> pre_calc(pooled_height * pooled_width * count);
     const float roi_start_x = -roi_width / 2.0;
     const float roi_start_y = -roi_height / 2.0;
 
-    // 4.Computation flow based on truth value dependencies
-    // 58 meanings (50 + 8)
-    theory_ops_ += (roi_bin_grid_h * roi_bin_grid_w * 58 + 1) *
-                pooled_height * pooled_width;
-    if (cpu_mode) {
-      std::vector<PreCalc> pre_calc(pooled_height * pooled_width * count);
-      // regard as 50 theory_ops at once
-      preCalcForBilinearInterpolate(
+    preCalcForBilinearInterpolate(
         height, width, channel, pooled_height, pooled_width, roi_bin_grid_h,
         roi_bin_grid_w, roi_start_x, roi_start_y, bin_size_h, bin_size_w,
         roi_center_x, roi_center_y, cos_theta, sin_theta, pre_calc);
-
-      for (int c_idx = 0; c_idx < channel; ++c_idx) {
-        float *offset_features =
+    for (int c_idx = 0; c_idx < channel; ++c_idx) {
+      const float *offset_features =
           features + roi_batch_idx * height * width * channel;
-        int pre_calc_idx = 0;
-        for (int ph = 0; ph < pooled_height; ++ph) {
-          for (int pw = 0; pw < pooled_width; ++pw) {
-            int output_idx =
-                output_nidx + (ph * pooled_width + pw) * channel + c_idx;
-            float output_val = 0.;
-            // regard as 8 theory_ops at once
-            for (int iy = 0; iy < roi_bin_grid_h; ++iy) {
-              for (int ix = 0; ix < roi_bin_grid_w; ++ix) {
-                auto pc = pre_calc[pre_calc_idx];
-                if (pc.w1 == 0 && pc.w2 == 0 && pc.w3 == 0 && pc.w4 == 0) {
-                  output_val += 0;
-                } else {
-                  output_val += pc.w1 * offset_features[pc.pos1 + c_idx] +
-                                pc.w2 * offset_features[pc.pos2 + c_idx] +
-                                pc.w3 * offset_features[pc.pos3 + c_idx] +
-                                pc.w4 * offset_features[pc.pos4 + c_idx];
-                }
-                ++pre_calc_idx;
+      int pre_calc_idx = 0;
+
+      for (int ph = 0; ph < pooled_height; ++ph) {
+        for (int pw = 0; pw < pooled_width; ++pw) {
+          int output_idx =
+              output_nidx + (ph * pooled_width + pw) * channel + c_idx;
+
+          float output_val = 0.;
+          for (int iy = 0; iy < roi_bin_grid_h; ++iy) {
+            for (int ix = 0; ix < roi_bin_grid_w; ++ix) {
+              auto pc = pre_calc[pre_calc_idx];
+              if (pc.w1 == 0 && pc.w2 == 0 && pc.w3 == 0 && pc.w4 == 0) {
+                output_val += 0;
+              } else {
+                output_val += pc.w1 * offset_features[pc.pos1 + c_idx] +
+                              pc.w2 * offset_features[pc.pos2 + c_idx] +
+                              pc.w3 * offset_features[pc.pos3 + c_idx] +
+                              pc.w4 * offset_features[pc.pos4 + c_idx];
               }
+              ++pre_calc_idx;
+              theory_ops_ += 8;
             }
-            // regard as 1 theory_ops
-            output_val /= count;
-            output[output_idx] = output_val;
           }
+          output_val /= count;
+          output[output_idx] = output_val;
+          ++theory_ops_;
         }
       }
     }
   }
-
-  // 5.Free memory
-  if (!cpu_mode) {
-    cpu_runtime_.deallocate(rois);
-  }
-}
-
-void RoiAlignRotatedForwardExecutor::cpuCompute() {
-  computeWithTheoryOps<true>();
 }
 
 int64_t RoiAlignRotatedForwardExecutor::getTheoryOps() {
-#if 0
-  // When debugging, used for getting theory_ops on the GPU.
   if (parser_->device() != CPU) {
-    computeWithTheoryOps<false>();
+    return -1;
   }
-#endif
   VLOG(4) << "getTheoryOps: " << theory_ops_ << " ops";
   return theory_ops_;
 }

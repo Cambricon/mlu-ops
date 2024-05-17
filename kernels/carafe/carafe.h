@@ -28,7 +28,7 @@
 #define CARAFE_FORWARD_API "[mluOpCarafeForward]: "
 #define CARAFE_BACKWARD_API "[mluOpCarafeBackward]: "
 
-#define CARAFE_CHECK_RETURN(api, returned_status, ...)      \
+#define MLUOP_CHECK_RETURN(api, returned_status, ...)       \
   if (returned_status != MLUOP_STATUS_SUCCESS) {            \
     LOG(ERROR) << api << " BAD return value. " __VA_ARGS__; \
     return returned_status;                                 \

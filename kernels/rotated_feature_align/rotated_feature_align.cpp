@@ -206,8 +206,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRotatedFeatureAlignForward(
 
   // generate mluOpRotatedFeatureAlignForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("rotated_feature_align_forward",
-                   "ROTATED_FEATURE_ALIGN_FORWARD");
+    GEN_CASE_START("rotated_feature_align_forward");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", input, input_desc, -10, 10);
     GEN_CASE_DATA_REAL(true, "rois", bboxes, bboxes_desc);
@@ -262,8 +261,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRotatedFeatureAlignBackward(
 
   // generate mluOpRotatedFeatureAlignBackward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("rotated_feature_align_backward",
-                   "ROTATED_FEATURE_ALIGN_BACKWARD");
+    GEN_CASE_START("rotated_feature_align_backward");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", top_output, top_output_desc, -100, 100);
     GEN_CASE_DATA_REAL(true, "rois", bboxes, bboxes_desc);

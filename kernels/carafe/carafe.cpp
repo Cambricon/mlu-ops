@@ -752,7 +752,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeForward(
   // check param
   bool return_directly = true;
 
-  CARAFE_CHECK_RETURN(
+  MLUOP_CHECK_RETURN(
       CARAFE_FORWARD_API,
       CarafeForwardParamCheck(handle, carafe_desc, input_desc, input, mask_desc,
                               mask, output_desc, output, &return_directly),
@@ -776,7 +776,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeForward(
   int grid_dimC = 0;
   int job_num = 0;
 
-  CARAFE_CHECK_RETURN(
+  MLUOP_CHECK_RETURN(
       CARAFE_FORWARD_API,
       genPolicy(handle, carafe_desc, input_desc, &k_dim, &k_type, &block_dimH,
                 &block_dimW, &block_dimG, &block_dimC, &grid_dimH, &grid_dimW,
@@ -785,7 +785,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeForward(
 
   // GEN_CASE
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("carafe_forward", "CARAFE_FORWARD");
+    GEN_CASE_START("carafe_forward");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", input, input_desc, 5.1, -5.3);
     GEN_CASE_DATA(true, "mask", mask, mask_desc, 0.0, 1.0);
@@ -841,7 +841,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeBackward(
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("carafe_backward", "CARAFE_BACKWARD");
+    GEN_CASE_START("carafe_backward");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", input, input_desc, 5.1, -5.3);
     GEN_CASE_DATA(true, "mask", mask, mask_desc, 0.0, 1.0);

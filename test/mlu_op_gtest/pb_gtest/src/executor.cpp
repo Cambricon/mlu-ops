@@ -188,7 +188,7 @@ void Executor::setup(std::string file,
   deviceRestSpaceMalloc();
 
   // when get MLUOP_GTEST_FILL_RAM env,
-  // fill nram/sram/warm for nan or inf before compute for each case
+  // fill nram/sram/warm for nan or inf beore compute for each case
   fillRam();
 
   VLOG(4) << "Algorithm Search.";

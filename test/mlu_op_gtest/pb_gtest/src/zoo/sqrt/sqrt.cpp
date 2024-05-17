@@ -25,8 +25,9 @@
 namespace mluoptest {
 
 void SqrtExecutor::paramCheck() {
-  GTEST_CHECK(parser_->getInputNum() == 1,
-              "[mluOpSqrt] Input number is wrong.");
+  if (parser_->getInputNum() != 1) {
+    LOG(ERROR) << "sqrt input number is wrong. ";
+  }
 }
 
 void SqrtExecutor::compute() {

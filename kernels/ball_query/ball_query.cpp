@@ -171,7 +171,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   PARAM_CHECK("[mluOpBallQuery]", idx != NULL);
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("ball_query", "BALL_QUERY");
+    GEN_CASE_START("ball_query");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "input1", new_xyz, new_xyz_desc);
     GEN_CASE_DATA_REAL(true, "input2", xyz, xyz_desc);

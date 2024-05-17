@@ -33,7 +33,7 @@ void SyncBatchnormBackwardReduceExecutor::workspaceMalloc() {
   auto tensor_x = tensor_desc_[1].tensor;
   void *tmp = nullptr;
   // allocate extra nram space for deletion of CDMA
-  MLUOP_CHECK(mluOpGetSyncBatchNormBackwardReduceWorkspaceSize(
+  MLUOP_CHECK(mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(
       handle_, tensor_x, &workspace_size_));
   if (workspace_size_ > 0) {
     VLOG(4) << "Malloc workspace space for deletion of CDMA.";
@@ -160,15 +160,15 @@ void SyncBatchnormBackwardReduceExecutor::compute() {
   VLOG(4) << "Start to run mluOpSyncBatchNormBackwardReduce().";
   interface_timer_.start();
 #if 1
-  VLOG(4) << "launch mluOpSyncBatchNormBackwardReduce_v2.";
-  MLUOP_CHECK(mluOpSyncBatchNormBackwardReduce_v2(
+  VLOG(4) << "launch mluOpSyncBatchnormBackwardReduce_v2.";
+  MLUOP_CHECK(mluOpSyncBatchnormBackwardReduce_v2(
       handle_, desc_dz, dev_dz, desc_x, dev_x, desc_mean, dev_mean, desc_invstd,
       dev_invstd, workspace_[0], workspace_size_, desc_dweight, dev_dweight,
       desc_dbias, dev_dbias, desc_sum_dy, dev_sum_dy, desc_sum_dy_xmu,
       dev_sum_dy_xmu, needs_input_grad0, needs_input_grad1, needs_input_grad2));
 #else
-  VLOG(4) << "launch mluOpSyncBatchNormBackwardReduce.";
-  MLUOP_CHECK(mluOpSyncBatchNormBackwardReduce(
+  VLOG(4) << "launch mluOpSyncBatchnormBackwardReduce.";
+  MLUOP_CHECK(mluOpSyncBatchnormBackwardReduce(
       handle_, desc_dz, dev_dz, desc_x, dev_x, desc_mean, dev_mean, desc_invstd,
       dev_invstd, desc_dweight, dev_dweight, desc_dbias, dev_dbias, desc_sum_dy,
       dev_sum_dy, desc_sum_dy_xmu, dev_sum_dy_xmu, needs_input_grad0,

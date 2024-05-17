@@ -76,7 +76,7 @@ class fft_MakeFFTPlanMany : public testing::Test {
   mluOpStatus_t compute() {
     mluOpStatus_t status =
         mluOpMakeFFTPlanMany(handle_, fft_plan_, input_desc_, output_desc_,
-                             rank, n, reservespace_size_, workspace_size_);
+                             rank, n, reservespace_size_, workspace_size_, direction_);
     destroy();
     return status;
   }
@@ -131,6 +131,7 @@ class fft_MakeFFTPlanMany : public testing::Test {
   size_t *workspace_size_ = nullptr;
   size_t reservespaceSizeInBytes_ = 64;
   size_t workspaceSizeInBytes_ = 64;
+  int direction_ = 0; 
 };
 
 TEST_F(fft_MakeFFTPlanMany, BAD_PARAM_handle_null) {

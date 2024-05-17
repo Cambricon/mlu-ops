@@ -329,7 +329,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
 
   // generate mluOpRoiAwarePool3dForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("roiaware_pool3d_forward", "ROIAWARE_POOL3D_FORWARD");
+    GEN_CASE_START("roiaware_pool3d_forward");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "rois", rois, rois_desc);
     GEN_CASE_DATA_REAL(true, "pts", pts, pts_desc);
@@ -373,10 +373,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
     pts_tmp_dims[i] = pts_desc->dims[pts_permute[i]];
   }
   mluOpTensorDescriptor_t pts_desc_tmp = NULL;
-  CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
-               mluOpCreateTensorDescriptor(&pts_desc_tmp));
-  CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
-               mluOpSetTensorDescriptor(pts_desc_tmp, MLUOP_LAYOUT_ARRAY,
+  MLUOP_CHECK(mluOpCreateTensorDescriptor(&pts_desc_tmp));
+  MLUOP_CHECK(mluOpSetTensorDescriptor(pts_desc_tmp, MLUOP_LAYOUT_ARRAY,
                                        data_dtype, pts_dim, pts_tmp_dims));
 
   auto ret = transposeTensor(handle, pts_desc, pts, pts_permute, pts_desc_tmp,
@@ -385,8 +383,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
     return ret;
   }
 
-  CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
-               mluOpDestroyTensorDescriptor(pts_desc_tmp));
+  MLUOP_CHECK(mluOpDestroyTensorDescriptor(pts_desc_tmp));
   VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlTranspose pts end.";
 
   VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlTranspose pts_feature start.";
@@ -397,11 +394,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
     pts_feature_tmp_dims[i] = pts_feature_desc->dims[pts_feature_permute[i]];
   }
   mluOpTensorDescriptor_t pts_feature_desc_tmp = NULL;
-  CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
-               mluOpCreateTensorDescriptor(&pts_feature_desc_tmp));
-  CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
-               mluOpSetTensorDescriptor(pts_feature_desc_tmp,
-                  MLUOP_LAYOUT_ARRAY, data_dtype, pts_feature_dim,
+  MLUOP_CHECK(mluOpCreateTensorDescriptor(&pts_feature_desc_tmp));
+  MLUOP_CHECK(mluOpSetTensorDescriptor(pts_feature_desc_tmp, MLUOP_LAYOUT_ARRAY,
+                                       data_dtype, pts_feature_dim,
                                        pts_feature_tmp_dims));
 
   ret = transposeTensor(handle, pts_feature_desc, pts_feature,
@@ -411,8 +406,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
     return ret;
   }
 
-  CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
-               mluOpDestroyTensorDescriptor(pts_feature_desc_tmp));
+  MLUOP_CHECK(mluOpDestroyTensorDescriptor(pts_feature_desc_tmp));
   VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlTranspose pts_feature end.";
 
   VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlFill_v3 host pointer start.";
@@ -631,7 +625,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dBackward(
 
   // generate mluOpRoiAwarePool3dBackward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("roiaware_pool3d_backward", "ROIAWARE_POOL3D_BACKWARD");
+    GEN_CASE_START("roiaware_pool3d_backward");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA_REAL(true, "pts_idx_of_voxels", pts_idx_of_voxels,
                        pts_idx_of_voxels_desc);

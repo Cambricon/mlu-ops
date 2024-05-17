@@ -62,7 +62,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("abs", "ABS");
+    GEN_CASE_START("abs");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "x", x, x_desc, 10, 0);
     GEN_CASE_DATA(false, "y", y, y_desc, 0, 0);

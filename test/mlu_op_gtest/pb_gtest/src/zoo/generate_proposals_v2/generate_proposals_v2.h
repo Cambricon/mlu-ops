@@ -32,7 +32,7 @@ namespace mluoptest {
 class GenerateProposalsV2Executor : public Executor {
  public:
   GenerateProposalsV2Executor() {}
-  ~GenerateProposalsV2Executor() {}
+  ~GenerateProposalsV2Executor() { workspaceFree(); }
   void paramCheck() override;
   void compute() override;
   void cpuCompute() override;

@@ -229,7 +229,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
   const int rois_offset = rois_desc->dims[1];
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("psroipool_forward", "PSROIPOOL_FORWARD");
+    GEN_CASE_START("psroipool_forward");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", input, input_desc, 1, 0);
     GEN_CASE_DATA_REAL(true, "rois", rois, rois_desc);
@@ -252,7 +252,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
   policyFuncPsRoiPool(handle, &k_dim, &k_type, rois_sum);
   VLOG(5) << api << " Launch [" << k_type << ", " << k_dim.x << ", " << k_dim.y
           << ", " << k_dim.z << "].";
-  CHECK_RETURN(api, (KernelPsRoiPoolForward(
+  KERNEL_CHECK((KernelPsRoiPoolForward(
       k_dim, k_type, handle->queue, input, rois, output, mapping_channel,
       batch_size, height, width, channels, pooled_height, pooled_width,
       output_dim, group_size, rois_sum, rois_offset, spatial_scale)));
@@ -303,7 +303,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
   const int rois_offset = rois_desc->dims[1];
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("psroipool_backward", "PSROIPOOL_BACKWARD");
+    GEN_CASE_START("psroipool_backward");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "input", top_grad, top_grad_desc, 1, 0);
     GEN_CASE_DATA_REAL(true, "mapping_channel", mapping_channel,
@@ -340,7 +340,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
 
-  CHECK_RETURN(api, (KernelPsRoiPoolBackward(
+  KERNEL_CHECK((KernelPsRoiPoolBackward(
       k_dim, k_type, handle->queue, top_grad, mapping_channel, rois,
       bottom_grad, batch_size, height, width, channels, pooled_height,
       pooled_width, output_dim, rois_sum, rois_offset, spatial_scale)));

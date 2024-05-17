@@ -25,14 +25,20 @@
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateNmsDescriptor(mluOpNmsDescriptor_t *desc) {
   PARAM_CHECK("mluOpCreateNmsDescriptor", desc != NULL);
-  CALL_CNNL(cnnlCreateNmsDescriptor(desc));
+  CHECK_FUNC_RETURN(cnnlCreateNmsDescriptor(desc), CNNL_STATUS_SUCCESS,
+                    "[mluOpNms] Internal error accured in "
+                    "mluOpCreateNmsDescriptor.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc) {
   PARAM_CHECK("mluOpDestroyNmsDescriptor", desc != NULL);
-  CALL_CNNL(cnnlDestroyNmsDescriptor(desc));
+  CHECK_FUNC_RETURN(cnnlDestroyNmsDescriptor(desc), CNNL_STATUS_SUCCESS,
+                    "[mluOpNms] Internal error accured in "
+                    "mluOpDestroyNmsDescriptor.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -44,12 +50,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetNmsDescriptor(
     const float confidence_threshold, const float offset,
     const int input_layout, const bool pad_to_max_output_size) {
   PARAM_CHECK("mluOpSetNmsDescriptor", nms_desc != NULL);
-  CALL_CNNL(cnnlSetNmsDescriptor_v5(
-                nms_desc, (cnnlNmsBoxPointMode_t)box_mode,
-                (cnnlNmsOutputMode_t)output_mode, (cnnlNmsAlgo_t)algo,
-                (cnnlNmsMethodMode_t)method_mode, iou_threshold,
-                soft_nms_sigma, max_output_size, confidence_threshold,
-                offset, input_layout, pad_to_max_output_size));
+  CHECK_FUNC_RETURN(cnnlSetNmsDescriptor_v5(
+                        nms_desc, (cnnlNmsBoxPointMode_t)box_mode,
+                        (cnnlNmsOutputMode_t)output_mode, (cnnlNmsAlgo_t)algo,
+                        (cnnlNmsMethodMode_t)method_mode, iou_threshold,
+                        soft_nms_sigma, max_output_size, confidence_threshold,
+                        offset, input_layout, pad_to_max_output_size),
+                    CNNL_STATUS_SUCCESS,
+                    "[mluOpNms] Internal error accured in "
+                    "mluOpSetNmsDescriptor.",
+                    MLUOP_STATUS_INTERNAL_ERROR);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -68,9 +78,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetNmsWorkspaceSize(
                                           cnnl_confidence_desc);
   }
 
-  CALL_CNNL(
+  CHECK_FUNC_RETURN(
       cnnlGetNmsWorkspaceSize_v3(cnnl_handle, cnnl_boxes_desc,
-                                 cnnl_confidence_desc, workspace_size));
+                                 cnnl_confidence_desc, workspace_size),
+      CNNL_STATUS_SUCCESS,
+      "[mluOpNms] Internal error accured in mluOpGetNmsWorkspaceSize.",
+      MLUOP_STATUS_INTERNAL_ERROR);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
   if (cnnl_confidence_desc != NULL) {
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_confidence_desc);
@@ -103,10 +116,12 @@ mluOpNms(mluOpHandle_t handle, const mluOpNmsDescriptor_t nms_desc,
                                           cnnl_confidence_desc);
   }
 
-  CALL_CNNL(
+  CHECK_FUNC_RETURN(
       cnnlNms_v2(cnnl_handle, nms_desc, cnnl_boxes_desc, boxes,
                  cnnl_confidence_desc, confidence, workspace, workspace_size,
-                 cnnl_output_desc, output, output_size));
+                 cnnl_output_desc, output, output_size),
+      CNNL_STATUS_SUCCESS, "[mluOpNms] Internal error accured in mluOpNms.",
+      MLUOP_STATUS_INTERNAL_ERROR);
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);

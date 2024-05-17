@@ -31,7 +31,7 @@ namespace mluoptest {
 class PolyNmsExecutor : public Executor {
  public:
   PolyNmsExecutor() {}
-  ~PolyNmsExecutor() {}
+  ~PolyNmsExecutor() { workspaceFree(); }
   void paramCheck() override;
   void compute() override;
   void cpuCompute() override;

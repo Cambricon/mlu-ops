@@ -98,21 +98,12 @@ void IndiceConvolutionForwardExecutor::cpuCompute() {
   int64_t num_active_in = features_desc_->dims[0];
   int64_t ci = features_desc_->dims[1];
   int64_t co = features_out_desc_->dims[1];
-  bool filters_need_transpose = filters_desc_->layout != MLUOP_LAYOUT_ARRAY;
-  int64_t kd = 0;
-  int64_t kh = 0;
-  int64_t kw = 0;
-  if (filters_need_transpose) {
-    kd = mluOpGetTensordimD(filters_desc_);
-    kh = mluOpGetTensordimH(filters_desc_);
-    kw = mluOpGetTensordimW(filters_desc_);
-  } else {
-    kd = filters_desc_->dims[0];
-    kh = filters_desc_->dims[1];
-    kw = filters_desc_->dims[2];
-  }
+  int64_t kd = mluOpGetTensordimD(filters_desc_);
+  int64_t kh = mluOpGetTensordimH(filters_desc_);
+  int64_t kw = mluOpGetTensordimW(filters_desc_);
   int64_t num_filters = kd * kh * kw;
 
+  bool filters_need_transpose = true;
   int32_t stride[3];
   float *filters_transed = filters;
   if (filters_need_transpose) {

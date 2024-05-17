@@ -246,7 +246,7 @@ mluOpStatus_t mluOpPsamaskForward(mluOpHandle_t handle, const int psa_type,
 
   // generate mluOpPsamaskForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("psamask_forward", "PSAMASK_FORWARD");
+    GEN_CASE_START("psamask_forward");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "x", x, x_desc, 10, -10);
     GEN_CASE_DATA(false, "y", y, y_desc, 0, 0);
@@ -316,7 +316,7 @@ mluOpStatus_t mluOpPsamaskBackward(mluOpHandle_t handle, const int psa_type,
 
   // generate mluOpPsamaskBackward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("psamask_backward", "PSAMASK_BACKWARD");
+    GEN_CASE_START("psamask_backward");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "dy", dy, dy_desc, 10, -10);
     GEN_CASE_DATA(false, "dx", dx, dx_desc, 0, 0);

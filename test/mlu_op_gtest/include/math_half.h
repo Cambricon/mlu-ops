@@ -24,7 +24,7 @@
 
 #include <cnrt.h>
 
-#if !defined(__aarch64__) && defined(__x86_64__)
+#if defined(__x86_64__)
 #include <immintrin.h>
 #endif
 
