@@ -54,6 +54,32 @@
 #define FFT_HALF(x) ((x) / 2 + 1)
 #endif
 
+#ifndef FFT_MAXFACTORS
+#define FFT_MAXFACTORS 278  // max length of factors[] in plan
+#endif
+
+#ifndef MAX_DFT_MATRIX_NR
+#define MAX_DFT_MATRIX_NR 21
+#endif
+
+#ifndef DFT_TABLE_SIZE
+#define DFT_TABLE_SIZE \
+  (32 * 32 * (MAX_DFT_MATRIX_NR + 1) * 8 * 2 + (MAX_DFT_MATRIX_NR + 1) * 8)
+// radix-32, 22-stages, double, complex
+// + addrs size
+#endif
+
+// transform directions
+#define FFT_FORWARD (0)
+#define FFT_BACKWARD (+1)
+
+#define FFT_PI (3.1415926535897932384626433832795)
+
+struct dft_table_entry {
+  int radix;
+  int offset;
+};
+
 typedef enum {
   FFT_IFFT = 0,
   RFFT = 1,
@@ -125,6 +151,19 @@ struct cnfftMatmulAddrs {
   size_t internal_workspace_size;
 };
 
+// struct for CNFFT_FUNC_MATMUL strategy.
+struct cnfftButterflyAddrs {
+  /* addrs set in the preprocess-stage */
+  void *input;
+  void *output;
+  void *buffer;
+  void *twiddles;
+  void *buffer_buf;
+  void *buffer_in;
+  void *buffer_out;
+  void *dft_matrix;
+  int *factors;
+};
 struct mluOpFFTStruct {
   int rank;            // rank of FFT
   int n[FFT_DIM_MAX];  // FFT lengths on each dimension
@@ -164,6 +203,10 @@ struct mluOpFFTStruct {
   mluOpTensorDescriptor_t output_desc;
   void *reservespace_addr;
   cnfftMatmulAddrs matmul_addrs;
+  int *factors;
+  void *twiddles;
+  void *dft_matrix;
+  cnfftButterflyAddrs mlu_addrs;
 };
 
 struct ParamNode {
@@ -229,6 +272,12 @@ mluOpStatus_t MLUOP_WIN_API
 kernelFFTStockham(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
                   cnrtQueue_t queue, mluOpFFTPlan_t fft_plan, int direction,
                   const float scale_factor, FFTFlag flag);
+
+mluOpStatus_t MLUOP_WIN_API kernelFFTButterfly(cnrtDim3_t k_dim,
+                                               cnrtFunctionType_t k_type,
+                                               cnrtQueue_t queue,
+                                               mluOpFFTPlan_t fft_plan,
+                                               int direction, FFTFlag flag);
 
 mluOpStatus_t MLUOP_WIN_API kernelC2CFFTDFTMatrix(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,

@@ -59,7 +59,16 @@ __mlu_func__ void genWVec1(float *w_r, float *w_i, float *w_tmp1, float *w_tmp2,
     float *tmp_offset_addr = offset_addr + L_align * i;
     float *tmp_inc_addr = inc_addr + L_align * i;
     float start_value = L * i;
-    __mluop_get_indices(tmp_inc_addr, start_value, L_align);
+#if __BANG_ARCH__ >= 372
+    __mluop_get_indices(L_align, start_value, tmp_inc_addr, nullptr,
+                        tmp_inc_addr, nullptr);
+#else
+    float *int32_temp_addr = tmp_cos_addr;
+    float *float2int_dst_ad = tmp_sin_addr;
+    float *float2int_src128B = w_tmp3;
+    __mluop_get_indices(L_align, start_value, int32_temp_addr,
+                        float2int_src128B, tmp_inc_addr, float2int_dst_ad);
+#endif
     float scale =
         2.0 * M_PI / (n / L_align * L * 2.0) * (fft_flag != IRFFT ? -1 : 1);
     scale *= ((fft_flag == FFT_IFFT && direction == FFT_INVERSE) ? -1 : 1);
@@ -90,7 +99,16 @@ __mlu_func__ void genWVec2(float *w_r, float *w_i, float *w_tmp1, float *w_tmp2,
   float scale = 2.0 * M_PI / (n_tmp * 2.0) * (fft_flag != IRFFT ? -1 : 1);
   scale *= ((fft_flag == FFT_IFFT && direction == FFT_INVERSE) ? -1 : 1);
   float start_value = ri * op_size;
-  __mluop_get_indices(inc_addr, start_value, op_size_align);
+#if __BANG_ARCH__ >= 372
+  __mluop_get_indices(op_size_align, start_value, inc_addr, nullptr, inc_addr,
+                      nullptr);
+#else
+  float *int32_temp_addr = cos_addr;
+  float *float2int_dst_ad = sin_addr;
+  float *float2int_src128B = w_tmp3;
+  __mluop_get_indices(op_size_align, start_value, int32_temp_addr,
+                      float2int_src128B, inc_addr, float2int_dst_ad);
+#endif
   __bang_mul_scalar(offset_addr, inc_addr, scale, op_size_align);
   __bang_cos(cos_addr, offset_addr, op_size);
   if (n <= 48000) {
@@ -487,7 +505,7 @@ __mlu_func__ void computeMutiLayerOnchip(
     DT *matmul_im_mul_im_addr, DT *output, int batch, int n, int m, int l,
     int s, int fft_flag, int direction) {
   // load subgraph from workspace data: X[C, batch_id, 2^s * core_offset, L]
-  // ->(C x 1 x 2^s x L) each mlu core deals with 2 sub graph
+  // ->(C x 1 x 2^s x L) each ipu core deals with 2 sub graph
   int repeat_remain_flag = (param.op_group_num_x_batch % taskDimX);
   int repeat_plus_one = repeat_remain_flag > 0 ? 1 : 0;
   int repeat_for_each_core =
@@ -558,9 +576,9 @@ __mlu_func__ void computeLayerByLayer(const AddrNode<DT> &addr,
            repeat_for_each_core);
     for (int repeat_id = 0; repeat_id < repeat_for_each_core; repeat_id++) {
       int continue_flag_for_each_core =
-          // all mlu cores will be used the same times
+          // all ipu cores will be used the same times
           repeat_remain_flag == 0
-          // assume that all mlu cores just less one than others at most
+          // assume that all ipu cores just less one than others at most
           || (repeat_id != repeat_for_each_core - 1) ||
           (repeat_id == repeat_for_each_core - 1 &&
            taskId < repeat_remain_flag);

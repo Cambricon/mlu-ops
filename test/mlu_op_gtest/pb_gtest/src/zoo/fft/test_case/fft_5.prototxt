@@ -1,0 +1,55 @@
+op_name: "fft"
+input {
+  id: "input1"
+  shape {
+    dims: 1 
+    dims: 243
+    dim_stride: 243
+    dim_stride: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_COMPLEX_FLOAT
+  random_data {
+    seed: 23
+    distribution: UNIFORM
+    lower_bound_double: -10
+    upper_bound_double: 10
+  }
+  onchip_dtype: DTYPE_FLOAT
+}
+output {
+  id: "output1"
+  shape {
+    dims: 1 
+    dims: 243
+    dim_stride: 243
+    dim_stride: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_COMPLEX_FLOAT
+  thresholds {
+    evaluation_threshold: 1e-05
+    evaluation_threshold: 1e-05
+    evaluation_threshold_imag: 1e-05
+    evaluation_threshold_imag: 1e-05
+  }
+}
+evaluation_criterion: DIFF1
+evaluation_criterion: DIFF2
+supported_mlu_platform: MLU370
+handle_param {
+  round_mode: ROUND_OFF_ZERO
+}
+fft_param {
+  rank: 1
+  n: 243
+  direction: 0
+  scale_factor: 1
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 1e-05
+  error_threshold: 1e-05
+  baseline_device: CPU
+}

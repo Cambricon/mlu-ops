@@ -48,7 +48,8 @@ static mluOpStatus_t selectRFFT1dStrategy(mluOpHandle_t handle,
 mluOpStatus_t makeRFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
   std::string api = "[mluOpMakeFFTPlanMany]";
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
-  CHECK_RETURN(api, selectRFFT1dStrategy(handle, fft_plan));
+  INTERNAL_CHECK(
+      api, selectRFFT1dStrategy(handle, fft_plan) == MLUOP_STATUS_SUCCESS);
 
   mluOpDataType_t in_r_dtype = fft_plan->input_dtype;
   mluOpDataType_t in_e_dtype = fft_plan->execution_dtype;
@@ -393,15 +394,15 @@ mluOpStatus_t setRFFT1dReserveArea(mluOpHandle_t handle,
       int dft_mat_num = dim0 * dim1 * dim2;
       kernelGenerateRFFTHalfDFTMatrix(k_dim, k_type, handle->queue, fft_plan,
                                       in_r_dtype, n);
-      CHECK_RETURN(
-          "[mluOpSetFFTReserveArea]",
-          fftQuantizePositionScale(
-              handle, dft_mat_num, in_r_dtype, in_e_dtype,
-              fft_plan->matmul_addrs.dft_matrix_addr,
-              fft_plan->matmul_addrs.dft_pos_addr,
-              fft_plan->matmul_addrs.dft_scale_addr,
-              fft_plan->matmul_addrs.dft_quantize_workspace_addr,
-              fft_plan->matmul_addrs.dft_quantize_workspace_size, api));
+      status = fftQuantizePositionScale(
+          handle, dft_mat_num, in_r_dtype, in_e_dtype,
+          fft_plan->matmul_addrs.dft_matrix_addr,
+          fft_plan->matmul_addrs.dft_pos_addr,
+          fft_plan->matmul_addrs.dft_scale_addr,
+          fft_plan->matmul_addrs.dft_quantize_workspace_addr,
+          fft_plan->matmul_addrs.dft_quantize_workspace_size, api);
+      INTERNAL_CHECK("[mluOpSetFFTReserveArea]",
+                     status == MLUOP_STATUS_SUCCESS);
     }; break;
     case CNFFT_FUNC_COOLEY_TUKEY: {
       // Matmul Matrix : 2 * [L, L]
@@ -410,15 +411,15 @@ mluOpStatus_t setRFFT1dReserveArea(mluOpHandle_t handle,
       int dft_mat_num = dft_mat_times * L * L;
       kernelGenerateRFFTFullDFTMatrix(k_dim, k_type, handle->queue, fft_plan,
                                       in_r_dtype, L, L);
-      CHECK_RETURN(
-          "[mluOpSetFFTReserveArea]",
-          fftQuantizePositionScale(
-              handle, dft_mat_num, in_r_dtype, in_e_dtype,
-              fft_plan->matmul_addrs.dft_matrix_addr,
-              fft_plan->matmul_addrs.dft_pos_addr,
-              fft_plan->matmul_addrs.dft_scale_addr,
-              fft_plan->matmul_addrs.dft_quantize_workspace_addr,
-              fft_plan->matmul_addrs.dft_quantize_workspace_size, api));
+      status = fftQuantizePositionScale(
+          handle, dft_mat_num, in_r_dtype, in_e_dtype,
+          fft_plan->matmul_addrs.dft_matrix_addr,
+          fft_plan->matmul_addrs.dft_pos_addr,
+          fft_plan->matmul_addrs.dft_scale_addr,
+          fft_plan->matmul_addrs.dft_quantize_workspace_addr,
+          fft_plan->matmul_addrs.dft_quantize_workspace_size, api);
+      INTERNAL_CHECK("[mluOpSetFFTReserveArea]",
+                     status == MLUOP_STATUS_SUCCESS);
     }; break;
     case CNFFT_FUNC_STOCKHAM: {
       // Matmul Matrix : 2 * [L, L]
@@ -429,15 +430,15 @@ mluOpStatus_t setRFFT1dReserveArea(mluOpHandle_t handle,
       VLOG(5) << "CNFFT_FUNC_STOCKHAM generateRFFTFullDFTMatrix";
       kernelGenerateRFFTFullDFTMatrix(k_dim, k_type, handle->queue, fft_plan,
                                       in_r_dtype, row, L);
-      CHECK_RETURN(
-          "[mluOpSetFFTReserveArea]",
-          fftQuantizePositionScale(
-              handle, dft_mat_num, in_r_dtype, in_e_dtype,
-              fft_plan->matmul_addrs.dft_matrix_addr,
-              fft_plan->matmul_addrs.dft_pos_addr,
-              fft_plan->matmul_addrs.dft_scale_addr,
-              fft_plan->matmul_addrs.dft_quantize_workspace_addr,
-              fft_plan->matmul_addrs.dft_quantize_workspace_size, api));
+      status = fftQuantizePositionScale(
+          handle, dft_mat_num, in_r_dtype, in_e_dtype,
+          fft_plan->matmul_addrs.dft_matrix_addr,
+          fft_plan->matmul_addrs.dft_pos_addr,
+          fft_plan->matmul_addrs.dft_scale_addr,
+          fft_plan->matmul_addrs.dft_quantize_workspace_addr,
+          fft_plan->matmul_addrs.dft_quantize_workspace_size, api);
+      INTERNAL_CHECK("[mluOpSetFFTReserveArea]",
+                     status == MLUOP_STATUS_SUCCESS);
     }; break;
     default: {
       status = MLUOP_STATUS_NOT_SUPPORTED;
@@ -553,20 +554,23 @@ static mluOpStatus_t makeRFFT1dContiguousInput(mluOpHandle_t handle,
   if (!fft_plan->is_input_contiguous) {
     VLOG(5) << "launch mluOpContiguous";
     mluOpTensorDescriptor_t input_desc;
-    CHECK_RETURN(api, mluOpCreateTensorDescriptor(&input_desc));
+    status = mluOpCreateTensorDescriptor(&input_desc);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
     const int in_dim_num = 2;
     int64_t dims[in_dim_num] = {fft_plan->batch, fft_plan->inembed[0]};
     int64_t strides[in_dim_num] = {fft_plan->idist, fft_plan->istride};
-    CHECK_RETURN(api, mluOpSetTensorDescriptorEx_v2(
-                          input_desc, MLUOP_LAYOUT_ARRAY, fft_plan->input_dtype,
-                          in_dim_num, dims, strides));
+    status = mluOpSetTensorDescriptorEx_v2(input_desc, MLUOP_LAYOUT_ARRAY,
+                                           fft_plan->input_dtype, in_dim_num,
+                                           dims, strides);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-    CHECK_RETURN(api,
-                 mluOpContiguous(handle, input_desc, input,
-                                 fft_plan->matmul_addrs.input_contiguous_addr));
+    status = mluOpContiguous(handle, input_desc, input,
+                             fft_plan->matmul_addrs.input_contiguous_addr);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-    CHECK_RETURN(api, mluOpDestroyTensorDescriptor(input_desc));
+    status = mluOpDestroyTensorDescriptor(input_desc);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   }
   return status;
 }
@@ -585,19 +589,21 @@ static mluOpStatus_t padRFFT1dContiguousInput(mluOpHandle_t handle,
   bool need_pad = (fft_plan->inembed[0] != n);
   if (need_pad) {
     mluOpTensorDescriptor_t input_desc, padded_input_desc;
-    CHECK_RETURN(api, mluOpCreateTensorDescriptor(&input_desc));
-    CHECK_RETURN(api, mluOpCreateTensorDescriptor(&padded_input_desc));
+    status = mluOpCreateTensorDescriptor(&input_desc);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    status = mluOpCreateTensorDescriptor(&padded_input_desc);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
     const int in_dim_num = 2;
     int64_t dims[in_dim_num] = {batch, fft_plan->inembed[0]};
-    CHECK_RETURN(api,
-                 mluOpSetTensorDescriptor_v2(input_desc, MLUOP_LAYOUT_ARRAY,
-                                             in_r_dtype, in_dim_num, dims));
+    status = mluOpSetTensorDescriptor_v2(input_desc, MLUOP_LAYOUT_ARRAY,
+                                         in_r_dtype, in_dim_num, dims);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
     int64_t padded_dims[in_dim_num] = {batch, n};
-    CHECK_RETURN(
-        api, mluOpSetTensorDescriptor_v2(padded_input_desc, MLUOP_LAYOUT_ARRAY,
-                                         in_r_dtype, in_dim_num, padded_dims));
+    status = mluOpSetTensorDescriptor_v2(padded_input_desc, MLUOP_LAYOUT_ARRAY,
+                                         in_r_dtype, in_dim_num, padded_dims);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
     const int pad_dim_num = 4;
     int paddings[pad_dim_num] = {0, 0, 0, n - fft_plan->inembed[0]};
@@ -645,13 +651,12 @@ static mluOpStatus_t transposeRFFT1dPaddedInput(mluOpHandle_t handle,
     int trans_output_dims[trans_dim_num] = {batch, m, L};
     int trans_permute[trans_dim_num] = {0, 2, 1};
 
-    CHECK_RETURN(
-        api,
+    status =
         fftTranspose(handle, trans_dim_num, trans_input_dims, trans_output_dims,
                      trans_permute, fft_plan->matmul_addrs.input_pad_addr,
                      fft_plan->matmul_addrs.input_transed_addr, in_r_dtype,
                      fft_plan->matmul_addrs.internal_workspace_addr,
-                     fft_plan->matmul_addrs.internal_workspace_size, api));
+                     fft_plan->matmul_addrs.internal_workspace_size, api);
   }
   return status;
 }
@@ -668,13 +673,13 @@ static mluOpStatus_t quantizeRFFT1dPaddedInput(mluOpHandle_t handle,
   mluOpDataType_t in_e_dtype = fft_plan->execution_dtype;
   int padded_num = fft_plan->batch * fft_plan->n[0];
 
-  CHECK_RETURN(api, fftQuantizePositionScale(
-                        handle, padded_num, in_r_dtype, in_e_dtype,
-                        fft_plan->matmul_addrs.input_pad_addr,
-                        fft_plan->matmul_addrs.input_pos_addr,
-                        fft_plan->matmul_addrs.input_scale_addr,
-                        fft_plan->matmul_addrs.internal_workspace_addr,
-                        fft_plan->matmul_addrs.internal_workspace_size, api));
+  status = fftQuantizePositionScale(
+      handle, padded_num, in_r_dtype, in_e_dtype,
+      fft_plan->matmul_addrs.input_pad_addr,
+      fft_plan->matmul_addrs.input_pos_addr,
+      fft_plan->matmul_addrs.input_scale_addr,
+      fft_plan->matmul_addrs.internal_workspace_addr,
+      fft_plan->matmul_addrs.internal_workspace_size, api);
 
   return status;
 }
@@ -699,52 +704,50 @@ static mluOpStatus_t computeRFFT1dMatmulResult(mluOpHandle_t handle,
 
   if (fft_plan->fft_strategy == CNFFT_FUNC_MATMUL) {
     VLOG(5) << "into CNFFT_FUNC_MATMUL";
-    CHECK_RETURN(api,
-                 fftQuantMatMul(
-                     handle, batch, n, FFT_HALF(n) * COMPLEX,
-                     fft_plan->matmul_addrs.input_pad_addr,
-                     fft_plan->matmul_addrs.input_pos_addr,
-                     fft_plan->matmul_addrs.input_scale_addr,
-                     fft_plan->matmul_addrs.dft_matrix_addr,
-                     fft_plan->matmul_addrs.dft_pos_addr,
-                     fft_plan->matmul_addrs.dft_scale_addr,
-                     fft_plan->matmul_addrs.output_contiguous_addr, false, true,
-                     scale_factor, 0.0, in_e_dtype, in_e_dtype, in_r_dtype,
-                     fft_plan->matmul_addrs.internal_workspace_addr,
-                     fft_plan->matmul_addrs.internal_workspace_size, api));
+    status = fftQuantMatMul(
+        handle, batch, n, FFT_HALF(n) * COMPLEX,
+        fft_plan->matmul_addrs.input_pad_addr,
+        fft_plan->matmul_addrs.input_pos_addr,
+        fft_plan->matmul_addrs.input_scale_addr,
+        fft_plan->matmul_addrs.dft_matrix_addr,
+        fft_plan->matmul_addrs.dft_pos_addr,
+        fft_plan->matmul_addrs.dft_scale_addr,
+        fft_plan->matmul_addrs.output_contiguous_addr, false, true,
+        scale_factor, 0.0, in_e_dtype, in_e_dtype, in_r_dtype,
+        fft_plan->matmul_addrs.internal_workspace_addr,
+        fft_plan->matmul_addrs.internal_workspace_size, api);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   } else if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY) {
     VLOG(5) << "into CNFFT_FUNC_COOLEY_TUKEY";
     int L = fft_plan->L;
     int m = (1 << fft_plan->m);
     // input real matmul dft real
-    CHECK_RETURN(
-        api,
-        fftQuantMatMul(
-            handle, batch * m, L, L, fft_plan->matmul_addrs.input_transed_addr,
-            fft_plan->matmul_addrs.input_pos_addr,
-            fft_plan->matmul_addrs.input_scale_addr,
-            fft_plan->matmul_addrs.dft_re_matrix_addr,
-            fft_plan->matmul_addrs.dft_pos_addr,
-            fft_plan->matmul_addrs.dft_scale_addr,
-            fft_plan->matmul_addrs.matmul_re_mul_re_addr, false, true,
-            scale_factor, 0.0, in_e_dtype, in_e_dtype, in_r_dtype,
-            fft_plan->matmul_addrs.internal_workspace_addr,
-            fft_plan->matmul_addrs.internal_workspace_size, api));
+    status = fftQuantMatMul(
+        handle, batch * m, L, L, fft_plan->matmul_addrs.input_transed_addr,
+        fft_plan->matmul_addrs.input_pos_addr,
+        fft_plan->matmul_addrs.input_scale_addr,
+        fft_plan->matmul_addrs.dft_re_matrix_addr,
+        fft_plan->matmul_addrs.dft_pos_addr,
+        fft_plan->matmul_addrs.dft_scale_addr,
+        fft_plan->matmul_addrs.matmul_re_mul_re_addr, false, true, scale_factor,
+        0.0, in_e_dtype, in_e_dtype, in_r_dtype,
+        fft_plan->matmul_addrs.internal_workspace_addr,
+        fft_plan->matmul_addrs.internal_workspace_size, api);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
     // input re matmul dft imag
-    CHECK_RETURN(
-        api,
-        fftQuantMatMul(
-            handle, batch * m, L, L, fft_plan->matmul_addrs.input_transed_addr,
-            fft_plan->matmul_addrs.input_pos_addr,
-            fft_plan->matmul_addrs.input_scale_addr,
-            fft_plan->matmul_addrs.dft_im_matrix_addr,
-            fft_plan->matmul_addrs.dft_pos_addr,
-            fft_plan->matmul_addrs.dft_scale_addr,
-            fft_plan->matmul_addrs.matmul_re_mul_im_addr, false, true,
-            scale_factor, 0.0, in_e_dtype, in_e_dtype, in_r_dtype,
-            fft_plan->matmul_addrs.internal_workspace_addr,
-            fft_plan->matmul_addrs.internal_workspace_size, api));
+    status = fftQuantMatMul(
+        handle, batch * m, L, L, fft_plan->matmul_addrs.input_transed_addr,
+        fft_plan->matmul_addrs.input_pos_addr,
+        fft_plan->matmul_addrs.input_scale_addr,
+        fft_plan->matmul_addrs.dft_im_matrix_addr,
+        fft_plan->matmul_addrs.dft_pos_addr,
+        fft_plan->matmul_addrs.dft_scale_addr,
+        fft_plan->matmul_addrs.matmul_re_mul_im_addr, false, true, scale_factor,
+        0.0, in_e_dtype, in_e_dtype, in_r_dtype,
+        fft_plan->matmul_addrs.internal_workspace_addr,
+        fft_plan->matmul_addrs.internal_workspace_size, api);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   } else if (fft_plan->fft_strategy == CNFFT_FUNC_STOCKHAM) {
     VLOG(5) << "into CNFFT_FUNC_STOCKHAM";
     int L = fft_plan->L;
@@ -753,22 +756,20 @@ static mluOpStatus_t computeRFFT1dMatmulResult(mluOpHandle_t handle,
     // origin: in_trans[batch, 2^m, L] * W_real[L, L] -> IN_real[batch, 2^m, L]
     //         in_trans[batch, 2^m, L] * W_imag[L, L] -> IN_imag[batch, 2^m, L]
     // update: W[c*L, L] * in[batch, L, 2^m] -> out[batch, c*L, 2^m]
-    CHECK_RETURN(
-        api,
-        fftBatchMatMulBcast(
-            handle,
-            L <= fft_plan->L_sub ? (2 * L)
-                                 : (2 * (PAD_UP(L / 2, fft_plan->L_sub) + 1)),
-            L, m, batch, fft_plan->matmul_addrs.dft_re_matrix_addr,
-            fft_plan->matmul_addrs.dft_pos_addr,
-            fft_plan->matmul_addrs.dft_scale_addr,
-            fft_plan->matmul_addrs.input_pad_addr,
-            fft_plan->matmul_addrs.input_pos_addr,
-            fft_plan->matmul_addrs.input_scale_addr,
-            fft_plan->matmul_addrs.matmul_re_mul_re_addr, false, false,
-            scale_factor, 0.0, in_e_dtype, in_e_dtype, in_r_dtype,
-            fft_plan->matmul_addrs.internal_workspace_addr,
-            fft_plan->matmul_addrs.internal_workspace_size, api));
+    status = fftBatchMatMulBcast(
+        handle,
+        L <= fft_plan->L_sub ? (2 * L)
+                             : (2 * (PAD_UP(L / 2, fft_plan->L_sub) + 1)),
+        L, m, batch, fft_plan->matmul_addrs.dft_re_matrix_addr,
+        fft_plan->matmul_addrs.dft_pos_addr,
+        fft_plan->matmul_addrs.dft_scale_addr,
+        fft_plan->matmul_addrs.input_pad_addr,
+        fft_plan->matmul_addrs.input_pos_addr,
+        fft_plan->matmul_addrs.input_scale_addr,
+        fft_plan->matmul_addrs.matmul_re_mul_re_addr, false, false,
+        scale_factor, 0.0, in_e_dtype, in_e_dtype, in_r_dtype,
+        fft_plan->matmul_addrs.internal_workspace_addr,
+        fft_plan->matmul_addrs.internal_workspace_size, api);
   }
 
   return status;
@@ -846,20 +847,22 @@ static mluOpStatus_t makeRFFT1dContiguousOutput(mluOpHandle_t handle,
     mluOpDataType_t out_c_dtype = fft_plan->output_dtype;
     // create tensor desc
     mluOpTensorDescriptor_t copy_src_desc, copy_dst_desc;
-    CHECK_RETURN(api, mluOpCreateTensorDescriptor(&copy_src_desc));
-    CHECK_RETURN(api, mluOpCreateTensorDescriptor(&copy_dst_desc));
+    status = mluOpCreateTensorDescriptor(&copy_src_desc);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    status = mluOpCreateTensorDescriptor(&copy_dst_desc);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
     // set up tensor desc
     const int out_dim_num = 2;
     int64_t dims[out_dim_num] = {fft_plan->batch, fft_plan->onembed[0]};
     int64_t strides[out_dim_num] = {fft_plan->odist, fft_plan->ostride};
-    CHECK_RETURN(api,
-                 mluOpSetTensorDescriptor_v2(copy_src_desc, MLUOP_LAYOUT_ARRAY,
-                                             out_c_dtype, out_dim_num, dims));
-
-    CHECK_RETURN(api, mluOpSetTensorDescriptorEx_v2(
-                          copy_dst_desc, MLUOP_LAYOUT_ARRAY, out_c_dtype,
-                          out_dim_num, dims, strides));
+    status = mluOpSetTensorDescriptor_v2(copy_src_desc, MLUOP_LAYOUT_ARRAY,
+                                         out_c_dtype, out_dim_num, dims);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    status =
+        mluOpSetTensorDescriptorEx_v2(copy_dst_desc, MLUOP_LAYOUT_ARRAY,
+                                      out_c_dtype, out_dim_num, dims, strides);
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
     // copy
     void *copy_src_addr = fft_plan->matmul_addrs.output_contiguous_addr;
@@ -890,18 +893,25 @@ mluOpStatus_t execRFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
   configureRFFT1dMatmulWorkspaceAddrs(handle, fft_plan, (void *)input,
                                       workspace, output);
 
-  CHECK_RETURN(api, makeRFFT1dContiguousInput(handle, fft_plan, input));
+  status = makeRFFT1dContiguousInput(handle, fft_plan, input);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-  CHECK_RETURN(api, padRFFT1dContiguousInput(handle, fft_plan));
+  status = padRFFT1dContiguousInput(handle, fft_plan);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-  CHECK_RETURN(api, transposeRFFT1dPaddedInput(handle, fft_plan));
+  status = transposeRFFT1dPaddedInput(handle, fft_plan);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-  CHECK_RETURN(api, quantizeRFFT1dPaddedInput(handle, fft_plan));
+  status = quantizeRFFT1dPaddedInput(handle, fft_plan);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-  CHECK_RETURN(api, computeRFFT1dMatmulResult(handle, fft_plan, scale_factor));
+  status = computeRFFT1dMatmulResult(handle, fft_plan, scale_factor);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-  CHECK_RETURN(api, mergeRFFT1dOutput(handle, fft_plan, scale_factor));
+  status = mergeRFFT1dOutput(handle, fft_plan, scale_factor);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-  CHECK_RETURN(api, makeRFFT1dContiguousOutput(handle, fft_plan, output));
+  status = makeRFFT1dContiguousOutput(handle, fft_plan, output);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   return status;
 }
