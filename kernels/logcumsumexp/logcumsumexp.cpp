@@ -30,6 +30,27 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     cnrtFunctionType_t k_type;
     cnrtDim3_t k_dim;
 
+    PARAM_CHECK(API, handle != NULL);
+    PARAM_CHECK(API, input_desc != NULL);
+    PARAM_CHECK(API, input != NULL);
+    PARAM_CHECK(API, result_desc != NULL);
+    PARAM_CHECK(API, result != NULL);
+    PARAM_CHECK(API, input_desc->layout == MLUOP_LAYOUT_ARRAY);
+    PARAM_CHECK(API, result_desc->layout == MLUOP_LAYOUT_ARRAY);
+
+    if (dim < 0) {
+        LOG(ERROR) << API
+                << " dim cannot be a negative number. But received dim=["
+                << dim << "]";
+        return MLUOP_STATUS_BAD_PARAM;
+    }
+    if (dim >= input_desc->dim) {
+        LOG(ERROR) << API
+                << " dim beyonds the dimension of tensor. Received dim=["
+                << dim << "]";
+        return MLUOP_STATUS_BAD_PARAM;
+    }
+
     int32_t axis_size = input_desc->dims[dim];
     int32_t higher_size = 1;
     int32_t lower_size = 1;
