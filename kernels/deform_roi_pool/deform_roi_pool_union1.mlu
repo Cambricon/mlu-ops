@@ -503,23 +503,19 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
           __bang_mul_scalar((T *)nram_tmp4, (T *)nram_grad_output, w4,
                             channels_align);
           __sync();
-          __bang_atomic_add(
-              (T *)nram_tmp1,
+          __bang_atomic_reduce_add(
               (T *)(offset_grad_input + (y_low * width + x_low) * channels +
                     channel_offset),
               (T *)nram_tmp1, channels_num);
-          __bang_atomic_add(
-              (T *)nram_tmp2,
+          __bang_atomic_reduce_add(
               (T *)(offset_grad_input + (y_low * width + x_high) * channels +
                     channel_offset),
               (T *)nram_tmp2, channels_num);
-          __bang_atomic_add(
-              (T *)nram_tmp3,
+          __bang_atomic_reduce_add(
               (T *)(offset_grad_input + (y_high * width + x_low) * channels +
                     channel_offset),
               (T *)nram_tmp3, channels_num);
-          __bang_atomic_add(
-              (T *)nram_tmp4,
+          __bang_atomic_reduce_add(
               (T *)(offset_grad_input + (y_high * width + x_high) * channels +
                     channel_offset),
               (T *)nram_tmp4, channels_num);
@@ -645,8 +641,7 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
                              kernel_width, 1, kernel_width, kernel_width, 1);
               __bang_reduce_sum(nram_sum_tmp, nram_sum_tmp,
                                 nram_sum_tmp_channel);
-              __bang_atomic_add(
-                  (T *)nram_sum_tmp,
+              __bang_atomic_reduce_add(
                   (T *)(grad_offset +
                         out_batch * pooled_width * pooled_height * 2 +
                         out_height * pooled_width + out_width),
@@ -670,8 +665,7 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
                              kernel_width, 1, kernel_width, kernel_width, 1);
               __bang_reduce_sum(nram_sum_tmp, nram_sum_tmp,
                                 NFU_ALIGN_SIZE / sizeof(T));
-              __bang_atomic_add(
-                  (T *)nram_sum_tmp,
+              __bang_atomic_reduce_add(
                   (T *)(grad_offset +
                         out_batch * pooled_width * pooled_height * 2 +
                         pooled_width * pooled_height +
