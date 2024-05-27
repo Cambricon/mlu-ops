@@ -26,8 +26,7 @@
 #include <string>
 
 namespace mluoptest {
-// Calculate based on the branch with the maximum computational load.
-// The theory_ops per single loop iteration is 50.
+
 void RoiAlignRotatedBackwardExecutor::preCalcForBilinearInterpolate(
     const int height, const int width, const int channel,
     const int pooled_height, const int pooled_width, const int roi_bin_grid_h,
@@ -42,12 +41,14 @@ void RoiAlignRotatedBackwardExecutor::preCalcForBilinearInterpolate(
         const float yy = roi_start_y + ph * bin_size_h +
                          static_cast<float>(iy + 0.5) * bin_size_h /
                              static_cast<float>(roi_bin_grid_h);
+        theory_ops_ += 8;  // cur block
         for (int ix = 0; ix < roi_bin_grid_w; ++ix) {
           const float xx = roi_start_x + pw * bin_size_w +
                            static_cast<float>(ix + 0.5) * bin_size_w /
                                static_cast<float>(roi_bin_grid_w);
           float y = yy * cos_theta - xx * sin_theta + roi_center_y;
           float x = yy * sin_theta + xx * cos_theta + roi_center_x;
+          theory_ops_ += 16;  // cur block
 
           if (y < -1.0 || y > height || x < -1.0 || x > width) {
             PreCalc pc{0, 0, 0, 0, 0, 0, 0, 0};
@@ -62,24 +63,30 @@ void RoiAlignRotatedBackwardExecutor::preCalcForBilinearInterpolate(
           int y_low = (int)y;
           int x_low = (int)x;
           int y_high, x_high;
+          theory_ops_ += 2;  // cur block
 
           if (y_low >= height - 1) {
             y_high = y_low = height - 1;
             y = (float)y_low;
+            theory_ops_ += 2;  // cur block
           } else {
             y_high = y_low + 1;
+            theory_ops_ += 1;  // cur block
           }
           if (x_low >= width - 1) {
             x_high = x_low = width - 1;
             x = (float)x_low;
+            theory_ops_ += 2;  // cur block
           } else {
             x_high = x_low + 1;
+            theory_ops_ += 1;  // cur block
           }
 
           float ly = y - y_low;
           float lx = x - x_low;
           float hy = 1. - ly, hx = 1. - lx;
           float w1 = hy * hx, w2 = hy * lx, w3 = ly * hx, w4 = ly * lx;
+
           PreCalc pc;
           pc.pos1 = (y_low * width + x_low) * channel;
           pc.pos2 = (y_low * width + x_high) * channel;
@@ -90,7 +97,9 @@ void RoiAlignRotatedBackwardExecutor::preCalcForBilinearInterpolate(
           pc.w3 = w3;
           pc.w4 = w4;
           pre_calc[pre_calc_idx] = pc;
+          // next stmt not count theory_ops_
           ++pre_calc_idx;
+          theory_ops_ += 20;  // cur block
         }
       }
     }
@@ -153,10 +162,9 @@ void RoiAlignRotatedBackwardExecutor::compute() {
   interface_timer_.stop();
 }
 
-template <bool cpu_mode>
-void RoiAlignRotatedBackwardExecutor::computeWithTheoryOps() {
-  // 1.Get basic information about proto
+void RoiAlignRotatedBackwardExecutor::cpuCompute() {
   VLOG(4) << "RoiAlignRotatedBackwardExecutor cpu compute.";
+  // not count theory_ops_ begin
   const int pooled_height = parser_->getProtoNode()
                                 ->roi_align_rotated_backward_param()
                                 .pooled_height();
@@ -177,32 +185,11 @@ void RoiAlignRotatedBackwardExecutor::computeWithTheoryOps() {
   auto top_grad_desc = parser_->getMetaTensor(0).tensor;
   auto rois_desc = parser_->getMetaTensor(1).tensor;
   auto bottom_grad_desc = parser_->getMetaTensor(2).tensor;
+  // not count theory_ops_ end
 
-  // 2.Selectively load data based on the pattern
-  float *top_grad, *rois, *bottom_grad;
-  if (cpu_mode) {
-    top_grad = cpu_fp32_input_[0];
-    rois = cpu_fp32_input_[1];  // (n, 6) [batch_id, x, y, w, h, Θ]
-    bottom_grad = cpu_fp32_output_[0];
-  } else {
-    // Only load the data that affects computation.
-    auto *ts = parser_->input(1);
-    if (unlikely(ts->empty())) {
-      return;
-    }
-    // Load data as float type.
-    if (ts->dtype == MLUOP_DTYPE_FLOAT) {
-      rois = (float *)cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
-      parser_->getInputTensorValue(1, (void *)rois, ts->shape_count);
-    } else {
-      void *temp = cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
-      parser_->getInputTensorValue(1, temp, ts->shape_count);
-      rois = (float *)cpu_runtime_.allocate(ts->shape_count * sizeof(float));
-      castDataOut(temp, ts->dtype, rois, MLUOP_DTYPE_FLOAT,
-                  ts->shape_count, NO_QUANT);
-      cpu_runtime_.deallocate(temp);
-    }
-  }
+  float *top_grad = cpu_fp32_input_[0];
+  float *rois = cpu_fp32_input_[1];  // (n, 6) [batch_id, x, y, w, h, Θ]
+  float *bottom_grad = cpu_fp32_output_[0];
 
   const int channel = top_grad_desc->dims[3];
   const int width = bottom_grad_desc->dims[2];
@@ -214,40 +201,41 @@ void RoiAlignRotatedBackwardExecutor::computeWithTheoryOps() {
     return;
   }
 
-  // 3.Control flow section
   for (int n_idx = 0; n_idx < rois_nums; ++n_idx) {
+    // not count theory_ops_ begin
     const int top_grad_noffset = pooled_height * pooled_width * channel;
 
     const float *current_roi = rois + n_idx * ROI_OFFSET;
+    // not count theory_ops_ end
     const int roi_batch_idx = (int)current_roi[0];
 
-    theory_ops_ += 8;
     const float offset = aligned ? 0.5 : 0.0;
     const float roi_center_x = current_roi[1] * spatial_scale - offset;
     const float roi_center_y = current_roi[2] * spatial_scale - offset;
     float roi_width = current_roi[3] * spatial_scale;
     float roi_height = current_roi[4] * spatial_scale;
     float theta = current_roi[5];
-
+    theory_ops_ += 7;  // cur block
     if (clockwise) {
-      theory_ops_ += 1;
       theta = -theta;
+      theory_ops_ += 1;  // cur block
     }
-    theory_ops_ += 2;
     const float cos_theta = cos(theta);
     const float sin_theta = sin(theta);
+    theory_ops_ += 2;  // cur block
 
     if (aligned) {
       if (roi_width < 0 || roi_height < 0) {
-        continue;
+        VLOG(4) << "ROIs do not have non-negative value.";
+        throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                    std::to_string(__LINE__));
       }
     } else {
-      theory_ops_ += 2;
       roi_width = std::max(roi_width, (float)1.0);
       roi_height = std::max(roi_height, (float)1.0);
+      theory_ops_ += 4;  // cur block
     }
 
-    theory_ops_ += (sample_ratio > 0) ? 7 : 9;
     const float bin_size_h = roi_height / static_cast<float>(pooled_height);
     const float bin_size_w = roi_width / static_cast<float>(pooled_width);
     int roi_bin_grid_h =
@@ -255,80 +243,98 @@ void RoiAlignRotatedBackwardExecutor::computeWithTheoryOps() {
     int roi_bin_grid_w =
         (sample_ratio > 0) ? sample_ratio : ceilf(roi_width / pooled_width);
     const float count = std::max(roi_bin_grid_h * roi_bin_grid_w, 1);
+    std::vector<PreCalc> pre_calc(pooled_height * pooled_width * count);
     const float roi_start_x = -roi_width / 2.0;
     const float roi_start_y = -roi_height / 2.0;
 
-    // 4.Computation flow based on truth value dependencies
-    // 62 meanings (50 + 12)
-    theory_ops_ += roi_bin_grid_h * roi_bin_grid_w * 62 *
-                    pooled_height * pooled_width;
+    preCalcForBilinearInterpolate(
+        height, width, channel, pooled_height, pooled_width, roi_bin_grid_h,
+        roi_bin_grid_w, roi_start_x, roi_start_y, bin_size_h, bin_size_w,
+        roi_center_x, roi_center_y, cos_theta, sin_theta, pre_calc);
+    theory_ops_ += 14;  // cur block
 
-    if (cpu_mode) {
-      std::vector<PreCalc> pre_calc(pooled_height * pooled_width * count);
-      // regard as 50 theory_ops at once
-      preCalcForBilinearInterpolate(
-          height, width, channel, pooled_height, pooled_width, roi_bin_grid_h,
-          roi_bin_grid_w, roi_start_x, roi_start_y, bin_size_h, bin_size_w,
-          roi_center_x, roi_center_y, cos_theta, sin_theta, pre_calc);
+    for (int c_idx = 0; c_idx < channel; ++c_idx) {
+      // next stmt not count theory_ops_
+      int bottom_grad_offset = roi_batch_idx * height * width * channel +
+      c_idx;
+      int pre_calc_idx = 0;
 
-      for (int c_idx = 0; c_idx < channel; ++c_idx) {
-        int bottom_grad_offset =
-                roi_batch_idx * height * width * channel + c_idx;
-        int pre_calc_idx = 0;
-
-        // loop for each bin
-        for (int ph = 0; ph < pooled_height; ++ph) {
-          for (int pw = 0; pw < pooled_width; ++pw) {
-            float top_grad_val = 0;
-            int top_grad_offset = n_idx * top_grad_noffset +
-                                  (ph * pooled_width + pw) * channel + c_idx;
-            top_grad_val = top_grad[top_grad_offset];
-            // regard as 12 theory_ops at once
-            for (int iy = 0; iy < roi_bin_grid_h; ++iy) {
-              for (int ix = 0; ix < roi_bin_grid_w; ++ix) {
-                PreCalc pc = pre_calc[pre_calc_idx];
-                float g1 = pc.w1 * top_grad_val * 1 / count;
-                float g2 = pc.w2 * top_grad_val * 1 / count;
-                float g3 = pc.w3 * top_grad_val * 1 / count;
-                float g4 = pc.w4 * top_grad_val * 1 / count;
-                if (pc.w1 == 0 && pc.w2 == 0 && pc.w3 == 0 && pc.w4 == 0) {
-                  bottom_grad[bottom_grad_offset + pc.pos1] += 0;
-                  bottom_grad[bottom_grad_offset + pc.pos2] += 0;
-                  bottom_grad[bottom_grad_offset + pc.pos3] += 0;
-                  bottom_grad[bottom_grad_offset + pc.pos4] += 0;
-                } else {
-                  bottom_grad[bottom_grad_offset + pc.pos1] += g1;
-                  bottom_grad[bottom_grad_offset + pc.pos2] += g2;
-                  bottom_grad[bottom_grad_offset + pc.pos3] += g3;
-                  bottom_grad[bottom_grad_offset + pc.pos4] += g4;
-                }
-                ++pre_calc_idx;
+      // loop for each bin
+      for (int ph = 0; ph < pooled_height; ++ph) {
+        for (int pw = 0; pw < pooled_width; ++pw) {
+          // next stmt not count theory_ops_
+          int top_grad_offset = n_idx * top_grad_noffset +
+                                (ph * pooled_width + pw) * channel + c_idx;
+          float top_grad_val = top_grad[top_grad_offset];
+          for (int iy = 0; iy < roi_bin_grid_h; ++iy) {
+            for (int ix = 0; ix < roi_bin_grid_w; ++ix) {
+              PreCalc pc = pre_calc[pre_calc_idx];
+              float g1 = pc.w1 * top_grad_val / count;
+              float g2 = pc.w2 * top_grad_val / count;
+              float g3 = pc.w3 * top_grad_val / count;
+              float g4 = pc.w4 * top_grad_val / count;
+              theory_ops_ += 8;  // cur block
+              if (!(pc.w1 == 0 && pc.w2 == 0 && pc.w3 == 0 && pc.w4 == 0)) {
+                bottom_grad[bottom_grad_offset + pc.pos1] += g1;
+                bottom_grad[bottom_grad_offset + pc.pos2] += g2;
+                bottom_grad[bottom_grad_offset + pc.pos3] += g3;
+                bottom_grad[bottom_grad_offset + pc.pos4] += g4;
+                theory_ops_ += 8;  // cur block
               }
+              // next stmt not count theory_ops_
+              ++pre_calc_idx;
             }
           }
         }
       }
     }
   }
-
-  // 5.Free memory
-  if (!cpu_mode) {
-    cpu_runtime_.deallocate(rois);
-  }
-}
-
-
-void RoiAlignRotatedBackwardExecutor::cpuCompute() {
-  computeWithTheoryOps<true>();
 }
 
 int64_t RoiAlignRotatedBackwardExecutor::getTheoryOps() {
-#if 0
   // When debugging, used for getting theory_ops on the GPU.
   if (parser_->device() != CPU) {
-    computeWithTheoryOps<false>();
+    for (int i = 0; i < parser_->getInputNum(); ++i) {
+      auto *ts = parser_->input(i);
+      if (unlikely(ts->empty())) {
+            return 0;
+      }
+      if (ts->dtype == MLUOP_DTYPE_FLOAT) {
+        ts->cpu_ptr =
+            (float *)cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
+        parser_->getInputTensorValue(i, (void *)ts->cpu_ptr, ts->shape_count);
+      } else {
+        void *temp = cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
+        parser_->getInputTensorValue(i, temp, ts->shape_count);
+        ts->cpu_ptr =
+            (float *)cpu_runtime_.allocate(ts->shape_count * sizeof(float));
+        castDataOut(temp, ts->dtype, ts->cpu_ptr, MLUOP_DTYPE_FLOAT,
+                        ts->shape_count, NO_QUANT);
+      }
+      cpu_fp32_input_.push_back(ts->cpu_ptr);
+    }
+    for (int i = 0; i < parser_->getOutputNum(); ++i) {
+      auto *ts = parser_->output(i);
+      if (unlikely(ts->empty())) {
+            return 0;
+      }
+      if (ts->dtype == MLUOP_DTYPE_FLOAT) {
+        ts->cpu_ptr =
+            (float *)cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
+        parser_->getOutputTensorValue(i, (void *)ts->cpu_ptr, ts->shape_count);
+      } else {
+        void *temp = cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
+        parser_->getOutputTensorValue(i, temp, ts->shape_count);
+        ts->cpu_ptr =
+            (float *)cpu_runtime_.allocate(ts->shape_count * sizeof(float));
+        castDataOut(temp, ts->dtype, ts->cpu_ptr, MLUOP_DTYPE_FLOAT,
+                        ts->shape_count, NO_QUANT);
+      }
+      cpu_fp32_output_.push_back(ts->cpu_ptr);
+    }
+    cpuCompute();
   }
-#endif
+
   VLOG(4) << "getTheoryOps: " << theory_ops_ << " ops";
   return theory_ops_;
 }
