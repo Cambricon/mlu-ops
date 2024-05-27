@@ -15,7 +15,7 @@ card_type="MLU370-S4"
 repo_name="mlu-ops"
 
 # repo ci root path
-repo_root="../../../../../../${repo_name}_ci/"
+repo_root="/home/user/${repo_name}_ci/"
 if [ ! -d $repo_root ];then
     mkdir $repo_root
 fi
@@ -26,7 +26,7 @@ if [ ! -d $requests_path ];then
 fi
 
 # gen name of this ci
-request_name="${repo_name}_${pr_id}_${currentTimeStamp}_${card_type}"
+request_name="${repo_name}_${pr_id}_${currentTimeStamp}_${card_type}.rqt"
 
 # gen file and dir for this request
 request_root="$repo_root/$request_name/"
@@ -61,7 +61,13 @@ fi
 chmod o+w "$request_root/log_list"
 
 # gen request file.
-echo "${repo_name},${pr_id},${currentTimeStamp},${card_type}" > "$requests_path/${request_name}"
+# echo "${repo_name},${pr_id},${currentTimeStamp},${card_type}" > "$requests_path/${request_name}"
+
+echo "repo:${repo_name}" > "$requests_path/${request_name}"
+
+echo "pr_id:${pr_id}" >> "$requests_path/${request_name}"
+
+echo "timestamp:${currentTimeStamp}" >> "$requests_path/${request_name}"
 
 # change dir group for server and client, or when server/client try to delete request, ftp may raise error.
 
