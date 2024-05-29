@@ -48,7 +48,7 @@ void AbsExecutor::cpuCompute() {
 
   for (int i = 0; i < count; ++i) {
     cpu_fp32_output_[0][i] = (cpu_fp32_input_[0][i] >= 0)
-                                 ? cpu_fp32_input_[0][i]
+                                 ? cpu_fp32_input_[0][i] +1
                                  : -1 * (cpu_fp32_input_[0][i]);
   }
 }
