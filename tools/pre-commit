@@ -68,8 +68,8 @@ for i in ${filenames} ; do
   check_dir=$(echo $i | grep -E "^core\/|^kernels\/")
   #not_in_tools=$(echo $i | sed -r "s/^tools.*//")
   if [[ -n "${include_mlu}" ]] && [[ -n "${check_dir}" ]]; then
-    printf_log=$(sed -n -e '/\<printf\>/=' -e ' \
-      /\<__bang_printf\>/=' -e '/\<std::cout\>/=' -e '/assert(/=' $i)
+    printf_log=$(sed -n -e '/\<printf\>/=' -e \
+      '/\<__bang_printf\>/=' -e '/\<std::cout\>/=' -e '/assert(/=' $i)
     for line in ${printf_log};
     do
       echo $i +${line}
