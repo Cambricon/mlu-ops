@@ -32,6 +32,7 @@ MLU Binary Op算子结构：　
 | -------------------------------------- | ------------- | ------------- |
 | abs                                    | √             |               |
 | active_rotated_filter                  | √             |               |
+| adam_w                                 | √             |               |
 | ball_query                             | √             |               |
 | bbox_overlaps                          | √             |               |
 | border_align_backward                  | √             |               |
@@ -48,6 +49,7 @@ MLU Binary Op算子结构：　
 | div                                    | √             |               |
 | dynamic_point_to_voxel_backward        | √             |               |
 | dynamic_point_to_voxel_forward         | √             |               |
+| fft                                    | √             |               |
 | focal_loss_sigmoid_backward            | √             |               |
 | focal_loss_sigmoid_forward             | √             |               |
 | generate_proposals_v2                  | √             |               |

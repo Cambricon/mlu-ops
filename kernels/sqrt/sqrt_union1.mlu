@@ -1,0 +1,286 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "sqrt.h"
+
+#include "core/logging.h"
+#include "kernels/binary_op/binary_op_3pipeline.h"
+#include "kernels/debug.h"
+#include "kernels/unary_op/unary_op_3pipeline.h"
+#include "kernels/unary_op/unary_op_5pipeline.h"
+
+#define SQRT_HIGH_BOUND 1e4
+#define SQRT_SCALE 1e-6
+#define SQRT_RECOVER 1e3
+
+__nram__ float nram_tmp[NFU_ALIGN_SIZE];
+__nram__ char nram_buffer[BINARY_NRAM_SIZE];
+#if __BANG_ARCH__ != 520
+__mlu_shared__ char sram_buffer[BINARY_NRAM_SIZE];
+#endif
+
+template <typename T1, typename T2>
+__mlu_func__ void auxFunc3SqrtFast(size_t &output_input_gap,
+                                   size_t &ping_pong_gap,
+                                   size_t &auxiliary_a_gap,
+                                   size_t &auxiliary_b_gap,
+                                   size_t &span_num_deal, size_t &align_num) {
+  align_num = NFU_ALIGN_SIZE / sizeof(T1);
+  // ping input/output | pong input/output
+  span_num_deal = PAD_DOWN(UNARY_NRAM_SIZE / sizeof(T1) / 2, align_num);
+  ping_pong_gap = span_num_deal * sizeof(T1);
+  output_input_gap = 0;
+  auxiliary_a_gap = 0;
+  auxiliary_b_gap = 0;
+}
+
+template <typename T1, typename T2>
+__mlu_func__ void auxFunc3SqrtHighAcc(
+    size_t &output_input_gap, size_t &ping_pong_gap, size_t &auxiliary_a_gap,
+    size_t &auxiliary_b_gap, size_t &span_num_deal, size_t &align_num) {
+  align_num = NFU_ALIGN_SIZE / sizeof(T1);
+  // ping output | ping input | pong...
+  span_num_deal = PAD_DOWN(UNARY_NRAM_SIZE / sizeof(T1) / 4, align_num);
+  output_input_gap = span_num_deal * sizeof(T1);
+  ping_pong_gap = 2 * output_input_gap;
+  auxiliary_a_gap = 0;
+  auxiliary_b_gap = 0;
+}
+
+__mlu_func__ void funcSqrtFast(float *nram_output, float *nram_input,
+                               float *auxiliary_a, float *auxiliary_b,
+                               size_t actual_num, size_t deal_num) {
+  __bang_sqrt((float *)nram_output, (float *)nram_input, actual_num);
+}
+
+__mlu_func__ void funcSqrtFast(float *nram_output, int *nram_input,
+                               float *auxiliary_a, float *auxiliary_b,
+                               size_t actual_num, size_t deal_num) {
+  __bang_int322float((float *)nram_output, (int *)nram_input, deal_num, 0);
+  __bang_sqrt((float *)nram_output, (float *)nram_output, actual_num);
+}
+
+__mlu_func__ void funcSqrtFast(bfloat16_t *nram_output, bfloat16_t *nram_input,
+                               bfloat16_t *auxiliary_a, bfloat16_t *auxiliary_b,
+                               size_t actual_num, size_t deal_num) {
+#if __BANG_ARCH__ >= 500
+  __bang_sqrt((bfloat16_t *)nram_output, (bfloat16_t *)nram_input, actual_num);
+#endif
+}
+
+template <typename T1, typename T2>
+__mlu_func__ void computeSqrtFast(char *nram_output, char *nram_input,
+                                  char *auxiliary_a, char *auxiliary_b,
+                                  size_t deal_num, size_t actual_num) {
+  funcSqrtFast((T2 *)nram_output, (T1 *)nram_input, (T2 *)auxiliary_a,
+               (T2 *)auxiliary_b, actual_num, deal_num);
+}
+
+template <typename T1, typename T2>
+__mlu_func__ void computeSqrtHighAcc(char *nram_output, char *nram_input,
+                                     char *auxiliary_a, char *auxiliary_b,
+                                     size_t deal_num, size_t actual_num) {
+  __bang_half2float((float *)nram_output, (half *)nram_input, deal_num);
+  __bang_sqrt((float *)nram_output, (float *)nram_output, actual_num);
+  __mluop_float2half((half *)nram_output, (float *)nram_output, deal_num);
+}
+
+template <typename DType_in1, typename DType_in2 = DType_in1,
+          typename DType_out = DType_in1>
+__mlu_func__ void auxFunc3SqrtBackwardHighAcc(
+    size_t &output_input1_gap, size_t &output_input2_gap, size_t &ping_pong_gap,
+    size_t &auxiliary_a_gap, size_t &auxiliary_b_gap, size_t &auxiliary_c_gap,
+    size_t &span_num_deal, size_t &align_num) {
+#if __BANG_ARCH__ != 520  // TODO(sram): tp_520
+  // x - y - x_pong - y_pong
+  // x half->float bit_up
+  // fp_x-hf_x-fp_y-hf_y
+  span_num_deal = (BINARY_NRAM_SIZE / sizeof(DType_in1)) / 8;
+  span_num_deal = PAD_DOWN(span_num_deal, BINARY_ALIGN_NUM);
+  ping_pong_gap = 4 * span_num_deal * sizeof(DType_in1);
+  // pong_xx = ping_xx + ping_pong_gap
+  // ping_output = nram_buffer
+  // ping_input_1 = nram_buffer + output_input1_gap
+  output_input1_gap = span_num_deal * sizeof(DType_in1);
+  // ping_input_2 = nram_buffer + output_input2_gap
+  output_input2_gap = output_input1_gap + 2 * span_num_deal * sizeof(DType_in1);
+
+  auxiliary_a_gap =
+      output_input2_gap + ping_pong_gap + span_num_deal * sizeof(DType_in1);
+  auxiliary_b_gap = auxiliary_a_gap;
+  auxiliary_c_gap = auxiliary_b_gap;
+#endif
+}
+
+template <typename DType_in1, typename DType_in2 = DType_in1,
+          typename DType_out = DType_in1>
+__mlu_func__ void auxFunc3SqrtBackwardFast(
+    size_t &output_input1_gap, size_t &output_input2_gap, size_t &ping_pong_gap,
+    size_t &auxiliary_a_gap, size_t &auxiliary_b_gap, size_t &auxiliary_c_gap,
+    size_t &span_num_deal, size_t &align_num) {
+#if __BANG_ARCH__ != 520  // TODO(sram): tp_520
+  // x - x_pong - y - y_pong
+  span_num_deal = (BINARY_NRAM_SIZE / sizeof(DType_in1)) / 4;
+  span_num_deal = PAD_DOWN(span_num_deal, BINARY_ALIGN_NUM);
+  ping_pong_gap = span_num_deal * sizeof(DType_in1);
+  output_input1_gap = 0;
+  output_input2_gap = output_input1_gap + 2 * span_num_deal * sizeof(DType_in1);
+
+  auxiliary_a_gap = output_input2_gap + 2 * span_num_deal * sizeof(DType_in1);
+  auxiliary_b_gap = auxiliary_a_gap;
+  auxiliary_c_gap = auxiliary_b_gap;
+#endif
+}
+
+template <typename DType_in1, typename DType_in2 = DType_in1,
+          typename DType_out = DType_in1>
+__mlu_func__ void auxFunc5SqrtBackwardHighAcc(
+    size_t &span_num_deal, size_t &output_input1_gap, size_t &output_input2_gap,
+    size_t &auxiliary_a_gap, size_t &auxiliary_b_gap, size_t &auxiliary_c_gap,
+    size_t &align_num) {
+#if __BANG_ARCH__ != 520  // TODO(sram): tp_520
+  int sram_limit = (BINARY_SRAM_SIZE / sizeof(DType_in1)) / 16;
+  span_num_deal = (BINARY_NRAM_SIZE / sizeof(DType_in1)) / 4;
+  span_num_deal = span_num_deal < sram_limit ? span_num_deal : sram_limit;
+  span_num_deal = PAD_DOWN(span_num_deal, BINARY_ALIGN_NUM);
+  // x - hf_x - y - hf_y
+  output_input1_gap = span_num_deal * sizeof(DType_in1);
+  output_input2_gap = span_num_deal * 3 * sizeof(DType_in1);
+#endif
+}
+
+template <typename DType_in1, typename DType_in2 = DType_in1,
+          typename DType_out = DType_in1>
+__mlu_func__ void auxFunc5SqrtBackwardFast(
+    size_t &span_num_deal, size_t &output_input1_gap, size_t &output_input2_gap,
+    size_t &auxiliary_a_gap, size_t &auxiliary_b_gap, size_t &auxiliary_c_gap,
+    size_t &align_num) {
+#if __BANG_ARCH__ != 520  // TODO(sram): tp_520
+  int sram_limit = (BINARY_SRAM_SIZE / sizeof(DType_in1)) / 16;
+
+  span_num_deal = (BINARY_NRAM_SIZE / sizeof(DType_in1)) / 2;
+  span_num_deal = span_num_deal < sram_limit ? span_num_deal : sram_limit;
+  span_num_deal = PAD_DOWN(span_num_deal, BINARY_ALIGN_NUM);
+  output_input1_gap = 0;
+  // x - y
+  output_input2_gap = span_num_deal * sizeof(DType_in1);
+#endif
+}
+
+/* 1. 370 surpass half
+ * 2. 200 active half with COMPUTATION_HIGH_PRECISION
+ */
+template <typename DType_in1, typename DType_in2 = DType_in1,
+          typename DType_out = DType_in1>
+__mlu_func__ void computeSqrtBackwardHighAcc(
+    char *nram_output, char *nram_input1, char *nram_input2, char *auxiliary_a,
+    char *auxiliary_b, char *auxiliary_c, size_t deal_num, size_t actual_num) {
+#if __BANG_ARCH__ != 520  // TODO(sram): tp_520
+  float *nram_fp_y = (float *)((DType_in1 *)nram_input1 - deal_num);
+  float *nram_fp_dy = (float *)((DType_in1 *)nram_input2 - deal_num);
+  // bit-up
+  __bang_half2float(nram_fp_y, (DType_in1 *)nram_input1, deal_num);
+  __bang_half2float(nram_fp_dy, (DType_in1 *)nram_input2, deal_num);
+#if __BANG_ARCH__ >= 300
+  __bang_recip(nram_fp_y, nram_fp_y, actual_num);
+#else
+  __bang_active_reciphp(nram_fp_y, nram_fp_y, deal_num);
+#endif
+  __bang_mul_scalar(nram_fp_dy, nram_fp_dy, (float)0.5, deal_num);
+  __bang_mul(nram_fp_y, nram_fp_y, nram_fp_dy, deal_num);
+  __mluop_float2half((DType_in1 *)nram_output, (float *)nram_fp_y, deal_num);
+#endif
+}
+
+/* 1. 370 surpass float
+ * 2. 2x0 active float
+ */
+template <typename DType_in1, typename DType_in2 = DType_in1,
+          typename DType_out = DType_in1>
+__mlu_func__ void computeSqrtBackwardFast(char *nram_output, char *nram_input1,
+                                          char *nram_input2, char *auxiliary_a,
+                                          char *auxiliary_b, char *auxiliary_c,
+                                          size_t deal_num, size_t actual_num) {
+#if __BANG_ARCH__ != 520  // TODO(sram): tp_520
+#if __BANG_ARCH__ >= 300
+  __bang_mul_scalar((DType_in1 *)nram_input2, (DType_in1 *)nram_input2,
+                    (DType_in1)0.5, deal_num);
+  __bang_recip((DType_in1 *)nram_input1, (DType_in1 *)nram_input1, actual_num);
+  __bang_mul((DType_in1 *)nram_output, (DType_in1 *)nram_input2,
+             (DType_in1 *)nram_input1, deal_num);
+#else
+  __bang_mul_scalar((DType_in1 *)nram_input2, (DType_in1 *)nram_input2,
+                    (DType_in1)0.5, deal_num);
+  __bang_active_reciphp((DType_in1 *)nram_input1, (DType_in1 *)nram_input1,
+                        deal_num);
+  __bang_mul((DType_in1 *)nram_output, (DType_in1 *)nram_input2,
+             (DType_in1 *)nram_input1, deal_num);
+#endif
+#endif
+}
+
+UNARY_OP_KERNEL_3PIPELINE_IMPLE(Sqrt, Fast);
+UNARY_OP_KERNEL_3PIPELINE_IMPLE(Sqrt, HighAcc);
+
+// function implementation
+BINARY_OP_KERNEL_3PIPELINE(SqrtBackward, Fast);
+BINARY_OP_KERNEL_3PIPELINE(SqrtBackward, HighAcc);
+
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineSqrt(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
+    const void *x, void *y, size_t num) {
+  // launch kernel
+  if (d_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
+    KERNEL_CHECK(MLUBlockKernel3StagePipelineSqrtFast<float, float>
+                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, num));
+  } else if (d_type == mluOpDataType_t::MLUOP_DTYPE_INT32) {
+    KERNEL_CHECK(MLUBlockKernel3StagePipelineSqrtFast<int32_t, float>
+                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, num));
+  } else if (d_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
+    KERNEL_CHECK(MLUBlockKernel3StagePipelineSqrtHighAcc<half, half>
+                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, num));
+  } else {
+    // bfloat16
+    KERNEL_CHECK(MLUBlockKernel3StagePipelineSqrtFast<bfloat16_t, bfloat16_t>
+                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, num));
+  }
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineSqrtBackward(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const void *y, const void *diff_y, void *x,
+    size_t num) {
+  // launch kernel
+  if (d_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
+    KERNEL_CHECK(
+        MLUBlockKernel3StagePipelineSqrtBackwardHighAcc<half, half, half>
+        <<<k_dim, k_type, queue>>>((char *)y, (char *)diff_y, (char *)x, num));
+  } else {
+    // half
+    KERNEL_CHECK(
+        MLUBlockKernel3StagePipelineSqrtBackwardFast<float, float, float>
+        <<<k_dim, k_type, queue>>>((char *)y, (char *)diff_y, (char *)x, num));
+  }
+  return MLUOP_STATUS_SUCCESS;
+}

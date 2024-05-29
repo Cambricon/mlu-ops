@@ -20,19 +20,20 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_ABS_ABS_H
-#define KERNELS_ABS_ABS_H
+#ifndef KERNELS_ABS_ABS_H_
+#define KERNELS_ABS_ABS_H_
 
 #include "mlu_op.h"
+#include "kernels/tensor_stride_process/tensor_stride_process_host.h"
 
 mluOpStatus_t MLUOP_WIN_API
 Kernel3StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
                         const cnrtQueue_t queue, const mluOpDataType_t d_type,
-                        const void *x, void *y, const int num);
+                        const void *x, void *y, size_t element_num);
 
-mluOpStatus_t MLUOP_WIN_API
-Kernel5StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
-                        const cnrtQueue_t queue, const mluOpDataType_t d_type,
-                        const void *x, void *y, const int num);
-
-#endif  // KERNELS_ABS_ABS_H
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineWithStrideAbs(
+    const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+    const cnrtQueue_t queue, const mluOpDataType_t d_type, const void *x,
+    mluop::TensorShape x_shape, void *y, mluop::TensorShape y_shape,
+    size_t element_num);
+#endif  // KERNELS_ABS_ABS_H_

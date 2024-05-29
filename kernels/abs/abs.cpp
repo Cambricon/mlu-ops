@@ -20,40 +20,110 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "kernels/unary_op/unary_op_host.h"
 #include "abs.h"
 
-#include "core/context.h"
-#include "core/gen_case.h"
-#include "core/logging.h"
-#include "core/runtime/device.h"
-#include "core/tensor.h"
-#include "core/type.h"
-#include "kernels/unary_op/unary_op_host.h"
+#define op_name "[mluOpAbs]"
 
-static void policyFunc(const mluOpHandle_t &handle,
-                       const mluOpTensorDescriptor_t &desc, cnrtDim3_t *k_dim,
-                       cnrtFunctionType_t *k_type) {
-  size_t dim = mluOpGetTensorElementNum(desc);
-  // Union1 policyFunc
-  *k_type = CNRT_FUNC_TYPE_UNION1;
-  k_dim->x = handle->core_num_per_cluster;
-  k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
-  k_dim->z = 1;
-  // if a case is smaller than 2048 , it just need one cluster can work best.
-  size_t small_case_thread = 2048;
-  if (dim <= small_case_thread) k_dim->y = 1;
+static inline bool isAbsSupportType(const mluOpDataType_t check_type,
+                                    const mluOpDataType_t support_type[],
+                                    const int len) {
+  for (int i = 0; i < len; ++i) {
+    if (check_type == support_type[i]) {
+      return true;
+    }
+  }
+  return false;
 }
 
+static mluOpStatus_t mluOpAbsParamCheck(mluOpHandle_t handle,
+                                        const mluOpTensorDescriptor_t x_desc,
+                                        const void *x,
+                                        const mluOpTensorDescriptor_t y_desc,
+                                        void *y, bool *zero_element) {
+  PARAM_CHECK(op_name, handle != NULL);
+  PARAM_CHECK(op_name, x_desc != NULL);
+  PARAM_CHECK(op_name, y_desc != NULL);
+  // check dim and dtype
+  if (x_desc->dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
+    PARAM_CHECK_EQ(op_name, y_desc->dtype, MLUOP_DTYPE_FLOAT);
+  } else {
+    PARAM_CHECK_EQ(op_name, x_desc->dtype, y_desc->dtype);
+  }
+  PARAM_CHECK_EQ(op_name, x_desc->dim, y_desc->dim);
+  // check data type
+  mluOpStatus_t param_check;
+  if (handle->arch >= MLUOP_MLU590) {
+    mluOpDataType_t support_type[5] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_BFLOAT16,
+                                       MLUOP_DTYPE_FLOAT, MLUOP_DTYPE_INT32,
+                                       MLUOP_DTYPE_COMPLEX_FLOAT};
+    if (!isAbsSupportType(x_desc->dtype, support_type, 5)) {
+      LOG(ERROR) << op_name << ":x_desc's data type is not supported.";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
+  } else {
+    mluOpDataType_t support_type[4] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT,
+                                       MLUOP_DTYPE_INT32,
+                                       MLUOP_DTYPE_COMPLEX_FLOAT};
+    if (!isAbsSupportType(x_desc->dtype, support_type, 4)) {
+      LOG(ERROR) << op_name << ":x_desc's data type is not supported.";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
+  }
+
+  PARAM_CHECK_GT(op_name, x_desc->dim, 0);
+  PARAM_CHECK_GT(op_name, y_desc->dim, 0);
+  for (int i = 0; i < x_desc->dim; i++) {
+    if (x_desc->dims[i] != y_desc->dims[i]) {
+      LOG(ERROR) << op_name << ":The shape of x should be equal to y"
+                 << ". But now x_desc's shape[" << i << "] is "
+                 << x_desc->dims[i] << ", y_desc's shape[" << i << "] is "
+                 << y_desc->dims[i] << ".";
+      return MLUOP_STATUS_BAD_PARAM;
+    }
+  }
+
+  // check 0 element
+  if (mluOpGetTensorElementNum(x_desc) == 0) {
+    VLOG(5) << op_name << "skip zero element tensor.";
+    *zero_element = true;
+    return MLUOP_STATUS_SUCCESS;
+  }
+
+  // check largetensor
+  if (handle->arch < MLUOP_MLU590) {
+    uint64_t num_input = mluOpGetTensorElementNum(x_desc);
+    TENSOR_NUM_CHECK(op_name, num_input, LARGE_TENSOR_NUM,
+                     "input tensor num is too large. ");
+  }
+
+  if (needStrideProcess(x_desc, y_desc)) {
+    PARAM_CHECK(op_name, x_desc->dim <= MLUOP_DIM_MAX);
+    if (handle->arch < MLUOP_MLU590) {
+      // num_with_stride affects offset (related with mul op, which cannot
+      // exceed 32-bit on MLU300)
+      uint64_t num_input_with_stride = shapeStrideCount(x_desc);
+      uint64_t num_output_with_stride = shapeStrideCount(y_desc);
+      TENSOR_NUM_CHECK(op_name, num_input_with_stride, LARGE_TENSOR_NUM,
+                       "input tensor num with stride is too large. ");
+      TENSOR_NUM_CHECK(op_name, num_output_with_stride, LARGE_TENSOR_NUM,
+                       "output tensor num with stride is too large. ");
+    }
+  }
+
+  PARAM_CHECK(op_name, x != NULL);
+  PARAM_CHECK(op_name, y != NULL);
+
+  return MLUOP_STATUS_SUCCESS;
+}
 mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
                                      const mluOpTensorDescriptor_t x_desc,
                                      const void *x,
                                      const mluOpTensorDescriptor_t y_desc,
                                      void *y) {
-  mluOpDataType_t support_type[2] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT};
   bool zero_element = false;
   mluOpStatus_t param_check =
-      unaryOpParamCheck("[mluOpAbs]", handle, x_desc, x, y_desc, y,
-                        support_type, 2, zero_element);
+      mluOpAbsParamCheck(handle, x_desc, x, y_desc, y, &zero_element);
   if (zero_element == true) {
     return MLUOP_STATUS_SUCCESS;
   }
@@ -61,6 +131,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
     return param_check;
   }
 
+  // generate prototxt
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("abs", "ABS");
     GEN_CASE_HANDLE(handle);
@@ -72,13 +143,30 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
   // Choose the best task dimension.
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
-  policyFunc(handle, x_desc, &k_dim, &k_type);
 
-  const int element_num = mluOpGetTensorElementNum(x_desc);
-  VLOG(5) << "kernel Kernel3StagePipelineAbs.";
-  CHECK_RETURN("[mluOpAbs] ",
-               Kernel3StagePipelineAbs(k_dim, k_type, handle->queue,
-                                       x_desc->dtype, x, y, element_num));
+  unaryOpPolicyFuncBlock(handle, &k_dim, &k_type, x_desc);
+
+  size_t dim_x = mluOpGetTensorElementNum(x_desc);
+
+  bool if_stride_kernel = false;
+  if (mluop::strideCaseWithNotConsistentDense(2, x_desc, y_desc)) {
+    if_stride_kernel = true;
+  }
+  if (if_stride_kernel) {
+    VLOG(5) << "kernel Kernel3StagePipelineWithStrideAbs";
+    PARAM_CHECK(op_name, x_desc->dim <= MLUOP_DIM_MAX);
+    mluop::TensorShape x_shape;
+    mluop::TensorShape y_shape;
+    mluop::getTensorShape(x_desc, &x_shape);
+    mluop::getTensorShape(y_desc, &y_shape);
+    CHECK_RETURN(op_name, Kernel3StagePipelineWithStrideAbs(
+                              k_dim, k_type, handle->queue, x_desc->dtype, x,
+                              x_shape, y, y_shape, dim_x));
+  } else {
+    VLOG(5) << "kernel Kernel3StagePipelineAbs";
+    CHECK_RETURN(op_name, Kernel3StagePipelineAbs(k_dim, k_type, handle->queue,
+                                                  x_desc->dtype, x, y, dim_x));
+  }
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
