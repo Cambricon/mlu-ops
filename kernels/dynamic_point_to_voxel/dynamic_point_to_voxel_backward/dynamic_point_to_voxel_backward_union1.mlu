@@ -42,11 +42,6 @@ __mlu_func__ void loadAsync(T *feats_nram, T *voxel_feats_nram,
   int size_feats = C * sizeof(T);
   int size_feats_idx = C * sizeof(int);
   n_real = 0;
-  for (; x < N && n_real < n_limit; x++) {
-    int point_to = point2voxel_map_nram[x];
-    int input_offset = x * C;
-    int input_real_offset = n_real * C;
-    if (taskId == point_to % taskDim) {
       if (point_to == invalid_index) {
         continue;
       }
