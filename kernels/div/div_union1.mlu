@@ -1,0 +1,213 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "div.h"
+
+#include "core/logging.h"
+#include "kernels/binary_op/binary_op_3pipeline.h"
+#include "kernels/binary_op/binary_op_5pipeline.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+
+#define HIGH_BOUND 1e5
+#define LOW_BOUND 1e-10
+#define SCALE 1e-5
+#define LOW_SCALE 1e10
+
+__nram__ char nram_buffer[BINARY_NRAM_SIZE];
+#if __BANG_ARCH__ != 520
+__mlu_shared__ char sram_buffer[BINARY_SRAM_SIZE];
+#endif
+
+template <typename DType_in1, typename DType_in2 = DType_in1,
+          typename DType_out = DType_in1>
+__mlu_func__ void auxFunc3DivFloat(
+    size_t &output_input1_gap, size_t &output_input2_gap, size_t &ping_pong_gap,
+    size_t &auxiliary_a_gap, size_t &auxiliary_b_gap, size_t &auxiliary_c_gap,
+    size_t &span_num_deal, size_t &align_num) {
+  // ONLY FLOAT x - x_pong - y - y_pong - temp1 - temp2
+  span_num_deal = (BINARY_NRAM_SIZE / sizeof(float)) / 6;
+  span_num_deal = PAD_DOWN(span_num_deal, BINARY_ALIGN_NUM);
+  output_input1_gap = 0;
+  output_input2_gap = span_num_deal * 2 * sizeof(float);
+  ping_pong_gap = span_num_deal * sizeof(float);
+  auxiliary_a_gap = span_num_deal * 4 * sizeof(float);
+  auxiliary_b_gap = span_num_deal * 5 * sizeof(float);
+}
+
+template <typename DType_in1, typename DType_in2 = DType_in1,
+          typename DType_out = DType_in1>
+__mlu_func__ void auxFunc3DivHalf(
+    size_t &output_input1_gap, size_t &output_input2_gap, size_t &ping_pong_gap,
+    size_t &auxiliary_a_gap, size_t &auxiliary_b_gap, size_t &auxiliary_c_gap,
+    size_t &span_num_deal, size_t &align_num) {
+  // ONLY HALF fp_x - hf_x - fp_x_pong - hf_x_pong - y... - temp1 - temp2
+  span_num_deal = (BINARY_NRAM_SIZE / sizeof(half)) / 12;
+  span_num_deal = PAD_DOWN(span_num_deal, BINARY_ALIGN_NUM);
+  output_input1_gap = span_num_deal * sizeof(half);
+  output_input2_gap = span_num_deal * 5 * sizeof(half);
+  ping_pong_gap = span_num_deal * 2 * sizeof(half);
+  auxiliary_a_gap = span_num_deal * 8 * sizeof(half);
+  auxiliary_b_gap = span_num_deal * 10 * sizeof(half);
+}
+
+template <typename DType_in1, typename DType_in2 = DType_in1,
+          typename DType_out = DType_in1>
+__mlu_func__ void auxFunc5DivFloat(size_t &span_num_deal,
+                                   size_t &output_input1_gap,
+                                   size_t &output_input2_gap,
+                                   size_t &auxiliary_a_gap,
+                                   size_t &auxiliary_b_gap,
+                                   size_t &auxiliary_c_gap, size_t &align_num) {
+  // split sram size 16 parts: (x - x_pong - y - y_pong) * CORE_DIM
+  int32_t sram_limit = (BINARY_SRAM_SIZE / sizeof(float)) / 16;
+  // x - y - temp1 - temp2(inf check)
+  span_num_deal = (BINARY_NRAM_SIZE / sizeof(float)) / 4;
+  span_num_deal = span_num_deal < sram_limit ? span_num_deal : sram_limit;
+  span_num_deal = PAD_DOWN(span_num_deal, BINARY_ALIGN_NUM);
+  output_input1_gap = 0;
+  output_input2_gap = span_num_deal * sizeof(float);
+  auxiliary_a_gap = span_num_deal * sizeof(float) * 2;
+  auxiliary_b_gap = span_num_deal * sizeof(float) * 3;
+}
+
+template <typename DType_in1, typename DType_in2 = DType_in1,
+          typename DType_out = DType_in1>
+__mlu_func__ void auxFunc5DivHalf(size_t &span_num_deal,
+                                  size_t &output_input1_gap,
+                                  size_t &output_input2_gap,
+                                  size_t &auxiliary_a_gap,
+                                  size_t &auxiliary_b_gap,
+                                  size_t &auxiliary_c_gap, size_t &align_num) {
+  // ONLY HALF: split sram size 16 parts: (x - x_pong - y - y_pong) * CORE_DIM
+  int32_t sram_limit = (BINARY_SRAM_SIZE / sizeof(half)) / 16;
+  // fp_x - hf_x - fp_y - hf_y - fp_temp1 - fp_temp2
+  span_num_deal = (BINARY_NRAM_SIZE / sizeof(half)) / 8;
+  span_num_deal = span_num_deal < sram_limit ? span_num_deal : sram_limit;
+  span_num_deal = PAD_DOWN(span_num_deal, BINARY_ALIGN_NUM);
+  output_input1_gap = span_num_deal * sizeof(half);
+  output_input2_gap = output_input1_gap + span_num_deal * 2 * sizeof(half);
+  auxiliary_a_gap = span_num_deal * sizeof(half) * 4;
+  auxiliary_b_gap = span_num_deal * sizeof(half) * 6;
+}
+
+/* 1. 370 surpass recip float
+ * 2. 5x0 surpass div float
+ */
+template <typename DType_in1, typename DType_in2 = DType_in1,
+          typename DType_out = DType_in1>
+__mlu_func__ void computeDivFloat(char *nram_z, char *nram_x, char *nram_y,
+                                  char *nram_temp1, char *nram_temp2,
+                                  char *nram_aux3, int32_t deal_num,
+                                  int32_t actual_num) {
+#if __BANG_ARCH__ > 500
+  __bang_div((float *)nram_x, (float *)nram_x, (DType_in2 *)nram_y, actual_num);
+#else
+  __bang_recip((float *)nram_temp1, (float *)nram_y, actual_num);
+  __bang_abs((float *)nram_temp2, (float *)nram_temp1, actual_num);
+  __bang_argmax((float *)nram_temp2, (float *)nram_temp2, actual_num);
+  if (((float *)nram_temp2)[0] == INFINITY) {
+    __cn_vector_div_f32_rn(actual_num, (float *)nram_x, (float *)nram_x,
+                           (float *)nram_y);
+  } else {
+    __bang_mul((float *)nram_x, (DType_in2 *)nram_temp1, (float *)nram_x,
+               actual_num);
+  }
+#endif
+}
+
+/* 1. 3x0 surpass recip half
+ * 2. 5x0 surpass div half
+ */
+template <typename DType_in1, typename DType_in2 = DType_in1,
+          typename DType_out = DType_in1>
+__mlu_func__ void computeDivHalf(char *nram_z, char *nram_x, char *nram_y,
+                                 char *nram_temp1, char *nram_temp2,
+                                 char *nram_aux3, int32_t deal_num,
+                                 int32_t actual_num) {
+#if __BANG_ARCH__ > 500
+  __bang_div((half *)nram_z, (half *)nram_x, (half *)nram_y, actual_num);
+#else
+  float *nram_fp_x = (float *)((half *)nram_x - deal_num);
+  float *nram_fp_y = (float *)((half *)nram_y - deal_num);
+  // bit-up
+  __bang_half2float(nram_fp_x, (half *)nram_x, actual_num);
+  __bang_half2float(nram_fp_y, (half *)nram_y, actual_num);
+  // compute
+  __bang_recip((float *)nram_temp1, nram_fp_y, actual_num);
+  __bang_mul(nram_fp_y, nram_fp_x, (float *)nram_temp1, actual_num);
+  // recover
+  __mluop_float2half((half *)nram_z, nram_fp_y, actual_num);
+#endif
+}
+
+BINARY_OP_KERNEL_3PIPELINE(Div, Float);
+BINARY_OP_KERNEL_3PIPELINE(Div, Half);
+
+BINARY_OP_KERNEL_5PIPELINE(Div, Float);
+BINARY_OP_KERNEL_5PIPELINE(Div, Half);
+
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineDiv(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
+    const void *x, const void *y, void *z, size_t num) {
+  switch (d_type) {
+    /* Only float and half data types are supported
+       in host-side CPP file fool-proof processing. */
+    case MLUOP_DTYPE_FLOAT: {
+      KERNEL_CHECK(
+          MLUBlockKernel3StagePipelineDivFloat<float, float, float>
+          <<<k_dim, k_type, queue>>>((char *)x, (char *)y, (char *)z, num));
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      KERNEL_CHECK(
+          MLUBlockKernel3StagePipelineDivHalf<half, half, half>
+          <<<k_dim, k_type, queue>>>((char *)x, (char *)y, (char *)z, num));
+    }; break;
+    default:
+      break;
+  }
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API Kernel5StagePipelineDiv(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
+    const void *x, const void *y, void *z, size_t num) {
+  switch (d_type) {
+    /* Only float and half data types are supported
+       in host-side CPP file fool-proof processing. */
+    case MLUOP_DTYPE_FLOAT: {
+      KERNEL_CHECK(
+          MLUBlockKernel5StagePipelineDivFloat<float, float, float>
+          <<<k_dim, k_type, queue>>>((char *)x, (char *)y, (char *)z, num));
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      KERNEL_CHECK(
+          MLUBlockKernel5StagePipelineDivHalf<half, half, half>
+          <<<k_dim, k_type, queue>>>((char *)x, (char *)y, (char *)z, num));
+    }; break;
+    default:
+      break;
+  }
+  return MLUOP_STATUS_SUCCESS;
+}
