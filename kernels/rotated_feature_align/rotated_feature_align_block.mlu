@@ -600,14 +600,13 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignBackward(
           const T *cur_br = bottom_input + n_offset +
                             p_y_high * width * channels + p_x_high * channels +
                             channel_offset;
-          __bang_atomic_add((T *)nram_ping, (T *)cur_tl, (T *)nram_ping,
-                            channels_num);
-          __bang_atomic_add((T *)(nram_ping + deal_num), (T *)cur_tr,
-                            (T *)(nram_ping + deal_num), channels_num);
-          __bang_atomic_add((T *)(nram_ping + 2 * deal_num), (T *)cur_bl,
-                            (T *)(nram_ping + 2 * deal_num), channels_num);
-          __bang_atomic_add((T *)(nram_ping + 3 * deal_num), (T *)cur_br,
-                            (T *)(nram_ping + 3 * deal_num), channels_num);
+          __bang_atomic_reduce_add((T *)cur_tl, (T *)nram_ping, channels_num);
+          __bang_atomic_reduce_add(
+              (T *)cur_tr, (T *)(nram_ping + deal_num), channels_num);
+          __bang_atomic_reduce_add(
+              (T *)cur_bl, (T *)(nram_ping + 2 * deal_num), channels_num);
+          __bang_atomic_reduce_add(
+              (T *)cur_br, (T *)(nram_ping + 3 * deal_num), channels_num);
         }
         __sync();
         swap_ptr(nram_ping, nram_pong);
@@ -629,18 +628,18 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignBackward(
         const T *cur_br = bottom_input + n_offset +
                           p_y_high * width * channels + p_x_high * channels +
                           channel_offset;
-        __bang_atomic_add((T *)nram_ping, (T *)cur_tl, (T *)nram_ping,
-                          channels_num);
-        __bang_atomic_add((T *)(nram_ping + deal_num), (T *)cur_tr,
-                          (T *)(nram_ping + deal_num), channels_num);
-        __bang_atomic_add((T *)(nram_ping + 2 * deal_num), (T *)cur_bl,
-                          (T *)(nram_ping + 2 * deal_num), channels_num);
-        __bang_atomic_add((T *)(nram_ping + 3 * deal_num), (T *)cur_br,
-                          (T *)(nram_ping + 3 * deal_num), channels_num);
+        __bang_atomic_reduce_add(
+            (T *)cur_tl, (T *)nram_ping, channels_num);
+        __bang_atomic_reduce_add(
+            (T *)cur_tr, (T *)(nram_ping + deal_num), channels_num);
+        __bang_atomic_reduce_add(
+            (T *)cur_bl, (T *)(nram_ping + 2 * deal_num), channels_num);
+        __bang_atomic_reduce_add(
+            (T *)cur_br, (T *)(nram_ping + 3 * deal_num), channels_num);
       }
       // So
-      __bang_atomic_add((T *)ping_out, (T *)cur_bottom_input, (T *)ping_out,
-                        channels_num);
+      __bang_atomic_reduce_add(
+          (T *)cur_bottom_input, (T *)ping_out, channels_num);
       // load next rem c
       if (channel_loop_index + 1 < channel_loops) {
         int channels_num_rem = channels_num;
