@@ -720,6 +720,10 @@ struct PerfInfo {  // perf info for certain device (mlu or gpu)
   double d2h_time = -1;
   // hardware time of mlu or gpu
   double hardware_time = -1;  // us
+  // hardware time baseline that output to log
+  double baseline_mlu_hw_time = -1;
+  // hardware time baseline that output to log
+  double thistime_mlu_hw_time = -1;
   // mlu hardware time coefficient of variantion
   double hardware_time_cv = -1;
   double hardware_time_layer = -1;  // us
