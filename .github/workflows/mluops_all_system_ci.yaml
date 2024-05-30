@@ -46,7 +46,7 @@ jobs:
 
       - name: build_mlu_ops
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-${{matrix.os}}-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
+          docker run --rm  -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:devel-x86_64-${{matrix.os}}-cntoolkit${{matrix.cntoolkit_version}}-cnnl${{matrix.cnnl_version}}
           ./build.sh
 
       - name: mlu_ops_version_check

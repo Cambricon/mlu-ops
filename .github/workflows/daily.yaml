@@ -23,7 +23,7 @@ jobs:
 
       - name: bangc_lint_check
         run: >
-          docker run --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:v0.2-x86_64-ubuntu16.04-BANGPy
+          docker run  --rm -v $(pwd):/work -w /work docker-user.extrotec.com:30080/mlu-ops/mluops_ci:v0.2-x86_64-ubuntu16.04-BANGPy
           ./tools/pre-commit origin/master
 
       - name: build_mlu_ops
