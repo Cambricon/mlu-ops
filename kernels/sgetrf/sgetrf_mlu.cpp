@@ -87,7 +87,6 @@ static mluOpStatus_t MLUOP_WIN_API MatrixInverse(
     return MLUOP_STATUS_SUCCESS;
 }
 
-/* m n是原矩阵的尺寸*/
 static mluOpStatus_t trsm3(mluOpHandle_t handle, int m, int n, float *d_a, int lda, float *d_b, int ldb, float *work_space, cnrtQueue_t queue)
 {
     if (n == 0)
@@ -120,8 +119,6 @@ static mluOpStatus_t trsm3(mluOpHandle_t handle, int m, int n, float *d_a, int l
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_b_desc, cnnl_b_desc);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(info_desc, cnnl_info_desc);
 
-    // cnnlInverse(cnnl_handle, cnnl_a_desc,work_space,false,cnnl_a_desc,work_space,cnnl_info_desc,info);
-
     MatrixInverse(handle,
                   1,
                   m,
@@ -135,7 +132,6 @@ static mluOpStatus_t trsm3(mluOpHandle_t handle, int m, int n, float *d_a, int l
                           cnnl_b_desc, d_b, ldb, m * n,
                           0.0f,
                           cnnl_b_desc, d_b, ldb, m * n);
-    // cnnlStrideBatchMatMul(cnnl_handle, false, true, n,m, m, 1, 1.0, cnnl_b_desc, d_b, ldb, n*ldb, cnnl_a_desc, work_space, m, m*m, 0.0f, cnnl_b_desc, d_b, ldb, n*ldb);
 
     CNRT_CHECK(cnrtQueueSync(queue));
     return MLUOP_STATUS_SUCCESS;
@@ -205,7 +201,6 @@ static mluOpStatus_t MLUOP_WIN_API gemm3(
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_d_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
 
-    printf("MatrixAdd m n %d %d\n", m_, n_);
     MatrixAdd(handle, m_, n_, (float *)dev_c, n_, (float *)dev_d, (ldda), (float *)dev_d, (ldda), queue);
 
     return MLUOP_STATUS_SUCCESS;
@@ -246,8 +241,6 @@ int sgetrf_mlu(
 
     float *workspace;
     cnrtMalloc((void **)&workspace, nb * nb * sizeof(float));
-    // float *hA = (float *)malloc(m * n * sizeof(float));
-    // float *hAP = (float *)malloc((m - j) * nb * sizeof(float));
 
     cnrtQueue_t queue[2] = {NULL};
     // CNRT_CHECK(cnrtQueueCreate(&queue[0]));
@@ -263,7 +256,7 @@ int sgetrf_mlu(
 
     if (nb <= 1 || nb >= MIN(m, n))
     {
-        sgetrf_recpanel_native(handle, m, n, dA(0, 0), ldda, dipiv, dipivinfo, dinfo, 0, queue[0], queue[1]);
+        sgetrf2_native(handle, m, n, dA, ldda, dipiv, dinfo, 0, queue[0]);
     }
     else
     {
@@ -278,72 +271,45 @@ int sgetrf_mlu(
         }
         else
         {
-            lddat = maxm; // N-by-M
+            lddat = maxm; 
             cnrtMalloc((void **)&dAT, lddat * maxn);
         }
-        cnrtQueueSync(queue[0]); //
+        cnrtQueueSync(queue[0]); 
 
         for (j = 0; j < minmn - nb; j += nb)
         {
-            printf("im here in get j-th panel from device\t");
-            printf("j %d\n", j);
-
             MyCnrtMemcpy2D(handle, m - j, nb, dA(j, j), ldda, dAP(0, 0), nb, 1, queue[0]);
 
-            cnrtQueueSync(queue[0]); //
-
-            if (j > 0)
-            {
-                printf("------------------------------\n");
-                printf("sgetrf_mlu\n");
-
-                printf("trsm3 %d %d\n", nb, n - (j + nb));
-                trsm3(handle,
-                      nb, n - (j + nb),
-                      dA(j - nb, j - nb), ldda,
-                      dA(j - nb, j + nb), ldda,
-                      workspace, queue[0]);
-                printf("gemm3 %d %d %d\n", m - j, n - (j + nb), nb);
-                gemm3(handle,
-                      m - j, n - (j + nb), nb,
-                      m, n,
-                      dA(j, j - nb), dA(j - nb, j + nb), dA(j, j + nb), dA(j, j + nb), ldda, queue[0]);
-            }
+            cnrtQueueSync(queue[0]); 
 
             rows = m - j;
-            sgetrf_recpanel_native(handle, rows, nb, dAP(0, 0), nb, dipiv + j, dipivinfo, dinfo, j, queue[0], queue[1]);
+            sgetrf2_native(handle, rows, nb, dAP(0,0), nb, dipiv+j, dinfo, j, queue[0]);
 
-            cnrtQueueSync(queue[0]); //
+            cnrtQueueSync(queue[0]); 
 
             MyCnrtMemcpy2D(handle, m - j, nb, dAP(0, 0), nb, dA(j, j), ldda, 1, queue[0]);
 
-            // do the small non-parallel computations (next panel update)
-            printf("do the small non-parallel computations (next panel update)\t");
             if (j + nb < minmn - nb)
             {
-                printf("trsm3 %d %d\n", nb, nb);
-                trsm3(handle, nb, nb,
+                trsm3(handle, nb, n - j - nb,
                       dA(j, j), ldda,
                       dA(j, j + nb), ldda,
                       workspace,
                       queue[0]);
 
-                printf("gemm3 %d %d %d\n", m - (j + nb), nb, nb);
                 gemm3(handle,
-                      m - (j + nb), nb, nb,
+                      m - (j + nb), n - j - nb, nb,
                       m, n,
                       dA(j + nb, j), dA(j, j + nb), dA(j + nb, j + nb), dA(j + nb, j + nb), ldda, queue[0]);
             }
             else
             {
-                printf("trsm3 %d %d\n", nb, n - (j + nb));
                 trsm3(handle,
                       nb, n - (j + nb),
                       dA(j, j), ldda,
                       dA(j, j + nb), ldda,
                       workspace, queue[0]);
 
-                printf("gemm3 %d %d %d\n", m - (j + nb), n - (j + nb), nb);
                 gemm3(handle,
                       m - (j + nb), n - (j + nb), nb,
                       m, n,
@@ -351,14 +317,14 @@ int sgetrf_mlu(
             }
         }
         jb = MIN(m - j, n - j);
-        printf("jb m-j n-j %d %d %d\n", jb, m - j, n - j);
+
         if (jb > 0)
         {
             rows = m - j;
 
             MyCnrtMemcpy2D(handle, rows, jb, dA(j, j), ldda, dAP(0, 0), jb, 1, queue[0]);
 
-            sgetrf_recpanel_native(handle, rows, jb, dAP(0, 0), jb, dipiv + j, dipivinfo, dinfo, j, queue[0], queue[1]);
+            sgetrf2_native(handle, rows, jb, dAP(0,0), jb, dipiv+j, dinfo, j, queue[0]);
 
             MyCnrtMemcpy2D(handle, rows, jb, dAP(0, 0), jb, dA(j, j), ldda, 1, queue[0]);
 

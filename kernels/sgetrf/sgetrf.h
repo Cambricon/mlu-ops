@@ -54,6 +54,7 @@ mluOpStatus_t MLUOP_WIN_API KernelTrsm(cnrtDim3_t k_dim, cnrtFunctionType_t k_ty
 
 mluOpStatus_t MLUOP_WIN_API KernelScal_ger(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
                                            cnrtQueue_t queue, mluOpDataType_t d_type,
+                                           int M_size, int N_size, int ib, int J,
                                            int m, int n, int step,
                                            float *dA, int lda,
                                            int *info, int gbstep);
