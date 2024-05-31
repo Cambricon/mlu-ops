@@ -25,7 +25,7 @@
 namespace mluoptest {
 
 static void luDecomposition(float* matrix, int m, int n) {
-    int size = (m < n) ? m : n; // 获取较小的维度作为 LU 分解的大小
+    int size = (m < n) ? m : n; 
     for (int k = 0; k < size; k++) {
         for (int i = k + 1; i < m; i++) {
             matrix[i * n + k] /= matrix[k * n + k];
@@ -38,11 +38,8 @@ static void luDecomposition(float* matrix, int m, int n) {
 
 static void assign_lower_upper(float *A, float *L, float *U, int m, int n) {
     if (m <= 0 || n <= 0) {
-        //printf("矩阵维度无效\n");
         return;
     }
-
-    // 将下三角赋值给 L
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
             if (j < i) {
@@ -52,7 +49,6 @@ static void assign_lower_upper(float *A, float *L, float *U, int m, int n) {
         }
     }
 
-    // 将上三角赋值给 U
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
             if (j >= i) {
@@ -60,69 +56,28 @@ static void assign_lower_upper(float *A, float *L, float *U, int m, int n) {
             }
         }
     }
-    // //printf("assigning result A to L and U:\n");
-    // printCol(m,n,A);
-    // printCol(m,n,L);
-    // printCol(n,n,U);
 }
 
-// 计算 LU 分解误差
-
-/*
-LU(dst)是L*U后反解原矩阵后的结果
-res(src)是对原矩阵进行LU分解后的结果，其上三角是U,下三角是L
-*/
 static void computeLUError(float *LU, float *res, int m,int n)
 {
     double error = 0.0;
     double normA = 0.0;
-    // float *L[m*n]={0};
-    // float *U[n*n]={0};
+
     std::unique_ptr<float[]> L(new float[m*n]());
     std::unique_ptr<float[]> U(new float[n*n]());
-    // printf("111\n");
+
 
     assign_lower_upper(res,L.get(),U.get(),m,n);
 
-
-    // printf("111\n");
-    // 计算 A 的范数
-    // float matnorm = compute_frobenius_norm(A, m, n);
-    // //printf("A matnorm: %f \n",matnorm);
-
-    // 计算 L*U-A
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
-            // double sum=LU[i * n + j ];
-            // double c=0;
             double temp=0;
             for (int k = 0; k <= i && k < n; k++) {
-                // double y=L[i * n + k] * U[k * n + j]-c;
-                // double t=sum+y;
-                // c=(t-sum)-y;
-                // sum=t;
                 temp+=L[i * n + k ] * U[k * n + j];
-                // LU[i * n + j ] += L[i * n + k ] * U[k * n + j];
             }
-            // LU[i * n + j] = sum;
             LU[i * n + j] = temp;
-            // if(i==36&&j==4)
-            // {
-            //     //printf("(36,4) %.0f \n",LU[i  + j * m]);
-            // }
-            // LU[i  + j * m]-=A[i  + j * m];
         }
     }
-    // printf("111\n");
-    // //printf("A A-LU:\n");
-    // printCol(m,n,A);
-    // printCol(m,n,LU);
-
-    // float residual = compute_frobenius_norm(LU, m, n);
-
-    // //printf("residual / (matnorm * n): %.10f/(%.10f*%d) \n",residual,matnorm,n);
-    // 归一化误差
-    // return LU;
     return;
 }
 

@@ -4,148 +4,215 @@
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 
-#define N 4
-#define MAX_M_SIZE 16384
-#define CEILDIV(x,y) ( (x + y - 1)/y)
+#define N 16
+#define MAX_M_SIZE 5192
+#define CEILDIV(x, y) ((x + y - 1) / y)
+
+
+__mlu_func__ void MLUSubKernelScal_ger(
+    int m, int n, int step,
+    float *dA, int lda, int ldL1,
+    int *info, int gbstep,
+    int m_per_core, int m_per_core_, int len_extra, int k, int cur,
+    __nram__ float *shared_y,
+    __nram__ float *temp,
+    __nram__ float *L1,
+    __nram__ float *temp_L1,
+    __nram__ float *tail,
+    __nram__ float *orig)
+{
+    int tx = taskIdX;
+
+    // checkinfo to avoid computation of the singular matrix
+    if ((*info) != 0)
+        return;
+    if (m_per_core <= 0)
+        return;
+
+    int ld_orig = n + step;
+
+    if (step == 0)
+        __memcpy(shared_y, orig, n * sizeof(float), NRAM2NRAM, n * sizeof(float), lda * sizeof(float), 0);
+    else
+    {
+
+        orig = orig + step + step * ld_orig;
+        L1 = L1 + step + step * ldL1;
+
+        __memcpy(shared_y, L1, 1 * sizeof(float), NRAM2NRAM, 1 * sizeof(float), ldL1 * sizeof(float), n - 1);
+    }
+
+    if (shared_y[0] == 0)
+    {
+        (*info) = step + gbstep + 1;
+        return;
+    }
+
+    int offset_L1 = 0;
+
+    if (tx == 0 || (tx == taskDim - 1 && m_per_core_ == 0)) 
+    {
+        if (step == 0 && k == 0)
+        {
+            m_per_core--;
+            offset_L1++; 
+        }
+    }
+    if (k > 0)
+    {
+        if (((tx + k * taskDim) == cur) && (m_per_core == 1))
+        {
+            return;
+        }
+    }
+
+    float reg;
+    reg = 1 / shared_y[0];
+    int of = (step == 0) ? 0 : 1;
+
+    if (m_per_core > 0)
+    {
+        if (m_per_core + len_extra - of > 0)
+            __bang_mul_scalar(temp_L1 + offset_L1, L1 + offset_L1 + of, reg, m_per_core + len_extra - of);
+
+        for (int i = 0; i < n - 1; i++)
+        {
+            if (m_per_core + len_extra - of > 0)
+            {
+                __bang_cycle_mul(temp, temp_L1 + offset_L1, shared_y + i + 1, m_per_core + len_extra - of, 1);
+                __bang_sub(L1 + offset_L1 + (i + 1) * (ldL1) + of, L1 + offset_L1 + (i + 1) * (ldL1) + of, temp, m_per_core + len_extra - of);
+            }
+        }
+
+        if (m_per_core - 1 >= 0)
+        {
+            if ((m_per_core + len_extra - of) > 0)
+                __memcpy(L1 + offset_L1 + of, temp_L1 + offset_L1, (m_per_core + len_extra - of) * sizeof(float), NRAM2NRAM, ldL1 * sizeof(float), sizeof(float), 0); // 写回第一列
+        }
+    }
+}
 
 
 __mlu_entry__ void MLUKernelScal_ger(
+    int M_size, int N_size, int ib, int J,
     int m, int n, int step,
     float *dA, int lda,
     int *info, int gbstep)
-    {
-        int tx  = taskIdX;
-        // int gtx = taskId;
-        // checkinfo to avoid computation of the singular matrix
-        if( (*info) != 0 ) return;
-        // printf("tx %d and gtx %d  MLUKernelSwap\n",tx,gtx);
-
-        float *A = dA + step + step * lda;
-        float reg;
-        __nram__ float shared_y[N];
-        // __nram__ float rA[N];
-        __nram__ float temp[MAX_M_SIZE];
-        __nram__ float L1[MAX_M_SIZE];
-        __nram__ float temp_L1[MAX_M_SIZE];
-        __nram__ float tail[MAX_M_SIZE];
-
-        if ( tx<taskDim ) {      
-            __memcpy(shared_y,A,n*sizeof(float),LDRAM2NRAM,sizeof(float),lda*sizeof(float),0);     
-        }
+{
+    int tx = taskIdX;
+    const int coef= 8;
+    int gbj, STEP;
  
+    __nram__ float shared_y[N * N];
+    __nram__ float extra_vec[N * N];
+    __nram__ float temp[MAX_M_SIZE * coef / TaskUnion4];
+    __nram__ float L1[MAX_M_SIZE * N * coef / TaskUnion4];
+    __nram__ float temp_L1[MAX_M_SIZE * coef / TaskUnion4];
+    __nram__ float tail[MAX_M_SIZE * coef / TaskUnion4];
+    __nram__ float orig[MAX_M_SIZE * N * coef / TaskUnion4];
 
-        if (shared_y[0] == 0) {
-        (*info) = step + gbstep + 1;
-        return;
-        }
+    float *A = dA + J + J * lda;
+    
+    const int seg = CEILDIV(m, MAX_M_SIZE);
+    int mm_per_core_ = 0;
 
-
-        int m_per_core=m/taskDim;
-        const int m_per_core_=m_per_core;
-        int m_=m-m_per_core*(taskDim-1);
-        if (tx == taskDim - 1) {
-            m_per_core=m_;
-        }
-
-        reg=1/shared_y[0];
-        
-        if(m_per_core-1>=0)
-            __memcpy(L1,A+tx*lda*m_per_core_,1*sizeof(float),LDRAM2NRAM,sizeof(float),lda*sizeof(float),m_per_core-1);
-            
-        int offset_L1=0;
-        
-         if(tx==0)
-        {
-            offset_L1++;//指向shared_y的第二个元素
-            m_per_core--;
-        }
-        else if(tx==taskDim-1&&m_per_core_==0) //m=3时 前三个核的m为0，最后一个核需要处理2行，偏移
-        {
-            offset_L1++;//指向shared_y的第二个元素
-            m_per_core--;
-        }
-
-        if(m>MAX_M_SIZE)
-        {
-            int seg=2;
-            int num_per_core=m_per_core/seg;
-            int rem_num_per_core=m_per_core-seg*num_per_core;
-            if(num_per_core>0)
-            {
-                __bang_mul_scalar(temp_L1+offset_L1,L1+offset_L1,reg,m_per_core);
-                for(int j=0;j<seg;j++)
-                {
-
-                    for(int i=0;i<n-1;i++)
-                    {
-                        __memcpy(tail+j*num_per_core, A+tx*lda*m_per_core_+j*num_per_core*lda+offset_L1*lda+i+1,sizeof(float),LDRAM2NRAM,sizeof(float),lda*sizeof(float),num_per_core-1);
-                        __bang_cycle_mul(temp+j*num_per_core,temp_L1+offset_L1+j*num_per_core,shared_y+i+1,num_per_core,1);
-
-                        __bang_sub(tail+j*num_per_core,tail+j*num_per_core,temp+j*num_per_core,num_per_core);
-
-                        __memcpy(A+tx*lda*m_per_core_+j*num_per_core*lda+offset_L1*lda+i+1,tail+j*num_per_core,sizeof(float),NRAM2LDRAM,lda*sizeof(float),sizeof(float),num_per_core-1);//写回tail
-                    }
-                    
-                    __memcpy(A+tx*lda*m_per_core_+j*num_per_core*lda+offset_L1*lda,temp_L1+offset_L1+j*num_per_core,sizeof(float),NRAM2LDRAM,lda*sizeof(float),sizeof(float),num_per_core-1);//写回temp_L1   
-                }
-            }
-            if(rem_num_per_core>0)
-            {
-
-                for(int i=0;i<n-1;i++)
-                {
-                    __memcpy(tail+seg*num_per_core,A+tx*lda*m_per_core_+seg*num_per_core*lda+offset_L1*lda+i+1,sizeof(float),LDRAM2NRAM,sizeof(float),lda*sizeof(float),rem_num_per_core-1);
-                    __bang_cycle_mul(temp+seg*num_per_core,temp_L1+offset_L1+seg*num_per_core,shared_y+i+1,rem_num_per_core,1);
-
-                    __bang_sub(tail+seg*num_per_core,tail+seg*num_per_core,temp+seg*num_per_core,rem_num_per_core);
-                    
-                    __memcpy(A+tx*lda*m_per_core_+seg*num_per_core*lda+offset_L1*lda+i+1,tail+seg*num_per_core,sizeof(float),NRAM2LDRAM,lda*sizeof(float),sizeof(float),rem_num_per_core-1);//写回tail
-                }
-                
-                __memcpy(A+tx*lda*m_per_core_+seg*num_per_core*lda+offset_L1*lda,temp_L1+offset_L1+seg*num_per_core,sizeof(float),NRAM2LDRAM,lda*sizeof(float),sizeof(float),rem_num_per_core-1);//写回temp_L1   
-                
-            }
-            
-           
-            return;
-        }
-        
-        if(m_per_core>0)
-        {
-            __bang_mul_scalar(temp_L1+offset_L1,L1+offset_L1,reg,m_per_core);
-            
-            for(int i=0;i<n-1;i++)
-            {
-
-                __memcpy(tail,A+tx*lda*m_per_core_+offset_L1*lda+i+1,sizeof(float),LDRAM2NRAM,sizeof(float),lda*sizeof(float),m_per_core-1);
-                __bang_cycle_mul(temp,temp_L1+offset_L1,shared_y+i+1,m_per_core,1);
-
-                __bang_sub(tail,tail,temp,m_per_core);
-
-                
-                __memcpy(A+tx*lda*m_per_core_+offset_L1*lda+i+1,tail,sizeof(float),NRAM2LDRAM,lda*sizeof(float),sizeof(float),m_per_core-1);//写回tail
-
-            }
-            if(m_per_core-1>=0)
-                __memcpy(A+tx*lda*m_per_core_+offset_L1*lda,temp_L1+offset_L1,sizeof(float),NRAM2LDRAM,lda*sizeof(float),sizeof(float),m_per_core-1);//写回temp_L1
-        }
-        
-    }
-
-
-
-
-
-mluOpStatus_t MLUOP_WIN_API KernelScal_ger(cnrtDim3_t k_dim, cnrtFunctionType_t k_type, 
-    cnrtQueue_t queue, mluOpDataType_t d_type,
-    int m, int n, int step,
-    float *dA, int lda,
-    int *info, int gbstep)
+    __memcpy(extra_vec, A, n * sizeof(float), GDRAM2NRAM, n * sizeof(float), lda * sizeof(float), n - 1);
+    for (int k = 0; k < seg; k++)
     {
-        
-        KERNEL_CHECK(
-        MLUKernelScal_ger<<<k_dim, k_type, queue>>>
-            (m,n,step,dA,lda,info,gbstep));
-        
-        return MLUOP_STATUS_SUCCESS;
+
+        int remain_m = m - k * MAX_M_SIZE;
+        int mp = remain_m < MAX_M_SIZE ? remain_m : MAX_M_SIZE;
+        int m_per_core = mp / taskDim;
+        int m_per_core_ = m_per_core;
+        int m_ = mp - m_per_core * (taskDim - 1);
+        if (tx == taskDim - 1)
+        {
+            m_per_core = m_;
+        }
+
+        int offset = tx * m_per_core_ + k * lda * MAX_M_SIZE;
+        int len_extra = 0;
+
+        if (!(m_per_core_ == 0 && tx != taskDim - 1))
+        {
+            if (offset <= n)
+            {
+                len_extra = offset;
+            }
+            else
+            {
+                len_extra = n;
+            }
+            len_extra = len_extra < 0 ? 0 : len_extra;
+
+            if (len_extra > 0)
+                __memcpy(orig, extra_vec, n * sizeof(float), NRAM2NRAM, n * sizeof(float), n * sizeof(float), len_extra - 1);
+            __memcpy(orig + len_extra * n, A + tx * lda * m_per_core_ + k * lda * MAX_M_SIZE, n * sizeof(float), GDRAM2NRAM, n * sizeof(float), lda * sizeof(float), m_per_core - 1);
+        }
+
+        int m_e = m_per_core + len_extra;
+        int ld_L1 = m_e;
+        int mm_per_core = m_per_core;
+
+        int llen_extra = len_extra;
+
+        if (mm_per_core_ == 0)
+        {
+            if (k == 0)
+                mm_per_core_ = m_per_core;
+        }
+
+        if (m_e > 0)
+            __bang_transpose(L1, orig, m_e, n);
+        for (STEP = 0; STEP < ib; STEP++)
+        {
+            gbj = J + STEP;
+            if (gbj < M_size)
+            {
+                if (m_per_core_ == 0 && m_per_core == 0)
+                    return;
+
+                int cur = (m_per_core_ == 0) ? (taskDim - 1 + STEP / mm_per_core_ * taskDim) : STEP / m_per_core_;
+
+                MLUSubKernelScal_ger(m - gbj, ib - STEP, STEP,
+                                        A, lda, ld_L1,
+                                        info, gbstep,
+                                        m_per_core, m_per_core_, len_extra, k, cur,
+                                        shared_y,
+                                        temp,
+                                        L1,
+                                        temp_L1,
+                                        tail,
+                                        orig);
+
+                if ((tx + k * taskDim) == cur && m_per_core > 0)
+                    m_per_core--;
+                else if (len_extra > 0)
+                    len_extra--;
+                if (m_per_core == 0)
+                    break;
+            }
+        }
+        if (m_e > 0)
+            __bang_transpose(orig, L1, n, m_e);
+            
+        if (mm_per_core - 1 >= 0)
+        {
+            __memcpy(A + tx * lda * m_per_core_ + k * lda * MAX_M_SIZE, orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM, lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+        }
     }
+    return;
+}
+
+
+mluOpStatus_t MLUOP_WIN_API KernelScal_ger(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                                           cnrtQueue_t queue, mluOpDataType_t d_type,
+                                           int M_size, int N_size, int ib, int J,
+                                           int m, int n, int step,
+                                           float *dA, int lda,
+                                           int *info, int gbstep)
+{
+
+    KERNEL_CHECK(MLUKernelScal_ger<<<k_dim, k_type, queue>>>(M_size, N_size, ib, J, m, n, step, dA, lda, info, gbstep));
+    return MLUOP_STATUS_SUCCESS;
+}

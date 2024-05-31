@@ -10,31 +10,86 @@
 #include "kernels/unary_op/unary_op_host.h"
 #include "kernels/utils/cnnl_helper.h"
 
-static mluOpStatus_t MLUOP_WIN_API trsm(
+static mluOpStatus_t MLUOP_WIN_API MatrixInverse(
     mluOpHandle_t handle,
-    int m, int n,
-    float *dA, int ldda,
-    float *dB, int lddb,
+    int batch,
+    int m,
+    float *d_input, int ld_input, int stride_input,
+    float *d_output, int ld_output, int stride_output,
     cnrtQueue_t queue)
 {
-  cnrtDim3_t k_dim;
-  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
-  int dim_x = roundup(m, handle->core_num_per_cluster);
-  k_dim.x = dim_x;
-  k_dim.y = dim_x;
-  k_dim.z = 1;
 
-  CHECK_RETURN("[KernelTrsm]", KernelTrsm(
-                                   k_dim, k_type, queue, MLUOP_DTYPE_FLOAT,
-                                   m, n, dA, ldda, dB, lddb));
+  cnrtDim3_t dim;
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+  dim.x = 4;
+  dim.y = 1;
+  dim.z = 1;
 
+  CHECK_RETURN("kernelInverse", KernelInverse(
+                                    dim, func_type, queue,
+                                    batch,
+                                    d_input, ld_input, stride_input,
+                                    d_output, ld_output, stride_output,
+                                    m));
   CNRT_CHECK(cnrtQueueSync(queue));
 
   return MLUOP_STATUS_SUCCESS;
 }
 
+/* m n是原矩阵的尺寸*/
+static mluOpStatus_t trsm3(mluOpHandle_t handle, int m, int n, float *d_a, int lda, float *d_b, int ldb, float *work_space, cnrtQueue_t queue)
+{
+  if (n == 0)
+    return MLUOP_STATUS_BAD_PARAM;
+  mluOpTensorDescriptor_t matmul_a_desc, matmul_b_desc, info_desc;
+  std::string api_name = "LU";
+
+  int32_t *info;
+  CNRT_CHECK(cnrtMalloc((void **)&info, sizeof(int32_t)));
+
+  CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_a_desc));
+  CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_b_desc));
+  CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&info_desc));
+  int32_t matmul_a_shape[2] = {m, m};
+  int32_t matmul_b_shape[2] = {m, ldb};
+  int32_t info_shape[1] = {1};
+
+  CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                             matmul_a_desc, MLUOP_LAYOUT_ARRAY,
+                             MLUOP_DTYPE_FLOAT, 2, matmul_a_shape));
+  CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                             matmul_b_desc, MLUOP_LAYOUT_ARRAY,
+                             MLUOP_DTYPE_FLOAT, 2, matmul_b_shape));
+  CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
+                             info_desc, MLUOP_LAYOUT_ARRAY,
+                             MLUOP_DTYPE_INT32, 1, info_shape));
+
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_a_desc, cnnl_a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(info_desc, cnnl_info_desc);
+
+  MatrixInverse(handle,
+                1,
+                m,
+                d_a, lda, m * lda,
+                work_space, m, m * m,
+                queue);
+
+  cnnlStrideBatchMatMul(cnnl_handle, false, false, m, n, m,
+                        1, 1.0,
+                        cnnl_a_desc, work_space, m, m * m,
+                        cnnl_b_desc, d_b, ldb, m * n,
+                        0.0f,
+                        cnnl_b_desc, d_b, ldb, m * n);
+
+  CNRT_CHECK(cnrtQueueSync(queue));
+  return MLUOP_STATUS_SUCCESS;
+}
+
 static mluOpStatus_t MLUOP_WIN_API scal_ger(
     mluOpHandle_t handle,
+    int M_size, int N_size, int ib, int J,
     int m, int n, int step,
     float *dA, int lda,
     int *info, int gbstep,
@@ -51,8 +106,8 @@ static mluOpStatus_t MLUOP_WIN_API scal_ger(
 
   CHECK_RETURN("[KernelScal_ger]", KernelScal_ger(
                                        k_dim, k_type, queue, MLUOP_DTYPE_FLOAT,
+                                       M_size, N_size, ib, J,
                                        m, n, step, dA, lda, info, gbstep));
-
   CNRT_CHECK(cnrtQueueSync(queue));
 
   return MLUOP_STATUS_SUCCESS;
@@ -69,8 +124,8 @@ static mluOpStatus_t MLUOP_WIN_API MatrixAdd(
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
 
-  k_type = CNRT_FUNC_TYPE_UNION8;
-  int dim_x = handle->core_num_per_cluster * 8;
+  k_type = CNRT_FUNC_TYPE_UNION1;
+  int dim_x = handle->core_num_per_cluster * 1;
   k_dim.x = dim_x;
   k_dim.y = 1;
   k_dim.z = 1;
@@ -94,7 +149,6 @@ static mluOpStatus_t MLUOP_WIN_API gemm3(
   if (m_ <= 0 || n_ <= 0)
     return MLUOP_STATUS_BAD_PARAM;
 
-  // int m_=m-n1, n_=n2,k_=n1;
   int dim_mn[2] = {m_, n_};
   int dim_kn[2] = {k_, n_};
   int dim_mk[2] = {m_, k_};
@@ -184,41 +238,28 @@ int sgetrf2_native(
   {
     return arginfo;
   }
-  int nb = 4;
+  int nb = 16;
   int min_mn = MIN(m, n);
   int gbj, j, step, ib;
   float *workspace;
   cnrtMalloc((void **)&workspace, nb * nb * sizeof(float));
 
-  printf("      sgetrf2_native m n %d %d \n", m, n);
   for (j = 0; j < min_mn; j += nb)
   {
-    // printf("-----------------------------------\n");
-    // printf("第%d次循环\n",j/nb);
     ib = MIN(nb, min_mn - j);
-    for (step = 0; step < ib; step++)
-    {
-      gbj = j + step;
-      
-      if (gbj < m)
-      {
-        // printf("scal_dger m n gbj %d %d %d \n",m-gbj,ib-step,gbj);
-        arginfo = scal_ger(handle, m - gbj, ib - step, gbj, dA, ldda, dinfo, gbstep, queue);
-        if (arginfo != 0)
-        {
-          printf("kernel failed with %d in scal_ger\n", arginfo);
-          // break;
-        }
-      }
-    }
+    arginfo = scal_ger(handle,
+                       m, n, ib, j,
+                       m - j, ib, j,
+                       dA, ldda,
+                       dinfo, gbstep, queue);
+
     if ((n - j - ib) > 0)
     {
-      // printf("      trsm %d %d\n",ib,n-j-ib);
-      trsm(handle,
-           ib, n - j - ib,
-           dA(j, j), ldda,
-           dA(j, j + ib), ldda, queue);
-      // printf("      gemm %d %d %d\n",m-(j+ib),n-(j+ib),ib);
+      trsm3(handle,
+            ib, n - j - ib,
+            dA(j, j), ldda,
+            dA(j, j + ib), ldda, workspace, queue);
+
       gemm3(handle,
             m - (j + ib), n - (j + ib), ib,
             m, n,
