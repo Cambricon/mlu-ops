@@ -1,0 +1,594 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "mlu.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+#include "kernels/fft/fft.h"
+#include "kernels/fft/fft_optm_device/fft_butterfly_ops.h"
+#include "kernels/fft/fft_optm_device/fft_nram_wram_allocate.h"
+
+template <typename DT>
+__mlu_func__ void computeConjMerge(DT *output, DT *input, const int len) {
+  // in[2][len][2]
+  // out[len][2]
+  if (__is_mpu()) return;
+
+  int total_num = len;
+  int repeat_num = total_num / taskDim;
+  int remain_num = total_num % taskDim;
+
+  int t_len = repeat_num + ((remain_num > 0 && taskId < remain_num) ? 1 : 0);
+  int t_start = taskId - remain_num <= 0 ? taskId * (repeat_num + 1)
+                                         : (remain_num * (repeat_num + 1) +
+                                            (taskId - remain_num) * repeat_num);
+  int nram_buf_offset = 0;
+
+  // efficient parallel number: 1000
+  const int max_para_num = 1000 > t_len ? t_len : 1000;
+  repeat_num = (t_len + max_para_num - 1) / max_para_num;
+
+  DT *nram_para_load_rr_ri_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;
+
+  DT *nram_para_load_rr_ri_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;
+
+  DT *nram_para_load_ir_ii_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;
+
+  DT *nram_para_load_ir_ii_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;
+
+  DT *nram_para_store_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_para_store_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_in_rr = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+  DT *nram_in_ri = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+  DT *nram_in_ir = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+  DT *nram_in_ii = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_out_r = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+  DT *nram_out_i = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  if (repeat_num) {
+    input += t_start * 2;
+    output += t_start * 2;
+    for (int repeat_id = 0; repeat_id < repeat_num + 2; ++repeat_id) {
+      // pipeline: load-stage
+
+      if (repeat_id < repeat_num) {
+        int i = repeat_id * max_para_num;
+
+        int para_num =
+            (max_para_num > (t_len - i)) ? (t_len - i) : max_para_num;
+
+        __memcpy_async(nram_para_load_rr_ri_ping, input + i * 2,
+                       sizeof(DT) * 2 * para_num, GDRAM2NRAM);
+
+        __memcpy_async(nram_para_load_ir_ii_ping, input + i * 2 + len * 2,
+                       sizeof(DT) * 2 * para_num, GDRAM2NRAM);
+      }
+
+      // pipeline: store-stage
+
+      if (repeat_id >= 2) {
+        int i = (repeat_id - 2) * max_para_num;
+        int para_num =
+            (max_para_num > (t_len - i)) ? (t_len - i) : max_para_num;
+        __memcpy_async(output + i * 2, nram_para_store_ping,
+                       para_num * 2 * sizeof(DT), NRAM2GDRAM);
+      }
+
+      // pipeline: compute-stage
+      if (repeat_id >= 1 && repeat_id < repeat_num + 1) {
+        __bang_transpose(nram_in_rr, nram_para_load_rr_ri_pong, max_para_num,
+                         2);
+        __bang_transpose(nram_in_ir, nram_para_load_ir_ii_pong, max_para_num,
+                         2);
+
+        __bang_sub(nram_out_r, nram_in_rr, nram_in_ii, max_para_num);
+        __bang_add(nram_out_i, nram_in_ri, nram_in_ir, max_para_num);
+
+        __bang_transpose(nram_para_store_pong, nram_out_r, 2, max_para_num);
+      }
+
+      __sync();
+      FFT_SWAP_PTR(nram_para_load_rr_ri_pong, nram_para_load_rr_ri_ping);
+      FFT_SWAP_PTR(nram_para_load_ir_ii_pong, nram_para_load_ir_ii_ping);
+      FFT_SWAP_PTR(nram_para_store_ping, nram_para_store_pong);
+    }
+  }
+}
+
+template <typename DT>
+__mlu_func__ void computeBatchConjMerge(DT *output, DT *input, const int len,
+                                        const int batch) {
+  if (__is_mpu()) return;
+
+  int total_num = len;
+  int repeat_num = total_num / taskDim;
+  int remain_num = total_num % taskDim;
+
+  int t_len = repeat_num + ((remain_num > 0 && taskId < remain_num) ? 1 : 0);
+  int t_start = taskId - remain_num <= 0 ? taskId * (repeat_num + 1)
+                                         : (remain_num * (repeat_num + 1) +
+                                            (taskId - remain_num) * repeat_num);
+  int nram_buf_offset = 0;
+  // efficient parallel number: 600
+  const int max_para_num = 600 < t_len ? 600 : t_len;
+  repeat_num = (t_len + max_para_num - 1) / max_para_num;
+
+  DT *nram_para_load_rr_ri_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_para_load_rr_ri_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_para_load_ir_ii_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_para_load_ir_ii_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_para_store_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_para_store_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_in_rr = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;  // complex
+  DT *nram_in_ri = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;  // complex
+  DT *nram_in_ir = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;  // complex
+  DT *nram_in_ii = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;  // complex
+
+  DT *nram_out_r = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;  // complex
+  DT *nram_out_i = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;  // complex
+
+  int idist = len * 4;
+  int odist = len * 2;
+  if (repeat_num) {
+    input += t_start * 2;
+    output += t_start * 2;
+    for (int batch_id = 0; batch_id < batch; batch_id++) {
+      for (int repeat_id = 0; repeat_id < repeat_num + 2; ++repeat_id) {
+        // pipeline: load-stage
+
+        if (repeat_id < repeat_num) {
+          int i = repeat_id * max_para_num;
+          int para_num =
+              (max_para_num > (t_len - i)) ? (t_len - i) : max_para_num;
+          __memcpy_async(nram_para_load_rr_ri_ping, input + i * 2,
+                         sizeof(DT) * 2 * para_num, GDRAM2NRAM);
+
+          __memcpy_async(nram_para_load_ir_ii_ping, input + (i + len) * 2,
+                         sizeof(DT) * 2 * para_num, GDRAM2NRAM);
+        }
+
+        // pipeline: store-stage
+
+        if (repeat_id >= 2) {
+          int i = (repeat_id - 2) * max_para_num;
+          int para_num =
+              (max_para_num > (t_len - i)) ? (t_len - i) : max_para_num;
+          __memcpy_async(output + i * 2, nram_para_store_ping,
+                         sizeof(DT) * 2 * para_num, NRAM2GDRAM);
+        }
+
+        // pipeline: compute-stage
+        if (repeat_id >= 1 && repeat_id < repeat_num + 1) {
+          __bang_transpose(nram_in_rr, nram_para_load_rr_ri_pong, max_para_num,
+                           2);
+          __bang_transpose(nram_in_ir, nram_para_load_ir_ii_pong, max_para_num,
+                           2);
+
+          __bang_sub(nram_out_r, nram_in_rr, nram_in_ii, max_para_num);
+          __bang_add(nram_out_i, nram_in_ri, nram_in_ir, max_para_num);
+
+          __bang_transpose(nram_para_store_pong, nram_out_r, 2, max_para_num);
+        }
+
+        __sync();
+        FFT_SWAP_PTR(nram_para_load_rr_ri_pong, nram_para_load_rr_ri_ping);
+        FFT_SWAP_PTR(nram_para_load_ir_ii_pong, nram_para_load_ir_ii_ping);
+        FFT_SWAP_PTR(nram_para_store_pong, nram_para_store_ping);
+      }
+      input += idist;
+      output += odist;
+    }
+  }
+}
+
+// out[n0][(n1/2+1)][batch * 2] <- [n0 * 2][(n1/2+1)*2][batch]
+// STRIDE RR_RI IR_II = n0*(n1/2+1)*2*batch
+// STRIDE RR RI = (n1/2+1)*batch
+// STRIDE IR II = (n1/2+1)*batch
+// [param]len = (n1/2+1) * batch
+// [param]batch = n0
+template <typename DT>
+__mlu_func__ void computeBatchConjMergeR2C(DT *output, DT *input, const int len,
+                                           const int batch) {
+  if (__is_mpu()) return;
+
+  int total_num = len;
+  int repeat_num = total_num / taskDim;
+  int remain_num = total_num % taskDim;
+
+  int t_len = repeat_num + ((remain_num > 0 && taskId < remain_num) ? 1 : 0);
+  int t_start = taskId - remain_num <= 0 ? taskId * (repeat_num + 1)
+                                         : (remain_num * (repeat_num + 1) +
+                                            (taskId - remain_num) * repeat_num);
+  int nram_buf_offset = 0;
+  // efficient parallel number: 768
+  const int max_para_num = 768 < t_len ? 768 : t_len;
+  repeat_num = (t_len + max_para_num - 1) / max_para_num;
+
+  DT *nram_para_load_rr_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_para_load_rr_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_para_load_ri_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_para_load_ri_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_para_load_ir_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_para_load_ir_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_para_load_ii_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_para_load_ii_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_para_store_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_para_store_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_out_r = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;  // complex
+  DT *nram_out_i = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;  // complex
+
+  int idist = len * 2;
+  int odist = len * 2;
+  int stride_RR_IR = 2 * batch * len;
+  if (repeat_num > 0) {
+    input += t_start;
+    output += 2 * t_start;
+    for (int batch_id = 0; batch_id < batch; batch_id++) {
+      for (int repeat_id = 0; repeat_id < repeat_num + 2; ++repeat_id) {
+        // pipeline: load-stage
+
+        if (repeat_id < repeat_num) {
+          int i = repeat_id * max_para_num;
+          int para_num =
+              (max_para_num > (t_len - i)) ? (t_len - i) : max_para_num;
+          __memcpy_async(nram_para_load_rr_ping, input + i + idist * batch_id,
+                         sizeof(DT) * para_num, GDRAM2NRAM);
+          __memcpy_async(nram_para_load_ri_ping,
+                         input + i + len + idist * batch_id,
+                         sizeof(DT) * para_num, GDRAM2NRAM);
+          __memcpy_async(nram_para_load_ir_ping,
+                         input + i + stride_RR_IR + idist * batch_id,
+                         sizeof(DT) * para_num, GDRAM2NRAM);
+          __memcpy_async(nram_para_load_ii_ping,
+                         input + i + len + stride_RR_IR + idist * batch_id,
+                         sizeof(DT) * para_num, GDRAM2NRAM);
+        }
+
+        // pipeline: store-stage
+        if (repeat_id >= 2) {
+          int i = (repeat_id - 2) * max_para_num;
+          int para_num =
+              (max_para_num > (t_len - i)) ? (t_len - i) : max_para_num;
+          __memcpy_async(output + i * 2 + odist * batch_id,
+                         nram_para_store_ping, sizeof(DT) * 2 * para_num,
+                         NRAM2GDRAM);
+        }
+
+        // pipeline: compute-stage
+        if (repeat_id >= 1 && repeat_id < repeat_num + 1) {
+          __bang_sub(nram_out_r, nram_para_load_rr_pong, nram_para_load_ii_pong,
+                     max_para_num);
+          __bang_add(nram_out_i, nram_para_load_ri_pong, nram_para_load_ir_pong,
+                     max_para_num);
+
+          __bang_transpose(nram_para_store_pong, nram_out_r, 2, max_para_num);
+        }
+
+        __sync();
+        FFT_SWAP_PTR(nram_para_load_rr_pong, nram_para_load_rr_ping);
+        FFT_SWAP_PTR(nram_para_load_ir_pong, nram_para_load_ir_ping);
+        FFT_SWAP_PTR(nram_para_load_ri_pong, nram_para_load_ri_ping);
+        FFT_SWAP_PTR(nram_para_load_ii_pong, nram_para_load_ii_ping);
+
+        FFT_SWAP_PTR(nram_para_store_pong, nram_para_store_ping);
+      }
+    }
+  }
+}
+
+template <typename DT>
+__mlu_func__ void computeBatchConjMergeC2R(DT *output, DT *input, const int len,
+                                           const int batch) {
+  // in[batch][2][len][2]
+  // out[batch][len][2]
+  if (__is_mpu()) return;
+
+  int total_num = len;
+  int repeat_num = total_num / taskDim;
+  int remain_num = total_num % taskDim;
+
+  int t_len = repeat_num + ((remain_num > 0 && taskId < remain_num) ? 1 : 0);
+  int t_start = taskId - remain_num <= 0 ? taskId * (repeat_num + 1)
+                                         : (remain_num * (repeat_num + 1) +
+                                            (taskId - remain_num) * repeat_num);
+
+  int nram_buf_offset = 0;
+  // efficient parallel number: 600
+  const int max_para_num = 600 < t_len ? 600 : t_len;
+  repeat_num = (t_len + max_para_num - 1) / max_para_num;
+
+  DT *nram_para_load_rr_ri_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_para_load_rr_ri_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_para_load_ir_ii_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_para_load_ir_ii_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num * 2;  // complex
+
+  DT *nram_para_store_r_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_para_store_r_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_para_store_i_ping = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_para_store_i_pong = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;
+
+  DT *nram_in_rr = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;  // complex
+  DT *nram_in_ri = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;  // complex
+  DT *nram_in_ir = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;  // complex
+  DT *nram_in_ii = (DT *)nram_buffer + nram_buf_offset;
+  nram_buf_offset += max_para_num;  // complex
+
+  // in[2][n0][(n1/2+1)][batch][2]
+  // out[n0][2][(n1/2+1)][batch]
+  int idist = len * 2;
+  int odist = len * 2;
+  if (repeat_num) {
+    input += t_start * 2;
+    output += t_start;
+    for (int batch_id = 0; batch_id < batch; batch_id++) {
+      for (int repeat_id = 0; repeat_id < repeat_num + 2; ++repeat_id) {
+        // pipeline: load-stage
+
+        if (repeat_id < repeat_num) {
+          int i = repeat_id * max_para_num;
+          int para_num =
+              (max_para_num > (t_len - i)) ? (t_len - i) : max_para_num;
+          __memcpy_async(nram_para_load_rr_ri_ping, input + i * 2,
+                         sizeof(DT) * 2 * para_num, GDRAM2NRAM);
+
+          __memcpy_async(nram_para_load_ir_ii_ping,
+                         input + (i + len * batch) * 2,
+                         sizeof(DT) * 2 * para_num, GDRAM2NRAM);
+        }
+
+        // pipeline: store-stage
+
+        if (repeat_id >= 2) {
+          int i = (repeat_id - 2) * max_para_num;
+          int para_num =
+              (max_para_num > (t_len - i)) ? (t_len - i) : max_para_num;
+          __memcpy_async(output + i, nram_para_store_r_ping,
+                         sizeof(DT) * para_num, NRAM2GDRAM);
+          __memcpy_async(output + i + len, nram_para_store_i_ping,
+                         sizeof(DT) * para_num, NRAM2GDRAM);
+        }
+
+        // pipeline: compute-stage
+        if (repeat_id >= 1 && repeat_id < repeat_num + 1) {
+          __bang_transpose(nram_in_rr, nram_para_load_rr_ri_pong, max_para_num,
+                           2);
+          __bang_transpose(nram_in_ir, nram_para_load_ir_ii_pong, max_para_num,
+                           2);
+
+          __bang_sub(nram_para_store_r_pong, nram_in_rr, nram_in_ii,
+                     max_para_num);
+          __bang_add(nram_para_store_i_pong, nram_in_ri, nram_in_ir,
+                     max_para_num);
+        }
+
+        __sync();
+        FFT_SWAP_PTR(nram_para_load_rr_ri_pong, nram_para_load_rr_ri_ping);
+        FFT_SWAP_PTR(nram_para_load_ir_ii_pong, nram_para_load_ir_ii_ping);
+        FFT_SWAP_PTR(nram_para_store_r_pong, nram_para_store_r_ping);
+        FFT_SWAP_PTR(nram_para_store_i_pong, nram_para_store_i_ping);
+      }
+      input += idist;
+      output += odist;
+    }
+  }
+}
+
+__mlu_global__ void MLUKernelFFTConjMerge(void *output, void *input,
+                                          const int len, const int dtype) {
+  switch (dtype) {
+    case (MLUOP_DTYPE_COMPLEX_FLOAT):
+    case (MLUOP_DTYPE_FLOAT): {
+      computeConjMerge<float>((float *)output, (float *)input, len);
+    }; break;
+    case (MLUOP_DTYPE_COMPLEX_HALF):
+    case (MLUOP_DTYPE_HALF): {
+      computeConjMerge<half>((half *)output, (half *)input, len);
+    }; break;
+
+    default: {
+      MLULOG("mluOpFFT Not Implemented.");
+    }
+  }
+}
+
+__mlu_global__ void MLUKernelFFTBatchConjMerge(void *output, void *input,
+                                               const int len, const int batch,
+                                               const int dtype) {
+  switch (dtype) {
+    case (MLUOP_DTYPE_COMPLEX_FLOAT):
+    case (MLUOP_DTYPE_FLOAT): {
+      computeBatchConjMerge<float>((float *)output, (float *)input, len, batch);
+    }; break;
+    case (MLUOP_DTYPE_COMPLEX_HALF):
+    case (MLUOP_DTYPE_HALF): {
+      computeBatchConjMerge<half>((half *)output, (half *)input, len, batch);
+    }; break;
+
+    default: {
+      MLULOG("mluOpFFT Not Implemented.");
+    }
+  }
+}
+
+__mlu_global__ void MLUKernelFFTBatchConjMergeR2C(void *output, void *input,
+                                                  const int len,
+                                                  const int batch,
+                                                  const int dtype) {
+  switch (dtype) {
+    case (MLUOP_DTYPE_COMPLEX_FLOAT):
+    case (MLUOP_DTYPE_FLOAT): {
+      computeBatchConjMergeR2C<float>((float *)output, (float *)input, len,
+                                      batch);
+    }; break;
+    case (MLUOP_DTYPE_COMPLEX_HALF):
+    case (MLUOP_DTYPE_HALF): {
+      computeBatchConjMergeR2C<half>((half *)output, (half *)input, len, batch);
+    }; break;
+
+    default: {
+      MLULOG("mluOpFFT Not Implemented.");
+    }
+  }
+}
+
+__mlu_global__ void MLUKernelFFTBatchConjMergeC2R(void *output, void *input,
+                                                  const int len,
+                                                  const int batch,
+                                                  const int dtype) {
+  switch (dtype) {
+    case (MLUOP_DTYPE_COMPLEX_FLOAT):
+    case (MLUOP_DTYPE_FLOAT): {
+      computeBatchConjMergeC2R<float>((float *)output, (float *)input, len,
+                                      batch);
+    }; break;
+    case (MLUOP_DTYPE_COMPLEX_HALF):
+    case (MLUOP_DTYPE_HALF): {
+      computeBatchConjMergeC2R<half>((half *)output, (half *)input, len, batch);
+    }; break;
+
+    default: {
+      MLULOG("mluOpFFT Not Implemented.");
+    }
+  }
+}
+
+mluOpStatus_t MLUOP_WIN_API kernelFFTConjMerge(cnrtDim3_t k_dim,
+                                               cnrtFunctionType_t k_type,
+                                               cnrtQueue_t queue, void *output,
+                                               void *input, const int len,
+                                               const int dtype) {
+  VLOG(5) << "Launch Kernel kernelFFTConjMerge <<Union" << k_type / CORE_DIM
+          << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  KERNEL_CHECK((MLUKernelFFTConjMerge<<<k_dim, k_type, queue>>>(output, input,
+                                                                len, dtype)));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API
+kernelFFTBatchConjMerge(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                        cnrtQueue_t queue, void *output, void *input,
+                        const int len, const int batch, const int dtype) {
+  VLOG(5) << "Launch Kernel kernelFFTBatchConjMerge <<Union"
+          << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
+          << k_dim.z << ">>>";
+  KERNEL_CHECK((MLUKernelFFTBatchConjMerge<<<k_dim, k_type, queue>>>(
+      output, input, len, batch, dtype)));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API
+kernelFFTBatchConjMergeR2C(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                           cnrtQueue_t queue, void *output, void *input,
+                           const int len, const int batch, const int dtype) {
+  VLOG(5) << "Launch Kernel kernelFFTBatchConjMerge <<Union"
+          << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
+          << k_dim.z << ">>>";
+  KERNEL_CHECK((MLUKernelFFTBatchConjMergeR2C<<<k_dim, k_type, queue>>>(
+      output, input, len, batch, dtype)));
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API
+kernelFFTBatchConjMergeC2R(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                           cnrtQueue_t queue, void *output, void *input,
+                           const int len, const int batch, const int dtype) {
+  VLOG(5) << "Launch Kernel kernelFFTBatchConjMerge <<Union"
+          << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
+          << k_dim.z << ">>>";
+  KERNEL_CHECK((MLUKernelFFTBatchConjMergeC2R<<<k_dim, k_type, queue>>>(
+      output, input, len, batch, dtype)));
+  return MLUOP_STATUS_SUCCESS;
+}

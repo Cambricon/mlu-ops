@@ -14259,22 +14259,22 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
- * in the FFT execution. For detailed information, see ::mluOpHandle_t.
- * @param[in] fft_plan
- * The plan for FFT execution. For detailed information, see ::mluOpFFTPlan_t.
- * @param[in] input
- * Pointer to the MLU memory that stores the input tensor.
- * @param[in] scale_factor
- * Input. A float-point scalar used to multiply the FFT output.
- * @param[in, out] workspace
- * Pointer to the MLU memory that is used as an extra workspace for the
- * ::mluOpExecFFT.
- * @param[out] output
- * Pointer to the MLU memory that stores the output tensor.
- * @param[in] direction
- * The transform direction: 0 means FFT forward and 1 means FFT inverse.
- * Direction is ignored for real-to-complex and complex-to-real transforms.
- *
+ * in the FFT operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in,out] fft_plan
+ * Plan for the FFT operation. This parameter is used to store the configuration of the FFT operation.
+ * @param[in,out] input
+ * Input tensor for the FFT operation. This parameter is used to provide the data to be transformed.
+ * @param[in,out] scale_factor
+ * Scale factor applied to the FFT operation. This parameter is used to normalize the result.
+ * @param[in,out] workspace
+ * Workspace buffer used during the FFT operation. This parameter is used to store intermediate
+ * results and other temporary data.
+ * @param[in,out] output
+ * Output tensor for the FFT operation. This parameter is used to store the result of the
+ * FFT transformation.
+ * @param[in,out] direction
+ * Direction of the FFT operation. This parameter specifies whether to perform a
+ * forward or inverse FFT transformation.
  * @par Note
  * - For in-place 1D real-to-complex FFTs, the input is a batch of n real numbers, and the
  *   output is n/2 + 1 non-redundant complex numbers. This requires a padding of input array.
@@ -14297,13 +14297,31 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Data Type
- * - None.
+ * - The supported data types of \p input and \p output tensors are as follows:
+ * - real-to-complex FFT:
+ *     - half(input offchip)-complex_half(output offchip)-half(input onchip)
+ *     - float(input offchip)-complex_float(output offchip)-float(input onchip)
+ * - complex-to-real FFT:
+ *     - complex_half(input offchip)-half(output offchip)-half(input onchip)
+ *     - complex_float(input offchip)-float(output offchip)-float(input onchip)
+ * - complex-to-complex FFT:
+ *     - complex_half(input offchip)-complex_half(output offchip)-half(input onchip)
+ *     - complex_float(input offchip)-complex_float(output offchip)-float(input onchip)
  *
  * @par Data Layout
  * - None.
  *
  * @par Scale Limitation
- * - None.
+ * - For float data types, FFT supports any combination of powers of i (i from 2 to 64), as well as \f$2^mL\f$.
+ *   This means that for float data types, FFT can handle a wide range of sizes, allowing flexibility in choosing the
+ *   dimensions of the input data. The values of i can be any integer from 2 to 64, enabling combinations such as 4, 8,
+ * 16, etc., as well as sizes that are a product of a power of 2 and an additional integer L.
+ *
+ * - For half data types, FFT support is more limited. It only supports sizes of 2^m, where m is an integer. This
+ * constraint means that the input size for half data types must be a power of 2. This restriction is important to note
+ * when planning to use FFT with half-precision floating-point data, as it limits the flexibility compared to float data
+ * types.
+ *
  *
  * @par API Dependency
  * - Before calling this function, you need to call the ::mluOpCreateFFTPlan
