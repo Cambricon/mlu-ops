@@ -876,6 +876,8 @@ bool Executor::checkBaseline() {
       LOG(INFO) << "[Baseline:" << case_name
                 << "]:workspace size of baseline is " << workspace_size
                 << " (Bytes).";
+      eva_res_.mlu.baseline_mlu_hw_time = hw_time_base;
+      eva_res_.mlu.thistime_mlu_hw_time = hw_time_mean;
     } else {  // new case
       LOG(INFO) << "[Baseline:" << case_name
                 << "]:this case is new and do not have baseline data.";
