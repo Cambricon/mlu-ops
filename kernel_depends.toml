@@ -8,6 +8,7 @@
 
 abs = ["unary_op"]
 div = ["binary_op"]
+lgamma = ["unary_op"]
 log = ["unary_op"]
 sqrt = ["binary_op", "unary_op"]
 carafe = ["tensor_stride_process"]
