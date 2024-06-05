@@ -30,7 +30,7 @@
 
   `Fork` MLU-OPS™ 原代码库，点击 GitHub 界面右上角的 `Fork` 按钮即可
 
-   ![fork](./PR-Fork.png)
+   ![fork](./images/PR-Fork.png)
 
   克隆 `Fork` 的代码库到本地   
 
@@ -85,7 +85,7 @@
   ```
 
 - 创建一个拉取请求
-  ![pull request](./PR-Createpr.png)
+  ![pull request](./images/PR-Createpr.png)
 
 #### 5.讨论并评审你的代码
 
