@@ -30,7 +30,6 @@ void mluOpCnnlCheck(mluOpStatus_t result, char const *const func,
         " in " + std::string(func) + " at " + std::string(file) +
         " line: " + std::to_string(line) + "\"";
     LOG(ERROR) << error;
-    throw std::runtime_error(error);
   }
 }
 
