@@ -14575,7 +14575,13 @@ mluOpCholesky(mluOpHandle_t handle,
               const mluOpTensorDescriptor_t input_desc,
               float* d_input, 
               const mluOpTensorDescriptor_t output_desc, 
-              float* d_output,bool upper);
+              float* d_output,bool upper, float* workspace);
+
+mluOpStatus_t MLUOP_WIN_API 
+mluOpGetCholeskyWorkspace(mluOpTensorDescriptor_t input_desc, 
+              size_t* size, float** workspace);
+
+
 #if defined(__cplusplus)
 }
 #endif
