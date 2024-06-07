@@ -60,7 +60,7 @@
 
 ## 1. 简介
 
-BANG C 语言是寒武纪针对 MLU ( Machine Learning Unit ) 硬件提出的编程语言。
+BANG C 语言是寒武纪针对 MLU 硬件提出的编程语言。
 
 - 提供高效的编程接口，充分发挥寒武纪硬件特性
 - 提供一种通用的异构编程方式，方便用户拓展自己的应用程序
@@ -97,7 +97,7 @@ Driver/CNToolKit 为必装依赖项，对于其它组件，用户可根据框架
 
 ### 3.1 使用说明
 
-算子(Operator，简称 OP)是深度学习算法的基本函数计算单元。在网络模型中，算子对应网络层中的计算逻辑。
+算子(Operator，简称 OP)是人工智能算法的基本函数计算单元。在网络模型中，算子对应网络层中的计算逻辑。
 
 对于初次接触 BANG-C 的开发者，从本章节开始，我们以 Add 算子为例，介绍算子开发的基本步骤，主要包括算子分析、Kernel 代码开发、Host 代码开发、编译、测试和优化。同时引入 BANG-C 抽象硬件模型，BANGC-C 抽象存储模型，BANG-C 编程模型，BANG-C 并发与同步，带你深入了解基于 MLU 硬件的 BANG-C 算子开发。
 
@@ -1438,7 +1438,7 @@ UnionN (N=1, 2, 4, 8, ...) 任务表示一个 Kernel 在执行时至少需要占
   __mlu_func__ void add(float *output, const float *a,
                         const float *b, int32_t data_num) {
     int32_t align_num = NFU_ALIGN_SIZE / sizeof(float);  // 128 bytes align
-    int32_t nram_buffer_size = MAX_NRAM_SIZE / sizeof(float) / 6 / align_num * align_num; // nram buffer size on ipu
+    int32_t nram_buffer_size = MAX_NRAM_SIZE / sizeof(float) / 6 / align_num * align_num; // nram buffer size on mlu core
     int32_t sram_buffer_size = nram_buffer_size * coreDim;                                // sram buffer size on cluser
     int32_t loop_count = data_num / sram_buffer_size;
     int32_t data_num_sram_rem = data_num % sram_buffer_size;
