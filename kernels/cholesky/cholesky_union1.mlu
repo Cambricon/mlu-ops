@@ -1,24 +1,30 @@
 #include "cholesky.h"
 __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
-     
+// __mlu_shared__ uint8_t sram_buffer[MAX_SRAM_SIZE];
+    
 __mlu_func__ 
 void sgemm_fixwidth_device(int m, int k,
         float* A0, const int lda,
         float *sC, float  *sB)
 {
-    int id = taskId;
+    int id = taskId % 4;
     
-    int span = POTF_NB;
+    int span = POTF_NB;//span = remain > POTF_NB ? POTF_NB : remain;
     
 
+    //这个m和M不同！这个m是前面M-i的
     __nram__ float rC[M * POTF_NB/TASK_NUM ];
     __nram__ float rA[M * POTF_NB/TASK_NUM ];
     __nram__ float rp[M * POTF_NB/TASK_NUM ];
 
     __nram__ float rB[POTF_NB * POTF_NB];
 
+    // __nram__ float rC_inter[POTF_NB * POTF_NB];
 
+    // __wram__ float wB[POTF_NB * POTF_NB];
 
+    //void __memcpy(void *dst, const void *src, unsigned int size, mluMemcpyDirection_t dir, unsigned int dst_stride, int src_stride, unsigned int segnum)
+    // row major
     if(id*span<m)
         __memcpy(rp,OFFSET_ROW(A0,span*id,0),POTF_NB*sizeof(float),GDRAM2NRAM,POTF_NB*sizeof(float),lda*sizeof(float),span-1);
     __memset_nram(rC,POTF_NB*span,(float)ZERO);
@@ -32,20 +38,49 @@ void sgemm_fixwidth_device(int m, int k,
     }
 
 
+    //void __memset_nram(void *dst, unsigned int elem_count, float value)
+    // __memset_nram(rC,POTF_NB*span,(float)ZERO);
 
     __sync_cluster();
 
 
     for(int iter = 0; iter < k; iter+= POTF_NB)
     {
+        //void __bang_move(void *dst, const void *src, unsigned int size)
         __bang_move(rA,rp,POTF_NB*span*sizeof(float));
+        //void __memcpy(void *dst, const void *src, unsigned int size, mluMemcpyDirection_t dir)
         __memcpy(rB,sB,POTF_NB*POTF_NB*sizeof(float),SRAM2NRAM);
         
+        // __memcpy(wB, sB, POTF_NB * POTF_NB * sizeof(float), SRAM2WRAM);
         __sync_cluster();
+        // __sync_cluster();
         if(id*span<m)
             __memcpy_async(rp,OFFSET_ROW(A0,span*id,iter+POTF_NB),POTF_NB*sizeof(float),GDRAM2NRAM,POTF_NB*sizeof(float),lda*sizeof(float),span-1);
-        if(id == 0)
-            __memcpy_async(sB,rp,POTF_NB*POTF_NB*sizeof(float),NRAM2SRAM);
+        
+
+        // if(id == 0 && k == 8)
+        // {
+        //     //printf rA
+        //     printf("rA:\n");
+        //     for(int i = 0; i < span; i++)
+        //     {
+        //         for(int j = 0; j < POTF_NB; j++)
+        //         {
+        //             printf("%.3f ",rA[i*POTF_NB+j]);
+        //         }
+        //         printf("\n");
+        //     }
+        //     //printf rB
+        //     printf("rB:\n");
+        //     for(int i = 0; i < POTF_NB; i++)
+        //     {
+        //         for(int j = 0; j < POTF_NB; j++)
+        //         {
+        //             printf("%.3f ",rB[i*POTF_NB+j]);
+        //         }
+        //         printf("\n");
+        //     }
+        // }
         for(int i = 0; i < span; i++)
         {
             for(int j = 0; j < POTF_NB; j++)
@@ -56,12 +91,31 @@ void sgemm_fixwidth_device(int m, int k,
                 }
             }
         }
+        // if(id == 0 && k == 8)
+        // {
+        //     //printf rC
+        //     printf("rC:\n");
+        //     for(int i = 0; i < span; i++)
+        //     {
+        //         for(int j = 0; j < POTF_NB; j++)
+        //         {
+        //             printf("%.3f ",rC[i*POTF_NB+j]);
+        //         }
+        //         printf("\n");
+        //     }
+        // }
+        // __bang_matmul(rC_inter, rA, wB, span, POTF_NB, POTF_NB);
+        // __bang_add(rC,rC,rC_inter,POTF_NB * POTF_NB);
+        __sync_cluster();
+        if(id == 0)
+            __memcpy(sB,rp,POTF_NB*POTF_NB*sizeof(float),NRAM2SRAM);
         __sync_cluster();
     }
 
     
 
 
+    //void __bang_sub(float *dst, const float *src0, const float *src1, unsigned int elem_count)
     __bang_sub(rp,rp,rC,POTF_NB * span);
 
     if(id*span<m)
@@ -72,25 +126,57 @@ void sgemm_fixwidth_device(int m, int k,
 static __mlu_func__ void spotf2_sminout_fixsize_device(int m, float *A, int lda)
 {
     float factor;
-    int id = coreId;
+    int id = coreId % 4;
     int span = POTF_NB;
+    // __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
     float* diag = (float*)nram_buffer;
     float* nram_src = diag + span * span;
     __memcpy(diag,A,span*span*sizeof(float),SRAM2NRAM);
     __memcpy(nram_src,A + id *span*POTF_NB,span*span*sizeof(float),SRAM2NRAM);
+    // __sync();
+    //print diag and nram_src
+    // if(id*span < m)
+    // {
+    //     printf("before sminout,id:%d\n",id);
+    //     printf("diag:\n");
+    //     for(int i = 0; i < span; i++)
+    //     {
+    //         for(int j = 0; j < span; j++)
+    //         {
+    //             printf("%.3f ",diag[i*span+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    //     printf("nram_src:\n");
+    //     for(int i = 0; i < span; i++)
+    //     {
+    //         for(int j = 0; j < span; j++)
+    //         {
+    //             printf("%.3f ",nram_src[i*span+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
     
+    // __sync_cluster();
     for(int iter = 0; iter < POTF_NB; iter++)
     {
         factor=sqrt(diag[iter*POTF_NB+iter]);
         factor = 1.0/factor;
+        // __sync_cluster();
         for(int i = 0; i < span; i++)
         {
+            // if(iter == 0)
+            //     printf("before: %.3f\n",A[i*POTF_NB+iter+id*span*POTF_NB]);
             nram_src[i*POTF_NB+iter] *= factor;
             diag[i*POTF_NB+iter] *= factor;
+            // if(iter == 0)
+            //     printf("after: %.3f\n",A[i*POTF_NB+iter+id*span*POTF_NB]);
             
         }
         __sync();
 
+        //TODO:可能要重点优化
 
         for(int i = iter + 1; i < POTF_NB; i++)
         {
@@ -105,10 +191,80 @@ static __mlu_func__ void spotf2_sminout_fixsize_device(int m, float *A, int lda)
 
     }
     __sync_cluster();
+    // if(id * span < m)
+    // {
+    //     printf("after sminout,id:%d\n",id);
+    //     printf("diag:\n");
+    //     for(int i = 0; i < span; i++)
+    //     {
+    //         for(int j = 0; j < span; j++)
+    //         {
+    //             printf("%.3f ",diag[i*span+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    //     printf("nram_src:\n");
+    //     for(int i = 0; i < span; i++)
+    //     {
+    //         for(int j = 0; j < span; j++)
+    //         {
+    //             printf("%.3f ",nram_src[i*span+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
     
     if(id*span<m)
         __memcpy(A + id *span * POTF_NB,nram_src,span*span*sizeof(float),NRAM2SRAM);
     __sync_cluster();
+    // if(id == 0)
+    // {
+    //     //printf A
+    //     printf("after sminout A:\n");
+    //     for(int i = 0; i < 4*span; i++)
+    //     {
+    //         for(int j = 0; j < span; j++)
+    //         {
+    //             printf("%.3f ",A[i*span+j]);
+    //         }
+    //         printf("\n");
+    //     }
+
+    // }
+    // for(int iter = 0; iter < POTF_NB; iter++)
+    // {
+    //     factor=sqrt(A[iter*POTF_NB+iter]);
+    //     factor = 1.0/factor;
+    //     __sync_cluster();
+    //     for(int i = 0; i < span; i++)
+    //     {
+    //         // if(iter == 0)
+    //         //     printf("before: %.3f\n",A[i*POTF_NB+iter+id*span*POTF_NB]);
+    //         if(id*span<m)
+    //             A[i*POTF_NB+iter+id*span*POTF_NB] *= factor;
+    //         // if(iter == 0)
+    //         //     printf("after: %.3f\n",A[i*POTF_NB+iter+id*span*POTF_NB]);
+            
+    //     }
+    //     __sync_cluster();
+
+    //     //TODO:可能要重点优化
+    //     if(id*span<m)
+    //     {
+    //         for(int i = iter + 1; i < POTF_NB; i++)
+    //         {
+    //             for(int j = id *span; j < (id+1)*span; j++)
+    //             {
+    //                 if(j < i)
+    //                     continue;
+    //                 A[j * POTF_NB + i ] -= A[i*POTF_NB+iter] * A[j * POTF_NB + iter];
+    //             }
+    //         }
+    //     }
+        
+    //     __sync_cluster();
+
+    // }
     
 }
 
@@ -117,7 +273,7 @@ void sgemm_anywidth_device(int m, int k,
         float* A0, const int lda,
         float *sC, float  *sB)
 {
-    int id = taskId;
+    int id = taskId % 4;
     
 
     int remain = m - id * POTF_NB;
@@ -125,6 +281,7 @@ void sgemm_anywidth_device(int m, int k,
     int span =  (remain > POTF_NB||remain <= 0) ? POTF_NB : remain;
 
     float *rA = (float*)nram_buffer + id * NB * NB * 4;
+    // float *rA = (float*)nram_buffer;
 
     float *rB = rA + NB * NB;
 
@@ -150,9 +307,42 @@ void sgemm_anywidth_device(int m, int k,
         
     if(k>0)
     {
+        // if(id == 0)
+        // {
+        //     printf("tmdsb\n");
+        //     for(int i = 0; i < m; i++)
+        //     {
+        //         for(int j = 0; j < 7;j ++)
+        //         {
+        //             printf("%.3f ",A0[i*lda+j]);
+        //         }
+        //         printf("\n");
+        //     }
+        //     printf("k:%d\n",k);
+        //     printf("m:%d\n",m);
+        //     printf("lda:%d\n",lda);
+        //     printf("span_b:%d\n",span_b);
+        // }
         __memcpy(rB,A0,k*sizeof(float),SRAM2NRAM,NB*sizeof(float),lda*sizeof(float),span_b-1);
+        // if(id == 0)
+        // {
+        //     printf("after memcpy rB:\n");
+        //     for(int i = 0; i <m;i++)
+        //     {
+        //         for(int j = 0; j < k;j ++)
+        //         {
+        //             printf("%.3f ",rB[i*NB+j]);
+        //         }
+        //         printf("\n");
+        //     }
+        // }
         
     }
+
+    // if(k>0 && if_execute)
+    // {
+    //     __memcpy(rB,A0,1*sizeof(float),SRAM2NRAM,1*sizeof(float),1*sizeof(float),0);
+    // }
     
 
     __sync_cluster();
@@ -190,12 +380,13 @@ void sgemm_anywidth_device(int m, int k,
 
 
 
-} 
+}
+
 
 static __mlu_func__ void spotf2_sminout_anysize_device(int m, float *A, int lda)
 {
     float factor;
-    int id = coreId;
+    int id = coreId % 4;
     int finish = id * POTF_NB;
     int remain = m - finish;
     bool if_execute = remain > 0;
@@ -208,12 +399,17 @@ static __mlu_func__ void spotf2_sminout_anysize_device(int m, float *A, int lda)
         __sync_cluster();
         for(int i = 0; i < span; i++)
         {
+            // if(iter == 0)
+            //     printf("before: %.3f\n",A[i*POTF_NB+iter+id*span*POTF_NB]);
             if(if_execute)
                 A[i*lda+iter+id*POTF_NB*lda] *= factor;
+            // if(iter == 0)
+            //     printf("after: %.3f\n",A[i*POTF_NB+iter+id*span*POTF_NB]);
             
         }
         __sync_cluster();
 
+        //TODO:可能要重点优化
         if(if_execute)
         {
             for(int i = iter + 1; i < iter_num; i++)
@@ -235,64 +431,228 @@ static __mlu_func__ void spotf2_sminout_anysize_device(int m, float *A, int lda)
 
 __mlu_func__ void spotf2_smlpout_fixwidth_device(const int m, float *A0, float *A, int lda, const int localstep, const int gbstep)
 {
-    int id = taskId;
+    int id = taskId % 4;
     __mlu_shared__  float shared_data[SHARED_MEM_SIZE];
     float* sdata_A = shared_data;
     float* sdata_B = shared_data + m *POTF_NB/TASK_NUM * 4;
+
+    // if(localstep == 8)
+    // {
+    //     if(id == 0)
+    //     {
+    //         printf("before sgemm:\n");
+    //     }
+    //     for(int i = 0; i <POTF_NB; i++ ) 
+    //     {
+    //         for(int j = 0; j < POTF_NB; j++)
+    //         {
+    //             if(id == 0)
+    //             {
+    //                 printf("A[%d][%d]:%.3f ",i,j,A[i*lda+j]);
+    //             }
+    //         }
+    //         if(id == 0)
+    //         {
+    //             printf("\n");
+    //         }
+    //     }               
+    // }
+
     sgemm_fixwidth_device(m, localstep, A0, lda, sdata_A, sdata_B);
 
+
     __sync_cluster();
+
+    // if(localstep == 8)
+    // {
+    //     if(id == 0)
+    //     {
+    //         printf("after sgemm:\n");
+    //     }
+    //     for(int i = 0; i <POTF_NB; i++ ) 
+    //     {
+    //         for(int j = 0; j < POTF_NB; j++)
+    //         {
+    //             if(id == 0)
+    //             {
+    //                 printf("A[%d][%d]:%.3f ",i,j,sdata_A[i*POTF_NB+j]);
+    //             }
+    //         }
+    //         if(id == 0)
+    //         {
+    //             printf("\n");
+    //         }
+    //     }               
+    // }
+
+    // if(id==3)
+    // {
+    //     printf("sdata:\n");
+    //     for(int i = 0; i <m;i++)
+    //     {
+    //         for(int j = 0; j < POTF_NB; j++)
+    //         {
+    //             printf("%.3f ",sdata_A[i*POTF_NB+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
+    // __sync_cluster();
     
 
-    spotf2_sminout_fixsize_device(m, sdata_A, m);
+    spotf2_sminout_fixsize_device(m, sdata_A, POTF_NB);
 
     __sync_cluster();
 
     int span = POTF_NB;
 
+    // printf("coreId:%d\n",coreId);
+    // printf("Id:%d\n",id);
+    // printf("coreId == Id ? %d\n",coreId==id);
+
+    // __memcpy(OFFSET_ROW(A,id*span,0),sdata_A+coreId*span*POTF_NB,POTF_NB*sizeof(float),SRAM2GDRAM,lda*sizeof(float),POTF_NB*sizeof(float),span-1);
 
     if(id==0)
     {
+        //为什么coreId为0的时候会出错 
+        // __memcpy(A+id*span*lda,sdata_A,POTF_NB*sizeof(float),SRAM2GDRAM,lda*sizeof(float),POTF_NB*sizeof(float),span-1);
         for(int i = 0; i < span; i++)
         {
+            // for(int j = 0; j < POTF_NB; j++)
+            // {
+            //     if(i>=j)
+            //     {
+            //         A[i*lda+j] = sdata_A[coreId*span*POTF_NB+i*POTF_NB+j];
+            //     }  
+            // }
              __memcpy(A+(i*lda),sdata_A+i*POTF_NB,(i+1)*sizeof(float),SRAM2LDRAM);
+            //  __memcpy(work_space+(i*NB),sdata_A+i*POTF_NB,(i+1)*sizeof(float),SRAM2LDRAM);
         }
        
     }
     else if(id*span < m)
     {
         __memcpy(A+(id*POTF_NB*lda),sdata_A+coreId*POTF_NB*POTF_NB,POTF_NB*sizeof(float),SRAM2LDRAM,lda*sizeof(float),POTF_NB*sizeof(float),span-1);
+        // __memcpy(work_space+(id*POTF_NB*NB),sdata_A+coreId*POTF_NB*POTF_NB,POTF_NB*sizeof(float),SRAM2LDRAM,NB*sizeof(float),POTF_NB*sizeof(float),span-1);
     }
 
     __sync_cluster();
+
+    // if(id==3)
+    // {
+    //     printf("sdata:\n");
+    //     for(int i = 0; i <m;i++)
+    //     {
+    //         for(int j = 0; j < POTF_NB; j++)
+    //         {
+    //             printf("%.3f ",sdata_A[i*POTF_NB+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
 
 
 }
 
 __mlu_func__ void spotf2_smlpout_anywidth_device(const int m, float *A0, float *A, int lda, const int localstep, const int gbstep)
 {
-
+    // int id = taskId;
+    // __mlu_shared__  float shared_data[SHARED_MEM_SIZE];
+    // float* sdata_A = shared_data;
+    // float* sdata_B = shared_data + m *POTF_NB/TASK_NUM * 4;
+    // int remain = m - id * POTF_NB;
+    // bool if_execute = remain > 0;
+    // int span =  remain > POTF_NB ? POTF_NB : remain;
+    // __sync_cluster();
     sgemm_anywidth_device(m, localstep, A0, lda, A, nullptr);
+
+    // __sync_cluster();
+
+    // if(id==3)
+    // {
+    //     printf("sdata:\n");
+    //     for(int i = 0; i <m;i++)
+    //     {
+    //         for(int j = 0; j < POTF_NB; j++)
+    //         {
+    //             printf("%.3f ",sdata_A[i*POTF_NB+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
+    // __sync_cluster();
     
     spotf2_sminout_anysize_device(m, A, lda);
 
     __sync_cluster();
 
+    // int span = POTF_NB;
 
-}
-__mlu_global__ void spotf2_smlpin_fixwidth_kernel(bool trans, int m, float *dA, int lda, int localstep, int gbstep)
-{
     
-    for(int i = 0; i < m; i += POTF_NB)
-    {
-        spotf2_smlpout_fixwidth_device(m-i,OFFSET_ROW(dA, localstep + i,0), OFFSET_ROW(dA, localstep + i, localstep + i), lda, localstep+i, gbstep);
-    }
+
+    // printf("coreId:%d\n",coreId);
+    // printf("Id:%d\n",id);
+    // printf("coreId == Id ? %d\n",coreId==id);
+
+    // __memcpy(OFFSET_ROW(A,id*span,0),sdata_A+coreId*span*POTF_NB,POTF_NB*sizeof(float),SRAM2GDRAM,lda*sizeof(float),POTF_NB*sizeof(float),span-1);
+
+    // if(id==0)
+    // {
+    //     //为什么coreId为0的时候会出错 
+    //     // __memcpy(A+id*span*lda,sdata_A,POTF_NB*sizeof(float),SRAM2GDRAM,lda*sizeof(float),POTF_NB*sizeof(float),span-1);
+    //     for(int i = 0; i < span; i++)
+    //     {
+    //         // for(int j = 0; j < POTF_NB; j++)
+    //         // {
+    //         //     if(i>=j)
+    //         //     {
+    //         //         A[i*lda+j] = sdata_A[coreId*span*POTF_NB+i*POTF_NB+j];
+    //         //     }                
+    //         // }
+    //          __memcpy(A+(i*lda),sdata_A+i*POTF_NB,(i+1)*sizeof(float),SRAM2LDRAM);
+    //         //  __memcpy(work_space+(i*NB),sdata_A+i*POTF_NB,(i+1)*sizeof(float),SRAM2LDRAM);
+    //     } 
+       
+    // }
+    // else if(if_execute)
+    // {
+    //     __memcpy(A+(id*POTF_NB*lda),sdata_A+coreId*POTF_NB*POTF_NB,POTF_NB*sizeof(float),SRAM2LDRAM,lda*sizeof(float),POTF_NB*sizeof(float),span-1);
+    //     // __memcpy(work_space+(id*POTF_NB*NB),sdata_A+coreId*POTF_NB*POTF_NB,POTF_NB*sizeof(float),SRAM2LDRAM,NB*sizeof(float),POTF_NB*sizeof(float),span-1);
+    // }
+
+    // __sync_cluster();
+
+    // if(id==3)
+    // {
+    //     printf("sdata:\n");
+    //     for(int i = 0; i <m;i++)
+    //     {
+    //         for(int j = 0; j < POTF_NB; j++)
+    //         {
+    //             printf("%.3f ",sdata_A[i*POTF_NB+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
+
 
 }
 
-__mlu_global__ void spotf2_smlpin_anywidth_kernel(bool trans, int m, float *dA, int lda, int localstep, int gbstep)
+
+__mlu_global__ void spotf2_smlpin_anywidth_kernel(int batch, int stride, bool trans, int m, float *dA, int lda, int localstep, int gbstep)
 {
     int id = taskId;
+    // int cluster_num = clusterDim;
+    // int cluster_id = clusterId;
+    float* orignA = dA;
+    // int loop_num = batch / cluster_num + 1;
+    // for(int x = 0; x < loop_num; x++)
+    // {
+        // int batch_id = x * cluster_num + cluster_id;
+        int batch_id = id / 4;
+        if(batch_id >= batch)
+            return;
+        dA = orignA + batch_id * stride;
 
     __mlu_shared__  float shared_data[NB * NB];
 
@@ -309,6 +669,17 @@ __mlu_global__ void spotf2_smlpin_anywidth_kernel(bool trans, int m, float *dA, 
         if(id == 0)
         {
             __memcpy(shared_data,dA,m*sizeof(float),GDRAM2SRAM,NB*sizeof(float),lda*sizeof(float),m-1);
+            //printf shared_data
+            // printf("shared_data:\n");
+            // for(int i = 0; i < m; i++)
+            // {
+            //     for(int j = 0; j < m; j++)
+            //     {
+            //         printf("%.3f ",shared_data[i*NB+j]);
+            //     }
+            //     printf("\n");
+            // }
+            // printf("localstep:%d\n",localstep);
         }
         __sync_cluster();
 
@@ -325,40 +696,479 @@ __mlu_global__ void spotf2_smlpin_anywidth_kernel(bool trans, int m, float *dA, 
         }
         __sync_cluster();
     }
+    // }
+
     
     
     
 
 }
 
-mluOpStatus_t mlu_spotf2_lpin(bool trans,bool uplo, int n, int ldda, float* dA, int gbstep, cnrtQueue_t queue)
+__mlu_func__ 
+void small_sgemm_batch(int m, int k,
+        float* A0, const int lda,int width, 
+        float* dst, float* nram_remain)
+{
+    //dst和dst2形状: m*width src1形状：m*k src2形状：width*k
+    int ldk = k;
+    int ldm = m;
+    float* src1 = nram_remain;
+    float* src2 = src1 + ldk * ldm;
+    float* dst2 = src2 + width * ldk;
+    
+    float* dA = A0 + k;
+    __memcpy_async(dst, dA, width*sizeof(float),GDRAM2NRAM,width*sizeof(float),lda*sizeof(float),m-1);
+
+    if(k == 0)
+    {
+        __sync();
+        return;
+    }
+    
+    __memset_nram(src1,ldm*ldk,(float)ZERO);
+
+    __memcpy_async(src1, A0, k*sizeof(float),GDRAM2NRAM,ldk*sizeof(float),lda*sizeof(float),m-1);
+
+    __memset_nram(dst2,ldm*width,(float)ZERO);
+
+    __sync();
+
+    __memcpy(src2, src1, ldk*width*sizeof(float),NRAM2NRAM);
+
+    for(int i = 0; i < m; i++)
+    {
+        for(int j = 0; j < width; j++)
+        {
+            for(int h = 0; h < k; h++)
+            {
+                dst2[i*width+j] += src1[i*ldk+h] * src2[j*ldk+h];
+            }
+        }
+    }
+
+    __bang_sub(dst,dst,dst2,width * m);
+
+    __sync();
+}
+
+__mlu_func__ void small_sminout_batch(int m, int width, float *dst, float *nram_remain, int lda)
+{
+    float factor;
+    // __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
+    float* diag = dst;
+
+    for(int iter = 0; iter < width; iter++)
+    {
+        factor=sqrt(diag[iter*width+iter]);
+        factor = 1.0/factor;
+        // __sync_cluster();
+        for(int i = 0; i < m; i ++)
+        {
+            dst[i*width+iter] *= factor;
+        }
+        __sync();
+        for(int i = iter + 1; i < width; i++)
+        {
+            for(int j = 0; j < m; j++)
+            {
+                dst[j * width + i ] -= dst[i*width+iter] * dst[j * width + iter];
+                
+                // nram_src[j * POTF_NB + i ] -= diag[i*POTF_NB+iter] * nram_src[j * POTF_NB + iter];
+            }
+        }
+        __sync();
+
+        // for(int i = 0; i < width; i++)
+        // {
+        //     // if(iter == 0)
+        //     //     printf("before: %.3f\n",A[i*POTF_NB+iter+id*span*POTF_NB]);
+        //     nram_src[i*POTF_NB+iter] *= factor;
+        //     diag[i*POTF_NB+iter] *= factor;
+        //     // if(iter == 0)
+        //     //     printf("after: %.3f\n",A[i*POTF_NB+iter+id*span*POTF_NB]);
+            
+        // }
+        
+
+
+        // for(int i = iter + 1; i < POTF_NB; i++)
+        // {
+        //     for(int j = 0; j < span; j++)
+        //     {
+        //         diag[j * POTF_NB + i ] -= diag[i*POTF_NB+iter] * diag[j * POTF_NB + iter];
+        //         nram_src[j * POTF_NB + i ] -= diag[i*POTF_NB+iter] * nram_src[j * POTF_NB + iter];
+        //     }
+        // }
+        
+        
+
+    }
+    __sync();
+
+    // __memcpy(nram_src,A + id *span*POTF_NB,span*span*sizeof(float),SRAM2NRAM);
+    // __sync();
+    //print diag and nram_src
+    // if(id*span < m)
+    // {
+    //     printf("before sminout,id:%d\n",id);
+    //     printf("diag:\n");
+    //     for(int i = 0; i < span; i++)
+    //     {
+    //         for(int j = 0; j < span; j++)
+    //         {
+    //             printf("%.3f ",diag[i*span+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    //     printf("nram_src:\n");
+    //     for(int i = 0; i < span; i++)
+    //     {
+    //         for(int j = 0; j < span; j++)
+    //         {
+    //             printf("%.3f ",nram_src[i*span+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
+    
+    // __sync_cluster();
+    
+    // if(id * span < m)
+    // {
+    //     printf("after sminout,id:%d\n",id);
+    //     printf("diag:\n");
+    //     for(int i = 0; i < span; i++)
+    //     {
+    //         for(int j = 0; j < span; j++)
+    //         {
+    //             printf("%.3f ",diag[i*span+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    //     printf("nram_src:\n");
+    //     for(int i = 0; i < span; i++)
+    //     {
+    //         for(int j = 0; j < span; j++)
+    //         {
+    //             printf("%.3f ",nram_src[i*span+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
+    
+    // if(id*span<m)
+    //     __memcpy(A + id *span * POTF_NB,nram_src,span*span*sizeof(float),NRAM2SRAM);
+    // __sync_cluster();
+    // if(id == 0)
+    // {
+    //     //printf A
+    //     printf("after sminout A:\n");
+    //     for(int i = 0; i < 4*span; i++)
+    //     {
+    //         for(int j = 0; j < span; j++)
+    //         {
+    //             printf("%.3f ",A[i*span+j]);
+    //         }
+    //         printf("\n");
+    //     }
+
+    // }
+    // for(int iter = 0; iter < POTF_NB; iter++)
+    // {
+    //     factor=sqrt(A[iter*POTF_NB+iter]);
+    //     factor = 1.0/factor;
+    //     __sync_cluster();
+    //     for(int i = 0; i < span; i++)
+    //     {
+    //         // if(iter == 0)
+    //         //     printf("before: %.3f\n",A[i*POTF_NB+iter+id*span*POTF_NB]);
+    //         if(id*span<m)
+    //             A[i*POTF_NB+iter+id*span*POTF_NB] *= factor;
+    //         // if(iter == 0)
+    //         //     printf("after: %.3f\n",A[i*POTF_NB+iter+id*span*POTF_NB]);
+            
+    //     }
+    //     __sync_cluster();
+
+    //     //TODO:可能要重点优化
+    //     if(id*span<m)
+    //     {
+    //         for(int i = iter + 1; i < POTF_NB; i++)
+    //         {
+    //             for(int j = id *span; j < (id+1)*span; j++)
+    //             {
+    //                 if(j < i)
+    //                     continue;
+    //                 A[j * POTF_NB + i ] -= A[i*POTF_NB+iter] * A[j * POTF_NB + iter];
+    //             }
+    //         }
+    //     }
+        
+    //     __sync_cluster();
+
+    // }
+    
+}
+
+__mlu_func__ void smlpout_batch(const int m, float *A0, float *A, int lda, const int localstep, int width)
+{
+    float* dst = (float*)nram_buffer;
+    float* nram_remain = dst + m * m;
+
+    
+    small_sgemm_batch(m, localstep, A0, lda, width, dst, nram_remain);
+
+    __sync();
+    
+    //此时数据存储在dst（位于nram中），所以ld是width
+    small_sminout_batch(m, width, dst, nram_remain, width);
+
+    __sync();
+
+    for(int i = 0; i < width; i++)
+    {
+        __memcpy(A+(i*lda),dst+i*width,(i+1)*sizeof(float),NRAM2GDRAM);
+    }
+
+    if(m > width)
+    {
+        __memcpy(A+(width*lda),dst+width*width,width*sizeof(float),NRAM2GDRAM,lda*sizeof(float),width*sizeof(float),m-width-1);
+    }
+
+    __sync();
+
+
+}
+
+__mlu_global__ void spotf2_batch_kernel(int batch, int stride, int m, float *dA, int lda)
+{
+    int id = taskId;
+    int batch_id = id;
+    if(batch_id >= batch)
+        return;
+    float* orignA = dA;
+    dA = orignA + batch_id * stride;
+    int width = POTF_NB;
+    int span = width;
+
+    for(int i = 0; i < m; i += width)
+    {
+        span = std::min(width, m - i);
+        smlpout_batch(m-i,dA+i*lda,dA+i*lda+i,lda,i,span);
+    }
+
+}
+
+mluOpStatus_t mlu_spotf2_lpin(int batch, int stride, bool trans,bool uplo, int n, int ldda, float* dA, int gbstep, cnrtQueue_t queue)
 {
     cnrtDim3_t dim;
-    cnrtFunctionType_t func_type = __CNRT_FUNC_TYPE__;
-    dim.x = TASK_NUM;
+    cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_BLOCK;
     dim.y = 1;
     dim.z = 1;
-
-    KERNEL_CHECK(
-        spotf2_smlpin_anywidth_kernel<<<dim, func_type, queue>>>(trans, n, dA, ldda, 0,gbstep));
+    if(batch > 1)
+    {
+        dim.x = batch;
+        KERNEL_CHECK(
+            spotf2_batch_kernel<<<dim, func_type, queue>>>(batch, stride, n, dA, ldda));
+    }
+    else
+    {
+        int carry_batch = batch;
+        if(batch == 1)
+        {
+            func_type = CNRT_FUNC_TYPE_UNION1;
+        }
+        else if(batch == 2)
+        {
+            func_type = CNRT_FUNC_TYPE_UNION2;
+        }
+        else if(batch <= 4)
+        {
+            func_type = CNRT_FUNC_TYPE_UNION4;
+            carry_batch = 4;
+        }
+        else 
+        {
+            func_type = CNRT_FUNC_TYPE_UNION8;
+            carry_batch = batch < 8 ? 8 : batch;
+        }
+        dim.x = carry_batch * 4;
+        KERNEL_CHECK(
+          spotf2_smlpin_anywidth_kernel<<<dim, func_type, queue>>>(batch, stride, trans, n, dA, ldda, 0,gbstep));
+    
+    }
+    // dim.x = TASK_NUM * 4;
+        
+    // }
+    // cnrtQueueSync(queue);
+    // float* h_i;
+    // h_i = (float*)malloc(n*n*sizeof(float));
+    // for(int i = 0; i < n; i ++)
+    // {
+    //     cnrtMemcpy(h_i+i*n, work_space+i*NB, n*sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
+    // }
+    
+    // cnrtQueueSync(queue);
+    // //print h_i
+    // printf("work_space after mlu_spotf2_lpin:\n");
+    // for(int i = 0; i < n; i++)
+    // {
+    //     for(int l = 0; l < n; l++)
+    //     {
+    //         printf("%.3f ",h_i[i*n+l]);
+    //     }
+    //     printf("\n");
+    // }
+    // cnrtQueueSync(queue);
     return MLUOP_STATUS_SUCCESS;
 }
 
-
-__mlu_entry__ void mlu_strsm_rectile_kernel(
+__mlu_entry__ void mlu_strsm_rectile_batch_kernel(
+    int batch, int stride,
     int m,int n, bool trans,
     float *dA, int32_t lda,
     float *dB, int32_t ldb)
 {
     int id = taskId;
+    int batch_id = id;
+    if(batch_id >= batch)
+        return;
+    float* orignA = dA;
+    float* orignB = dB;
+    dA = orignA + batch_id * stride;
+    dB = orignB + batch_id * stride;
+    
+    // int remain = n - id * POTF_NB;
+    // bool if_execute = remain > 0;
+    // int span = (remain > POTF_NB || remain <= 0) ? POTF_NB : remain;
+    int span = n;
+    int start = 0;
+
+    __nram__ float sA[8*POTF_NB];
+    __nram__ float rB[4*POTF_NB * 8*POTF_NB];
+    __nram__ float rC[4*POTF_NB * 8*POTF_NB];
+    __nram__ float rBp[4*POTF_NB];
+    __nram__ float rA[8*POTF_NB];
+    int calc_length = (8 * POTF_NB) > m ? m : (8 * POTF_NB);
+    __memset_nram(rB,POTF_NB*calc_length,(float)ZERO);
+    __memset_nram(sA,calc_length*calc_length,(float)ZERO);
+
+
+    float temp_b = 0, factor = 0;
     
 
+
+    __memcpy_async(sA,dA,sizeof(float),GDRAM2NRAM);
+
+    __memcpy(rBp,OFFSET_B_ROW(dB,start,0),sizeof(float),GDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
+    __sync();
+    // if(id == 3)
+    // {
+    //     printf("sA[0]:%.3f\n",sA[0]);
+    //     printf("dA[0]:%.3f\n",dA[0]);
+    // }
+        
+    if(trans)
+    {
+        __memcpy_async(rA,sA,(1)*sizeof(float),NRAM2NRAM);
+        __memcpy_async(rB,rBp,sizeof(float),NRAM2NRAM,calc_length * sizeof(float), sizeof(float), span - 1);
+        __sync();
+
+        __memcpy_async(sA,OFFSET_ROW(dA,1,0),2*sizeof(float),GDRAM2NRAM);
+        __memcpy_async(rBp,OFFSET_B_ROW(dB,start,1),sizeof(float),GDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
+        factor = 1.0 / rA[0];
+        for(int i = 0; i < span; i++)
+        {
+            //void __bang_mul(float *dst, const float *src0, const float *src1, unsigned int elem_count)
+            //float __bang_sum(const float *src, unsigned int elem_count)
+            rB[i*calc_length] *=  factor;
+        }
+
+        __sync();
+        
+        for(int iter = 1; iter < m - 1; iter++)
+        {
+            __memcpy_async(rA,sA,(iter+1)*sizeof(float),NRAM2NRAM);
+            __memcpy_async(rB+iter,rBp,sizeof(float),NRAM2NRAM,calc_length * sizeof(float), sizeof(float), span - 1);
+            __sync();
+
+            __memcpy_async(sA,OFFSET_ROW(dA,iter+1,0),(iter+2)*sizeof(float),GDRAM2NRAM);
+            __memcpy_async(rBp,OFFSET_B_ROW(dB,start,iter+1),sizeof(float),GDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
+            factor = 1.0 / rA[iter];
+            for(int i = 0; i < span; i++)
+            {
+                //void __bang_mul(float *dst, const float *src0, const float *src1, unsigned int elem_count)
+                __bang_mul(rC+i*calc_length,rA,rB+i*calc_length,iter);
+                //float __bang_sum(const float *src, unsigned int elem_count)
+                temp_b = 0;
+                //reduce add rC
+                for(int j = 0; j < iter; j++)
+                {
+                    temp_b += rC[i*calc_length+j];
+                }
+                temp_b = rB[i*calc_length+iter] - temp_b;
+                rB[i*calc_length+iter] = temp_b * factor;
+            }
+
+            __sync();
+        }
+
+        __memcpy_async(rA,sA,(m)*sizeof(float),NRAM2NRAM);
+        __memcpy_async(rB+m-1,rBp,sizeof(float),NRAM2NRAM,calc_length * sizeof(float), sizeof(float), span - 1);
+        __sync();
+        factor = 1.0 / rA[m-1];
+        for(int i = 0; i < span; i++)
+        {
+            //void __bang_mul(float *dst, const float *src0, const float *src1, unsigned int elem_count)
+            __bang_mul(rC+i*calc_length,rA,rB+i*calc_length,m-1);
+
+            temp_b = 0;
+            //reduce add rC
+            for(int j = 0; j < m-1; j++)
+            {
+                temp_b += rC[i*calc_length+j];
+            }
+            temp_b = rB[i*calc_length+m-1] - temp_b;
+
+            rB[i*calc_length+m-1] = temp_b * factor;
+        }
+        __sync();
+
+
+        __memcpy(OFFSET_B_ROW(dB,start,0),rB,calc_length*sizeof(float),NRAM2GDRAM,ldb * sizeof(float), calc_length * sizeof(float), span - 1);
+        __sync();
+
+    }
+
+}
+
+
+__mlu_entry__ void mlu_strsm_rectile_kernel(
+    int batch, int stride,
+    int m,int n, bool trans,
+    float *dA, int32_t lda,
+    float *dB, int32_t ldb)
+{
+    int id = taskId;
+    int batch_id = id / 4;
+    if(batch_id >= batch)
+        return;
+    id = id % 4;
+    float* orignA = dA;
+    float* orignB = dB;
+    dA = orignA + batch_id * stride;
+    dB = orignB + batch_id * stride;
+    
+    // int remain = n - id * POTF_NB;
+    // bool if_execute = remain > 0;
+    // int span = (remain > POTF_NB || remain <= 0) ? POTF_NB : remain;
     int span = n / 4;
     int start = id * span;
     if(id == 3)
     {
         span = n - 3 * span;
     }
+
     bool if_execute = span > 0;
     __mlu_shared__ float sA[8*POTF_NB];
     __nram__ float rB[4*POTF_NB * 8*POTF_NB];
@@ -371,6 +1181,9 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(
 
 
     float temp_b = 0, factor = 0;
+    float sum = 0.0;
+    float c = 0.0;
+    float t = 0.0;
     
 
     if(id == 0)
@@ -380,7 +1193,11 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(
     if(if_execute)
     __memcpy(rBp,OFFSET_B_ROW(dB,start,0),sizeof(float),LDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
     __sync_cluster();
-
+    // if(id == 3)
+    // {
+    //     printf("sA[0]:%.3f\n",sA[0]);
+    //     printf("dA[0]:%.3f\n",dA[0]);
+    // }
         
     if(trans)
     {
@@ -397,6 +1214,8 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(
         factor = 1.0 / rA[0];
         for(int i = 0; i < span; i++)
         {
+            //void __bang_mul(float *dst, const float *src0, const float *src1, unsigned int elem_count)
+            //float __bang_sum(const float *src, unsigned int elem_count)
             rB[i*calc_length] *=  factor;
         }
 
@@ -417,12 +1236,26 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(
             factor = 1.0 / rA[iter];
             for(int i = 0; i < span; i++)
             {
+                //void __bang_mul(float *dst, const float *src0, const float *src1, unsigned int elem_count)
                 __bang_mul(rC+i*calc_length,rA,rB+i*calc_length,iter);
+                //float __bang_sum(const float *src, unsigned int elem_count)
                 temp_b = 0;
+                sum = 0.0;
+                c = 0.0;
+                t = 0.0;
+                //reduce add rC
+                // for(int j = 0; j < iter; j++)
+                // {
+                //     temp_b += rC[i*calc_length+j];
+                // }
                 for(int j = 0; j < iter; j++)
                 {
-                    temp_b += rC[i*calc_length+j];
+                    temp_b = rC[i*calc_length+j] - c;    //So far, so good: c is zero.
+                    t = sum + temp_b;      //Alas, sum is big, y small, so low-order digits of y are lost.
+                    c = (t - sum) - temp_b;   //(t - sum) recovers the high-order part of y; subtracting y recovers -(low part of y)
+                    sum = t;   
                 }
+                temp_b = sum;
                 temp_b = rB[i*calc_length+iter] - temp_b;
                 rB[i*calc_length+iter] = temp_b * factor;
             }
@@ -437,15 +1270,27 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(
         factor = 1.0 / rA[m-1];
         for(int i = 0; i < span; i++)
         {
+            //void __bang_mul(float *dst, const float *src0, const float *src1, unsigned int elem_count)
             __bang_mul(rC+i*calc_length,rA,rB+i*calc_length,m-1);
 
+            sum = 0.0;
+            c = 0.0;
+            t = 0.0;
             temp_b = 0;
+            //reduce add rC
+            // for(int j = 0; j < m-1; j++)
+            // {
+            //     temp_b += rC[i*calc_length+j];
+            // }
             for(int j = 0; j < m-1; j++)
             {
-                temp_b += rC[i*calc_length+j];
+                temp_b = rC[i*calc_length+j] - c;    //So far, so good: c is zero.
+                t = sum + temp_b;      //Alas, sum is big, y small, so low-order digits of y are lost.
+                c = (t - sum) - temp_b;   //(t - sum) recovers the high-order part of y; subtracting y recovers -(low part of y)
+                sum = t;   
             }
+            temp_b = sum;
             temp_b = rB[i*calc_length+m-1] - temp_b;
-
             rB[i*calc_length+m-1] = temp_b * factor;
         }
         __sync_cluster();
@@ -461,38 +1306,448 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(
 
 }
 
+// __mlu_entry__ void mlu_strsm_rectile_kernel(
+//     int m,int n, bool trans,
+//     float *dA, int32_t lda,
+//     float *dB, int32_t ldb)
+// {
+//     int id = taskId;
+//     int remain = n - id * POTF_NB;
+//     bool if_execute = remain > 0;
+//     int span = (remain > POTF_NB || remain <= 0) ? POTF_NB : remain;
+//     __mlu_shared__ float sA[REC_NB];
+//     __nram__ float rB[POTF_NB * REC_NB];
+//     __nram__ float rC[POTF_NB * REC_NB];
+//     __nram__ float rBp[POTF_NB];
+//     __nram__ float rA[REC_NB];
+//     __memset_nram(rB,POTF_NB*REC_NB,(float)ZERO);
+//     __sramset(sA,REC_NB*REC_NB,0);
 
 
-mluOpStatus_t strsm_rectile(bool upper, bool trans, int m, int n, float *d_a, int lda, float *d_b, int lddb, cnrtQueue_t queue)
+//     float temp_b = 0, factor = 0;
+
+//     if(id == 0)
+//     {
+//         __memcpy_async(sA,dA,sizeof(float),LDRAM2SRAM);
+//     }
+//     __memcpy(rBp,OFFSET_B_ROW(dB,id*POTF_NB,0),sizeof(float),LDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
+//     __sync_cluster();
+//     // if(id == 3)
+//     // {
+//     //     printf("sA[0]:%.3f\n",sA[0]);
+//     //     printf("dA[0]:%.3f\n",dA[0]);
+//     // }
+        
+//     if(trans)
+//     {
+//         __memcpy_async(rA,sA,(1)*sizeof(float),SRAM2NRAM);
+            
+//         __memcpy_async(rB,rBp,sizeof(float),NRAM2NRAM,REC_NB * sizeof(float), sizeof(float), span - 1);
+//         __sync_cluster();
+//         // if(id == 0)
+//         // printf("rA[0]:%.3f\n",rA[0]);
+//         //print rB
+//         // printf("id :%d\n",id);
+//         // printf("before calculation\n");
+//         // for(int i = 0; i < span; i++)
+//         // {
+//         //     printf("rB[%d]:%.3f\n",i,rB[i*REC_NB]);
+//         // }
+//         if(id == 0)
+//         {
+//             __memcpy_async(sA,OFFSET_ROW(dA,1,0),2*sizeof(float),LDRAM2SRAM);
+//         }
+//         __memcpy_async(rBp,OFFSET_B_ROW(dB,id*POTF_NB,1),sizeof(float),LDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
+//         factor = 1.0 / rA[0];
+//         for(int i = 0; i < span; i++)
+//         {
+//             //void __bang_mul(float *dst, const float *src0, const float *src1, unsigned int elem_count)
+//             //float __bang_sum(const float *src, unsigned int elem_count)
+//             rB[i*REC_NB] *=  factor;
+//         }
+//         //print rB after first calculation
+//         // printf("id :%d\n",id);
+//         // printf("after first calculation\n");
+//         // for(int i = 0; i < span; i++)
+//         // {
+//         //     printf("rB[%d]:%.3f\n",i,rB[i*REC_NB]);
+//         // }
+
+//         __sync_cluster();
+        
+//         for(int iter = 1; iter < m - 1; iter++)
+//         {
+//             __memcpy_async(rA,sA,(iter+1)*sizeof(float),SRAM2NRAM);
+            
+//             __memcpy_async(rB+iter,rBp,sizeof(float),NRAM2NRAM,REC_NB * sizeof(float), sizeof(float), span - 1);
+//             __sync_cluster();
+//             //printf rA
+//             // printf("id :%d\n",id);
+//             // printf("rA:\n");
+//             // for(int i = 0; i < iter+1; i++)
+//             // {
+//             //     printf("%.3f ",rA[i]);
+//             // }
+//             //printf rB
+//             // printf("\n");
+//             // printf("rB:\n");
+//             // for(int i = 0; i < span; i++)
+//             // {
+//             //     for(int j = 0; j < iter+1; j++)
+//             //     {
+//             //         printf("%.3f ",rB[i*REC_NB+j]);
+//             //     }
+//             //     printf("\n");
+//             // }
+//             if(id == 0)
+//             {
+//                 __memcpy_async(sA,OFFSET_ROW(dA,iter+1,0),(iter+2)*sizeof(float),LDRAM2SRAM);
+//             }
+//             __memcpy_async(rBp,OFFSET_B_ROW(dB,id*POTF_NB,iter+1),sizeof(float),LDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
+//             factor = 1.0 / rA[iter];
+//             for(int i = 0; i < span; i++)
+//             {
+//                 //void __bang_mul(float *dst, const float *src0, const float *src1, unsigned int elem_count)
+//                 __bang_mul(rC+i*REC_NB,rA,rB+i*REC_NB,iter);
+//                 //float __bang_sum(const float *src, unsigned int elem_count)
+//                 temp_b = 0;
+//                 //reduce add rC
+//                 for(int j = 0; j < iter; j++)
+//                 {
+//                     temp_b += rC[i*REC_NB+j];
+//                 }
+//                 temp_b = rB[i*REC_NB+iter] - temp_b;
+//                 rB[i*REC_NB+iter] = temp_b * factor;
+//             }
+
+//             __sync_cluster();
+//         }
+
+//         __memcpy_async(rA,sA,(m)*sizeof(float),SRAM2NRAM);
+            
+//         __memcpy_async(rB+m-1,rBp,sizeof(float),NRAM2NRAM,REC_NB * sizeof(float), sizeof(float), span - 1);
+//         __sync_cluster();
+//         factor = 1.0 / rA[m-1];
+//         for(int i = 0; i < span; i++)
+//         {
+//             //void __bang_mul(float *dst, const float *src0, const float *src1, unsigned int elem_count)
+//             __bang_mul(rC+i*REC_NB,rA,rB+i*REC_NB,m-1);
+
+//             temp_b = 0;
+//             //reduce add rC
+//             for(int j = 0; j < m-1; j++)
+//             {
+//                 temp_b += rC[i*REC_NB+j];
+//             }
+//             temp_b = rB[i*REC_NB+m-1] - temp_b;
+
+//             rB[i*REC_NB+m-1] = temp_b * factor;
+//         }
+//         __sync_cluster();
+
+//         // printf("id:%d\n",id);
+//         //print rB after complete calculation
+//         // printf("after complete calculation\n");
+//         // for(int i = 0; i < span; i++)
+//         // {
+//         //     for(int j = 0; j < REC_NB; j++)
+//         //     {
+//         //         printf("%.3f ",rB[i*REC_NB+j]);
+//         //     }
+//         //     printf("\n");
+//         // }
+
+//         if(if_execute)
+//         {
+//             __memcpy(OFFSET_B_ROW(dB,id*POTF_NB,0),rB,REC_NB*sizeof(float),NRAM2LDRAM,ldb * sizeof(float), REC_NB * sizeof(float), span - 1);
+//         }
+//         __sync_cluster();
+
+//     }
+
+// }
+
+mluOpStatus_t strsm_rectile(int batch, int stride, bool upper, bool trans, int m, int n, float *d_a, int lda, float *d_b, int lddb, cnrtQueue_t queue)
 {
     cnrtDim3_t dim;
-    dim.x = TASK_NUM;
+    
+    cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_BLOCK;
+
     dim.y = 1;
     dim.z = 1;
-    cnrtFunctionType_t func_type = __CNRT_FUNC_TYPE__;
-    if(!upper && trans)
+
+    if(batch>16)
     {
+        dim.x = batch;
         KERNEL_CHECK(
-            mlu_strsm_rectile_kernel<<<dim, func_type, queue>>>(m,n,trans,d_a,lda,d_b,lddb));
+            mlu_strsm_rectile_batch_kernel<<<dim, func_type, queue>>>(batch,stride,m,n,trans,d_a,lda,d_b,lddb));
     }
+    else
+    {
+        int carry_batch = batch;
+        if(batch == 1)
+        {
+            func_type = CNRT_FUNC_TYPE_UNION1;
+        }
+        else if(batch == 2)
+        {
+            func_type = CNRT_FUNC_TYPE_UNION2;
+        }
+        else if(batch <= 4)
+        {
+            func_type = CNRT_FUNC_TYPE_UNION4;
+            carry_batch = 4;
+        }
+        else 
+        {
+            func_type = CNRT_FUNC_TYPE_UNION8;
+            carry_batch = batch < 8 ? 8 : batch;
+        }
+        dim.x = carry_batch * 4;
+
+        if(!upper && trans)
+        {
+            KERNEL_CHECK(
+                mlu_strsm_rectile_kernel<<<dim, func_type, queue>>>(batch,stride,m,n,trans,d_a,lda,d_b,lddb));
+        }
+    }
+
+    
     return MLUOP_STATUS_SUCCESS;
 }
 
-__mlu_global__
-void add_c(float beta, float *d_c, float* src,int ldc, int ldsrc, int m, int n)
-{
+
+
+// d_c = d_c - src
+// __mlu_global__
+// void add_c(float *d_c, float* src,int ldc, int ldsrc, int m, int n)
+// {
+//     int id = taskId;
+//     int span = m/4;
+    
+//     float* start_c = d_c + id * span * ldc;
+//     float* start_src = src + id * span * ldsrc;
+//     float* temp_c = start_c, *temp_src =start_src;
+//     int32_t align_num = NFU_ALIGN_SIZE / sizeof(float);
+//     int32_t data_nram_num = MAX_NRAM_SIZE / sizeof(float) / 2 / align_num * align_num;
+//     __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
+    
+//     if (id == 3)
+//     {
+//         span = m - 3 * span;
+//     }
+    // float *rC = (float *)nram_buffer;
+    // float *rsrc = (float *)nram_buffer + data_nram_num;
+//      int k = n/data_nram_num;
+//     int remain = n - k * data_nram_num;
+//     for(int i = 0; i < span; i++)
+//     {
+//         temp_c = start_c + i * ldc;
+//         temp_src = start_src + i * ldsrc;
+        // for(int i = 0; i < k; i++)
+        // {
+        //     __memcpy(rC,temp_c,data_nram_num*sizeof(float),GDRAM2NRAM);
+        //     __memcpy(rsrc,temp_src,data_nram_num*sizeof(float),GDRAM2NRAM);
+        //     temp_c += data_nram_num;
+        //     temp_src += data_nram_num;
+        //     __sync();
+        //     __bang_add(rC, rC, rsrc, data_nram_num);
+        //     __memcpy(temp_c - data_nram_num,rC,data_nram_num*sizeof(float),NRAM2GDRAM);
+        //     __sync_cluster();
+        // }
+        // if(remain > 0)
+        // {
+        //     __memcpy(rC,temp_c,remain*sizeof(float),GDRAM2NRAM);
+        //     __memcpy(rsrc,temp_src,remain*sizeof(float),GDRAM2NRAM);
+        //     __sync();
+        //     __bang_add(rC, rC, rsrc, remain);
+        //     __memcpy(temp_c,rC,remain*sizeof(float),NRAM2GDRAM);
+        //     __sync_cluster();
+        // }
+
+        
+//     }
+
+// }
+
+
+// __mlu_global__
+// void add_c(float beta, float *d_c, float* src,int ldc, int ldsrc, int m, int n)
+// {
     
 
-  __mlu_shared__ uint8_t sram_buffer[MAX_SRAM_SIZE];
+//   __mlu_shared__ uint8_t sram_buffer[MAX_SRAM_SIZE];
+//     if (beta == 0.0f)
+//     {
+//         if(taskId == 0)
+//         {
+//             __memcpy(sram_buffer,src,n*sizeof(float),GDRAM2SRAM,n*sizeof(float),ldsrc*sizeof(float),m-1);
+
+            
+//         }
+//         __sync_cluster();
+//         if(taskId == 0)
+//         {
+//             __memcpy(d_c,sram_buffer,n*sizeof(float),SRAM2LDRAM,ldc*sizeof(float),n*sizeof(float),m-1);
+//         }
+//         __sync_cluster();
+//         return;
+//     }
+
+
+//     if (taskId == 0) {
+//       __memcpy(sram_buffer,d_c,n*sizeof(float),GDRAM2SRAM,n*sizeof(float),ldc*sizeof(float),m-1);
+//     }
+
+//   __sync_cluster();
+
+
+//   int32_t data_num = m*n;
+//   int32_t data_per_core = data_num / taskDim;
+//   int32_t data_last_core = data_per_core + data_num % taskDim;
+//   const float *a_offset = src + taskId * data_per_core;
+//   const float *b_offset = (float*)sram_buffer + taskId * data_per_core;
+//   float *output_offset = (float*)sram_buffer + taskId * data_per_core;
+
+//   if (taskId == taskDim - 1) {
+//     data_per_core = data_last_core;
+//   }
+
+//   int32_t align_num = NFU_ALIGN_SIZE / sizeof(float);
+//   int32_t data_nram_num =
+//     MAX_NRAM_SIZE / sizeof(float) / 2 / align_num * align_num;
+//   float *a_nram = (float *)nram_buffer;
+//   float *b_nram = (float *)a_nram + data_nram_num;
+//   int32_t loop_num = data_per_core / data_nram_num;
+//   int32_t rem_nram_num = data_per_core % data_nram_num;
+
+//   for (int32_t i = 0; i < loop_num; i++) {
+//     __memcpy(a_nram, a_offset + i * data_nram_num,
+//              data_nram_num * sizeof(float), GDRAM2NRAM);
+//     __memcpy(b_nram, b_offset + i * data_nram_num,
+//              data_nram_num * sizeof(float), SRAM2NRAM);
+//     __bang_add(a_nram, a_nram, b_nram, data_nram_num);
+//     __memcpy(output_offset + i * data_nram_num, a_nram,
+//              data_nram_num * sizeof(float), NRAM2SRAM);
+//   }
+//   if (rem_nram_num != 0) {
+//     int32_t rem_align_num =
+//       (rem_nram_num + align_num - 1) / align_num * align_num;
+//     __memcpy(a_nram, a_offset + loop_num * data_nram_num,
+//              rem_nram_num * sizeof(float), GDRAM2NRAM);
+//     __memcpy(b_nram, b_offset + loop_num * data_nram_num,
+//              rem_nram_num * sizeof(float), SRAM2NRAM);
+//     __bang_add(a_nram, a_nram, b_nram, rem_align_num);
+//     __memcpy(output_offset + loop_num * data_nram_num, a_nram,
+//              rem_nram_num * sizeof(float), NRAM2SRAM);
+//   }
+//   __sync_cluster();
+
+//   if (taskId == 0) {
+//       __memcpy(d_c,sram_buffer,n*sizeof(float),SRAM2LDRAM,ldc*sizeof(float),n*sizeof(float),m-1);
+//   }
+
+//   __sync_cluster();
+
+// }
+
+__mlu_global__
+void add_c_batch(int batch, int stride, float beta, float *d_c, float* src,int ldc, int ldsrc, int m, int n)
+{
+    
+//   __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
+    int id = taskId;
+    int batch_id = id;
+    if(batch_id >= batch)
+        return;
+    float* orignC = d_c;
+    float* orignSrc = src;
+    d_c = orignC + batch_id * stride;
+    src = orignSrc + batch_id * m*n;
+    
+
     if (beta == 0.0f)
     {
-        if(taskId == 0)
+
+        // __memcpy(nram_buffer,src,n*sizeof(float),GDRAM2NRAM,n*sizeof(float),ldsrc*sizeof(float),m-1);
+            
+        // __memcpy(d_c,nram_buffer,n*sizeof(float),NRAM2GDRAM,ldc*sizeof(float),n*sizeof(float),m-1);
+        __memcpy(d_c,src,n*sizeof(float),GDRAM2GDRAM,ldc*sizeof(float),ldsrc*sizeof(float),m-1);
+        return;
+    }
+
+    float* a_sram = (float*)nram_buffer + m * n;
+
+    __memcpy(nram_buffer,d_c,n*sizeof(float),LDRAM2NRAM,n*sizeof(float),ldc*sizeof(float),m-1);
+    __memcpy(a_sram,src,n*m*sizeof(float),LDRAM2NRAM);
+
+  __sync();
+
+
+  int32_t data_num = m*n;
+  const float *a_offset = a_sram;
+  const float *b_offset = (float*)nram_buffer;
+
+  float *a_nram = (float *)a_offset;
+  float *b_nram = (float *)b_offset;
+
+  __bang_add(b_nram, a_nram, b_nram, data_num);
+
+  __memcpy(d_c,b_nram,n*sizeof(float),NRAM2LDRAM,ldc*sizeof(float),n*sizeof(float),m-1);
+
+
+  __sync();
+
+}
+
+__mlu_global__
+void add_c(int batch, int stride, float beta, float *d_c, float* src,int ldc, int ldsrc, int m, int n)
+{
+    
+//   __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
+    int id = taskId;
+    int ipu_per_cluster = 4;
+    int batch_id = id / ipu_per_cluster;
+    if(batch_id >= batch)
+        return;
+    id = taskId % ipu_per_cluster;
+    float* orignC = d_c;
+    float* orignSrc = src;
+    d_c = orignC + batch_id * stride;
+    src = orignSrc + batch_id * m*n;
+    
+    // if(batch_id == 1 && id== 0)
+    // {
+    //     printf("add_c d_c:\n");
+    //     for(int i = 0; i < m; i++)
+    //     {
+    //         for(int j = 0; j < n; j++)
+    //         {
+    //             printf("%.3f ",d_c[i*ldc+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    //     printf("add_c src:\n");
+    //     for(int i = 0; i < m; i++)
+    //     {
+    //         for(int j = 0; j < n; j++)
+    //         {
+    //             printf("%.3f ",src[i*n+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
+
+    __mlu_shared__ uint8_t sram_buffer[MAX_SRAM_SIZE];
+    if (beta == 0.0f)
+    {
+        if(id == 0)
         {
             __memcpy(sram_buffer,src,n*sizeof(float),GDRAM2SRAM,n*sizeof(float),ldsrc*sizeof(float),m-1);
             
         }
         __sync_cluster();
-        if(taskId == 0)
+        if(id == 0)
         {
             __memcpy(d_c,sram_buffer,n*sizeof(float),SRAM2LDRAM,ldc*sizeof(float),n*sizeof(float),m-1);
         }
@@ -502,7 +1757,7 @@ void add_c(float beta, float *d_c, float* src,int ldc, int ldsrc, int m, int n)
 
     float* a_sram = (float*)sram_buffer + 3* m * n;
 
-    if (taskId == 0) {
+    if (id == 0) {
       __memcpy(sram_buffer,d_c,n*sizeof(float),GDRAM2SRAM,n*sizeof(float),ldc*sizeof(float),m-1);
       __memcpy(a_sram,src,n*m*sizeof(float),GDRAM2SRAM);
     }
@@ -511,18 +1766,19 @@ void add_c(float beta, float *d_c, float* src,int ldc, int ldsrc, int m, int n)
 
 
   int32_t data_num = m*n;
-  int32_t data_per_core = data_num / taskDim;
-  int32_t data_last_core = data_per_core + data_num % taskDim;
-  const float *a_offset = a_sram + taskId * data_per_core;
-  const float *b_offset = (float*)sram_buffer + taskId * data_per_core;
-  float *output_offset = (float*)sram_buffer + taskId * data_per_core;
+  int32_t data_per_core = data_num / ipu_per_cluster;
+  int32_t data_last_core = data_per_core + data_num % ipu_per_cluster;
+  const float *a_offset = a_sram + id * data_per_core;
+  const float *b_offset = (float*)sram_buffer + id * data_per_core;
+  float *output_offset = (float*)sram_buffer + id * data_per_core;
 
-  if (taskId == taskDim - 1) {
+  if (id == ipu_per_cluster - 1) {
     data_per_core = data_last_core;
   }
 
   int32_t align_num = NFU_ALIGN_SIZE / sizeof(float);
-
+//   int32_t data_nram_num =
+//     MAX_NRAM_SIZE / sizeof(float) / 2 / align_num * align_num;
   int32_t data_nram_num =
     MAX_NRAM_SIZE / sizeof(float) / 2 / align_num * align_num;
   float *a_nram = (float *)nram_buffer;
@@ -552,9 +1808,17 @@ void add_c(float beta, float *d_c, float* src,int ldc, int ldsrc, int m, int n)
   }
   __sync_cluster();
 
-  if (taskId == 0) {
+  if (id == 0) {
       __memcpy(d_c,sram_buffer,n*sizeof(float),SRAM2GDRAM,ldc*sizeof(float),n*sizeof(float),m-1);
-
+    //   printf("d_c after add:\n");
+    //   for(int i = 0; i < m; i++)
+    //   {
+    //       for(int j = 0; j < n; j++)
+    //       {
+    //           printf("%.3f ",d_c[i*ldc+j]);
+    //       }
+    //       printf("\n");
+    //   }
   }
 
   __sync_cluster();
@@ -562,19 +1826,21 @@ void add_c(float beta, float *d_c, float* src,int ldc, int ldsrc, int m, int n)
 }
 
 
-mluOpStatus_t sgemm(bool trans_a, bool trans_b, int m, int n, int k, float alpha, float beta, float* d_a,int lda, float* d_b, int ldb,  float* d_c, int ldc, mluOpHandle_t handle)
+mluOpStatus_t sgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k, float alpha, float beta, float* d_a,int lda, int stride_a,  float* d_b, int ldb, int stride_b, float* d_c, int ldc, int stride_c, mluOpHandle_t handle)
 {
     if(k==0)
         return MLUOP_STATUS_SUCCESS;
     int matmul_is_transA = trans_a;
     int matmul_is_transB = trans_b;
-
+    // float matmul_alpha = alpha;
+    // float matmul_beta = beta;
     int matmul_requested_algo = 1;
     int matmul_recieved_algo = 0;
     size_t tempSize_matmulExtra = 0;
     int matmul_computetype = MLUOP_DTYPE_FLOAT;
     float *workspace;
     int matmul_use_beta = beta == 0.0f ? 0 : 1;
+    // lda = lda * sizeof(float);
 
     cnrtQueue_t queue;
     mluOpGetQueue(handle,&queue);
@@ -613,9 +1879,15 @@ mluOpStatus_t sgemm(bool trans_a, bool trans_b, int m, int n, int k, float alpha
     CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_USE_STRIDE,
                                     &lda, sizeof(int32_t))); 
 
-    int32_t matmul_a_shape[2] = {m, lda};
-    int32_t matmul_b_shape[2] = {n, ldb};
-    int32_t matmul_c_shape[2] = {m, n};
+    // int32_t matmul_a_shape[2] = {m, k};
+    // int32_t matmul_b_shape[2] = {n, k};
+    // int32_t matmul_a_shape[3] = {batch, 16, lda};
+    // int32_t matmul_b_shape[3] = {batch, 16, ldb};
+    // int32_t matmul_c_shape[3] = {batch, 16, n};
+
+    int32_t matmul_a_shape[2] = {batch, stride_a};
+    int32_t matmul_b_shape[2] = {batch, stride_b};
+    int32_t matmul_c_shape[2] = {batch, m*n};
 
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                matmul_a_desc, MLUOP_LAYOUT_ARRAY,
@@ -626,6 +1898,24 @@ mluOpStatus_t sgemm(bool trans_a, bool trans_b, int m, int n, int k, float alpha
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                matmul_c_desc, MLUOP_LAYOUT_ARRAY,
                                MLUOP_DTYPE_FLOAT, 2, matmul_c_shape));
+
+
+    // matmul_a_desc->strides[0] = lda;
+    // matmul_a_desc->strides[1] = 1;
+
+
+    // matmul_b_desc->strides[0] = ldb;
+    // matmul_b_desc->strides[1] = 1;
+    // matmul_c_desc->strides[0] = ldc;
+    // matmul_c_desc->strides[1] = 1;
+    // matmul_a_desc->dims[0] = m;
+    // matmul_a_desc->dims[1] = k;
+    // matmul_b_desc->dims[0] = n;
+    // matmul_b_desc->dims[1] = k;
+    // matmul_c_desc->dims[0] = m;
+    // matmul_c_desc->dims[1] = n;
+
+    
 
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_a_desc, cnnl_a_desc);
@@ -643,38 +1933,291 @@ mluOpStatus_t sgemm(bool trans_a, bool trans_b, int m, int n, int k, float alpha
     CALL_CNNL(cnnlGetMatMulHeuristicResult(heuristic_result, matmul_algo,
                                            &tempSize_matmulExtra));
 
-    // CNRT_CHECK(cnrtMalloc((void **)&workspace, tempSize_matmulExtra));
-    CNRT_CHECK(cnrtMalloc((void **)&workspace, m*n*sizeof(float)));
+    
 
-    cnnlStrideBatchMatMul(cnnl_handle, trans_a, trans_b, m, n, k, 1, alpha, cnnl_a_desc, d_a, lda, m*lda, cnnl_b_desc, d_b, ldb, ldb*n, 0.0f, cnnl_c_desc, workspace, n, m*n);
+    // printf("m = %d, n = %d, k = %d\n",m,n,k);
+    // printf("alpha:%.3f, beta:%.3f\n",alpha,beta);
+    // float* h_a = (float*)malloc(m*k*sizeof(float));
+    // float* h_b = (float*)malloc(n*k*sizeof(float));
+    // float* h_c = (float*)malloc(m*n*sizeof(float));
+    // cnrtMemcpy(h_a, d_a, sizeof(float)*m*k, CNRT_MEM_TRANS_DIR_DEV2HOST);
+    // cnrtMemcpyAsync(h_b, d_b, sizeof(float)*n*k, queue, CNRT_MEM_TRANS_DIR_DEV2HOST);
+    // cnrtMemcpyAsync(h_c, d_c, sizeof(float)*m*n, queue, CNRT_MEM_TRANS_DIR_DEV2HOST);
+    // cnrtQueueSync(queue);
+
+    
+
+    // printf("before matmul, a:\n");
+
+    // for(int i = 0; i < m;i++)
+    // {
+    //     for(int j = 0; j <k;j++)
+    //     {
+    //         cnrtMemcpy(h_a, d_a+i*lda+j, sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
+    //         printf("%.3f ",h_a[0]);
+    //     }
+    //     printf("\n");
+    // }
+
+    // printf("before matmul, b:\n");
+
+    // for(int i = 0; i < n;i++)
+    // {
+    //     for(int j = 0; j <k;j++)
+    //     {
+    //         cnrtMemcpy(h_b, d_b+i*lda+j, sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
+    //         printf("%.3f ",h_b[0]);
+    //     }
+    //     printf("\n");
+    // }
+
+    // CNRT_CHECK(cnrtMalloc((void **)&workspace, tempSize_matmulExtra));
+
+    CNRT_CHECK(cnrtMalloc((void **)&workspace, batch*m*n*sizeof(float)));
+
+    // printf("workspace size:%zu\n",m*n*sizeof(float));
+
+    // printf("before matmul, c:\n");
+
+    // for(int i = 0; i < m;i++)
+    // {
+    //     for(int j = 0; j <n;j++)
+    //     {
+    //         cnrtMemcpy(h_c, d_c+i*lda+j, sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
+    //         printf("%.3f ",h_c[0]);
+    //     }
+    //     printf("\n");
+    // }
+    //cnnlStrideBatchMatMul(cnnlHandle_t handle, const bool is_transa, const bool is_transb, const int m, const int n, const int k, const int batch_size, const float alpha, 
+        //const cnnlTensorDescriptor_t a_desc, const void *a, const int lda, const int64_t stride_a, const cnnlTensorDescriptor_t b_desc, const void *b, const int ldb, const int64_t stride_b, const float beta, constcnnlTensorDescriptor_tc_desc, void *c, const int ldc, const int64_t stride_c)
+
+    // cnnlStrideBatchMatMul(cnnl_handle, trans_a, trans_b, m, n, k, batch, alpha, cnnl_a_desc, d_a, lda, m*lda, cnnl_b_desc, d_b, ldb, ldb*n, 0.0f, cnnl_c_desc, workspace, n, m*n);
+    cnnlStrideBatchMatMul(cnnl_handle, trans_a, trans_b, m, n, k, batch, alpha, cnnl_a_desc, d_a, lda, stride_a, cnnl_b_desc, d_b, ldb, stride_b, 0.0f, cnnl_c_desc, workspace, n, m*n);
+
+    // printf("before add_c:\n");
+    // // for(int k = 0; k < batch;k++)
+    // // {
+    // //     printf("batch:%d\n",k);
+    //     for(int i = 0; i < m;i++)
+    //     {
+    //         for(int j = 0; j <n;j++)
+    //         {
+    //             cnrtMemcpy(h_c, workspace+i*n+j, sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
+    //             printf("%.3f ",h_c[0]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
+
+
 
     if ( beta == 1.0f || beta == 0.0f)
     {
         cnrtDim3_t dim;
-        cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
-        dim.x = 4;
+        cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_BLOCK;
         dim.y = 1;
         dim.z = 1;
-        KERNEL_CHECK(add_c<<<dim, func_type, queue>>>(beta,d_c,workspace,ldc,n,m,n));
+        int nram_space = 2 * m * n * sizeof(float);
+        if(batch > 1 && nram_space < MAX_NRAM_SIZE)
+        {
+            dim.x = batch;
+            KERNEL_CHECK(add_c_batch<<<dim, func_type, queue>>>(batch, stride_c, beta,d_c,workspace,ldc,n,m,n));
 
+        }
+        else
+        {
+            int carry_batch = batch;
+            if(batch == 1)
+            {
+                func_type = CNRT_FUNC_TYPE_UNION1;
+            }
+            else if(batch == 2)
+            {
+                func_type = CNRT_FUNC_TYPE_UNION2;
+            }
+            else if(batch <= 4)
+            {
+                func_type = CNRT_FUNC_TYPE_UNION4;
+                carry_batch = 4;
+            }
+            else 
+            {
+                func_type = CNRT_FUNC_TYPE_UNION8;
+                carry_batch = batch < 8 ? 8 : batch;
+            }
+            dim.x = carry_batch * 4;
+
+            KERNEL_CHECK(add_c<<<dim, func_type, queue>>>(batch, stride_c, beta,d_c,workspace,ldc,n,m,n));
+        }
+        
+        
     }
+
+    
+    
+
+    // cnnlMatMul_v2(
+    //         cnnl_handle, matmul_desc, matmul_algo, &matmul_alpha, cnnl_a_desc,
+    //         d_a, cnnl_b_desc, d_b, &matmul_beta,
+    //         cnnl_c_desc, d_c, workspace,
+    //         tempSize_matmulExtra, cnnl_d_desc, d_c);
+
+    // cnrtMemcpy(h_a, d_a, sizeof(float)*m*k, CNRT_MEM_TRANS_DIR_DEV2HOST);
+    // cnrtMemcpy(h_b, d_b, sizeof(float)*n*k, CNRT_MEM_TRANS_DIR_DEV2HOST);
+    // cnrtMemcpy(h_c, d_c, sizeof(float)*m*n, CNRT_MEM_TRANS_DIR_DEV2HOST);
+    // cnrtQueueSync(queue);
+
+    // printf("after matmul, a:\n");
+
+    // for(int i = 0; i < m;i++)
+    // {
+    //     for(int j = 0; j <k;j++)
+    //     {
+    //         cnrtMemcpy(h_a, d_a+i*lda+j, sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
+    //         printf("%.3f ",h_a[0]);
+    //     }
+    //     printf("\n");
+    // }
+
+    // printf("after matmul, b:\n");
+
+    // for(int i = 0; i < n;i++)
+    // {
+    //     for(int j = 0; j <k;j++)
+    //     {
+    //         cnrtMemcpy(h_b, d_b+i*lda+j, sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
+    //         printf("%.3f ",h_b[0]);
+    //     }
+    //     printf("\n");
+    // }
+    // cnrtQueueSync(queue);
+    // printf("after matmul, c:\n");
+    // printf("after add_c:\n");
+    // // for(int k = 0; k < batch;k++)
+    // // {
+    //     for(int i = 0; i < m;i++)
+    //     {
+    //         for(int j = 0; j <n;j++)
+    //         {
+    //             cnrtMemcpy(h_c, d_c+i*lda+j, sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
+    //             printf("%.3f ",h_c[0]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
+
+    
+
+    // printf("after matmul, workspace:\n");
+    // for(k = 0; k < batch; k++)
+    // {
+    //     printf("batch:%d\n",k);
+    //     for(int i = 0; i < m;i++)
+    //     {
+    //         for(int j = 0; j <n;j++)
+    //         {
+    //             cnrtMemcpy(h_c, workspace+k * m*n+i*n+j, sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
+    //             printf("%.3f ",h_c[0]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
+    
 
     return MLUOP_STATUS_SUCCESS;
 }
 
 __mlu_global__
-void inverse_kernel(float *d_input, int ld_input, float* d_output, int ld_output, int m)
+void batch_inverse_kernel(int batch, float *d_input, int ld_input, int stride_input, float* d_output, int ld_output, int stride_output, int m)
 {
+    int id = taskId;
+    int batch_id = id;
+    if(batch_id >= batch)
+        return;
+
+    float* orign_input = d_input;
+    float* orign_output = d_output;
+    d_input = orign_input + batch_id * stride_input;
+    d_output = orign_output + batch_id * stride_output;
+
+    // __mlu_shared__ uint8_t sram_buffer[MAX_SRAM_SIZE];
+
+    float* nram_offset = (float*)nram_buffer;
+    float* nram_src0 = nram_offset;
+    //nram_src1存放列主序的计算完成的矩阵
+    float* nram_src1 = nram_src0 + m * m;
+    float* nram_src2 = nram_src1 + m * m;
+    float* mul_result = nram_src2 + m;
+    float* nram_dst = nram_src2 + m * m;
+    float* diag_start = nram_dst;
+    int height = m, span = m;
+
+    __memset_nram(nram_offset, 4 * m * m, (float)ZERO);
+
+    //void __memcpy(void *dst, const void *src, unsigned int size, mluMemcpyDirection_t dir, int dst_stride0, unsigned int dst_segnum1, int dst_stride1, unsigned int dst_segnum2, int src_stride0, unsigned int src_segnum1, int src_stride1, unsigned int src_segnum2)
+    //   __memcpy(sram_buffer,d_input,m*m*sizeof(float),GDRAM2SRAM);
+    __memcpy(nram_dst,d_input,m*sizeof(float),GDRAM2NRAM,m*sizeof(float),ld_input*sizeof(float),m-1);
     
+    float result = 0.0;
+    for(int i = 0; i < m; i++)
+    {
+        int off = i * m + i;
+        result = nram_dst[off];
+        result = 1.0 / result;
+        nram_src1[i*height+i] = result;
+        nram_dst[i*span + i] = result;
+        diag_start[off] = result;
+    }
+
+    for(int i = 1; i < height; i++)
+    {
+        __memcpy(nram_src2,diag_start+i*m,i*sizeof(float),NRAM2NRAM);
+        int num = std::min(i, span);
+        float diag_element = diag_start[i*m+i];
+        for(int j = 0; j < num; j++)
+        {
+            float temp = 0.0;
+            __bang_mul(mul_result,nram_src2,nram_src1+j*height,i);
+            for(int k = 0; k< i; k++)
+            {
+                temp += mul_result[k];
+            }
+            temp = temp * -1.0 * diag_element;
+            nram_dst[i*span+j] = temp;
+            nram_src1[j*height+i] = temp;
+        } 
+        __sync();
+        
+    }
+
+    __memcpy(d_output,nram_dst,m*sizeof(float),NRAM2GDRAM,ld_output*sizeof(float), m*sizeof(float),m-1);
+    
+
+}
+
+__mlu_global__
+void inverse_kernel(int batch, float *d_input, int ld_input, int stride_input, float* d_output, int ld_output, int stride_output, int m)
+{
+    int id = taskId;
+    int batch_id = id / 4;
+    if(batch_id >= batch)
+        return;
+    id = taskId % 4;
+    float* orignInput = d_input;
+    float* orignOutput = d_output;
+    d_input = orignInput + batch_id * stride_input;
+    d_output = orignOutput + batch_id * stride_output;
+    // __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
     __mlu_shared__ uint8_t sram_buffer[MAX_SRAM_SIZE];
     
 
-    if (taskId == 0) {
+    if (id == 0) {
+    //   __memcpy(sram_buffer,d_input,m*m*sizeof(float),GDRAM2SRAM);
       __memcpy(sram_buffer,d_input,m*sizeof(float),GDRAM2SRAM,m*sizeof(float),ld_input*sizeof(float),m-1);
     }
     __sync_cluster();
 
-    int id = taskId;
+    
     int span = m/taskDim;
     int start = id * span;
     if (id == 3)
@@ -682,6 +2225,7 @@ void inverse_kernel(float *d_input, int ld_input, float* d_output, int ld_output
         span = m - 3 * span;
     }
     float* nram_offset = (float*)nram_buffer + id * 3 * m * m;
+    //nram_src1存放列主序的计算完成的矩阵
     float* nram_src1 = nram_offset;
     float* nram_src2 = nram_src1 + m * m;
     float* mul_result = nram_src2 + m;
@@ -713,6 +2257,21 @@ void inverse_kernel(float *d_input, int ld_input, float* d_output, int ld_output
         for(int j = 0; j < num; j++)
         {
             float temp = 0.0;
+            // if(id == 0 && i == 3)
+            // {
+            //     printf("nram_src2:\n");
+            //     for(int k = 0; k < i; k++)
+            //     {
+            //         printf("%.3f ",nram_src2[k]);
+            //     }
+            //     printf("\n");
+            //     printf("nrma_src1:\n");
+            //     for(int k = 0; k < i; k++)
+            //     {
+            //         printf("%.3f ",nram_src1[j*height+k]);
+            //     }
+            //     printf("diag_element:%.3f\n",diag_element);
+            // }
             __bang_mul(mul_result,nram_src2,nram_src1+j*height,i);
             for(int k = 0; k< i; k++)
             {
@@ -733,17 +2292,37 @@ void inverse_kernel(float *d_input, int ld_input, float* d_output, int ld_output
 
     __sync_cluster();
 
-    if (taskId == 0) {
+    if (id == 0) {
     //   __memcpy(d_input,sram_buffer,m*m*sizeof(float),SRAM2GDRAM);
       __memcpy(d_output,sram_buffer,m*sizeof(float),SRAM2GDRAM,ld_output*sizeof(float), m*sizeof(float),m-1);
     }
     
+    // if(id == 0)
+    // {
+    //     //printf nram_dst
+    //     printf("last diag_start:\n");
+    //     for(int i = 0; i < m; i++)
+    //     {
+    //         for(int j = 0; j < m; j++)
+    //         {
+    //             printf("%.3f ",diag_start[i*m+j]);
+    //         }
+    //         printf("\n");
+    //     }
+    // }
+    
 
 }
 
-__mlu_global__ void set_zero(bool upper, int m, float* d_c, int lddc)
+__mlu_global__ void set_zero(int batch, int stride, bool upper, int m, float* d_c, int lddc)
 {
     int id = taskId;
+    int batch_id = id / 4;
+    if(batch_id >= batch)
+        return;
+    float* orignC = d_c;
+    d_c = orignC + batch_id * stride;
+    id = taskId % 4;
     int span = m/taskDim;
     int pre = id * span;
     float* start_c = d_c + pre * lddc + pre;
@@ -768,9 +2347,36 @@ __mlu_global__ void set_zero(bool upper, int m, float* d_c, int lddc)
     }
 }
 
+// mluOpStatus_t batch_inverse(int batch, float *d_input, int ld_input, int stride_input, float* d_output, int ld_output, int stride_output, int m, mluOpHandle_t handle)
+// {
+//     if(m==0)
+//         return MLUOP_STATUS_SUCCESS;
+//     mluOpTensorDescriptor_t input_desc, output_desc, info_desc;
+//     std::string api_name = "Cholesky";
+
+//     cnrtQueue_t queue;
+//     mluOpGetQueue(handle,&queue);
+
+//     int32_t *info;
+//     CNRT_CHECK(cnrtMalloc((void **)&info, batch*sizeof(int32_t));
+
+//     CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&input_desc));
+//     CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&output_desc));
+//     CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&info_desc));
+
+//     int32_t input_shape[3] = {batch, m*m};
+//     int32_t output_shape[3] = {batch, m*m};
+//     int32_t info_shape[1] = {batch};
+
+//     float* workspace;
+//     CNRT_CHECK(cnrtMalloc((void **)&workspace, batch*m*m*sizeof(float)));
+
+//     __memcpy(sram_buffer,d_input,m*sizeof(float),GDRAM2SRAM,m*sizeof(float),m-1,stride_input * sizeof(float),batch_num-1,ld_input*sizeof(float),m-1,m*m*sizeof(float),batch_num-1);
+
+// }
 
 
-mluOpStatus_t strsm(bool upper, bool trans, int m, int n, float* d_a, int lda, float* d_b, int ldb, mluOpHandle_t handle)
+mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n, float* d_a, int lda, float* d_b, int ldb, mluOpHandle_t handle)
 {
     if(n==0)
         return MLUOP_STATUS_SUCCESS;
@@ -781,13 +2387,13 @@ mluOpStatus_t strsm(bool upper, bool trans, int m, int n, float* d_a, int lda, f
     mluOpGetQueue(handle,&queue);
 
     int32_t *info;
-    CNRT_CHECK(cnrtMalloc((void **)&info, sizeof(int32_t)));
+    CNRT_CHECK(cnrtMalloc((void **)&info, batch*sizeof(int32_t)));
 
     CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_a_desc));
     CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_b_desc));
     CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&info_desc));
-    int32_t matmul_a_shape[2] = {m, m};
-    int32_t matmul_b_shape[2] = {n, ldb};
+    int32_t matmul_a_shape[2] = {batch, m*m};
+    int32_t matmul_b_shape[2] = {batch, stride};
     int32_t info_shape[1] = {1};
 
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
@@ -805,10 +2411,14 @@ mluOpStatus_t strsm(bool upper, bool trans, int m, int n, float* d_a, int lda, f
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_b_desc, cnnl_b_desc);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(info_desc, cnnl_info_desc);
 
+    //cnnlStatus_t cnnlInverse(cnnlHandle_t handle, const cnnlTensorDescriptor_t input_desc, const void *input, const bool is_trans, const cnnlTensorDescriptor_t output_desc, void *output, const cnnlTensorDescriptor_t infos_desc, void *infos)
+    // cnnlInverse(cnnl_handle, cnnl_a_desc,work_space,false,cnnl_a_desc,work_space,cnnl_info_desc,info);
     float* workspace;
-    CNRT_CHECK(cnrtMalloc((void **)&workspace, m*m*sizeof(float)));
-    CNRT_CHECK(cnrtMemset(workspace, 0.0, m*m*sizeof(float)));
+    CNRT_CHECK(cnrtMalloc((void **)&workspace, batch*m*m*sizeof(float)));
+    CNRT_CHECK(cnrtMemset(workspace, 0.0, batch*m*m*sizeof(float)));
 
+    float* h_i;
+    h_i = (float*)malloc(m*m*sizeof(float));
     
 
     int m1 = m/2;
@@ -818,33 +2428,135 @@ mluOpStatus_t strsm(bool upper, bool trans, int m, int n, float* d_a, int lda, f
     float* workspace2 = workspace1 + m1*m+m1;
 
     cnrtDim3_t dim;
-    cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
-    dim.x = 4;
     dim.y = 1;
     dim.z = 1;
-    KERNEL_CHECK(inverse_kernel<<<dim, func_type, queue>>>(d_a,lda,workspace1,m,m1));
-    KERNEL_CHECK(inverse_kernel<<<dim, func_type, queue>>>(d_a+m1*lda+m1,lda,workspace2,m,m2));
+    cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_BLOCK;
+    if(batch > 1)
+    {
+        dim.x = batch;
+        KERNEL_CHECK(batch_inverse_kernel<<<dim, func_type, queue>>>(batch, d_a,lda,stride, workspace1,m,m*m,m1));
+        KERNEL_CHECK(batch_inverse_kernel<<<dim, func_type, queue>>>(batch, d_a+m1*lda+m1,lda,stride, workspace2,m,m*m,m2));
+    }
+    else
+    {
+        int carry_batch = batch;
+        if(batch == 1)
+        {
+            func_type = CNRT_FUNC_TYPE_UNION1;
+        }
+        else if(batch == 2)
+        {
+            func_type = CNRT_FUNC_TYPE_UNION2;
+        }
+        else if(batch <= 4)
+        {
+            func_type = CNRT_FUNC_TYPE_UNION4;
+            carry_batch = 4;
+        }
+        else 
+        {
+            func_type = CNRT_FUNC_TYPE_UNION8;
+            carry_batch = batch < 8 ? 8 : batch;
+        }
+        dim.x = carry_batch * 4;
 
-    sgemm(false,false,m2,m1,m1,1.0f,0.0f,d_a+m1*lda,lda,workspace1,m,workspace1+m1*m,m,handle);
-    sgemm(false,false,m2,m2,m1,-1.0f,0.0f,workspace2,m,workspace1+m1*m,m,workspace1+m1*m,m,handle);
+
+        KERNEL_CHECK(inverse_kernel<<<dim, func_type, queue>>>(batch, d_a,lda,stride, workspace1,m,m*m,m1));
+        KERNEL_CHECK(inverse_kernel<<<dim, func_type, queue>>>(batch, d_a+m1*lda+m1,lda,stride, workspace2,m,m*m,m2));
+   
+    }
+     
+
+    sgemm(batch, false,false,m2,m1,m1,1.0f,0.0f,d_a+m1*lda,lda,stride,workspace1,m,m*m,workspace1+m1*m,m,m*m,handle);
+    sgemm(batch, false,false,m2,m2,m1,-1.0f,0.0f,workspace2,m,m*m,workspace1+m1*m,m,m*m,workspace1+m1*m,m,m*m,handle);
+    cnrtQueueSync(queue);
+
+    // cnrtMemcpy(h_i, workspace, m*m*sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
+    // print 
+    // printf("batch 0 whole inverse:\n");
+    // for(int i = 0; i < m; i++)
+    // {
+    //     for(int j = 0; j < m; j++)
+    //     {
+    //         printf("%.3f ",h_i[i*m+j]);
+    //     }
+    //     printf("\n");
+    // }
+    
+    // cnrtMemcpy(h_i, workspace+m*m, m*m*sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
+    // // print 
+    // printf("batch 1 whole inverse:\n");
+    // for(int i = 0; i < m; i++)
+    // {
+    //     for(int j = 0; j < m; j++)
+    //     {
+    //         printf("%.3f ",h_i[i*m+j]);
+    //     }
+    //     printf("\n");
+    // }
+
+
+
 
     
+    // cnrtMemcpy(h_i, work_space, m*m*sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
+    // //print h_i
+    // printf("h_i:\n");
+    // for(int i = 0; i < m; i++)
+    // {
+    //     for(int j = 0; j < m; j++)
+    //     {
+    //         printf("%.3f ",h_i[i*m+j]);
+    //     }
+    //     printf("\n");
+    // }
+    // float *h_i;
+    // h_i = (float*)malloc(m*n*sizeof(float));
+    // cnrtQueueSync(queue);
+    
+    // for(int i = 0; i < n; i++)
+    // {
+    //     cnrtMemcpy(h_i+i*m, d_b+i*ldb, m*sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
 
-    cnnlStrideBatchMatMul(cnnl_handle, false, true, n,m, m, 1, 1.0, cnnl_b_desc, d_b, ldb, n*ldb, cnnl_a_desc, workspace, m, m*m, 0.0f, cnnl_b_desc, d_b, ldb, n*ldb);
+    // }
+    // cnrtQueueSync(queue);
+    // printf("before strsm, b:\n");
+    // for(int i = 0; i < n; i++)
+    // {
+    //     for(int l = 0; l < m; l++)
+    //     {
+    //         printf("%.3f ",h_i[i*m+l]);
+    //     }
+    //     printf("\n");
+    // }
+    //cnnlStrideBatchMatMul(cnnlHandle_t handle, const bool is_transa, const bool is_transb, const int m, const int n, const int k, const int batch_size, const float alpha, 
+        //const cnnlTensorDescriptor_t a_desc, const void *a, const int lda, const int64_t stride_a, const cnnlTensorDescriptor_t b_desc, const void *b, const int ldb, const int64_t stride_b, const float beta, constcnnlTensorDescriptor_t c_desc, void *c, const int ldc, const int64_t stride_c)
+    // cnnlStrideBatchMatMul(cnnl_handle, false, true, m, n, m, 1, 1.0, cnnl_a_desc, work_space, m, m*NB, cnnl_b_desc, d_b, ldb, ldb*n, 0.0f, cnnl_b_desc, d_b, ldb, ldb*n);
+    cnnlStrideBatchMatMul(cnnl_handle, false, true, n,m, m, batch, 1.0, cnnl_b_desc, d_b, ldb, stride, cnnl_a_desc, workspace, m, m*m, 0.0f, cnnl_b_desc, d_b, ldb, stride);
+    // cnrtQueueSync(queue);
+    
+    // for(int i = 0; i < n; i++)
+    // {
+    //     cnrtMemcpy(h_i+i*m, d_b+i*ldb, m*sizeof(float), CNRT_MEM_TRANS_DIR_DEV2HOST);
 
+    // }
+    // cnrtQueueSync(queue);
+    // printf("after strsm, b:\n");
+    // for(int i = 0; i < n; i++)
+    // {
+    //     for(int l = 0; l < m; l++)
+    //     {
+    //         printf("%.3f ",h_i[i*m+l]);
+    //     }
+    //     printf("\n");
+    // }
 
 
     return MLUOP_STATUS_SUCCESS;
 }
 
-
-
-mluOpStatus_t ssyrk(bool upper, bool trans,int n, int k, float* d_a, int ldda, float* d_c, int lddc, mluOpHandle_t handle)
+mluOpStatus_t set_half_zero(int batch,int stride,float* d_a, int lda, int m, mluOpHandle_t handle)
 {
-    if(k==0)
-        return MLUOP_STATUS_SUCCESS;
-
-    sgemm(false,true,n,n,k,-1.0f,1.0f,d_a,ldda,d_a,ldda,d_c,lddc,handle);
     cnrtQueue_t queue;
     mluOpGetQueue(handle,&queue);
     cnrtDim3_t dim;
@@ -852,13 +2564,50 @@ mluOpStatus_t ssyrk(bool upper, bool trans,int n, int k, float* d_a, int ldda, f
     dim.x = 4;
     dim.y = 1;
     dim.z = 1;
-    KERNEL_CHECK(set_zero<<<dim, func_type, queue>>>(upper, n, d_c,lddc));
+    KERNEL_CHECK(set_zero<<<dim, func_type, queue>>>(batch, stride, false, m, d_a,lda));
+    return MLUOP_STATUS_SUCCESS;
+}
+
+
+mluOpStatus_t ssyrk(int batch, int stride, bool upper, bool trans,int n, int k, float* d_a, int ldda, float* d_c, int lddc, mluOpHandle_t handle)
+{
+    if(k==0)
+        return MLUOP_STATUS_SUCCESS;
+
+    sgemm(batch, false,true,n,n,k,-1.0f,1.0f,d_a,ldda,stride,d_a,ldda,stride,d_c,lddc,stride,handle);
+    cnrtQueue_t queue;
+    mluOpGetQueue(handle,&queue);
+    cnrtDim3_t dim;
+    cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+    int carry_batch = batch;
+    if(batch == 1)
+    {
+        func_type = CNRT_FUNC_TYPE_UNION1;
+    }
+    else if(batch == 2)
+    {
+        func_type = CNRT_FUNC_TYPE_UNION2;
+    }
+    else if(batch <= 4)
+    {
+        func_type = CNRT_FUNC_TYPE_UNION4;
+        carry_batch = 4;
+    }
+    else 
+    {
+        func_type = CNRT_FUNC_TYPE_UNION8;
+        carry_batch = batch < 8 ? 8 : batch;
+    }
+    dim.x = carry_batch * 4;
+    dim.y = 1;
+    dim.z = 1;
+    KERNEL_CHECK(set_zero<<<dim, func_type, queue>>>(batch, stride, upper, n, d_c,lddc));
     
     
     return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mlu_spotrf_rectile(bool trans, bool uplo, int n, int recnb, float* d_A, int lda, int gbstep, mluOpHandle_t handle)
+mluOpStatus_t mlu_spotrf_rectile(int batch, int stride, bool trans, bool uplo, int n, int recnb, float* d_A, int lda, int gbstep, mluOpHandle_t handle)
 {
     cnrtQueue_t queue;
     mluOpGetQueue(handle,&queue);
@@ -868,24 +2617,50 @@ mluOpStatus_t mlu_spotrf_rectile(bool trans, bool uplo, int n, int recnb, float*
     if(n <=recnb)
     {
         // printf("n:%d, recnb:%d, mlu_spotf2_lpin\n",n,recnb);
-        mlu_spotf2_lpin(trans, uplo,n,lda,d_A,gbstep,queue);
+        mlu_spotf2_lpin(batch, stride, trans, uplo,n,lda,d_A,gbstep,queue);
     }
     else
     {
         int n1 = n/2;
         int n2 = n-n1;
-        mlu_spotrf_rectile(trans,uplo,n1,recnb,OFFSET_ROW(d_A,0,0),lda,gbstep, handle);
-        strsm_rectile(uplo,trans,n1,n2,OFFSET_ROW(d_A,0,0),lda,OFFSET_ROW(d_A,n1,0),lda,queue);
-        ssyrk(uplo,trans,n2,n1,d_A+n1*lda,lda,OFFSET_ROW(d_A,n1,n1),lda,handle);
-        mlu_spotrf_rectile(trans,uplo,n2,recnb,OFFSET_ROW(d_A,n1,n1),lda,gbstep+n1,handle);
+        // printf("n1:%d, n2:%d recnb:%d,mlu_spotrf_rectile1\n",n1,n2,recnb);
+        mlu_spotrf_rectile(batch,stride,trans,uplo,n1,recnb,OFFSET_ROW(d_A,0,0),lda,gbstep, handle);
+        // printf("n1:%d, n2:%d recnb:%d,strsm_rectile\n",n1,n2,recnb);
+        // strsm(batch, stride, uplo,trans,n1, n2, OFFSET_ROW(d_A,0,0), lda,OFFSET_ROW(d_A,n1,0), lda, handle);
+        strsm_rectile(batch, stride, uplo,trans,n1,n2,OFFSET_ROW(d_A,0,0),lda,OFFSET_ROW(d_A,n1,0),lda,queue);
+        // printf("n1:%d, n2:%d recnb:%d,ssyrk\n",n1,n2,recnb);
+        ssyrk(batch,stride,uplo,trans,n2,n1,d_A+n1*lda,lda,OFFSET_ROW(d_A,n1,n1),lda,handle);
+        // printf("n1:%d, n2:%d recnb:%d,mlu_spotrf_rectile2\n",n1,n2,recnb);
+        mlu_spotrf_rectile(batch,stride,trans,uplo,n2,recnb,OFFSET_ROW(d_A,n1,n1),lda,gbstep+n1,handle);
 
         
-
+        //printf d_A+n1*lda+n1
+        // printf("after calculate, dA+n1*lda+n1:\n");
+        // for(int i = 0; i < n2; i++)
+        // {
+        //     for(int j = 0; j < n2; j++)
+        //     {
+        //         printf("%.3f ",*(d_A+n1*lda+n1+i*lda+j));
+        //     }
+        //     printf("\n");
+        // }
+        // //printf work_space + n1 * NB+n1
+        // printf("after calculate, work_space + n1 * NB+n1:\n");
+        // for(int i = 0; i < n2; i++)
+        // {
+        //     for(int j = 0; j < n2; j++)
+        //     {
+        //         printf("%.3f ",*(work_space + n1 * NB+n1+i*NB+j));
+        //     }
+        //     printf("\n");
+        // }
     }
+    // strsm(false,true,n, n, work_space, n,d_A, n, work_space, handle);
     return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t transpose(int m, float* d_input,float* d_output, mluOpHandle_t handle)
+// m * n
+mluOpStatus_t transpose(int batch, int m, int n, float* d_input,float* d_output, mluOpHandle_t handle)
 {
     if(m==0)
         return MLUOP_STATUS_SUCCESS;
@@ -894,23 +2669,23 @@ mluOpStatus_t transpose(int m, float* d_input,float* d_output, mluOpHandle_t han
 
     mluOpTensorDescriptor_t trans_input_desc, trans_output_desc;
     std::string api_name = "Cholesky";
-    const int input_dim = 2;
+    const int input_dim = 3;
 
     CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&trans_input_desc));
     CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&trans_output_desc));
 
-    int32_t transpose_input_shape[2] = {m, m};
-    int32_t transpose_output_shape[2] = {m, m};
+    int32_t transpose_input_shape[3] = {batch, m, n};
+    int32_t transpose_output_shape[3] = {batch, n, m};
 
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                trans_input_desc, MLUOP_LAYOUT_ARRAY,
-                               MLUOP_DTYPE_FLOAT, 2, transpose_input_shape));
+                               MLUOP_DTYPE_FLOAT, 3, transpose_input_shape));
 
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                trans_output_desc, MLUOP_LAYOUT_ARRAY,
-                               MLUOP_DTYPE_FLOAT, 2, transpose_output_shape));
+                               MLUOP_DTYPE_FLOAT, 3, transpose_output_shape));
 
-    int permute[2] = {1, 0};
+    int permute[3] = {0, 2, 1};
 
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(trans_input_desc, cnnl_in_desc);
@@ -927,8 +2702,16 @@ mluOpStatus_t transpose(int m, float* d_input,float* d_output, mluOpHandle_t han
     
 
     CALL_CNNL(cnnlGetTransposeWorkspaceSize(cnnl_handle, cnnl_in_desc, cnnl_trans_desc, size));
+    // printf("transpose1 need size: %zu\n",*size);
 
     float *workspace = NULL;
+
+    if(*size > 0ul)
+    {
+        printf("start malloc\n");
+        CNRT_CHECK(cnrtMalloc((void **)&workspace, *size));
+        printf("transpose2 need size: %zu\n",*size);
+    }
 
     CALL_CNNL(cnnlTranspose_v2(cnnl_handle, cnnl_trans_desc, cnnl_in_desc,
                              d_input, cnnl_out_desc, d_output,
