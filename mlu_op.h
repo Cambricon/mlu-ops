@@ -2972,8 +2972,9 @@ mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
  * @par Data Type
  * - The date types of input tensor and output tensor should be the same.
  * - The supported data types of input and output tensors are as follows:
- *   - input tensor: half, float
- *   - output tensor: half, float
+ *   - input tensor: half, float, bfloat16, int32, complex_float
+ *   - output tensor: half, float, bfloat16, int32
+ * - The data type bfloat16 is only supported on MLU500 series.
  *
  * @par Data Layout
  * - None.

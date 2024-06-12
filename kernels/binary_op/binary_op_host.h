@@ -24,22 +24,39 @@
 #define KERNELS_BINARY_OP_BINARY_OP_HOST_H_
 
 #include <string>
-
 #include "mlu_op.h"
 
-void binaryOpPolicyFunc(const mluOpHandle_t &handle,
-                        const mluOpTensorDescriptor_t &desc,
-                        const int &align_param, cnrtDim3_t *k_dim,
-                        cnrtFunctionType_t *k_type);
+void binaryOpPolicyFunc(mluOpHandle_t handle, const int pad_up_size,
+                        cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type,
+                        const mluOpTensorDescriptor_t desc);
+
+// Use with BINARY_OP_KERNEL_3PIPELINE_V2
+void binaryOpBlockPolicyFunc(mluOpHandle_t handle,
+                             const mluOpTensorDescriptor_t desc,
+                             uint32_t pad_up_size, cnrtDim3_t &k_dim,
+                             cnrtFunctionType_t &k_type,
+                             size_t &normal_core_elem_num,
+                             size_t &tail_core_elem_num);
 
 /* user param check
  * step1:check desc and data ptr is not nullptr_t
  * step2:check shape and data type
  * */
 mluOpStatus_t binaryOpParamCheck(
-    const std::string &op_name, const mluOpHandle_t &handle,
-    const mluOpTensorDescriptor_t &input1_desc, const void *input1,
-    const mluOpTensorDescriptor_t &input2_desc, const void *input2,
-    const mluOpTensorDescriptor_t &output_desc, const void *output,
-    const mluOpDataType_t support_type[], const int &len, bool &zero_element);
+    const std::string &op_name, const mluOpHandle_t handle,
+    const mluOpTensorDescriptor_t input1_desc, const void *input1,
+    const mluOpTensorDescriptor_t input2_desc, const void *input2,
+    const mluOpTensorDescriptor_t output_desc, const void *output,
+    const mluOpDataType_t support_type[], const int len, bool &zero_element,
+    bool isSupportBoardcast);
+
+// add input and output shape consistency check
+mluOpStatus_t binaryOpParamSameShapeCheck(
+    const std::string &op_name, const mluOpTensorDescriptor_t input1_desc,
+    const mluOpTensorDescriptor_t input2_desc,
+    const mluOpTensorDescriptor_t output_desc);
+
+// convert c array to string
+std::string array2String(int32_t dim_num, int64_t *dims);
+
 #endif  //  KERNELS_BINARY_OP_BINARY_OP_HOST_H_

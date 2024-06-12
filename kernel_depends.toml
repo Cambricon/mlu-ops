@@ -6,10 +6,10 @@
 # ##  format:
 # ##  <kernel_name> = ["op_1", "op_2"]
 
-abs = ["unary_op"]
-div = ["binary_op"]
-log = ["unary_op"]
-sqrt = ["binary_op", "unary_op"]
+abs = ["tensor_stride_process","unary_op"]
+div = ["binary_op","tensor_stride_process"]
+log = ["unary_op","tensor_stride_process"]
+sqrt = ["binary_op", "unary_op", "tensor_stride_process"]
 carafe = ["tensor_stride_process"]
 
 [gtest]
