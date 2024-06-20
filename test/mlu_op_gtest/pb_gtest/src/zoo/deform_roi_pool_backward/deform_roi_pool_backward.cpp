@@ -162,7 +162,9 @@ void DeformRoiPoolBackwardExecutor::cpuCompute() {
 
     const int roi_batch_ind = offset_rois[0];
     float roi_start_w = offset_rois[1] * spatial_scale - 0.5;
+    float base_roi_start_w = roi_start_w;
     float roi_start_h = offset_rois[2] * spatial_scale - 0.5;
+    float base_roi_start_h = roi_start_h;
     float roi_end_w = offset_rois[3] * spatial_scale - 0.5;
     float roi_end_h = offset_rois[4] * spatial_scale - 0.5;
     float roi_width = roi_end_w - roi_start_w;
@@ -181,28 +183,34 @@ void DeformRoiPoolBackwardExecutor::cpuCompute() {
             ? sampling_ratio
             : static_cast<int>(ceilf(roi_width / pooled_width));
     const float count = std::max(roi_bin_grid_h * roi_bin_grid_w, 1);
+    theory_ops_ += 23.0;  // cur block
 
+    // no count theory_ops_ begin
     const float *offset_input =
         cpu_fp32_input_[1] + roi_batch_ind * height * width * channels;
     float *offset_grad_input =
         cpu_fp32_output_[0] + roi_batch_ind * height * width * channels;
+    // no count theory_ops_ end
 
     for (int ph = 0; ph < pooled_height; ++ph) {
       for (int pw = 0; pw < pooled_width; ++pw) {
         if (offset_desc != nullptr && cpu_fp32_input_[3] != nullptr) {
+          // next stmt not count theory_ops_
           const float *offset_cur_w = cpu_fp32_input_[3] +
                                       n * pooled_width * pooled_height * 2 +
                                       ph * pooled_width + pw;
           float offset_roi_w = gamma * roi_width * offset_cur_w[0];
           float offset_roi_h =
               gamma * roi_height * offset_cur_w[pooled_width * pooled_height];
-          roi_start_w = offset_rois[1] * spatial_scale - 0.5 + offset_roi_w;
-          roi_start_h = offset_rois[2] * spatial_scale - 0.5 + offset_roi_h;
+          roi_start_w = base_roi_start_w + offset_roi_w;
+          roi_start_h = base_roi_start_h + offset_roi_h;
+          theory_ops_ += 6;  // cur block
         }
         for (int iy = 0; iy < roi_bin_grid_h; ++iy) {
           const float y = roi_start_h + ph * bin_size_h +
                           static_cast<float>(iy + .5f) * bin_size_h /
                               static_cast<float>(roi_bin_grid_h);
+          theory_ops_ += 8;  // cur block
           for (int ix = 0; ix < roi_bin_grid_w; ++ix) {
             const float x = roi_start_w + pw * bin_size_w +
                             static_cast<float>(ix + .5f) * bin_size_w /
@@ -212,10 +220,13 @@ void DeformRoiPoolBackwardExecutor::cpuCompute() {
             bilinear_interpolate_gradient(height, width, channels, y, x, w1, w2,
                                           w3, w4, x_low, x_high, y_low, y_high,
                                           theory_ops_);
+            theory_ops_ += 9;  // cur block
             if (x_low >= 0 && x_high >= 0 && y_low >= 0 && y_high >= 0) {
               for (int c = 0; c < channels; ++c) {
+                // next stmt not count theory_ops_
                 size_t index = n * pooled_height * pooled_width * channels +
                                ph * pooled_width * channels + pw * channels + c;
+
                 float grad_output_this_bin = cpu_fp32_input_[0][index] / count;
                 offset_grad_input[y_low * width * channels + x_low * channels +
                                   c] += grad_output_this_bin * w1;
@@ -226,6 +237,8 @@ void DeformRoiPoolBackwardExecutor::cpuCompute() {
                 offset_grad_input[y_high * width * channels +
                                   x_high * channels + c] +=
                     grad_output_this_bin * w4;
+                theory_ops_ += 13;  // cur block
+
                 if (offset_desc != NULL && cpu_fp32_input_[3] != NULL) {
                   float input_00 = offset_input[y_low * width * channels +
                                                 x_low * channels + c];
@@ -246,6 +259,7 @@ void DeformRoiPoolBackwardExecutor::cpuCompute() {
                   cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 +
                                       pooled_width * pooled_height +
                                       ph * pooled_width + pw] += ogy;
+                  theory_ops_ += 24;  // cur block
                 }
               }
             }
