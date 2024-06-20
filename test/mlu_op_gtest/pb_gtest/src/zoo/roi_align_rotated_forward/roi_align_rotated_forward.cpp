@@ -281,6 +281,7 @@ void RoiAlignRotatedForwardExecutor::cpuCompute() {
 }
 
 int64_t RoiAlignRotatedForwardExecutor::getTheoryOps() {
+#if 0
   if (parser_->device() != CPU) {
     for (int i = 0; i < parser_->getInputNum(); ++i) {
       auto *ts = parser_->input(i);
@@ -322,6 +323,7 @@ int64_t RoiAlignRotatedForwardExecutor::getTheoryOps() {
     }
     cpuCompute();
   }
+#endif
 
   VLOG(4) << "getTheoryOps: " << theory_ops_ << " ops";
   return theory_ops_;

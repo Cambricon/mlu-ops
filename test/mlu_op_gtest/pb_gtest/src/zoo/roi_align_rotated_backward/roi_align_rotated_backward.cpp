@@ -292,6 +292,7 @@ void RoiAlignRotatedBackwardExecutor::cpuCompute() {
 }
 
 int64_t RoiAlignRotatedBackwardExecutor::getTheoryOps() {
+#if 0
   // When debugging, used for getting theory_ops on the GPU.
   if (parser_->device() != CPU) {
     for (int i = 0; i < parser_->getInputNum(); ++i) {
@@ -334,6 +335,7 @@ int64_t RoiAlignRotatedBackwardExecutor::getTheoryOps() {
     }
     cpuCompute();
   }
+#endif
 
   VLOG(4) << "getTheoryOps: " << theory_ops_ << " ops";
   return theory_ops_;
