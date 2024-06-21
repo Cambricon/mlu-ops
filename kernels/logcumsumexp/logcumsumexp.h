@@ -28,7 +28,36 @@
 #include "kernels/kernel.h"
 
 mluOpStatus_t MLUOP_WIN_API
-KernelLogcumsumexp(const cnrtDim3_t k_dim,
+LogcumsumexpDimOne(const cnrtDim3_t k_dim,
+                   const cnrtFunctionType_t k_type,
+                   const cnrtQueue_t queue,
+                   mluOpDataType_t data_type,
+                   const void *input,
+                   void *result,
+                   const int32_t axis_size);
+
+mluOpStatus_t MLUOP_WIN_API
+LogcumsumexpHighestDim(const cnrtDim3_t k_dim,
+                   const cnrtFunctionType_t k_type,
+                   const cnrtQueue_t queue,
+                   mluOpDataType_t data_type,
+                   const void *input,
+                   void *result,
+                   const int32_t axis_size,
+                   const int32_t lower_size);
+
+mluOpStatus_t MLUOP_WIN_API
+LogcumsumexpLowestDim(const cnrtDim3_t k_dim,
+                   const cnrtFunctionType_t k_type,
+                   const cnrtQueue_t queue,
+                   mluOpDataType_t data_type,
+                   const void *input,
+                   void *result,
+                   const int32_t axis_size,
+                   const int32_t higher_size);
+
+mluOpStatus_t MLUOP_WIN_API
+LogcumsumexpMidDim(const cnrtDim3_t k_dim,
                    const cnrtFunctionType_t k_type,
                    const cnrtQueue_t queue,
                    mluOpDataType_t data_type,
@@ -37,38 +66,5 @@ KernelLogcumsumexp(const cnrtDim3_t k_dim,
                    const int32_t axis_size,
                    const int32_t higher_size,
                    const int32_t lower_size);
-
-mluOpStatus_t MLUOP_WIN_API
-LogcumsumexpDimOne(const cnrtDim3_t k_dim,
-                   const cnrtFunctionType_t k_type,
-                   const cnrtQueue_t queue,
-                   mluOpDataType_t data_type,
-                   const void *input,
-                   void *result,);
-
-mluOpStatus_t MLUOP_WIN_API
-LogcumsumexpHighestDim(const cnrtDim3_t k_dim,
-                   const cnrtFunctionType_t k_type,
-                   const cnrtQueue_t queue,
-                   mluOpDataType_t data_type,
-                   const void *input,
-                   void *result,);
-
-mluOpStatus_t MLUOP_WIN_API
-LogcumsumexpLowestDim(const cnrtDim3_t k_dim,
-                   const cnrtFunctionType_t k_type,
-                   const cnrtQueue_t queue,
-                   mluOpDataType_t data_type,
-                   const void *input,
-                   void *result,);
-
-mluOpStatus_t MLUOP_WIN_API
-LogcumsumexpMidDim(const cnrtDim3_t k_dim,
-                   const cnrtFunctionType_t k_type,
-                   const cnrtQueue_t queue,
-                   mluOpDataType_t data_type,
-                   const void *input,
-                   void *result,);
-
 
 #endif  // KERNELS_LOGCUMSUMEXP_LOGCUMSUMEXP_H
