@@ -46,7 +46,7 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
 
     if (dim < (-1) * input_desc->dim) {
         LOG(ERROR) << API
-                << " dim is invalid. Received dim=["
+                << " this negative dim is invalid. Received dim=["
                 << dim << "]";
         return MLUOP_STATUS_BAD_PARAM;
     }
@@ -55,6 +55,11 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
                 << " dim beyonds the dimension of tensor. Received dim=["
                 << dim << "]";
         return MLUOP_STATUS_BAD_PARAM;
+    }
+
+    // preprocess for negative dim
+    if(dim < 0) {
+        dim += input_desc->dim;
     }
 
     int32_t axis_size = input_desc->dims[dim];
