@@ -85,6 +85,8 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
         higher_size *= input_desc->dims[i];
     }
 
+
+
     if (lower_size == 1 && higher_size == 1) {
         k_type = CNRT_FUNC_TYPE_UNION8;
         k_dim = {32, 1, 1};
