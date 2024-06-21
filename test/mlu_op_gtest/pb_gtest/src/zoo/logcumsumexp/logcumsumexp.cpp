@@ -21,8 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "logcumsumexp.h"
-#include <memory>
+
 #include <algorithm>
+#include <memory>
 
 namespace mluoptest {
 
@@ -42,8 +43,8 @@ void LogcumsumexpExecutor::compute() {
 }
 
 void LogcumsumexpExecutor::cpuCompute() {
-  assert(parser_->getInputNum() == 1);
-  assert(parser_->getOutputNum() == 1);
+  GTEST_CHECK(parser_->getInputNum() == 1);
+  GTEST_CHECK(parser_->getOutputNum() == 1);
   int32_t dim = parser_->getProtoNode()->logcumsumexp_param().dim();
   int32_t data_size = parser_->input(0)->total_count;
 

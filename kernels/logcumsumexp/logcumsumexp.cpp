@@ -35,12 +35,18 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     PARAM_CHECK(API, input != NULL);
     PARAM_CHECK(API, result_desc != NULL);
     PARAM_CHECK(API, result != NULL);
+    PARAM_CHECK(API, input_desc->dtype == MLUOP_DTYPE_FLOAT ||
+                input_desc->dtype == MLUOP_DTYPE_HALF);
+    PARAM_CHECK(API, result_desc->dtype == MLUOP_DTYPE_FLOAT ||
+                result_desc->dtype == MLUOP_DTYPE_HALF);
+    PARAM_CHECK(API, input_desc->dim == result_desc->dim);
     PARAM_CHECK(API, input_desc->layout == MLUOP_LAYOUT_ARRAY);
     PARAM_CHECK(API, result_desc->layout == MLUOP_LAYOUT_ARRAY);
 
-    if (dim < 0) {
+
+    if (dim < (-1) * input_desc->dim) {
         LOG(ERROR) << API
-                << " dim cannot be a negative number. But received dim=["
+                << " dim is invalid. Received dim=["
                 << dim << "]";
         return MLUOP_STATUS_BAD_PARAM;
     }
