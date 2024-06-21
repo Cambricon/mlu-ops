@@ -33,8 +33,6 @@
 #define CoreCapacity 327680
 #define DimOneDealLength 147456
 #define ClusterCapacity 1310720
-#define min(a, b) (a < b ? a : b)
-#define max(a, b) (a > b ? a : b)
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 __mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
@@ -182,7 +180,7 @@ dimOneKernel_unino8(const T *input,
     int32_t LastCoresLength = last_cluster_length >> 2;
     int32_t length_offset = last_cluster_length % 4;
     int32_t copy_offset = IdInCluster * LastCoresLength
-      + min(IdInCluster, length_offset);
+      + __mluop_min(IdInCluster, length_offset);
     if (IdInCluster < length_offset)LastCoresLength += 1;
     int32_t padding_length = (LastCoresLength + SEG_L - 1) / SEG_L * SEG_L;
 
@@ -379,7 +377,7 @@ rowsKernel(T *result, const T *source, int32_t deal_length,
   T *nram_out = nram_src0 + ((MAX_NRAM_SIZE/sizeof(T)) >> 1);
   int32_t part_length = deal_length / 4;
   int32_t length_offset = deal_length % 4;
-  int32_t copy_offset = taskId * part_length + min(taskId, length_offset);
+  int32_t copy_offset = taskId * part_length + __mluop_min(taskId, length_offset);
   if (taskId < length_offset)part_length += 1;
 
   T *thisNram = nram_src1;

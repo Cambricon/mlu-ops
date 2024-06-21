@@ -14367,11 +14367,11 @@ mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpLogcumsumexp(mluOpHandle_t handle,
+                  const int32_t dim,
                   const mluOpTensorDescriptor_t input_desc,
                   const void *input,
                   const mluOpTensorDescriptor_t result_desc,
-                  void *result,
-                  const int32_t dim);
+                  void *result);
 
 #if defined(__cplusplus)
 }
