@@ -64,6 +64,41 @@ __mlu_func__ void dimOneCumsum(T *src0_nram, T *src1_nram, int deal_length) {
   __bang_transpose(src0_nram, src1_nram, seg_num, SEG_L);
 }
 
+// To compute the offset between clusters
+template <typename T>
+__mlu_func__ void offsetCompute(T *nram_src0, bool offset_type,
+                                int32_t data_size, T *cluster_offsets) {
+    if (offset_type == 0) {
+        if (coreId == 3)
+        cluster_offsets[clusterId] = nram_src0[data_size - 1];
+        __sync_all();
+        if (taskId == 0) {
+        cluster_offsets[8] = cluster_offsets[7];
+        cluster_offsets[7] = cluster_offsets[6];
+        cluster_offsets[6] = cluster_offsets[5];
+        cluster_offsets[5] = cluster_offsets[4];
+        cluster_offsets[4] = cluster_offsets[3];
+        cluster_offsets[3] = cluster_offsets[2];
+        cluster_offsets[2] = cluster_offsets[1];
+        cluster_offsets[1] = cluster_offsets[0];
+        cluster_offsets[0] = cluster_offsets[9];
+        cluster_offsets[1] = cluster_offsets[0] + cluster_offsets[1];
+        cluster_offsets[2] = cluster_offsets[1] + cluster_offsets[2];
+        cluster_offsets[3] = cluster_offsets[2] + cluster_offsets[3];
+        cluster_offsets[4] = cluster_offsets[3] + cluster_offsets[4];
+        cluster_offsets[5] = cluster_offsets[4] + cluster_offsets[5];
+        cluster_offsets[6] = cluster_offsets[5] + cluster_offsets[6];
+        cluster_offsets[7] = cluster_offsets[6] + cluster_offsets[7];
+        cluster_offsets[9] = cluster_offsets[7] + cluster_offsets[8];
+        }
+        __sync_all();
+        __bang_add_scalar(nram_src0, nram_src0,
+                        cluster_offsets[clusterId], data_size);
+    }
+    if (offset_type == 1)__bang_add_scalar(nram_src0, nram_src0,
+                                            cum_offset, data_size);
+}
+
 // inclusive execution
 template <typename T>
 __mlu_func__ void inclusiveScan(T* nram_src,
@@ -98,35 +133,7 @@ __mlu_func__ void inclusiveScan(T* nram_src,
   // "offset_type 0" means calculate the offset with the array
   // that pointed by "cluster_offsets"
   // "offset_type 1" means calculate the offset with the scalar "cum_offset"
-  if (offset_type == 0) {
-    if (coreId == 3)
-      cluster_offsets[clusterId] = nram_src0[data_size - 1];
-    __sync_all();
-    if (taskId == 0) {
-      cluster_offsets[8] = cluster_offsets[7];
-      cluster_offsets[7] = cluster_offsets[6];
-      cluster_offsets[6] = cluster_offsets[5];
-      cluster_offsets[5] = cluster_offsets[4];
-      cluster_offsets[4] = cluster_offsets[3];
-      cluster_offsets[3] = cluster_offsets[2];
-      cluster_offsets[2] = cluster_offsets[1];
-      cluster_offsets[1] = cluster_offsets[0];
-      cluster_offsets[0] = cluster_offsets[9];
-      cluster_offsets[1] = cluster_offsets[0] + cluster_offsets[1];
-      cluster_offsets[2] = cluster_offsets[1] + cluster_offsets[2];
-      cluster_offsets[3] = cluster_offsets[2] + cluster_offsets[3];
-      cluster_offsets[4] = cluster_offsets[3] + cluster_offsets[4];
-      cluster_offsets[5] = cluster_offsets[4] + cluster_offsets[5];
-      cluster_offsets[6] = cluster_offsets[5] + cluster_offsets[6];
-      cluster_offsets[7] = cluster_offsets[6] + cluster_offsets[7];
-      cluster_offsets[9] = cluster_offsets[7] + cluster_offsets[8];
-    }
-    __sync_all();
-    __bang_add_scalar(nram_src0, nram_src0,
-                      cluster_offsets[clusterId], data_size);
-  }
-  if (offset_type == 1)__bang_add_scalar(nram_src0, nram_src0,
-                                         cum_offset, data_size);
+
   // log computing
   __mluop_log(nram_src0, nram_src0, nullptr, 0, data_size);
 }
