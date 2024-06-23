@@ -613,7 +613,6 @@ midDimKernel_unino8(const T *input,
   }
 }
 
-
 #if 0
 template <typename T>
 __mlu_global__ void
