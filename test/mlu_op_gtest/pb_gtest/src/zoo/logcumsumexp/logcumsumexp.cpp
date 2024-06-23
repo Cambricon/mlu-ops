@@ -25,6 +25,8 @@
 #include <algorithm>
 #include <memory>
 
+#define CUMSUM_SIZE 1000
+
 namespace mluoptest {
 
 void LogcumsumexpExecutor::compute() {
@@ -65,22 +67,23 @@ void LogcumsumexpExecutor::cpuCompute() {
   for (int b = 0; b < batches; b++) {
     float* x_ptr =  cpu_fp32_input_[0] + self_dim_size * self_dim_stride * b;
     float* y_ptr =  cpu_fp32_output_[0] + self_dim_size * self_dim_stride * b;
+    // To minimize distortion in floating-point calculations
     for (int i = 0; i < self_dim_stride; i++) {
-      int32_t segNum = (self_dim_size + 999) / 1000;
+      int32_t segNum = (self_dim_size + CUMSUM_SIZE - 1) / CUMSUM_SIZE;
       std::unique_ptr<float[]> cum_number = std::make_unique<float[]>(segNum);
       for (int j = 0; j < segNum; j++) {
         cum_number[j] = 0;
       }
       for (int j = 0; j < segNum; j++) {
         int32_t dealLength;
-        if (self_dim_size % 1000 == 0)
-          dealLength = 1000;
+        if (self_dim_size % CUMSUM_SIZE == 0)
+          dealLength = CUMSUM_SIZE;
         else if (j < segNum - 1)
-          dealLength = 1000;
+          dealLength = CUMSUM_SIZE;
         else
-          dealLength = self_dim_size % 1000;
-        cum_number[j] = x_ptr[j * 1000 * self_dim_stride];
-        y_ptr[j * 1000 * self_dim_stride] = cum_number[j];
+          dealLength = self_dim_size % CUMSUM_SIZE;
+        cum_number[j] = x_ptr[j * CUMSUM_SIZE * self_dim_stride];
+        y_ptr[j * CUMSUM_SIZE * self_dim_stride] = cum_number[j];
 
         // cumsum in every seg
         for (int k = 1; k < dealLength; k++) {
@@ -94,8 +97,8 @@ void LogcumsumexpExecutor::cpuCompute() {
             }
           };
         cum_number[j]
-          = add_exe(x_ptr[(j * 1000 + k) * self_dim_stride], cum_number[j]);
-        y_ptr[(j * 1000 + k) * self_dim_stride] = cum_number[j];
+          = add_exe(x_ptr[(j * CUMSUM_SIZE + k) * self_dim_stride], cum_number[j]);
+        y_ptr[(j * CUMSUM_SIZE + k) * self_dim_stride] = cum_number[j];
         }
       }
       // computing the offsets
@@ -105,14 +108,14 @@ void LogcumsumexpExecutor::cpuCompute() {
       // offsets to result
       for (int j = 1; j < segNum; j++) {
         int32_t dealLength;
-        if (self_dim_size % 1000 == 0)
-          dealLength = 1000;
+        if (self_dim_size % CUMSUM_SIZE == 0)
+          dealLength = CUMSUM_SIZE;
         else if (j < segNum - 1)
-          dealLength = 1000;
+          dealLength = CUMSUM_SIZE;
         else
-          dealLength = self_dim_size % 1000;
+          dealLength = self_dim_size % CUMSUM_SIZE;
         for (int k = 0; k < dealLength; k++) {
-          y_ptr[(j * 1000 + k) * self_dim_stride] += cum_number[j - 1];
+          y_ptr[(j * CUMSUM_SIZE + k) * self_dim_stride] += cum_number[j - 1];
         }
       }
       x_ptr += 1;

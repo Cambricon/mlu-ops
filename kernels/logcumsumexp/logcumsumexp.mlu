@@ -27,6 +27,10 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 #include "kernels/log/log.h"
+#include "kernels/logcumsumexp/compute_kernels/dim_one.h"
+#include "kernels/logcumsumexp/compute_kernels/highest_dim.h"
+#include "kernels/logcumsumexp/compute_kernels/lowest_dim.h"
+#include "kernels/logcumsumexp/compute_kernels/mid_dim.h"
 
 #define SEG_L 128
 #define CoreCapacity 327680
@@ -647,7 +651,6 @@ KernelLogcumsumexp(const cnrtDim3_t k_dim,
   }
   return MLUOP_STATUS_SUCCESS;
 }
-
 #endif
 
 mluOpStatus_t MLUOP_WIN_API
@@ -658,7 +661,14 @@ LogcumsumexpDimOne(const cnrtDim3_t k_dim,
                    const void *input,
                    void *result,
                    const int32_t axis_size) {
-
+  if (data_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
+    // float32
+    KERNEL_CHECK();
+  } else {
+    // half
+    KERNEL_CHECK();
+  }
+  return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API
@@ -670,7 +680,14 @@ LogcumsumexpHighestDim(const cnrtDim3_t k_dim,
                    void *result,
                    const int32_t axis_size,
                    const int32_t lower_size) {
-
+  if (data_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
+    // float32
+    KERNEL_CHECK();
+  } else {
+    // half
+    KERNEL_CHECK();
+  }
+  return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API
@@ -682,7 +699,14 @@ LogcumsumexpLowestDim(const cnrtDim3_t k_dim,
                    void *result,
                    const int32_t axis_size,
                    const int32_t higher_size) {
-
+  if (data_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
+    // float32
+    KERNEL_CHECK();
+  } else {
+    // half
+    KERNEL_CHECK();
+  }
+  return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API
@@ -695,5 +719,12 @@ LogcumsumexpMidDim(const cnrtDim3_t k_dim,
                    const int32_t axis_size,
                    const int32_t higher_size,
                    const int32_t lower_size) {
-
+  if (data_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
+    // float32
+    KERNEL_CHECK();
+  } else {
+    // half
+    KERNEL_CHECK();
+  }
+  return MLUOP_STATUS_SUCCESS;
 }
