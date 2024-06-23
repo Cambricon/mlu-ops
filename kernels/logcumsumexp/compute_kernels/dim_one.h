@@ -72,19 +72,18 @@ __mlu_func__ void inclusiveScan(T* nram_src,
                                 T* cluster_offsets,
                                 T cum_offset) {
   // parameter preparing
-  int32_t IdInCluster = taskId % 4;
+  int32_t coreId = taskId % 4;
   __mlu_shared__ T core_offsets[4];
   T *nram_src0 = nram_src;
   T *nram_src1 = nram_src0 + DimOneDealLength / sizeof(T);
 
   __mluop_exp(nram_src0, nram_src0, nullptr, 0, data_size);
   dimOneCumsum(nram_src0, nram_src1, data_size);
-  core_offsets[IdInCluster] = nram_src0[data_size-1];
+  core_offsets[coreId] = nram_src0[data_size-1];
   __sync_cluster();
 
-
   // offset between coresx
-  if (IdInCluster == 0) {
+  if (coreId == 0) {
     core_offsets[1] = core_offsets[0] + core_offsets[1];
     core_offsets[3] = core_offsets[1] + core_offsets[2];
     core_offsets[2] = core_offsets[1];
@@ -93,14 +92,14 @@ __mlu_func__ void inclusiveScan(T* nram_src,
   }
   __sync_cluster();
   __bang_add_scalar(nram_src0, nram_src0,
-                    core_offsets[IdInCluster], data_size);
+                    core_offsets[coreId], data_size);
 
   // offset between clusters
   // "offset_type 0" means calculate the offset with the array
   // that pointed by "cluster_offsets"
   // "offset_type 1" means calculate the offset with the scalar "cum_offset"
   if (offset_type == 0) {
-    if (IdInCluster == 3)
+    if (coreId == 3)
       cluster_offsets[clusterId] = nram_src0[data_size - 1];
     __sync_all();
     if (taskId == 0) {
@@ -141,114 +140,113 @@ dimOneKernel_unino8(const T *input,
     // parameters preparing
     int32_t n_core = DimOneDealLength / sizeof(T);
     int32_t n_cluster = n_core * 4;
-    int32_t n_round = n_cluster * 8;
+    int32_t n_round = n_cluster * clusterDim;
     int32_t rounds = (data_size + n_round - 1) / n_round;
     int32_t last_round_length = data_size - (rounds - 1) * n_round;
 
     T *cluster_offsets = result + data_size - 10;
     cluster_offsets[9] = 0;
-    // [0],[1],[2]...[7] are 8 offsets for 8 clusters;
+    // [0],[1],[2]...[7] are clusterDim offsets for clusterDim clusters;
     // the [9] records and saves the cumulative offset for next round;
-    // the [8] is to support the offset calculate;
+    // the [clusterDim] is to support the offset calculate;
     T basenum = 0;
     int32_t round = 0;
     T *sram_src0 = (T *)sram_buffer;
     T *sram_src1 = (T *)(sram_buffer + ClusterCapacity);
     T *nram_src0 = (T *)nram_buffer;
     T *nram_src1 = nram_src0 + ((MAX_NRAM_SIZE/sizeof(T)) >> 1);
-    int32_t totalId = clusterId;
-    int32_t IdInCluster = taskId % 4;
+    int32_t totalId = clusterId; // clusters' Id in entire process
     int32_t last_round_clusters
       = (last_round_length + n_cluster - 1) / n_cluster;
     int32_t last_cluster_length
       = last_round_length - (last_round_clusters - 1) * n_cluster;
-    int32_t LastCoresLength = last_cluster_length >> 2;
+    int32_t n_last_core = last_cluster_length >> 2;
     int32_t length_offset = last_cluster_length % 4;
-    int32_t copy_offset = IdInCluster * LastCoresLength
-      + __mluop_min(IdInCluster, length_offset);
-    if (IdInCluster < length_offset)LastCoresLength += 1;
-    int32_t padding_length = (LastCoresLength + SEG_L - 1) / SEG_L * SEG_L;
+    int32_t copy_offset = coreId * n_last_core
+      + __mluop_min(coreId, length_offset);
+    if (coreId < length_offset)n_last_core += 1;
+    int32_t padding_length = (n_last_core + SEG_L - 1) / SEG_L * SEG_L;
 
     // first memory copy GDRAM2SRAM
     if (rounds > 1)__memcpy(nram_src0,
-      input + totalId * n_cluster + IdInCluster * n_core,
+      input + totalId * n_cluster + coreId * n_core,
       n_core * sizeof(T), GDRAM2NRAM);
 
-    T *thisSram = sram_src0;
-    T *nextSram = sram_src1;
-    T *thisNram = nram_src0;
-    T *nextNram = nram_src1;
+    T *this_sram = sram_src0;
+    T *next_sram = sram_src1;
+    T *this_nram = nram_src0;
+    T *next_nram = nram_src1;
 
     // pipeline execute
     while (round < rounds - 1) {
-      totalId = round * 8 + clusterId;
-      thisSram = (round % 2 == 0) ? sram_src0 : sram_src1;
-      nextSram = (round % 2 == 0) ? sram_src1 : sram_src0;
-      thisNram = (round % 2 == 0) ? nram_src0 : nram_src1;
-      nextNram = (round % 2 == 0) ? nram_src1 : nram_src0;
+      totalId = round * clusterDim + clusterId;
+      this_sram = (round % 2 == 0) ? sram_src0 : sram_src1;
+      next_sram = (round % 2 == 0) ? sram_src1 : sram_src0;
+      this_nram = (round % 2 == 0) ? nram_src0 : nram_src1;
+      next_nram = (round % 2 == 0) ? nram_src1 : nram_src0;
       // data copy for next round
       if (round < rounds - 2) {
-        __memcpy_async(nextNram,
-          input + (totalId + 8) * n_cluster + n_core * IdInCluster,
+        __memcpy_async(next_nram,
+          input + (totalId + clusterDim) * n_cluster + n_core * coreId,
           n_core * sizeof(T), GDRAM2NRAM);
       } else {
         if (clusterId < last_round_clusters - 1) {
-          __memcpy_async(nextNram,
-            input + (totalId + 8) * n_cluster + IdInCluster * n_core,
+          __memcpy_async(next_nram,
+            input + (totalId + clusterDim) * n_cluster + coreId * n_core,
             n_core * sizeof(T), GDRAM2NRAM);
         } else if (clusterId == last_round_clusters - 1) {
-          __bang_write_zero(nextNram, padding_length);
-          __memcpy_async(nextNram,
-            input + (totalId + 8) * n_cluster + copy_offset,
-            LastCoresLength * sizeof(T), GDRAM2NRAM);
+          __bang_write_zero(next_nram, padding_length);
+          __memcpy_async(next_nram,
+            input + (totalId + clusterDim) * n_cluster + copy_offset,
+            n_last_core * sizeof(T), GDRAM2NRAM);
         }
       }
       // compute
-      inclusiveScan(thisNram, n_core, 0, cluster_offsets, basenum);
-      __memcpy(thisSram + n_core * IdInCluster, thisNram,
+      inclusiveScan(this_nram, n_core, 0, cluster_offsets, basenum);
+      __memcpy(this_sram + n_core * coreId, this_nram,
                n_core * sizeof(T), NRAM2SRAM);
       __sync_cluster();
-      __memcpy_async(result + totalId * n_cluster + n_core * IdInCluster,
-                     thisSram + n_core * IdInCluster,
+      __memcpy_async(result + totalId * n_cluster + n_core * coreId,
+                     this_sram + n_core * coreId,
                      n_cluster * sizeof(T), SRAM2GDRAM);
       round++;
     }
 
-    thisSram = nextSram;
-    thisNram = nextNram;
-    totalId = round * 8 + clusterId;
+    this_sram = next_sram;
+    this_nram = next_nram;
+    totalId = round * clusterDim + clusterId;
     // the last round
 
     if (last_round_clusters == 1) {
       if (clusterId == 0) {
         if (rounds == 1) {
-          __bang_write_zero(thisNram, padding_length);
-          __memcpy(thisNram, input + totalId * n_cluster + copy_offset,
-                   LastCoresLength * sizeof(T), GDRAM2NRAM);
+          __bang_write_zero(this_nram, padding_length);
+          __memcpy(this_nram, input + totalId * n_cluster + copy_offset,
+                   n_last_core * sizeof(T), GDRAM2NRAM);
         }
-        inclusiveScan(thisNram, LastCoresLength, 1,
+        inclusiveScan(this_nram, n_last_core, 1,
                       result, cluster_offsets[9]);
-        __memcpy(result + totalId * n_cluster + copy_offset, thisNram,
-                 LastCoresLength * sizeof(T), NRAM2GDRAM);
+        __memcpy(result + totalId * n_cluster + copy_offset, this_nram,
+                 n_last_core * sizeof(T), NRAM2GDRAM);
       }
     } else {
       if (clusterId < last_round_clusters - 1) {
-        if (rounds == 1)__memcpy(thisNram,
-          input + totalId * n_cluster + IdInCluster * n_core,
+        if (rounds == 1)__memcpy(this_nram,
+          input + totalId * n_cluster + coreId * n_core,
           n_core * sizeof(T), GDRAM2NRAM);
-        inclusiveScan(thisNram, n_core, 0, cluster_offsets, basenum);
-        __memcpy(result + totalId * n_cluster + IdInCluster * n_core,
-                 thisNram, n_core * sizeof(T), NRAM2GDRAM);
+        inclusiveScan(this_nram, n_core, 0, cluster_offsets, basenum);
+        __memcpy(result + totalId * n_cluster + coreId * n_core,
+                 this_nram, n_core * sizeof(T), NRAM2GDRAM);
       } else if (clusterId == last_round_clusters - 1) {
         if (rounds == 1) {
-          __bang_write_zero(thisNram, padding_length);
-          __memcpy(thisNram, input + totalId * n_cluster + copy_offset,
-                   LastCoresLength * sizeof(T), GDRAM2NRAM);
+          __bang_write_zero(this_nram, padding_length);
+          __memcpy(this_nram, input + totalId * n_cluster + copy_offset,
+                   n_last_core * sizeof(T), GDRAM2NRAM);
         }
-        inclusiveScan(thisNram, LastCoresLength, 0,
+        inclusiveScan(this_nram, n_last_core, 0,
                       cluster_offsets, basenum);
-        __memcpy(result + totalId * n_cluster + copy_offset, thisNram,
-                 LastCoresLength * sizeof(T), NRAM2GDRAM);
+        __memcpy(result + totalId * n_cluster + copy_offset, this_nram,
+                 n_last_core * sizeof(T), NRAM2GDRAM);
       } else {
         __sync_all();
         __sync_all();

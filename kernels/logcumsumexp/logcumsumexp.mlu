@@ -33,9 +33,9 @@
 #include "kernels/logcumsumexp/compute_kernels/mid_dim.h"
 
 #define SEG_L 128
-#define CoreCapacity 327680
-#define DimOneDealLength 147456 // memory length of one NRAM in dim-one
-#define ClusterCapacity 1310720
+#define CoreCapacity 327680  // memory length of input per core
+#define ClusterCapacity 1310720 // memory length of input per cluster
+#define DimOneDealLength 147456 // size of one NRAM in dim-one
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 __mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
