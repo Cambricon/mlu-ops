@@ -65,38 +65,71 @@ __mlu_func__ void dimOneCumsum(T *src0_nram, T *src1_nram, int deal_length) {
 }
 
 // To compute the offset between clusters
+// "offset_type 0" means calculate the offset with the array
+// that pointed by "cluster_offsets"
+// "offset_type 1" means calculate the offset with the scalar "cum_offset"
 template <typename T>
-__mlu_func__ void offsetCompute(T *nram_src0, bool offset_type,
-                                int32_t data_size, T *cluster_offsets) {
+__mlu_func__ void offsetCompute(T *nram_src0, T *cluster_offsets,
+                                T *cum_offset, int32_t data_size,
+                                bool offset_type) {
     if (offset_type == 0) {
-        if (coreId == 3)
-        cluster_offsets[clusterId] = nram_src0[data_size - 1];
-        __sync_all();
-        if (taskId == 0) {
-        cluster_offsets[8] = cluster_offsets[7];
-        cluster_offsets[7] = cluster_offsets[6];
-        cluster_offsets[6] = cluster_offsets[5];
-        cluster_offsets[5] = cluster_offsets[4];
-        cluster_offsets[4] = cluster_offsets[3];
-        cluster_offsets[3] = cluster_offsets[2];
-        cluster_offsets[2] = cluster_offsets[1];
-        cluster_offsets[1] = cluster_offsets[0];
-        cluster_offsets[0] = cluster_offsets[9];
-        cluster_offsets[1] = cluster_offsets[0] + cluster_offsets[1];
-        cluster_offsets[2] = cluster_offsets[1] + cluster_offsets[2];
-        cluster_offsets[3] = cluster_offsets[2] + cluster_offsets[3];
-        cluster_offsets[4] = cluster_offsets[3] + cluster_offsets[4];
-        cluster_offsets[5] = cluster_offsets[4] + cluster_offsets[5];
-        cluster_offsets[6] = cluster_offsets[5] + cluster_offsets[6];
-        cluster_offsets[7] = cluster_offsets[6] + cluster_offsets[7];
-        cluster_offsets[9] = cluster_offsets[7] + cluster_offsets[8];
+        if (coreId == 3) {
+            cluster_offsets[clusterId] = nram_src0[data_size - 1]; 
         }
         __sync_all();
-        __bang_add_scalar(nram_src0, nram_src0,
-                        cluster_offsets[clusterId], data_size);
+        if (taskId == 0) {
+            if (clusterDim == 8) {
+                // [0],[1],[2]...[7] are clusterDim offsets for clusterDim clusters;
+                // the [9] records and saves the cumulative offset for next round;
+                // the [8] is to support the offset calculate;
+                cluster_offsets[8] = cluster_offsets[7];
+                cluster_offsets[7] = cluster_offsets[6];
+                cluster_offsets[6] = cluster_offsets[5];
+                cluster_offsets[5] = cluster_offsets[4];
+                cluster_offsets[4] = cluster_offsets[3];
+                cluster_offsets[3] = cluster_offsets[2];
+                cluster_offsets[2] = cluster_offsets[1];
+                cluster_offsets[1] = cluster_offsets[0];
+                cluster_offsets[0] = cluster_offsets[9];
+                cluster_offsets[1] = cluster_offsets[0] + cluster_offsets[1];
+                cluster_offsets[2] = cluster_offsets[1] + cluster_offsets[2];
+                cluster_offsets[3] = cluster_offsets[2] + cluster_offsets[3];
+                cluster_offsets[4] = cluster_offsets[3] + cluster_offsets[4];
+                cluster_offsets[5] = cluster_offsets[4] + cluster_offsets[5];
+                cluster_offsets[6] = cluster_offsets[5] + cluster_offsets[6];
+                cluster_offsets[7] = cluster_offsets[6] + cluster_offsets[7];
+                cluster_offsets[9] = cluster_offsets[7] + cluster_offsets[8];
+                __sync_all();
+                __bang_add_scalar(nram_src0, nram_src0,
+                                  cluster_offsets[clusterId], data_size);
+            } else if (clusterDim == 4) {
+                cluster_offsets[4] = cluster_offsets[3];
+                cluster_offsets[3] = cluster_offsets[2];
+                cluster_offsets[2] = cluster_offsets[1];
+                cluster_offsets[1] = cluster_offsets[0];
+                cluster_offsets[0] = cluster_offsets[5];
+                cluster_offsets[1] = cluster_offsets[0] + cluster_offsets[1];
+                cluster_offsets[2] = cluster_offsets[1] + cluster_offsets[2];
+                cluster_offsets[3] = cluster_offsets[2] + cluster_offsets[3];
+                cluster_offsets[5] = cluster_offsets[3] + cluster_offsets[4];
+                __sync_all();
+                __bang_add_scalar(nram_src0, nram_src0,
+                                  cluster_offsets[clusterId], data_size);
+            } else if (clusterDim == 2) {
+                cluster_offsets[2] = cluster_offsets[1];
+                cluster_offsets[1] = cluster_offsets[0];
+                cluster_offsets[0] = cluster_offsets[3];
+                cluster_offsets[1] = cluster_offsets[0] + cluster_offsets[1];
+                cluster_offsets[3] = cluster_offsets[1] + cluster_offsets[2];
+                __sync_all();
+                __bang_add_scalar(nram_src0, nram_src0,
+                                  cluster_offsets[clusterId], data_size);
+            } else {
+                return;
+            }
+    } else {
+        __bang_add_scalar(nram_src0, nram_src0, cum_offset, data_size);
     }
-    if (offset_type == 1)__bang_add_scalar(nram_src0, nram_src0,
-                                            cum_offset, data_size);
 }
 
 // inclusive execution
@@ -130,9 +163,8 @@ __mlu_func__ void inclusiveScan(T* nram_src,
                     core_offsets[coreId], data_size);
 
   // offset between clusters
-  // "offset_type 0" means calculate the offset with the array
-  // that pointed by "cluster_offsets"
-  // "offset_type 1" means calculate the offset with the scalar "cum_offset"
+  offsetCompute(nram_src0, cluster_offsets, cum_offset,
+                data_size, offset_type);
 
   // log computing
   __mluop_log(nram_src0, nram_src0, nullptr, 0, data_size);
@@ -153,9 +185,7 @@ dimOneKernel_unino8(const T *input,
 
     T *cluster_offsets = result + data_size - 10;
     cluster_offsets[9] = 0;
-    // [0],[1],[2]...[7] are clusterDim offsets for clusterDim clusters;
-    // the [9] records and saves the cumulative offset for next round;
-    // the [clusterDim] is to support the offset calculate;
+
     T basenum = 0;
     int32_t round = 0;
     T *sram_src0 = (T *)sram_buffer;

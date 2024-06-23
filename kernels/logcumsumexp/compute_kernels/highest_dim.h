@@ -21,3 +21,99 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *******************************************************************************/
 #pragma once
+
+// LCSE execution for small part
+template <typename T>
+__mlu_func__ void smallPartLCSE(T *result,
+                                const T *source,
+                                int32_t data_size,
+                                int32_t axis_size,
+                                int32_t parts) {
+    T *nram_src0 = (T *)nram_buffer;
+    T *nram_src1 = nram_src0 + ((MAX_NRAM_SIZE/sizeof(T)) >> 1);
+    int32_t part_width = axis_size;
+    int32_t part_height = SEG_L / sizeof(T);
+    int32_t part_size = part_width * part_height;
+
+    __memcpy(nram_src0, source, data_size * sizeof(T), GDRAM2NRAM);
+    __mluop_exp(nram_src0, nram_src0, nullptr, 0, data_size);
+    for (int i = 0; i < parts; i++) {
+        __bang_transpose(nram_src1 + part_size * i,
+                         nram_src0 + part_size * i,
+                         part_height, part_width);
+    }
+    for (int i = 0; i < parts; i++) {
+        for (int j = 1; j < part_width; j++) {
+            __bang_add(nram_src1 + part_size * i + part_height * j,
+                       nram_src1 + part_size * i + part_height * j,
+                       nram_src1 + part_size * i + part_height * (j - 1),
+                       part_height);
+        }
+    }
+    for (int i = 0; i < parts; i++) {
+        __bang_transpose(nram_src0 + part_size * i,
+                         nram_src1 + part_size * i,
+                         part_width, part_height);
+    }
+    __mluop_log(nram_src0, nram_src0, nullptr, 0, data_size);
+    __memcpy(result, nram_src0, data_size * sizeof(T), NRAM2GDRAM);
+}
+
+// highest dimension executing kernel====================================
+template <typename T>
+__mlu_func__ void
+highestDimKernel_unino8(const T *input,
+                        T *result,
+                        int32_t axis_size,
+                        int32_t lower_size) {
+    // if nram_size > part_size,
+    // there will be several parts on one nram every round;
+    // if nram_size < part_size, call dimOneKernel for batches.
+    int32_t data_size = axis_size * lower_size;
+    int32_t nram_size = CoreCapacity / sizeof(T);
+    int32_t nram_height = SEG_L / sizeof(T);
+    int32_t nram_width = nram_size / nram_height;
+    int32_t part_height = nram_height;
+    int32_t part_width = axis_size;
+    int32_t parts_per_core = nram_width / part_width;
+
+    if (parts_per_core == 0) {
+      for (int batch = 0; batch < lower_size; batch++)
+        dimOneKernel_unino8(input + axis_size * batch,
+                            result + axis_size * batch,
+                            axis_size);
+    } else {
+      int32_t deal_size = parts_per_core * part_width * part_height;
+      int32_t round_size = deal_size * taskDim;
+      int32_t round = 0;
+      int32_t deal_rounds = (data_size + round_size - 1) / round_size;
+      while (round < deal_rounds - 1) {
+          smallPartLCSE(result + round * round_size + taskId * deal_size,
+                        input + round * round_size + taskId * deal_size,
+                        deal_size, axis_size, parts_per_core);
+          round++;
+      }
+      // last round
+      int32_t last_round_size = data_size - round_size * (deal_rounds - 1);
+      int32_t last_round_height = last_round_size / part_width;
+      int32_t last_round_parts
+        = (last_round_height + part_height - 1) / part_height;
+      int32_t lastRoundCores
+        = (last_round_parts + parts_per_core - 1)/ parts_per_core;
+      int32_t last_core_size
+        = data_size - (deal_rounds - 1) * round_size
+        - (lastRoundCores - 1) * deal_size;
+
+      if (taskId < lastRoundCores - 1) {
+        smallPartLCSE(result + round * round_size + taskId * deal_size,
+                      input + round * round_size + taskId * deal_size,
+                      deal_size, axis_size, parts_per_core);
+      } else if (taskId == lastRoundCores - 1) {
+          T *nram_src = (T *)nram_buffer;
+          __bang_write_zero(nram_src, deal_size);
+          smallPartLCSE(result + round * round_size + taskId * deal_size,
+                        input + round * round_size + taskId * deal_size,
+                        last_core_size, axis_size, parts_per_core);
+      }
+    }
+}
