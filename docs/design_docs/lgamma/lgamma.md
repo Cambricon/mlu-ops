@@ -12,6 +12,7 @@
 | 版本号| 修订人 | 修订日期 | 修订描述 |
 | ----- | ------ | -------  | -------  |
 | V1.0  | 代韵涛    | 2024-04-25   | 首次提交 |
+| V2.0  | 代韵涛    | 2024-06-24   | 修改设计方案 |
 
 - #### 内容描述
 
@@ -159,7 +160,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
   }
 
 ```
-- step4 每个数据使用 [兰克泽斯逼进(Lanczos approximation)法](https://en.wikipedia.org/wiki/Lanczos_approximation) 进行计算，其本质上一种数值逼近算法，在下一节中将给出伪代码，该算法实现参考 [MindSpore 实现](https://github.com/mindspore-ai/mindspore/blob/master/mindspore/ccsrc/plugin/device/ascend/kernel/aicpu/aicpu_ops/cpu_kernel/utils/igamma_utils.h#L58)，并在本算子中实现了 simd 版本
+- step4 使用数值逼近算法进行计算：关于 Gamma 函数的数值逼近算法有 
+
+  (1) [Lanczos approximation](https://en.wikipedia.org/wiki/Lanczos_approximation): $\Gamma \left(z + 1\right) = \sqrt{2\pi }\left(z + a + 0.5\right)^{z + 0.5}e^{ - \left(z + a + 0.5\right)}\left(c_{0} + \sum \limits_{k = 1}^{N}\frac{c_{k}}{z + k} + \varepsilon _{a}\left(z\right)\right) $
+
+  (2) [Spouge's approximation](https://en.wikipedia.org/wiki/Spouge%27s_approximation): $ \Gamma \left(z + 1\right)  = (z + a)^{z + 0.5}e^{ - z - a}\left(c_{0} + \sum \limits_{k = 1}^{a - 1}\frac{c_{k}}{z + k} + \varepsilon _{a}\left(z\right)\right) $
+
+  其中整数 a 的取值决定了 $c_{i}$ 的值，具体计算参考链接网页；且要求 $z > 0$
+
+  计算 Lgamma 函数则是在 Gamma 函数数值逼近算法上取 Log 后，先进行公式上的化简再计算值。同时考虑到以上 Gamma 函数的逼近算法只对输入大于 0 的情况有效，需要通过 [Euler's reflection formula](https://en.wikipedia.org/wiki/Reflection_formula) 计算 $z <= 0$ 的情况：
+  
+  $ \Gamma(1-z) \Gamma(z) = \frac{\pi}{sin(\pi z)}$ => $ \Gamma(z) = \frac{\pi}{sin(\pi z) \Gamma(1-z) }$
+
+  以 xx approximation 为例，最终计算方法为 FIXME -- 根据最终方案选取例子进行阐述
+
 
 - step5 将计算完成后的数据从 NRAM 拷贝回 GDRAM 
 ```C++
@@ -174,94 +188,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
   }
 ```
 
-
-### 3.2 伪代码实现
-
-以下是兰克泽斯逼进算法实现的 C++ 版本，本算子根据 BANG C 提供的 api 将其翻译为了 simd 版本
-```C++
-T Lgamma(const T &input) {
-  T log_pi = std::log(M_PI);
-  T log_sqrt_two_pi = (std::log(2) + std::log(M_PI)) / 2;
-
-  /** If the input is less than 0.5 use Euler's reflection formula:
-   * gamma(x) = pi / (sin(pi * x) * gamma(1 - x))
-   */
-  bool need_to_reflect = (input < 0.5);
-  T input_after_reflect = need_to_reflect ? -input : input - 1;  // aka z
-
-  T sum = kBaseLanczosCoeff;  // aka x
-  for (int i = 0, end = kLanczosCoefficients.size(); i < end; ++i) {
-    T lanczos_coefficient = kLanczosCoefficients[i];
-
-    sum += lanczos_coefficient / (input_after_reflect + i + 1);
-  }
-
-  /** To improve accuracy on platforms with less-precise log implementations,
-   * compute log(lanczos_gamma_plus_one_half) at compile time and use log1p on
-   * the device.
-   * log(t) = log(kLanczosGamma + 0.5 + z)
-   *        = log(kLanczosGamma + 0.5) + log1p(z / (kLanczosGamma + 0.5))
-   * */
-  T gamma_plus_onehalf_plus_z = kLanczosGamma + 0.5 + input_after_reflect;  // aka t
-
-  T log_t = log_lanczos_gamma_plus_one_half + std::log1pf(input_after_reflect / (kLanczosGamma + 0.5));
-
-  /** Compute the final result (modulo reflection).  t(z) may be large, and we
-   * need to be careful not to overflow to infinity in the first term of
-   *   (z + 1/2) * log(t(z)) - t(z).
-   * Therefore we compute this as
-   *   (z + 1/2 - t(z) / log(t(z))) * log(t(z)).
-   */
-  T log_y = log_sqrt_two_pi + (input_after_reflect + 0.5 - gamma_plus_onehalf_plus_z / log_t) * log_t + std::log(sum);
-
-  /** Compute the reflected value, used when x < 0.5:
-   *
-   *   lgamma(x) = log(pi) - lgamma(1-x) - log(abs(sin(pi * x))).
-   *
-   * (The abs is because lgamma is the log of the absolute value of the gamma
-   * function.)
-   *
-   * We have to be careful when computing the final term above. gamma(x) goes
-   * to +/-inf at every integer x < 0, and this is controlled by the
-   * sin(pi * x) term.  The slope is large, so precision is particularly
-   * important.
-   *
-   * Because abs(sin(pi * x)) has period 1, we can equivalently use
-   * abs(sin(pi * frac(x))), where frac(x) is the fractional part of x.  This
-   * is more numerically accurate: It doesn't overflow to inf like pi * x can,
-   * and if x is an integer, it evaluates to 0 exactly, which is significant
-   * because we then take the log of this value, and log(0) is inf.
-   *
-   * We don't have a frac(x) primitive in XLA and computing it is tricky, but
-   * because abs(sin(pi * x)) = abs(sin(pi * abs(x))), it's good enough for
-   * our purposes to use abs(frac(x)) = abs(x) - floor(abs(x)).
-   *
-   * Furthermore, pi * abs(frac(x)) loses precision when abs(frac(x)) is close
-   * to 1.  To remedy this, we can use the fact that sin(pi * x) in the domain
-   * [0, 1] is symmetric across the line Y=0.5.
-   */
-  T abs_input = std::abs(input);
-  T abs_frac_input = abs_input - std::floor(abs_input);
-
-  /* Convert values of abs_frac_input > 0.5 to (1 - frac_input) to improve
-   * precision of pi * abs_frac_input for values of abs_frac_input close to 1.
-   */
-  T reduced_frac_input = (abs_frac_input > 0.5) ? 1 - abs_frac_input : abs_frac_input;
-  T reflection_denom = std::log(std::sin(M_PI * reduced_frac_input));
-
-  /* Avoid computing -inf - inf, which is nan.  If reflection_denom is +/-inf,
-   * then it "wins" and the result is +/-inf.
-   */
-  T reflection = std::isfinite(reflection_denom) ? log_pi - reflection_denom - log_y : -reflection_denom;
-
-  T result = need_to_reflect ? reflection : log_y;
-
-  return std::isinf(input) ? std::numeric_limits<T>::infinity() : result;
-}
-
-```
-
-### 3.3 拆分(任务拆分，多核拆分)
+### 3.2 拆分(任务拆分，多核拆分)
 
 1、基本任务类型是Block
 
@@ -282,20 +209,10 @@ T Lgamma(const T &input) {
 
 2、NRAM 分配策略
 
-本算子是 element-wise 算子，加速比与执行 simd 运算的元素数量成正相关，simd 一次可以计算的元素数量受到 NRAM 大小的限制
-
-在算子计算过程中，有非常的多的中间变量，设 simd 一次计算的元素数量为 num_deal, 每个中间变量都需要长为 num_deal 的 buffer 进行存储, 由于 NRAM 空间有限，中间变量 buffer 的长度 num_deal 和 buffer 数量 n_buffer 关系如下
-
-nram_size = num_deal * n_buffer
-
-用于存储中间变量的 buffer 数与 simd 一次可以计算的元素数量成反比。想要一次能够计算更多的数据，就要使用尽可能少的 buffer,对存储中间变量的 buffer 进行复用，复用后至少需要 5 个 buffer 同时存储中间变量。所以，每个 task 在计算过程中除预留 5 KB 作为栈预留空间外，所有的 NRAM 资源全部平均分配给 5 个中间变量 buffer
-
-```
+FIXEM -- 补充 nram buffer 分配说明 
 
 2、流水设计
-本算子是 element-wise 算子，同时计算每一个元素的步骤较复杂，所以瓶颈主要在于计算侧，数据存取的时间在整个运算时间中占比不大；同时，软件流水需要使用 NRAM 空间，在本算子对 NRAM 需求较大，由于可以使用的 NRAM 空间有限，使用软件流水将导致一次 simd 计算中可以处理的元素数量减少，所以未采用软件流水
-
-
+本算子采用三级软件流水 FIXME -- 补充流水 buffer 使用
 
 
 ### 3.5 可维护性设计
@@ -322,7 +239,7 @@ nram_size = num_deal * n_buffer
 
 - 边界case：
   - case0: 负整数产生 inf 值 - pass
-  - case1: 输入 nan\inf，正确产生输出 - not test 
+  - case1: 输入 nan\inf，正确产生输出 - pass 
   - case2: 输入空向量，正确产生输出 - not test 
 
   
