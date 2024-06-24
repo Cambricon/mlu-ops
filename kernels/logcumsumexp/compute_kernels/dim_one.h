@@ -176,9 +176,9 @@ __mlu_func__ void inclusiveScan(T* nram_src,
 // one dimension executing kernel==========================================
 template <typename T>
 __mlu_global__ void
-dimOneKernel_unino8(const T *input,
-                    T *result,
-                    int32_t data_size) {
+dimOneKernel(const T *input,
+             T *output,
+             int32_t data_size) {
     // parameters preparing
     int32_t n_core = DimOneDealLength / sizeof(T);
     int32_t n_cluster = n_core * 4;
@@ -186,7 +186,7 @@ dimOneKernel_unino8(const T *input,
     int32_t rounds = (data_size + n_round - 1) / n_round;
     int32_t last_round_length = data_size - (rounds - 1) * n_round;
 
-    T *cluster_offsets = result + data_size - 10;
+    T *cluster_offsets = output + data_size - 10;
     cluster_offsets[9] = 0;
 
     T basenum = 0;
@@ -246,7 +246,7 @@ dimOneKernel_unino8(const T *input,
       __memcpy(this_sram + n_core * coreId, this_nram,
                n_core * sizeof(T), NRAM2SRAM);
       __sync_cluster();
-      __memcpy_async(result + totalId * n_cluster + n_core * coreId,
+      __memcpy_async(output + totalId * n_cluster + n_core * coreId,
                      this_sram + n_core * coreId,
                      n_cluster * sizeof(T), SRAM2GDRAM);
       round++;
@@ -265,8 +265,8 @@ dimOneKernel_unino8(const T *input,
                    n_last_core * sizeof(T), GDRAM2NRAM);
         }
         inclusiveScan(this_nram, n_last_core, 1,
-                      result, cluster_offsets[9]);
-        __memcpy(result + totalId * n_cluster + copy_offset, this_nram,
+                      output, cluster_offsets[9]);
+        __memcpy(output + totalId * n_cluster + copy_offset, this_nram,
                  n_last_core * sizeof(T), NRAM2GDRAM);
       }
     } else {
@@ -275,7 +275,7 @@ dimOneKernel_unino8(const T *input,
           input + totalId * n_cluster + coreId * n_core,
           n_core * sizeof(T), GDRAM2NRAM);
         inclusiveScan(this_nram, n_core, 0, cluster_offsets, basenum);
-        __memcpy(result + totalId * n_cluster + coreId * n_core,
+        __memcpy(output + totalId * n_cluster + coreId * n_core,
                  this_nram, n_core * sizeof(T), NRAM2GDRAM);
       } else if (clusterId == last_round_clusters - 1) {
         if (rounds == 1) {
@@ -285,7 +285,7 @@ dimOneKernel_unino8(const T *input,
         }
         inclusiveScan(this_nram, n_last_core, 0,
                       cluster_offsets, basenum);
-        __memcpy(result + totalId * n_cluster + copy_offset, this_nram,
+        __memcpy(output + totalId * n_cluster + copy_offset, this_nram,
                  n_last_core * sizeof(T), NRAM2GDRAM);
       } else {
         __sync_all();

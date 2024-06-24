@@ -33,7 +33,7 @@ LogcumsumexpDimOne(const cnrtDim3_t k_dim,
                    const cnrtQueue_t queue,
                    mluOpDataType_t data_type,
                    const void *input,
-                   void *result,
+                   void *output,
                    const int32_t axis_size);
 
 mluOpStatus_t MLUOP_WIN_API
@@ -42,7 +42,7 @@ LogcumsumexpHighestDim(const cnrtDim3_t k_dim,
                    const cnrtQueue_t queue,
                    mluOpDataType_t data_type,
                    const void *input,
-                   void *result,
+                   void *output,
                    const int32_t axis_size,
                    const int32_t higher_size);
 
@@ -52,7 +52,7 @@ LogcumsumexpLowestDim(const cnrtDim3_t k_dim,
                    const cnrtQueue_t queue,
                    mluOpDataType_t data_type,
                    const void *input,
-                   void *result,
+                   void *output,
                    const int32_t axis_size,
                    const int32_t lower_size);
 
@@ -62,7 +62,7 @@ LogcumsumexpMidDim(const cnrtDim3_t k_dim,
                    const cnrtQueue_t queue,
                    mluOpDataType_t data_type,
                    const void *input,
-                   void *result,
+                   void *output,
                    const int32_t axis_size,
                    const int32_t lower_size,
                    const int32_t higher_size);

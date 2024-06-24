@@ -28,7 +28,7 @@ extern __mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
 template <typename T>
 __mlu_func__ void
 batchKernel(const T *source,
-            T *result,
+            T *output,
             int32_t batches_num,
             int32_t width,
             int32_t height) {
@@ -47,17 +47,17 @@ batchKernel(const T *source,
         }
     }
     __mluop_log(nram_src, nram_src, nullptr, 0, data_size);
-    __memcpy(result, nram_src, data_size * sizeof(T), NRAM2GDRAM);
+    __memcpy(output, nram_src, data_size * sizeof(T), NRAM2GDRAM);
 }
 
 // mid dimension executing kernel============================================
 template <typename T>
 __mlu_func__ void
-midDimKernel_unino8(const T *input,
-                    T *result,
-                    int32_t axis_size,
-                    int32_t lower_size,
-                    int32_t higher_size) {
+midDimKernel(const T *input,
+             T *output,
+             int32_t axis_size,
+             int32_t lower_size,
+             int32_t higher_size) {
   int32_t nram_size = CoreCapacity / sizeof(T);
   int32_t batches_num = higher_size;
   int32_t batch_size = axis_size * lower_size;
@@ -69,7 +69,7 @@ midDimKernel_unino8(const T *input,
   if (batches_per_core > 0) {
     for (int i = 0; i < rounds_num - 1; i++) {
         batchKernel(input + i * core_size * taskDim + core_size * taskId,
-                    result + i * core_size * taskDim + core_size * taskId,
+                    output + i * core_size * taskDim + core_size * taskId,
                     batches_per_core, lower_size, axis_size);
     }
     int32_t last_round_batches
@@ -81,20 +81,20 @@ midDimKernel_unino8(const T *input,
     if (taskId < lastRoundCores - 1) {
       batchKernel(
         input + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
-        result + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
+        output + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
         batches_per_core, lower_size, axis_size);
     }
     if (taskId == lastRoundCores - 1) {
       batchKernel(
         input + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
-        result + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
+        output + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
         last_core_batches, lower_size, axis_size);
     }
   } else {
     if (clusterId == 0) {
       for (int i = 0; i < batches_num; i++) {
         lowestDimKernel_unino1(input + i * batch_size,
-                                result + i * batch_size,
+                                output + i * batch_size,
                                 axis_size, lower_size);
         __sync_cluster();
       }

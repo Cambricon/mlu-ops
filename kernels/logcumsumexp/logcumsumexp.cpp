@@ -34,8 +34,8 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
                 const int32_t dim,
                 const mluOpTensorDescriptor_t input_desc,
                 const void *input,
-                const mluOpTensorDescriptor_t result_desc,
-                void *result) {
+                const mluOpTensorDescriptor_t output_desc,
+                void *output) {
     const std::string API = "[mluOpLogcumsumexp]";
 
     cnrtFunctionType_t k_type;
@@ -44,15 +44,15 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     PARAM_CHECK(API, handle != NULL);
     PARAM_CHECK(API, input_desc != NULL);
     PARAM_CHECK(API, input != NULL);
-    PARAM_CHECK(API, result_desc != NULL);
-    PARAM_CHECK(API, result != NULL);
+    PARAM_CHECK(API, output_desc != NULL);
+    PARAM_CHECK(API, output != NULL);
     PARAM_CHECK(API, input_desc->dtype == MLUOP_DTYPE_FLOAT ||
                 input_desc->dtype == MLUOP_DTYPE_HALF);
-    PARAM_CHECK(API, result_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                result_desc->dtype == MLUOP_DTYPE_HALF);
-    PARAM_CHECK(API, input_desc->dim == result_desc->dim);
+    PARAM_CHECK(API, output_desc->dtype == MLUOP_DTYPE_FLOAT ||
+                output_desc->dtype == MLUOP_DTYPE_HALF);
+    PARAM_CHECK(API, input_desc->dim == output_desc->dim);
     PARAM_CHECK(API, input_desc->layout == MLUOP_LAYOUT_ARRAY);
-    PARAM_CHECK(API, result_desc->layout == MLUOP_LAYOUT_ARRAY);
+    PARAM_CHECK(API, output_desc->layout == MLUOP_LAYOUT_ARRAY);
 
 
     if (dim < (-1) * input_desc->dim) {
@@ -102,7 +102,7 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     }
     CHECK_RETURN(API, KernelLogcumsumexp(
                         k_dim, k_type, handle->queue, input_desc->dtype,
-                        input, result, axis_size, lower_size, higher_size));
+                        input, output, axis_size, lower_size, higher_size));
     GEN_CASE_END();
     return MLUOP_STATUS_SUCCESS;
 }

@@ -28,7 +28,7 @@ extern __mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
 // LCSE execution for rows
 template <typename T>
 __mlu_func__ void
-rowsKernel(T *result, const T *source, int32_t deal_length,
+rowsKernel(T *output, const T *source, int32_t deal_length,
            int32_t rounds, int32_t address_offset) {
   T *nram_src0 = (T *)nram_buffer;
   T *nram_src1 = nram_src0 + deal_length;
@@ -42,7 +42,7 @@ rowsKernel(T *result, const T *source, int32_t deal_length,
   T *lastNram = nram_src0;
   __memcpy(lastNram, source + copy_offset,
            part_length * sizeof(T), GDRAM2NRAM);
-  __memcpy(result + copy_offset, lastNram,
+  __memcpy(output + copy_offset, lastNram,
            part_length * sizeof(T), NRAM2GDRAM);
   __mluop_exp(lastNram, lastNram, nullptr, 0, part_length);
 
@@ -56,7 +56,7 @@ rowsKernel(T *result, const T *source, int32_t deal_length,
     __mluop_exp(thisNram, thisNram, nullptr, 0, part_length);
     __bang_add(thisNram, thisNram, lastNram, part_length);
     __mluop_log(nram_out, thisNram, nullptr, 0, part_length);
-    __memcpy(result + i * address_offset + copy_offset,
+    __memcpy(output + i * address_offset + copy_offset,
              nram_out,
              part_length * sizeof(T),
              NRAM2GDRAM);
@@ -67,7 +67,7 @@ rowsKernel(T *result, const T *source, int32_t deal_length,
 // LCSE execution for one part
 template <typename T>
 __mlu_func__ void
-onePartKernel(const T *source, T *result, int32_t width,
+onePartKernel(const T *source, T *output, int32_t width,
               int32_t height, int32_t part_size) {
     T *offset_cores = (T *)sram_buffer;
     T *nram_src = (T *)nram_buffer;
@@ -123,17 +123,17 @@ onePartKernel(const T *source, T *result, int32_t width,
     }
 
     __mluop_log(nram_src, nram_src, nullptr, 0, data_size);
-    __memcpy(result + part_size * taskId, nram_src,
+    __memcpy(output + part_size * taskId, nram_src,
              data_size * sizeof(T), NRAM2GDRAM);
 }
 
 // lowest dimension executing kernel=========================================
 template <typename T>
 __mlu_func__ void
-highestDimKernel_unino1(const T *input,
-                        T *result,
-                        int32_t axis_size,
-                        int32_t lower_size) {
+highestDimKernel(const T *input,
+                 T *output,
+                 int32_t axis_size,
+                 int32_t lower_size) {
     int32_t data_size = axis_size * lower_size;
     int32_t nram_size = CoreCapacity / sizeof(T);
     int32_t part_width = lower_size;
@@ -152,7 +152,7 @@ highestDimKernel_unino1(const T *input,
             deal_length = cluster_capacity;
           else
             deal_length = lower_size - (batches_num - 1) * cluster_capacity;
-          rowsKernel(result + i * cluster_capacity,
+          rowsKernel(output + i * cluster_capacity,
                      input + i * cluster_capacity,
                      deal_length, axis_size, lower_size);
         }
@@ -166,7 +166,7 @@ highestDimKernel_unino1(const T *input,
         __sync_cluster();
         while (round < rounds_num - 1) {
             onePartKernel(input + cluster_size * round,
-                          result + cluster_size * round,
+                          output + cluster_size * round,
                           part_width, part_height, part_size);
             round++;
         }
@@ -179,11 +179,11 @@ highestDimKernel_unino1(const T *input,
 
         if (taskId < lastRoundCores - 1) {
           onePartKernel(input + cluster_size * round,
-                        result + cluster_size * round,
+                        output + cluster_size * round,
                         part_width, part_height, part_size);
         } else if (taskId == lastRoundCores - 1) {
           onePartKernel(input + cluster_size * round,
-                        result + cluster_size * round,
+                        output + cluster_size * round,
                         part_width, last_part_height, part_size);
         } else {
           __sync_cluster();
