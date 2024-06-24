@@ -22,6 +22,9 @@
  *******************************************************************************/
 #pragma once
 
+extern __nram__ char nram_buffer[MAX_NRAM_SIZE];
+extern __mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
+
 // removing the dependence between columns
 template <typename T>
 __mlu_func__ void removeDataDependence(T *dst,

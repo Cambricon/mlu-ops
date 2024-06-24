@@ -44,7 +44,7 @@ LogcumsumexpHighestDim(const cnrtDim3_t k_dim,
                    const void *input,
                    void *result,
                    const int32_t axis_size,
-                   const int32_t lower_size);
+                   const int32_t higher_size);
 
 mluOpStatus_t MLUOP_WIN_API
 LogcumsumexpLowestDim(const cnrtDim3_t k_dim,
@@ -54,7 +54,7 @@ LogcumsumexpLowestDim(const cnrtDim3_t k_dim,
                    const void *input,
                    void *result,
                    const int32_t axis_size,
-                   const int32_t higher_size);
+                   const int32_t lower_size);
 
 mluOpStatus_t MLUOP_WIN_API
 LogcumsumexpMidDim(const cnrtDim3_t k_dim,
@@ -64,7 +64,7 @@ LogcumsumexpMidDim(const cnrtDim3_t k_dim,
                    const void *input,
                    void *result,
                    const int32_t axis_size,
-                   const int32_t higher_size,
-                   const int32_t lower_size);
+                   const int32_t lower_size,
+                   const int32_t higher_size);
 
 #endif  // KERNELS_LOGCUMSUMEXP_LOGCUMSUMEXP_H

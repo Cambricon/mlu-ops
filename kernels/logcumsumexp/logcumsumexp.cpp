@@ -74,26 +74,26 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     }
 
     int32_t axis_size = input_desc->dims[dim];
-    int32_t higher_size = 1;
     int32_t lower_size = 1;
+    int32_t higher_size = 1;
 
     for (int i = 0; i < dim; i++) {
-        lower_size *= input_desc->dims[i];
-    }
-
-    for (int i = dim+1; i < input_desc->dim; i++) {
         higher_size *= input_desc->dims[i];
     }
 
+    for (int i = dim+1; i < input_desc->dim; i++) {
+        lower_size *= input_desc->dims[i];
+    }
 
 
-    if (lower_size == 1 && higher_size == 1) {
-        k_type = CNRT_FUNC_TYPE_UNION8;
-        k_dim = {32, 1, 1};
-    } else if (higher_size == 1) {
+
+    if (higher_size == 1 && lower_size == 1) {
         k_type = CNRT_FUNC_TYPE_UNION8;
         k_dim = {32, 1, 1};
     } else if (lower_size == 1) {
+        k_type = CNRT_FUNC_TYPE_UNION8;
+        k_dim = {32, 1, 1};
+    } else if (higher_size == 1) {
         k_type = CNRT_FUNC_TYPE_UNION1;
         k_dim = {4, 1, 1};
     } else {
@@ -102,7 +102,7 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     }
     CHECK_RETURN(API, KernelLogcumsumexp(
                         k_dim, k_type, handle->queue, input_desc->dtype,
-                        input, result, axis_size, higher_size, lower_size));
+                        input, result, axis_size, lower_size, higher_size));
     GEN_CASE_END();
     return MLUOP_STATUS_SUCCESS;
 }
