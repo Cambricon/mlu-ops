@@ -19,6 +19,7 @@ version_status = {"not_found_version":2, "version_check_failed": 1,
 # version(str1) > version(str2)
 def gtVersion(str1, str2):
     global version_check_module
+
     if version_check_module == 1:
         try:
             from packaging import version
@@ -26,6 +27,8 @@ def gtVersion(str1, str2):
         except ImportError:
             print("packaging not exists, try import distutils")
             version_check_module = 0
+        except Exception as e1:
+            print(f"version check error: {e1}")
 
     if version_check_module == 0:
         try:
@@ -34,8 +37,10 @@ def gtVersion(str1, str2):
         except ImportError:
             print("distutils not exists, version check failed")
             version_check_module = -1
+        except Exception as e1:
+            print(f"version check error: {e1}")
 
-    return FALSE
+    return False
 
 def get_build_requires(print_mode=1):
     global required_version
