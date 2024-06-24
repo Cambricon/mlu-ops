@@ -209,11 +209,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
 
 2、NRAM 分配策略
 
-FIXEM -- 补充 nram buffer 分配说明 
+本算子计算过程中需要存放多个临时变量，至少需要 5 个 buffer 同时存放临时变量，再加上软件流水 input output 各需要 1 个 buffer，所以将最大 NRAM 使用空间平均划分为 7 份
+```C++
+buf_size = FLOOR_ALIGN(LGAMMA_NRAM_USED / sizeof(T) / AUX_N, UNARY_ALIGN_NUM), AUX_N = 7
+```
 
-2、流水设计
-本算子采用三级软件流水 FIXME -- 补充流水 buffer 使用
+3、流水设计
+本算子采用三级软件流水，将 buffer 从 0 到 6 编号，其中 0 1 号 buffer 作为 input 的 ping-pong buffer，5 6 号 buffer 作为 input 的 ping-pong buffer，3 4 5 固定为计算过程使用的 buffer；在流水过程中，每个周期 input output 只需要使用一个 buffer 做输入/输出缓冲，即可以空余各 1 个 buffer 给计算过程使用，具体分配方法如下：
 
+对第 C 个周期处于 input 阶段的数据，其应该被 load 进入 buffer[(C % 2) ? 1 : 0]，结果写入 buffer[(C % 2) ? 6 : 5]，计算时使用的 5 个 buffer 为： { （C % 2) ? 1 : 0, 2, 3, 4, (C % 2) ? 6 : 5 }
 
 ### 3.5 可维护性设计
 
