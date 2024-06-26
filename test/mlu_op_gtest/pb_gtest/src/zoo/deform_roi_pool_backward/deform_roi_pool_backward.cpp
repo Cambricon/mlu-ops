@@ -259,7 +259,7 @@ void DeformRoiPoolBackwardExecutor::cpuCompute() {
                   cpu_fp32_output_[1][n * pooled_width * pooled_height * 2 +
                                       pooled_width * pooled_height +
                                       ph * pooled_width + pw] += ogy;
-                  theory_ops_ += 24;  // cur block
+                  theory_ops_ += 28;  // cur block
                 }
               }
             }
