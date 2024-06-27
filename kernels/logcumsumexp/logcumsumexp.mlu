@@ -32,14 +32,6 @@
 #include "kernels/logcumsumexp/compute_kernels/lowest_dim.h"
 #include "kernels/logcumsumexp/compute_kernels/mid_dim.h"
 
-#define SEG_L 128
-#define CoreCapacity 327680  // memory length of input per core
-#define ClusterCapacity 1310720 // memory length of input per cluster
-#define DimOneDealLength 147456 // size of one NRAM in dim-one
-
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
-__mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
-
 mluOpStatus_t MLUOP_WIN_API
 LogcumsumexpDimOne(const cnrtDim3_t k_dim,
                    const cnrtFunctionType_t k_type,
@@ -82,7 +74,7 @@ LogcumsumexpLowestDim(const cnrtDim3_t k_dim,
 }
 
 mluOpStatus_t MLUOP_WIN_API
-LogcumsumexpLowestDim(const cnrtDim3_t k_dim,
+LogcumsumexpHighestDim(const cnrtDim3_t k_dim,
                       const cnrtFunctionType_t k_type,
                       const cnrtQueue_t queue,
                       mluOpDataType_t data_type,
@@ -114,15 +106,14 @@ LogcumsumexpMidDim(const cnrtDim3_t k_dim,
                    const int32_t higher_size) {
   if (data_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
     // float32
-    KERNEL_CHECK(midDimKerne<<<k_dim, k_type, queue>>>
+    KERNEL_CHECK(midDimKernel<<<k_dim, k_type, queue>>>
                  ((float *)input, (float *)output,
                  axis_size, lower_size, higher_size));
   } else {
     // half
-    KERNEL_CHECK(midDimKerne<<<k_dim, k_type, queue>>>
+    KERNEL_CHECK(midDimKernel<<<k_dim, k_type, queue>>>
                  ((half *)input, (half *)output,
                  axis_size, lower_size, higher_size));
   }
   return MLUOP_STATUS_SUCCESS;
 }
-

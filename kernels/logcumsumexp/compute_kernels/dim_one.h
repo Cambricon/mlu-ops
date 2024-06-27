@@ -22,8 +22,13 @@
  *******************************************************************************/
 #pragma once
 
-extern __nram__ char nram_buffer[MAX_NRAM_SIZE];
-extern __mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
+#define N_ALIGN 128
+#define CoreCapacity 327680  // memory length of input per core
+#define ClusterCapacity 1310720 // memory length of input per cluster
+#define DimOneDealLength 147456 // size of one NRAM in dim-one
+
+__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
 
 // removing the dependence between columns
 template <typename T>
@@ -48,23 +53,23 @@ __mlu_func__ void removeDataDependence(T *dst,
 // cumsum execution
 template <typename T>
 __mlu_func__ void dimOneCumsum(T *src0_nram, T *src1_nram, int deal_length) {
-  int seg_num = (deal_length + SEG_L - 1) / SEG_L;
+  int seg_num = (deal_length + N_ALIGN - 1) / N_ALIGN;
   T pre_sum = 0;
-  __bang_transpose(src1_nram, src0_nram, SEG_L, seg_num);
+  __bang_transpose(src1_nram, src0_nram, N_ALIGN, seg_num);
 
   for (int j = 1; j < seg_num; j++) {
-    removeDataDependence(src1_nram + j * SEG_L,
-                         src1_nram + (j - 1) * SEG_L,
-                         SEG_L, 4);
+    removeDataDependence(src1_nram + j * N_ALIGN,
+                         src1_nram + (j - 1) * N_ALIGN,
+                         N_ALIGN, 4);
   }
   src0_nram[0]  = pre_sum;
-  int index_offset = (seg_num - 1) * SEG_L - 1;
-  for (int k = 1; k < SEG_L; k++) {
+  int index_offset = (seg_num - 1) * N_ALIGN - 1;
+  for (int k = 1; k < N_ALIGN; k++) {
     pre_sum      = pre_sum + src1_nram[index_offset + k];
     src0_nram[k] = pre_sum;
   }
-  __bang_cycle_add(src1_nram, src1_nram, src0_nram, seg_num * SEG_L, SEG_L);
-  __bang_transpose(src0_nram, src1_nram, seg_num, SEG_L);
+  __bang_cycle_add(src1_nram, src1_nram, src0_nram, seg_num * N_ALIGN, N_ALIGN);
+  __bang_transpose(src0_nram, src1_nram, seg_num, N_ALIGN);
 }
 
 // To compute the offset between clusters
@@ -73,7 +78,7 @@ __mlu_func__ void dimOneCumsum(T *src0_nram, T *src1_nram, int deal_length) {
 // "offset_type 1" means calculate the offset with the scalar "cum_offset"
 template <typename T>
 __mlu_func__ void offsetCompute(T *nram_src0, T *cluster_offsets,
-                                T *cum_offset, int32_t data_size,
+                                T cum_offset, const int32_t data_size,
                                 bool offset_type) {
     if (offset_type == 0) {
         if (coreId == 3) {
@@ -133,8 +138,8 @@ __mlu_func__ void offsetCompute(T *nram_src0, T *cluster_offsets,
     } else {
         __bang_add_scalar(nram_src0, nram_src0, cum_offset, data_size);
     }
+  }
 }
-
 // inclusive execution
 template <typename T>
 __mlu_func__ void inclusiveScan(T* nram_src,
@@ -143,7 +148,6 @@ __mlu_func__ void inclusiveScan(T* nram_src,
                                 T* cluster_offsets,
                                 T cum_offset) {
   // parameter preparing
-  int32_t coreId = taskId % 4;
   __mlu_shared__ T core_offsets[4];
   T *nram_src0 = nram_src;
   T *nram_src1 = nram_src0 + DimOneDealLength / sizeof(T);
@@ -205,7 +209,7 @@ dimOneKernel(const T *input,
     int32_t copy_offset = coreId * n_last_core
       + __mluop_min(coreId, length_offset);
     if (coreId < length_offset)n_last_core += 1;
-    int32_t padding_length = (n_last_core + SEG_L - 1) / SEG_L * SEG_L;
+    int32_t padding_length = (n_last_core + N_ALIGN - 1) / N_ALIGN * N_ALIGN;
 
     // first memory copy GDRAM2SRAM
     if (rounds > 1)__memcpy(nram_src0,

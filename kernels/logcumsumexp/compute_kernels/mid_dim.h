@@ -22,9 +22,6 @@
  *******************************************************************************/
 #pragma once
 
-extern __nram__ char nram_buffer[MAX_NRAM_SIZE];
-extern __mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
-
 template <typename T>
 __mlu_func__ void
 batchKernel(const T *source,
@@ -52,7 +49,7 @@ batchKernel(const T *source,
 
 // mid dimension executing kernel============================================
 template <typename T>
-__mlu_func__ void
+__mlu_global__ void
 midDimKernel(const T *input,
              T *output,
              int32_t axis_size,
@@ -93,9 +90,9 @@ midDimKernel(const T *input,
   } else {
     if (clusterId == 0) {
       for (int i = 0; i < batches_num; i++) {
-        lowestDimKernel_unino1(input + i * batch_size,
-                                output + i * batch_size,
-                                axis_size, lower_size);
+        highestDimKernel(input + i * batch_size,
+                         output + i * batch_size,
+                         axis_size, lower_size);
         __sync_cluster();
       }
     }

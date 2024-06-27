@@ -22,13 +22,10 @@
  *******************************************************************************/
 #pragma once
 
-extern __nram__ char nram_buffer[MAX_NRAM_SIZE];
-extern __mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
-
 // LCSE execution for rows
 template <typename T>
 __mlu_func__ void
-rowsKernel(T *output, const T *source, int32_t deal_length,
+oneRowKernel(T *output, const T *source, int32_t deal_length,
            int32_t rounds, int32_t address_offset) {
   T *nram_src0 = (T *)nram_buffer;
   T *nram_src1 = nram_src0 + deal_length;
@@ -129,7 +126,7 @@ onePartKernel(const T *source, T *output, int32_t width,
 
 // lowest dimension executing kernel=========================================
 template <typename T>
-__mlu_func__ void
+__mlu_global__ void
 highestDimKernel(const T *input,
                  T *output,
                  int32_t axis_size,
@@ -152,7 +149,7 @@ highestDimKernel(const T *input,
             deal_length = cluster_capacity;
           else
             deal_length = lower_size - (batches_num - 1) * cluster_capacity;
-          rowsKernel(output + i * cluster_capacity,
+          oneRowKernel(output + i * cluster_capacity,
                      input + i * cluster_capacity,
                      deal_length, axis_size, lower_size);
         }
