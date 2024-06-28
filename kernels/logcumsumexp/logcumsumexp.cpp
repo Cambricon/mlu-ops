@@ -91,11 +91,13 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
 
 
     if (higher_size == 1 && lower_size == 1) {
+        // dimOne
         k_type = CNRT_FUNC_TYPE_UNION8;
         k_dim = {32, 1, 1};
         CHECK_RETURN(API, LogcumsumexpDimOne(k_dim, k_type, handle->queue,
                      input_desc->dtype, input, output, axis_size));
     } else if (lower_size == 1) {
+        // lowestDim
         k_type = CNRT_FUNC_TYPE_UNION8;
         k_dim = {32, 1, 1};
 
@@ -121,11 +123,13 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
                          axis_size, higher_size));
         }
     } else if (higher_size == 1) {
+        // highestDim
         k_type = CNRT_FUNC_TYPE_UNION1;
         k_dim = {4, 1, 1};
         CHECK_RETURN(API, LogcumsumexpHighestDim(k_dim, k_type, handle->queue,
                      input_desc->dtype, input, output, axis_size, lower_size));
     } else {
+        // midDim
         k_type = CNRT_FUNC_TYPE_UNION8;
         k_dim = {32, 1, 1};
 
@@ -138,8 +142,13 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
             = (batches_num + (batches_per_core * taskDim) - 1)
             / (batches_per_core * taskDim);
         if (batches_per_core ==  0) {
-
-        //????????
+            CHECK_RETURN(API, LogcumsumexpHighestDim(k_dim, k_type,
+                         handle->queue, input_desc->dtype,
+                         (void *)((char *)input + batch * axis_size * \
+                         sizeof(input_desc->dtype)),
+                         (void *)((char *)output + batch * axis_size * \
+                         sizeof(input_desc->dtype)),
+                         axis_size, lower_size));
 
         } else {
         CHECK_RETURN(API, LogcumsumexpMidDim(k_dim, k_type, handle->queue,
@@ -147,9 +156,6 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
                      lower_size, higher_size));
         }
     }
-    // CHECK_RETURN(API, KernelLogcumsumexp(
-    //                     k_dim, k_type, handle->queue, input_desc->dtype,
-    //                     input, output, axis_size, lower_size, higher_size));
     GEN_CASE_END();
     return MLUOP_STATUS_SUCCESS;
 }
