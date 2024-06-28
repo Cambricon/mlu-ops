@@ -32,7 +32,8 @@ oneRowKernel(T *output, const T *source, int32_t deal_length,
   T *nram_out = nram_src0 + ((MAX_NRAM_SIZE/sizeof(T)) >> 1);
   int32_t part_length = deal_length / 4;
   int32_t length_offset = deal_length % 4;
-  int32_t copy_offset = taskId * part_length + __mluop_min(taskId, length_offset);
+  int32_t copy_offset = taskId * part_length + \
+    __mluop_min(taskId, length_offset);
   if (taskId < length_offset)part_length += 1;
 
   T *thisNram = nram_src1;

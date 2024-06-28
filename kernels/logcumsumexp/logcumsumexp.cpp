@@ -31,8 +31,8 @@
 
 #define N_ALIGN 128
 #define CoreCapacity 327680  // memory length of input per core
-#define ClusterCapacity 1310720 // memory length of input per cluster
-#define DimOneDealLength 147456 // size of one NRAM in dim-one
+#define ClusterCapacity 1310720  // memory length of input per cluster
+#define DimOneDealLength 147456  // size of one NRAM in dim-one
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpLogcumsumexp(mluOpHandle_t handle,
@@ -73,9 +73,10 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
         return MLUOP_STATUS_BAD_PARAM;
     }
 
+    int _dim = dim;
     // preprocess for negative dim
-    if(dim < 0) {
-        dim += input_desc->dim;
+    if (_dim < 0) {
+        _dim += input_desc->dim;
     }
 
     int32_t axis_size = input_desc->dims[dim];
@@ -85,7 +86,7 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     for (int i = 0; i < dim; i++) {
         higher_size *= input_desc->dims[i];
     }
-    for (int i = dim+1; i < input_desc->dim; i++) {
+    for (int i = _dim + 1; i < input_desc->dim; i++) {
         lower_size *= input_desc->dims[i];
     }
 
@@ -119,8 +120,8 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
             }
         } else {
             CHECK_RETURN(API, LogcumsumexpLowestDim(k_dim, k_type,
-                         handle->queue,input_desc->dtype, input, output,
-                         axis_size, higher_size));
+                         handle->queue, input_desc->dtype, input,
+                         output, axis_size, higher_size));
         }
     } else if (higher_size == 1) {
         // highestDim
@@ -133,23 +134,21 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
         k_type = CNRT_FUNC_TYPE_UNION8;
         k_dim = {32, 1, 1};
 
-        int32_t nram_size = CoreCapacity / sizeof(T);
+        int32_t nram_size = CoreCapacity / sizeof(input_desc->dtype);
         int32_t batches_num = higher_size;
         int32_t batch_size = axis_size * lower_size;
         int32_t batches_per_core = nram_size / batch_size;
-        int32_t core_size = batch_size * batches_per_core;
-        int32_t rounds_num
-            = (batches_num + (batches_per_core * taskDim) - 1)
-            / (batches_per_core * taskDim);
-        if (batches_per_core ==  0) {
-            CHECK_RETURN(API, LogcumsumexpHighestDim(k_dim, k_type,
-                         handle->queue, input_desc->dtype,
-                         (void *)((char *)input + batch * axis_size * \
-                         sizeof(input_desc->dtype)),
-                         (void *)((char *)output + batch * axis_size * \
-                         sizeof(input_desc->dtype)),
-                         axis_size, lower_size));
 
+        if (batches_per_core ==  0) {
+            for (int batch = 0; batch < batches_num; batch) {
+                CHECK_RETURN(API, LogcumsumexpHighestDim(k_dim, k_type,
+                handle->queue, input_desc->dtype,
+                (void *)((char *)input + batch * axis_size * \
+                sizeof(input_desc->dtype)),
+                (void *)((char *)output + batch * axis_size * \
+                sizeof(input_desc->dtype)),
+                axis_size, lower_size));
+            }
         } else {
         CHECK_RETURN(API, LogcumsumexpMidDim(k_dim, k_type, handle->queue,
                      input_desc->dtype, input, output, axis_size,

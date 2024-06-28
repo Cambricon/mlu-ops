@@ -63,38 +63,28 @@ midDimKernel(const T *input,
   int32_t rounds_num
     = (batches_num + (batches_per_core * taskDim) - 1)
     / (batches_per_core * taskDim);
-  if (batches_per_core > 0) {
-    for (int i = 0; i < rounds_num - 1; i++) {
-        batchKernel(input + i * core_size * taskDim + core_size * taskId,
-                    output + i * core_size * taskDim + core_size * taskId,
-                    batches_per_core, lower_size, axis_size);
-    }
-    int32_t last_round_batches
-      = batches_num - batches_per_core * taskDim * (rounds_num - 1);
-    int32_t lastRoundCores
-      = (last_round_batches + batches_per_core - 1) / batches_per_core;
-    int32_t last_core_batches
-      = last_round_batches - batches_per_core * (lastRoundCores - 1);
-    if (taskId < lastRoundCores - 1) {
-      batchKernel(
-        input + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
-        output + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
-        batches_per_core, lower_size, axis_size);
-    }
-    if (taskId == lastRoundCores - 1) {
-      batchKernel(
-        input + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
-        output + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
-        last_core_batches, lower_size, axis_size);
-    }
-  } else {
-    if (clusterId == 0) {
-      for (int i = 0; i < batches_num; i++) {
-        highestDimKernel(input + i * batch_size,
-                         output + i * batch_size,
-                         axis_size, lower_size);
-        __sync_cluster();
-      }
-    }
+
+  for (int i = 0; i < rounds_num - 1; i++) {
+      batchKernel(input + i * core_size * taskDim + core_size * taskId,
+                  output + i * core_size * taskDim + core_size * taskId,
+                  batches_per_core, lower_size, axis_size);
+  }
+  int32_t last_round_batches
+    = batches_num - batches_per_core * taskDim * (rounds_num - 1);
+  int32_t lastRoundCores
+    = (last_round_batches + batches_per_core - 1) / batches_per_core;
+  int32_t last_core_batches
+    = last_round_batches - batches_per_core * (lastRoundCores - 1);
+  if (taskId < lastRoundCores - 1) {
+    batchKernel(
+      input + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
+      output + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
+      batches_per_core, lower_size, axis_size);
+  }
+  if (taskId == lastRoundCores - 1) {
+    batchKernel(
+      input + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
+      output + (rounds_num - 1) * core_size * taskDim + core_size * taskId,
+      last_core_batches, lower_size, axis_size);
   }
 }

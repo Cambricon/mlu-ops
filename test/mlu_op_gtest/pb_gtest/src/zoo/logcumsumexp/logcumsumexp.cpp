@@ -39,8 +39,8 @@ void LogcumsumexpExecutor::compute() {
 
     VLOG(4) << "call mluOpLogcumsumexp()";
     interface_timer_.start();
-    MLUOP_CHECK(mluOpLogcumsumexp(handle_, tensor_x,
-                                  dev_x, tensor_y, dev_y, dim));
+    MLUOP_CHECK(mluOpLogcumsumexp(handle_, dim, tensor_x,
+                                  dev_x, tensor_y, dev_y));
     interface_timer_.stop();
 }
 
@@ -97,7 +97,8 @@ void LogcumsumexpExecutor::cpuCompute() {
             }
           };
         cum_number[j]
-          = add_exe(x_ptr[(j * CUMSUM_SIZE + k) * self_dim_stride], cum_number[j]);
+          = add_exe(x_ptr[(j * CUMSUM_SIZE + k) * self_dim_stride],
+                    cum_number[j]);
         y_ptr[(j * CUMSUM_SIZE + k) * self_dim_stride] = cum_number[j];
         }
       }

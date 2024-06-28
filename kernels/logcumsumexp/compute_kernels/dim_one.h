@@ -24,8 +24,8 @@
 
 #define N_ALIGN 128
 #define CoreCapacity 327680  // memory length of input per core
-#define ClusterCapacity 1310720 // memory length of input per cluster
-#define DimOneDealLength 147456 // size of one NRAM in dim-one
+#define ClusterCapacity 1310720  // memory length of input per cluster
+#define DimOneDealLength 147456  // size of one NRAM in dim-one
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
 __mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
@@ -82,14 +82,14 @@ __mlu_func__ void offsetCompute(T *nram_src0, T *cluster_offsets,
                                 bool offset_type) {
     if (offset_type == 0) {
         if (coreId == 3) {
-            cluster_offsets[clusterId] = nram_src0[data_size - 1]; 
+            cluster_offsets[clusterId] = nram_src0[data_size - 1];
         }
         __sync_all();
         if (taskId == 0) {
             if (clusterDim == 8) {
-                // [0],[1],[2]...[7] are clusterDim offsets for clusterDim clusters;
-                // the [9] records and saves the cumulative offset for next round;
-                // the [8] is to support the offset calculate;
+          // [0],[1],[2]...[7] are clusterDim offsets for clusterDim clusters;
+          // the [9] records and saves the cumulative offset for next round;
+          // the [8] is to support the offset calculate;
                 cluster_offsets[8] = cluster_offsets[7];
                 cluster_offsets[7] = cluster_offsets[6];
                 cluster_offsets[6] = cluster_offsets[5];
@@ -199,7 +199,7 @@ dimOneKernel(const T *input,
     T *sram_src1 = (T *)(sram_buffer + ClusterCapacity);
     T *nram_src0 = (T *)nram_buffer;
     T *nram_src1 = nram_src0 + ((MAX_NRAM_SIZE/sizeof(T)) >> 1);
-    int32_t totalId = clusterId; // clusters' Id in entire process
+    int32_t totalId = clusterId;  // clusters' Id in entire process
     int32_t last_round_clusters
       = (last_round_length + n_cluster - 1) / n_cluster;
     int32_t last_cluster_length
