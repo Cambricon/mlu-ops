@@ -46,7 +46,7 @@ MLU-OPS™提供了以下功能：
 ## 依赖条件
 
 - 操作系统：
-  - 支持 x86_64 架构下的 Ubuntu20.04、Centos7.6、Centos8.5、Kylin10
+  - 支持 x86_64 架构下的 Ubuntu20.04、Centos7.6、Centos8.5、KylinV10
   - MLU-OPS v1.0.0版本后将不再支持 Ubuntu18.04。Ubuntu22.04系统将在后续的版本提供支持。
 - 寒武纪 MLU SDK：
   - 编译和运行时依赖 CNToolkit v3.8.4 或更高版本，CNNL v1.23.2 或者更高版本
