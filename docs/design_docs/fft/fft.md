@@ -548,37 +548,26 @@ x_7\\
 
 目前实现的方案如下：
 
-- 对于小规模，使用暴力解法，算法逻辑参考matmul（仅支持到n[0] <= 4096）
-  - 拼接流程如下：
-  - 生成DFT-matrix ，公式（21）
-    - 300系列生成DFT-matrix，使用surpass生成sin-cos查找表，然后使用vaa指令生成DFT-matrix，每个taskId处理一行DFT-matrix。
-  - 生成DFT-matrix的量化参数（可选）
-  - input tensor 连续化（可选）
-  - input tensor补pad/切crop（可选）
-  - input tensor量化参数（可选）
-  - matmul 生成 output
-  - 处理output的stride特性（可选）
+- 针对GDRAM和NRAM的访存特点，设计片上片下 two-level 蝶形网络
+  - 两层蝶形网络均采用stockham蝶形网络
+  - 片下蝶形网络存放于GDRAM中， 片上网络存放于NRAM中
+  - GDRAM根据片下蝶形网络执行顺序，负责将一个大基蝶形（large-radix butterfly）加载到NRAM上，在NRAM上将这个大基视为一个新的DFT，故再次进行FFT的分解，在片上蝶形网络中调用小基（small radix）kernel实现计算。
+  - two-level的设计能够减少数据对于GDRAM的访存次数，例如对于n=[2048]的FFT，可以直接以一次大基radix-2048的形式执行（其可以完全存储在NRAM上），故只需向GDRAM进行一次load和一次store。
+  - 举个例子，n=[8192]的FFT可以分解为大基为 256-32 的片下蝶形网络，在片上网络中，大基256可以继续分解为小基为16-16的蝶形网络，大基32直接分解为一个小基32。大基和小基的界定并非有明确的大小关系，例如大基可以为radix-4，而小基可以为radix-32，他们的区别是由哪个蝶形网络来调用。
 
-- 对于满足 $n=2^m*l$ 次幂的规模，采用Cooley-turkey FFT 解法（参考论文：“FFT algorithms for vector computers (Parallel Computing 1 (1984) 45-63) ”），具体如下：
+- 蝶形计算目前采用matmul指令实现
+  - 实现了generic的kernel实现蝶形计算，可以用于计算radix-2~64的小基
 
-  - step0：findLimit，求出m, l, s系数；其中m，l为上面表述的array分解系数，s表示NRAM片上一次性能放下的子图大小，即：(2^s) * l；
-  - step1：生成DFT-matrix：[l, l]，同上；
-  - step2：input tensor转数：[batch, n, c] -> [batch, l, 2^m, c] -> [c, batch, 2^m, l]；其中，batch表示输入序列的batch_size，n表示输入序列的长度，c表示输入序列的类型，输入为实数时，c=1，输入为实数时，c=2；
-  - step3：input tensor和matrix在l维度进行matmul；
-  - step4：从matmul结果中permute出子图数据到NRAM，并进行实部、虚部结合等预处理操作；
-  - step5：进行子图合并，从1个l开始，前s逐层合并（为了满足精度要求，在输入数据类型half或complex_half时，合并的计算和累加操作位宽提升为float），前一层的输出作为后一层的输入，一直到限制的子图大小，即2*s个l；合并完的数据一次性写回到workspace；计算时，子图均分给每个核处理；
-  - step6：继续合并剩余的m-s层，因为无法放下一个完整的子图，需要每次处理一部分子图数据；计算时，子图划分的部分均分给每个核处理；
-  - step7：将计算结果转置为layout要求格式：c维度从最高维变到最低维，写回到output；
-
-  step1通过在host端 findLimit函数实现；step0，step2，step3为子序列拆分步骤，通过调用mluOpTranspose、mluOpMatmul等kernel实现；step4-step7为子序列合并步骤，为了提高效率，减少重复IO，通过一个新的kernel实现。
-
-- 对于片上可以放下一个2^(m-1) * align_size * 29的规模，采用stockham算法进行优化
+- 步骤如下
+   - device端调用片下蝶形网络执行代码，c2c1d行主序对应函数为`computeMutiStageOnchip`，代码位于 kernels/fft/fft_optm_device/fft_two-level_network_c2c_device.mlu
+   - computeMutiStageOnchip获取fft_plan中的网络参数，执行各个stage的大基实现，例如第一级大基对应函数`computeLargeButterflyFirststage`，代码位于 kernels/fft/fft_optm_device/fft_c2c_stockham_gdram.h
+   - 大基执行函数亦为片上网络，与片下网络类似，继续调用小基kernel，代码位于 kernels/fft/fft_optm_device/fft_c2c_stockham_nram.h
+   - 小基kernel代码分为为特定基实现的向量化版本（kernels/fft/fft_optm_device/fft_vector_butterfly.h）以及generic的矩阵实现版本（kernels/fft/fft_optm_device/fft_generic_butterfly.h）
 
 ### 3.3 拆分(任务拆分，多核拆分)
 
-1. 对于小规模，调用matmul方案，多核拆分先交给matmul处理。
-2. 对于大于4096的规模，step0，step2，step3多核拆分参考调用kernel方案；step4-step7，根据NRAM能放下的子图大小，均分给各个MLU core并行处理。
-
+1. 一个ipu负责处理连续的多个batch。
+2. mpu负责为一个cluster加载可共用的数据，如twiddles和DFT matrix。
 ### 3.5 方案理论性能
 
 完成上述3.1，3.2，3.3，3.4几个步骤之后，基本可以给出一个理论性能，不需要每一个算子都有过于复杂的公式，但是一定要对自己的算子有一个心理的预期，最终实现之后的效率值是多少。
