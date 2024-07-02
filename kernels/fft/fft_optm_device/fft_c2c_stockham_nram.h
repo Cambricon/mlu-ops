@@ -485,9 +485,9 @@ __mlu_func__ void computeLargeButterflyFirststage(
 template <typename DT>
 __mlu_func__ void computeLargeButterflyFirststageBatchPingpong(
     DT *output, DT *input, const int large_radix, int large_in_stride,
-    int section_num, const DT *twiddles, const DT *dft_matrix, void *nram_buf,
-    const int *small_factors, int dir, int nfft, int last_stage,
-    const int t_start, const int t_end) {
+    int section_num, const DT *small_twiddles, const int small_twiddles_size,
+    const DT *dft_matrix, void *nram_buf, const int *small_factors, int dir,
+    int nfft, int last_stage, const int t_start, const int t_end) {
   const dft_table_entry *dft_table = (const dft_table_entry *)dft_matrix;
   // DT *input_batch = input + t * (nfft << 1);
   // DT *output_batch = output + t * (nfft << 1);
@@ -528,7 +528,7 @@ __mlu_func__ void computeLargeButterflyFirststageBatchPingpong(
   //     (section_num < max_para_ldst_num) ? section_num : max_para_ldst_num;
 
   // max_para_ldst_num = ((7232) / large_radix > 0) ? (7232) / large_radix : 1;
-  const DT *small_twiddles = twiddles + tw_offset * 2;  // complex
+  // const DT *small_twiddles = twiddles + tw_offset * 2;  // complex
 
   // assign nram space
   int nram_buf_offset = 0;
@@ -586,8 +586,9 @@ __mlu_func__ void computeLargeButterflyFirststageBatchPingpong(
   // DT *nram_temp_i = (DT *)nram_buf + nram_buf_offset;
   // nram_buf_offset += large_radix * max_para_ldst_num;
 
-  __memcpy_async(_nram_tw, small_twiddles, large_radix * sizeof(DT) * 2,
-                 SRAM2NRAM);
+  if (small_twiddles_size) {
+    __memcpy_async(_nram_tw, small_twiddles, small_twiddles_size, SRAM2NRAM);
+  }
 
   // ceil
   // int repeat_num = (section_num + max_para_ldst_num - 1) / max_para_ldst_num;
@@ -1616,10 +1617,10 @@ __mlu_func__ void computeLargeButterflyLaststage(
 template <typename DT>
 __mlu_func__ void computeLargeButterflyOtherstagesBatchPingpong(
     DT *output, DT *input, const int large_radix, const DT *cur_large_twiddles,
-    const DT *_twiddles, const DT *dft_matrix, int large_section_num,
-    int large_butterfly_num, int large_in_stride, void *nram_buf,
-    const int *small_factors, int nfft, const int t_start, const int t_end,
-    int dir, int last_stage) {
+    const DT *small_twiddles, const int small_twiddles_size,
+    const DT *dft_matrix, int large_section_num, int large_butterfly_num,
+    int large_in_stride, void *nram_buf, const int *small_factors, int nfft,
+    const int t_start, const int t_end, int dir, int last_stage) {
   // return;
   const dft_table_entry *dft_table = (const dft_table_entry *)dft_matrix;
 
@@ -1633,8 +1634,6 @@ __mlu_func__ void computeLargeButterflyOtherstagesBatchPingpong(
   _small_stage_count = small_factors[0];
   // large_radix = small_factors[1];
   tw_offset = small_factors[1];
-
-  const DT *small_twiddles = _twiddles + tw_offset * 2;  // complex
 
   // const int max_para_ldst_num = (6144 + large_radix - 1) / large_radix;
   // int max_para_ldst_num = (6400 + large_radix - 1) / large_radix;
@@ -2093,14 +2092,14 @@ __mlu_func__ void computeLargeButterflyOtherstagesBatchPingpong(
 template <typename DT>
 __mlu_func__ void computeLargeButterflyLaststageBatchPingpong(
     DT *output, DT *input, const int large_radix, const DT *cur_large_twiddles,
-    const DT *_twiddles, const DT *dft_matrix, int large_section_num,
-    int large_butterfly_num, int large_in_stride, void *nram_buf,
-    const int *small_factors, int nfft, const int t_start, const int t_end,
-    int dir) {
+    const DT *small_twiddles, const int small_twiddles_size,
+    const DT *dft_matrix, int large_section_num, int large_butterfly_num,
+    int large_in_stride, void *nram_buf, const int *small_factors, int nfft,
+    const int t_start, const int t_end, int dir) {
   computeLargeButterflyOtherstagesBatchPingpong(
-      output, input, large_radix, cur_large_twiddles, _twiddles, dft_matrix,
-      large_section_num, large_butterfly_num, large_in_stride, nram_buf,
-      small_factors, nfft, t_start, t_end, dir, 1);
+      output, input, large_radix, cur_large_twiddles, small_twiddles,
+      small_twiddles_size, dft_matrix, large_section_num, large_butterfly_num,
+      large_in_stride, nram_buf, small_factors, nfft, t_start, t_end, dir, 1);
 }
 
 template <typename DT>
