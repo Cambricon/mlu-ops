@@ -234,7 +234,7 @@ __mlu_global__ void MLUBlockKernelLgamma(T *x, T *y, int total) { // FIXME: now 
   // __nram__ float res[10] = {0};
   // // output, input, C, H, W, kh, kw, sx, xy
   // __bang_sumpool((float*)res, (float*)mat, 1, 2, 3, 2, 1, 1, 1);
-  __bang_printf("res[0]: %f, res[1]:%f, res[2]:%f, res[3]:%f\n\n", res[0], res[1], res[2], res[3]);
+  // __bang_printf("res[0]: %f, res[1]:%f, res[2]:%f, res[3]:%f\n\n", res[0], res[1], res[2], res[3]);
 
   int core_n = total / taskDim;   // size of vector that each core computing 
   int rem_n = total % taskDim;    
@@ -251,7 +251,7 @@ __mlu_global__ void MLUBlockKernelLgamma(T *x, T *y, int total) { // FIXME: now 
   for (size_t i = 0; i < AUX_N; i++) {
     aux_array[i] = (float*)nram_buffer + pos;
     pos += arr_size;
-    __bang_printf("aux_array[%d] = 0x%x\n", i, (long)aux_array[i]);
+    // __bang_printf("aux_array[%d] = 0x%x\n", i, (long)aux_array[i]);
   }
 
   int32_t repeat = core_n / arr_size;
