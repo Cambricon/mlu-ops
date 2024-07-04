@@ -15,7 +15,20 @@ const int inf_float_value = 0x7f800000;
 const int nan_float_mask = inf_float_value | 0x7fffff;
 const float log_e_2 = 0.69314718055994530941723212145818; // ln(x) = log(x) * log_e_2
 
-#define AUX_N 7
+#define AUX_N 13
+#define input_x1  aux_array[0]
+#define input_x2  aux_array[1]
+#define out_y1    aux_array[2]
+#define out_y2    aux_array[3]
+#define input1    aux_array[4]
+#define input2    aux_array[5]
+#define input3    aux_array[6]
+#define input4    aux_array[7]
+#define temp1     aux_array[8]
+#define temp2     aux_array[9]
+#define temp3     aux_array[10]
+#define temp4     aux_array[11]
+#define mask      aux_array[12]
 
 // macro for vector multiplexer 2 to 1, sel is 0/1 vector
 // dst = a*sel + !sel*b
@@ -28,8 +41,8 @@ const float log_e_2 = 0.69314718055994530941723212145818; // ln(x) = log(x) * lo
                                         __bang_band((char*)sel, (char*)b,   (char*)sel, sz*sizeof(float)); \
                                         __bang_add(dst, dst, sel, sz)
 
-#define __bang_isfinite(dst, src, sz) __bang_band_scalar(dst, src, (float)inf_float_value, sz); \
-                                      __bang_ne_scalar(dst, dst, (float)inf_float_value, sz)
+#define __bang_isinfinite(dst, src, sz) __bang_band_scalar(dst, src, (float)inf_float_value, sz); \
+                                      __bang_eq_scalar(dst, dst, (float)inf_float_value, sz)
 
 #define __bang_isinf(dst, src, sz) __bang_band_scalar(dst, src, (float)nan_float_mask, sz); \
                                    __bang_eq_scalar(dst, dst, (float)inf_float_value, sz)
@@ -37,177 +50,192 @@ const float log_e_2 = 0.69314718055994530941723212145818; // ln(x) = log(x) * lo
 #define __bang_loghp(dst, src, sz) __bang_log(dst, src, sz); \
                                    __bang_mul_scalar(dst, dst, log_e_2, sz);
 
+__nram__ float* aux_array[AUX_N];
+const int arr_size = FLOOR_ALIGN(LGAMMA_NRAM_USED / sizeof(float) / AUX_N, UNARY_ALIGN_NUM);
+
+/**
+ * spouge's algorithm
+ * z < 0:
+ * fac_z = abs(z) - floor(abs(z))
+ * lgamma(z) = log(pi) - abs(log(sin(pi * fac_z)) - lgamma(1 - z), here (1-z) > 0, goto z > 0:
+ * 
+ * z > 0:
+ * accm = coeffs[0];
+ * for (size_t k = 1; k < numCoeff; k++) {
+ *   accm += coeffs[k] / (z + k);
+ * }
+ * 
+ * lgamma(z+1) = (z + 0.5) * log(z + numCoeff) - (z + numCoeff) + log(accm) 
+ * x = z+1 -> z = x - 1, lgamma(x) = (z + 0.5) * log(z + numCoeff) - (z + numCoeff) + log(accm) 
+ */
+
 template<typename T>
-__mlu_func__ void calc_lgamma(T *buf_in, float *buf0, float *buf2, float *buf3, float *buf4, int num_deal) {
+__mlu_func__ void calc_lgamma(T *buf_in, T *buf_out, int deal_num) {
+  static const int numCoeff = 4;
   static const float log_pi = 1.144730;
-  static const float log_sqrt_two_pi = 0.918939;
-  static const float kLanczosGamma = 7; 
-  static const float kBaseLanczosCoeff = 0.99999999999980993227684700473478;
-  static const float log_lanczos_gamma_plus_one_half = 2.014903;
-  
-  float *buf1 = nullptr;
-  if (sizeof(float) == sizeof(T)) {
-    buf1 = (float *)buf_in;
-  } else if (sizeof(half) == sizeof(T)) {
-    buf1 = buf0;
-    __bang_half2float(buf1, (half *)buf_in, num_deal);
-    buf0 = (float *)buf_in;
+  static const float coeffs[numCoeff] = {2.50663, 34.7892, -20.8994, 1.35914,};
+
+  if (sizeof(half) == sizeof(T)) {
+    __bang_half2float((float*)buf_in, (half *)buf_in, deal_num);
   }
-    
-    /**
-     * bool need_to_reflect = (input < 0.5); 
-     */
-    __bang_lt_scalar(buf4, buf1, 0.5, num_deal);
+  float *input_x =  (float *)buf_in;
+  // __bang_printf("%d input_x(%f)\n", taskId, input_x[0]);
+  
+  // 将所有 buffer 清零
+  __bang_write_zero(input1, 9*arr_size);
+  
+  // mask 存放 x > 0 的位置
+  __bang_lt_scalar(mask, input_x, 0, arr_size);
 
-    /**
-     * float input_after_reflect = need_to_reflect ? -input : input - 1;  // aka z
-     */
-    // using buf0 -> input_after_reflect
-    __bang_mul_scalar(buf0, buf1, -1, num_deal);
-    __bang_add_scalar(buf2, buf1, -1, num_deal);
-    __bang_mux2(buf0, buf0, buf2, buf4, num_deal);
-    // __bang_printf("ckpt2, %lf\n", *(buf0));
+  // 选出比 0 大的放 input2
+  __bang_maxequal(input2, input_x, temp1, arr_size);
+  // 选出比 0 小的放 input1
+  __bang_minequal(input1, input_x, temp1, arr_size);
 
-    /**
-     * float sum = kBaseLanczosCoeff;  // aka x
-     * for (int i = 0, end = 8; i < end; ++i) {
-     *   float lanczos_coefficient = kLanczosCoefficients[i];
-     *   sum += lanczos_coefficient / (input_after_reflect + i + 1);
-     * }
-     */
-    // do loop flatten, using buf2 -> sum
-    __bang_write_value(buf2, num_deal, (float)kBaseLanczosCoeff);
-    __bang_write_value(buf4, num_deal, (float)676.520368121885098844);
-    __bang_add_scalar(buf3, buf0, 1, num_deal);
-    __mluop_div(buf3, buf4, buf3, (float *)0, 0, num_deal);    // __bang_div(buf3, buf4, buf3, num_deal);
-    __bang_add(buf2, buf2, buf3, num_deal);
-    __bang_write_value(buf4, num_deal, (float)-1259.139216722402807136);
-    __bang_add_scalar(buf3, buf0, 2, num_deal);
-    __mluop_div(buf3, buf4, buf3, (float *)0, 0, num_deal);    // __bang_div(buf3, buf4, buf3, num_deal);
-    __bang_add(buf2, buf2, buf3, num_deal);
-    __bang_write_value(buf4, num_deal, (float)771.323428777653134603);
-    __bang_add_scalar(buf3, buf0, 3, num_deal);
-    __mluop_div(buf3, buf4, buf3, (float *)0, 0, num_deal);    // __bang_div(buf3, buf4, buf3, num_deal);
-    __bang_add(buf2, buf2, buf3, num_deal);
-    __bang_write_value(buf4, num_deal, (float)-176.615029162140587005);
-    __bang_add_scalar(buf3, buf0, 4, num_deal);
-    __mluop_div(buf3, buf4, buf3, (float *)0, 0, num_deal);    // __bang_div(buf3, buf4, buf3, num_deal);
-    __bang_add(buf2, buf2, buf3, num_deal);
-    __bang_write_value(buf4, num_deal, (float)12.507343278686905208);
-    __bang_add_scalar(buf3, buf0, 5, num_deal);
-    __mluop_div(buf3, buf4, buf3, (float *)0, 0, num_deal);    // __bang_div(buf3, buf4, buf3, num_deal);
-    __bang_add(buf2, buf2, buf3, num_deal);
-    __bang_write_value(buf4, num_deal, (float)-0.138571095265720118);
-    __bang_add_scalar(buf3, buf0, 6, num_deal);
-    __mluop_div(buf3, buf4, buf3, (float *)0, 0, num_deal);    // __bang_div(buf3, buf4, buf3, num_deal);
-    __bang_add(buf2, buf2, buf3, num_deal);
-    __bang_write_value(buf4, num_deal, (float)0.000009984369578020);
-    __bang_add_scalar(buf3, buf0, 7, num_deal);
-    __mluop_div(buf3, buf4, buf3, (float *)0, 0, num_deal);    // __bang_div(buf3, buf4, buf3, num_deal);
-    __bang_add(buf2, buf2, buf3, num_deal);
-    __bang_write_value(buf4, num_deal, (float)0.000000150563273515);
-    __bang_add_scalar(buf3, buf0, 8, num_deal);
-    __mluop_div(buf3, buf4, buf3, (float *)0, 0, num_deal);    // __bang_div(buf3, buf4, buf3, num_deal);
-    __bang_add(buf2, buf2, buf3, num_deal);
+  // if x < 0, x = x - 1 
+  __bang_sub_scalar(input1, input1, 1, arr_size);
+  // x > 0 的位置与 mask 相乘, 消除掉 -1
+  __bang_mul(input1, input1, mask, arr_size);
+  // input_x x > 0 部分 x - 0, 小于 0 部分 0 - (x - 1)
+  // 即得到 x 与 1 - x 都在 input_x 中
+  __bang_sub(input_x, input2, input1, arr_size);
+  // __bang_printf("%d reflect_x %f\n", taskId, input_x[0]);
 
-    /**
-     * float gamma_plus_onehalf_plus_z = kLanczosGamma + 0.5 + input_after_reflect;  // aka t
-     */
-    // using buf3 -> gamma_plus_onehalf_plus_z
-    __bang_add_scalar(buf3, buf0, kLanczosGamma+0.5, num_deal);
+  // z = x - 1 -> input_x
+  __bang_sub_scalar(input_x, input_x, 1, arr_size);
+  // __bang_printf("%d z (%f)\n", taskId, input_x[0]);
 
-    /** 
-     * float log_t = log_lanczos_gamma_plus_one_half + log1pf(input_after_reflect / (kLanczosGamma + 0.5));
-     */
-    // using buf4 -> log_t
-    __bang_write_value(buf4, num_deal, (float)(kLanczosGamma+0.5));
-    __mluop_div(buf4, buf0, buf4, (float *)0, 0, num_deal);
-    __bang_add_scalar(buf4, buf4, 1, num_deal);
-    __bang_loghp(buf4, buf4, num_deal);
-    __bang_add_scalar(buf4, buf4, log_lanczos_gamma_plus_one_half, num_deal);
+  // accm += coeffs[k] / (x + k) for k = 1 to 4
+  // 展开循环, 将 x + k 分别直接复制为 deal_num 份, 方便向量计算
+  __bang_add_scalar(input1, input_x, 1, arr_size);
+  __bang_add_scalar(input2, input_x, 2, arr_size);
+  __bang_add_scalar(input3, input_x, 3, arr_size);
+  // __bang_printf("%d x+1 %f\n", taskId, input1[0]);
+  // __bang_printf("%d x+2 %f\n", taskId, input2[0]);
+  // __bang_printf("%d x+3 %f\n", taskId, input3[0]);
 
-    /**
-     * float log_y = log_sqrt_two_pi + (input_after_reflect + 0.5 - gamma_plus_onehalf_plus_z / log_t) * log_t + log(sum);
-     *  ---->
-     *        log_y = log_sqrt_two_pi + (input_after_reflect + 0.5) * log_t - gamma_plus_onehalf_plus_z + log(sum)
-    */
-    // using buf0 -> log_y
-    __bang_loghp(buf2, buf2, num_deal);
-    __bang_add_scalar(buf0, buf0, 0.5, num_deal);
-    __bang_mul(buf0, buf0, buf4, num_deal);
-    __bang_add_scalar(buf0, buf0, log_sqrt_two_pi, num_deal);
-    __bang_sub(buf0, buf0, buf3, num_deal);
-    __bang_add(buf0, buf0, buf2, num_deal);
+  // 计算 1 / (z + k) for k = 1 to 4
+  __bang_recip(input1, input1, arr_size*3);
+  __sync();
+  // __bang_printf("%d 1/(x+1) %f\n", taskId, input1[0]);
+  // __bang_printf("%d 1/(x+2) %f\n", taskId, input2[0]);
+  // __bang_printf("%d 1/(x+3) %f\n", taskId, input3[0]);
 
-    /**
-     * float abs_input = fabs(input);
-     * float abs_frac_input = abs_input - floorf(abs_input);
-    */
-    // using buf4 -> abs_frac_input
-    __bang_abs(buf2, buf1, num_deal);
-    __bang_floor(buf3, buf2, num_deal);
-    __bang_sub(buf4, buf2, buf3, num_deal);
+  // 展开循环, 将 coeffs[k] 分别直接复制为 deal_num 份, 方便向量计算
+  // FMA?
+  __bang_write_value(temp1, arr_size, coeffs[1]);
+  __bang_write_value(temp2, arr_size, coeffs[2]);
+  __bang_write_value(temp3, arr_size, coeffs[3]);
+  __bang_write_value(temp4, arr_size, coeffs[0]);
+  __bang_mul(temp1, input1, temp1, arr_size*3);
+  __sync();
+  // __bang_printf("%d coeff1/(x+1) %f\n", taskId, temp1[0]);
+  // __bang_printf("%d coeff2/(x+2) %f\n", taskId, temp2[0]);
+  // __bang_printf("%d coeff3/(x+3) %f\n", taskId, temp3[0]);
 
-    /**
-     * float reduced_frac_input = (abs_frac_input > 0.5) ? 1 - abs_frac_input : abs_frac_input;
-    */
-    // using buf3 -> reduced_frac_input
-    __bang_gt_scalar(buf2, buf4, 0.5, num_deal);
-    __bang_mul_scalar(buf3, buf4, -1, num_deal);
-    __bang_add_scalar(buf3, buf3, 1, num_deal);
-    __bang_mux2(buf3, buf3, buf4, buf2, num_deal);
+  // accm -> input3
+  // sumpool input CHW [1, 4, deal_num], kernel HW [4, 1] -> output CHW [1, deal_num]
+  __bang_sumpool(input3, temp1, 1, 4, arr_size, 4, 1, 1, 1);
+  __sync();
+  // __bang_printf("%d sumpool accm = %f\n",taskId, input3[0]);
 
-    /**
-     * float reflection_denom = log(sinf(M_PI * reduced_frac_input));
-    */
-    // using buf2 -> reflection_denom
-    __bang_mul_scalar(buf2, buf3, M_PI, num_deal);
-    __bang_sin(buf2, buf2, num_deal);               // active sin ?
-    __bang_loghp(buf2, buf2, num_deal);               // active log ?
-    
-    /**
-     * float reflection = std::isfinite(reflection_denom) ? log_pi - reflection_denom - log_y : -reflection_denom;
-    */
-    // using buf3 -> reflection
-    __bang_write_zero(buf4, num_deal);
-    __bang_sub(buf2, buf4, buf2, num_deal);
-    __bang_isfinite(buf4, buf2, num_deal);
-    __bang_sub(buf3, buf2, buf0, num_deal);
-    __bang_add_scalar(buf3, buf3, log_pi, num_deal);
-    __bang_mux2(buf3, buf3, buf2, buf4, num_deal);
+  // z + 0.5 -> input1
+  __bang_add_scalar(input1, input_x, 0.5, arr_size);
 
+  // z + numCoeff -> input2
+  __bang_add_scalar(input2, input_x, numCoeff, arr_size);
 
-    /**
-     * float result = need_to_reflect ? reflection : log_y;
-    */
-    // using buf2 -> result
-    __bang_lt_scalar(buf4, buf1, 0.5, num_deal);
-    __bang_mux2(buf2, buf3, buf0, buf4, num_deal);
+  // abs(input_x) - floor(abs(input_x))
+  // convert values of abs_frac_input > 0.5 to (1 - frac_input) to improve precision if nessesary
+  __bang_abs(temp1, input_x, arr_size);
+  __bang_floor(temp2, input_x, arr_size);
+  __bang_sub(temp1, temp1, temp2, arr_size);
 
-    /**
-     * return isinf(input) ? INFINITY : result;
-    */ 
-    __bang_isinf(buf0, buf1, num_deal);
-    __bang_write_value(buf3, num_deal, (float)(inf_float_value));
-    __bang_mux2(buf4, buf3, buf2, buf0, num_deal);
-    
-    if (sizeof(half) == sizeof(T)) {
-      __mluop_float2half((half *)buf4, buf4, num_deal);
-    }
+  // sin(abs(pi*input_x)) = sin(pi * (abs(input_x) - floor(abs(input_x)))) for higher precision
+  __bang_mul_scalar(temp1, temp1, M_PI, arr_size);
+  __bang_sin(input4, temp1, arr_size);
 
+  // input2: z+num_coeff, input3: accm,   input4: sin(pi*input_x), temp1
+  // log(z+numCoeff)      log(accm)       log(sin(pi*input_x))
+  __bang_loghp(input2, input2, 3*arr_size);
+
+  // -sin(abs(pi*input_x)) -> temp1
+  __bang_mul_scalar(temp1, input4, -1, arr_size);
+
+  // (z+0.5)*log(z+numCoeff) -> input2
+  __bang_mul(input2, input2, input1, arr_size);
+
+  // lgamma(x) = (z+0.5)*log(z+numCoeff) - (z+numCoeff) + log(accm)
+  // -(z+numCoeff) -> input1
+  __bang_add_scalar(input1, input_x, numCoeff, arr_size);
+  __bang_mul_scalar(input1, input1, -1, arr_size);
+  // __bang_printf("%d -(z+numCoeff) = %f\n", taskId, input1[0]);
+  //将 input1: -(z+num_coeff), input2: (z+0.5)*log(z+numCoeff), input3: log(accm) 累加
+  // sumpool input CHW [1, 3, deal_num], kernel HW [3, 1] -> output CHW [1, deal_num]
+  __bang_sumpool(input1, input1, 1, 3, arr_size, 3, 1, 1, 1);
+  // __bang_printf("%d (z+0.5)*log(z+numCoeff) = %f\n", taskId, input2[0]);
+  // __bang_printf("%d log(accm) = %f\n", taskId, input3[0]);
+  // __bang_printf("%d sumpool lgamma(x) = %f\n", taskId, input1[0]);
+
+  // x > 0 ? lgamma(x) : 0 -> input2 
+  __bang_mul(input2, input1, mask, arr_size);
+  // x < 0 ? -lgamma(1-x) : 0 -> input3
+  __bang_mul_scalar(input3, input1, -1, arr_size);
+  __bang_eq_scalar(temp4, mask, 0, arr_size);
+  __bang_mul(input3, input1, temp4, arr_size);
+  // 然后得到 lgamma(x) 与 -lgamma(1-x) 都在 input4 中
+  __bang_add(input4, input2, input3, arr_size);
+
+  // temp1: log(sin(pi*input_x)), temp2: log(pi)
+  // mask * [log(sin(pi*input4)) log(pi)], x > 0 部分不需要加
+  __bang_write_value(temp2, arr_size, log_pi);
+  __bang_cycle_and(temp1, temp1, mask, 2*arr_size, arr_size);
+
+  // if x < 0, lgamma(x) = log(pi) - log(sin(abs(pi * fac_z)) + lgamma(1-x)
+  // sumpool input CHW [1, 3, deal_num], kernel HW [3, 1] -> output CHW [1, deal_num]
+  __bang_sumpool(input_x, input4, 1, 3, arr_size, 3, 1, 1, 1);
+  // __bang_printf("%d sumpool x < 0, lgamma(x) = %f\n", taskId, input_x[0]);
+
+  // aoid computing -inf - inf, which is nan. if temp1: log(sin(pi*input_x)) is +-inf, then lgamma(1-x) is -+inf
+  __bang_isinfinite(temp4, temp1, arr_size);
+  __bang_and(temp4, temp4, mask, arr_size);
+  __bang_mux2(temp3, temp1, input_x, temp4, arr_size);
+  // __bang_printf("%d __bang_isinfinite lgamma(x) = %f\n", taskId, input3[0]);
+
+  // if input x is +-inf, return +-inf
+  __bang_isinf(temp4, input_x, arr_size);
+  __bang_write_value(temp2, arr_size, (float)(inf_float_value));
+  __bang_mux2((float*)buf_out, temp2, temp3, temp4, arr_size);
+
+  if (sizeof(half) == sizeof(T)) {
+    __mluop_float2half((half *)buf_out, (float*)buf_out, deal_num);
+  }
+  // __bang_printf("%d result(%f) = %f\n", taskId, input_x[0], buf_out[0]);
 }
 
-// buffer <0 1 .. 5 6>
-/** when using pipelines, 
- * buffer <0 1> is ping-pong buffer for load, 
- * buffer <2 .. 4> for compute only, 
- * buffer <5 6> is ping-pong buffer for store 
- * for data load in circle C, it should load in buffer[(C % 2) ? 1 : 0],
- * for data load in circle C, its result should store in  buffer[(C % 2) ? 6 : 5],
+// buffer <0 1 2 3 .. 12>
+// -------------------------------------------------------------------------------------------
+// |input_x1|input_x2|out_y1|out_y2|input1|input2|input3|input4|temp1|temp2|temp3|temp4|mask|
+// -------------------------------------------------------------------------------------------
+
+/** 
+ * buffer <0 1> is ping-pong buffer for load, aka <input_x1 input_x2>
+ * buffer <2 3> is ping-pong buffer for store, aka <out_y1 out_y2>
+ * buffer <4 .. 12> for compute only, 
+ * for data load in circle C, it should load in (C % 2) ? input_x2 : input_x1,
+ * for data load in circle C, its result should store in (C % 2) ? out_y2 : out_y1
  **/
 
 template <typename T>
 __mlu_global__ void MLUBlockKernelLgamma(T *x, T *y, int total) { // FIXME: now is 3 stage pipeline
+
+  // // test sumpool
+  // __nram__ float mat[] = {0,1,2,3,4,5};
+  // __nram__ float res[10] = {0};
+  // // output, input, C, H, W, kh, kw, sx, xy
+  // __bang_sumpool((float*)res, (float*)mat, 1, 2, 3, 2, 1, 1, 1);
+  __bang_printf("res[0]: %f, res[1]:%f, res[2]:%f, res[3]:%f\n\n", res[0], res[1], res[2], res[3]);
+
   int core_n = total / taskDim;   // size of vector that each core computing 
   int rem_n = total % taskDim;    
   if (taskId <= rem_n) {
@@ -219,12 +247,11 @@ __mlu_global__ void MLUBlockKernelLgamma(T *x, T *y, int total) { // FIXME: now 
     y += (core_n + 1) * rem_n + core_n * (taskId - rem_n);
   }
 
-  float* aux_array[AUX_N];
-  int arr_size = FLOOR_ALIGN(LGAMMA_NRAM_USED / sizeof(float) / AUX_N, UNARY_ALIGN_NUM);
   int pos = 0;
   for (size_t i = 0; i < AUX_N; i++) {
     aux_array[i] = (float*)nram_buffer + pos;
     pos += arr_size;
+    __bang_printf("aux_array[%d] = 0x%x\n", i, (long)aux_array[i]);
   }
 
   int32_t repeat = core_n / arr_size;
@@ -233,100 +260,71 @@ __mlu_global__ void MLUBlockKernelLgamma(T *x, T *y, int total) { // FIXME: now 
   // CC 0
   if (repeat > 0) {
     // load
-    __memcpy_async(aux_array[0], x, arr_size*sizeof(T), GDRAM2NRAM);
+    __memcpy_async(input_x1, x, arr_size*sizeof(T), GDRAM2NRAM);
     __sync();
   }
 
   // CC 1
   if (repeat > 1) {
     // load
-    __memcpy_async(aux_array[1], x + arr_size, arr_size*sizeof(T),
+    __memcpy_async(input_x2, x + arr_size, arr_size*sizeof(T),
                    GDRAM2NRAM);
 
     // compute
-    calc_lgamma((T*)aux_array[0],aux_array[2], aux_array[3], aux_array[4],
-                aux_array[5], arr_size);
+    calc_lgamma((T*)input_x1, (T*)out_y1, arr_size);
     __sync();
   }
 
   // CC 2 -> repeat-1
   for (int i = 0; i < repeat - 2; i++) {
     // store
-    __memcpy_async(y + i*arr_size, aux_array[(i % 2) ? 6 : 5],
+    __memcpy_async(y + i*arr_size, (i % 2) ? out_y2 : out_y1,
                    arr_size*sizeof(T), NRAM2GDRAM);
 
     // load
-    __memcpy_async(aux_array[(i % 2) ? 1 : 0], x + (i+2)*arr_size,
+    __memcpy_async((i % 2) ? input_x2 : input_x1, x + (i+2)*arr_size,
                    arr_size*sizeof(T), GDRAM2NRAM);
     
     // compute
-    calc_lgamma((T*)aux_array[(i % 2) ? 0 : 1],aux_array[2], aux_array[3],
-                aux_array[4], aux_array[(i % 2) ? 5 : 6], arr_size);
+    calc_lgamma((T*)((i % 2) ? input_x1 : input_x2), (T*)((i % 2) ? out_y1 : out_y2), 
+                arr_size);
 
     __sync();
   }
 
   // CC repeat
   if (repeat > 1) {
-    __memcpy_async(y + (repeat - 2)*arr_size,
-                   aux_array[((repeat - 2) % 2) ? 6 : 5],
+    __memcpy_async(y + (repeat - 2)*arr_size, (repeat % 2) ? out_y2 : out_y1,
                    arr_size*sizeof(T), NRAM2GDRAM);
   }
 
   // if rem > 0, lead last (core_n % arr_size) element
   if (rem > 0) {
-    __memcpy_async(aux_array[(repeat % 2) ? 1 : 0],
+    __memcpy_async((repeat % 2) ? input_x2 : input_x1,
                    x + repeat*arr_size, rem*sizeof(T), GDRAM2NRAM);
   }
 
   if (repeat > 0) {
-    calc_lgamma((T*)aux_array[((repeat-1) % 2) ? 1 : 0],aux_array[2], 
-                aux_array[3],aux_array[4], 
-                aux_array[((repeat-1) % 2) ? 6 : 5], arr_size);
+    calc_lgamma((T*)(((repeat-1) % 2) ? input_x2 : input_x1), (T*)(((repeat-1) % 2) ? out_y2 : out_y1), 
+                arr_size);
   }
   __sync();
 
   // CC repeat+1
   if (repeat > 0) {
-    __memcpy_async(y + (repeat - 1)*arr_size,
-                   aux_array[((repeat - 1) % 2) ? 6 : 5],
+    __memcpy_async(y + (repeat - 1)*arr_size, ((repeat-1) % 2) ? out_y2 : out_y1,
                    arr_size*sizeof(T), NRAM2GDRAM);
   }
 
   // if rem > 0, compute & store last (core_n % arr_size) element
   if (rem > 0) {
-    calc_lgamma((T*)aux_array[(repeat % 2) ? 1 : 0],aux_array[2], 
-                aux_array[3],aux_array[4], 
-                aux_array[(repeat % 2) ? 6 : 5], rem);
-
+    calc_lgamma((T*)((repeat % 2) ? input_x2 : input_x1), (T*)((repeat % 2) ? out_y2 : out_y1), rem);
     __sync();
 
     // CC repeat+2
-    __memcpy_async(y + repeat*arr_size,
-                   aux_array[(repeat % 2) ? 6 : 5],
+    __memcpy_async(y + repeat*arr_size, (repeat % 2) ? out_y2 : out_y1,
                    rem*sizeof(T), NRAM2GDRAM);
   }
-
-  // for (size_t i = 0; i < core_n; i += arr_size) {
-  //   int num_deal = i + arr_size > core_n ? core_n - i : arr_size;
-
-
-
-  //   // using buf1 -> input
-  //   if (sizeof(T) == sizeof(float)) {
-  //     __memcpy(buf1, x + i, num_deal*sizeof(float), GDRAM2NRAM);  
-  //   } else if (sizeof(T) == sizeof(half)) {  // half
-  //     __memcpy(buf0, x + i, num_deal*sizeof(half), GDRAM2NRAM);  
-  //     __bang_half2float(buf1, (half *)buf0, num_deal);
-  //   }
-
-  //   if (sizeof(T) == sizeof(float)) {
-  //     __memcpy(y + i, buf1, num_deal*sizeof(float), NRAM2GDRAM);  
-  //   } else if (sizeof(T) == sizeof(half)) {  // half
-  //     __mluop_float2half((half *)buf1, buf1, num_deal);
-  //     __memcpy(y + i, buf1, num_deal*sizeof(half), NRAM2GDRAM);  
-  //   }
-  // } 
 }
 
 
