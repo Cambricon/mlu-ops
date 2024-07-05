@@ -1,0 +1,178 @@
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "logspace.h"
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/unary_op/unary_op_3pipeline.h"
+#include "kernels/unary_op/unary_op_5pipeline.h"
+
+#define LOGSPACE_NRAM_USED MAX_NRAM_SIZE
+#define LOGSPACE_FLOAT32_NRAM_USED LOGSPACE_NRAM_USED/4
+#define LOGSPACE_FLOAT32_INC_LIST_NRAM_USED LOGSPACE_FLOAT32_NRAM_USED/4
+#define LOGSPACE_FLOAT32_RES_NRAM_USED LOGSPACE_FLOAT32_NRAM_USED/4
+#define DEAL_NUM_IN_A_LOOP 4096
+#define INCREASE_LIST_LENGTH_IN_A_LOOP 64
+
+// An array for increase list and the result
+__nram__ float inc_list_and_logspace_res[LOGSPACE_FLOAT32_INC_LIST_NRAM_USED];
+
+// float to float/int/half/bfloat16
+__mlu_func__ void Float2DifferentType(const mluOpDataType_t d_type,
+ void *res_with_different_dtype, 
+ const float *inc_list_and_logspace_res, 
+ const int sizeofT, const int i, const int num){
+    switch(d_type){
+    case MLUOP_DTYPE_FLOAT:{
+      __bang_move((float *)res_with_different_dtype+i*DEAL_NUM_IN_A_LOOP, inc_list_and_logspace_res+i*DEAL_NUM_IN_A_LOOP, sizeofT*num);
+    };break;
+    case MLUOP_DTYPE_BFLOAT16:{
+      __bang_float2bfloat16_rd((bfloat16_t *)res_with_different_dtype+i*DEAL_NUM_IN_A_LOOP, inc_list_and_logspace_res+i*DEAL_NUM_IN_A_LOOP, num);
+    };break;
+    case MLUOP_DTYPE_HALF:{
+      __bang_float2half_rd((half *)res_with_different_dtype+i*DEAL_NUM_IN_A_LOOP, inc_list_and_logspace_res+i*DEAL_NUM_IN_A_LOOP, num);
+    };break;
+    case MLUOP_DTYPE_INT32:{
+      __bang_float2int32_rd((int32_t *)res_with_different_dtype+i*DEAL_NUM_IN_A_LOOP, inc_list_and_logspace_res+i*DEAL_NUM_IN_A_LOOP, num, 0);
+    };break;
+    default:
+      break;
+  }
+}
+
+template <typename T>
+__mlu_global__ void MLUKernelLogspace(const float start, const float end, const int steps, const float base, T *res, const mluOpDataType_t d_type) {
+  
+  // An array for data type conversions
+  __nram__ T res_with_different_dtype[LOGSPACE_FLOAT32_RES_NRAM_USED];
+
+  // steps=1
+  if(steps==1){
+    if(taskId==0){
+      res_with_different_dtype[0]=(T)powf(base, start);
+      __memcpy_async(res,res_with_different_dtype,sizeof(T),NRAM2GDRAM);
+    }
+  }
+  // steps>1
+  else{
+    // Calculate the number of elements that need to be processed by this kernel, and the offset
+    unsigned int deal_num=steps/taskDim;
+    unsigned int res_offset=taskId*deal_num;
+    if(taskId<steps%taskDim){
+      deal_num++;
+      res_offset+=taskId;
+    }
+    else{
+      res_offset+=steps%taskDim;
+    }
+    // The interval of the power
+    float step=(float)(end-start)/(steps-1);
+    // Generate an incrementing sequence
+    if(deal_num>INCREASE_LIST_LENGTH_IN_A_LOOP){
+      // Start by generating an increasing series of INCREASE_LIST_LENGTH_IN_A_LOOP lengths
+      // Then, by adding a scalar, the remaining increasing series is generated, and the total length is deal_num
+      __mluop_get_indices(inc_list_and_logspace_res, 0.0f, INCREASE_LIST_LENGTH_IN_A_LOOP);
+      int inc_list_length=INCREASE_LIST_LENGTH_IN_A_LOOP;
+      while(inc_list_length<(deal_num/2)){
+        __bang_add_scalar(inc_list_and_logspace_res+inc_list_length,inc_list_and_logspace_res,inc_list_length,inc_list_length);
+        inc_list_length*=2;
+      }
+      int inc_list_tail=deal_num-inc_list_length;
+      __bang_add_scalar(inc_list_and_logspace_res+inc_list_length,inc_list_and_logspace_res,inc_list_length,inc_list_tail);
+    }
+    else{
+      __mluop_get_indices(inc_list_and_logspace_res, 0.0f, deal_num);
+    }
+    // The incrementing sequence is also offset by the kernel
+    __bang_add_scalar(inc_list_and_logspace_res,inc_list_and_logspace_res,res_offset,deal_num);
+    // Multiply "step"
+    __bang_mul_scalar(inc_list_and_logspace_res,inc_list_and_logspace_res,step,deal_num);
+    // Add "start"
+    __bang_add_scalar(inc_list_and_logspace_res,inc_list_and_logspace_res,(float)start,deal_num);
+    // pow(x,y) = exp2(y * log2(x)), calculate log2(x)
+    float base_log=log2f(base);
+    // calculate y * log2(x)
+    __bang_mul_scalar(inc_list_and_logspace_res,inc_list_and_logspace_res,base_log,deal_num);
+
+    // Second-level pipeline, the latency of the compute stream covers the IO stream
+    int loop_time=deal_num/DEAL_NUM_IN_A_LOOP;
+    int rem_ram_num=deal_num%DEAL_NUM_IN_A_LOOP;
+    int rem_num=0;
+    if(rem_ram_num!=0){
+      rem_num=1;
+    }
+    for(int i=0;i<loop_time+1+rem_num;i++){
+      //S(i-1)
+      if(i>=1){
+        if(i<loop_time+rem_num||rem_num==0){
+          __memcpy_async(res+res_offset+(i-1)*DEAL_NUM_IN_A_LOOP,
+          res_with_different_dtype+(i-1)*DEAL_NUM_IN_A_LOOP,
+          DEAL_NUM_IN_A_LOOP*sizeof(T),
+          NRAM2GDRAM);
+        }else if(rem_num==1){
+          __memcpy_async(res+res_offset+(i-1)*DEAL_NUM_IN_A_LOOP,
+          res_with_different_dtype+(i-1)*DEAL_NUM_IN_A_LOOP,
+          rem_ram_num*sizeof(T),
+          NRAM2GDRAM);
+        }
+      }
+      //C(i)
+      if(i<loop_time+rem_num){
+        if(i<loop_time+rem_num-1||rem_num==0){
+          __bang_pow2(inc_list_and_logspace_res+i*DEAL_NUM_IN_A_LOOP,inc_list_and_logspace_res+i*DEAL_NUM_IN_A_LOOP,DEAL_NUM_IN_A_LOOP);
+          Float2DifferentType(d_type, res_with_different_dtype, inc_list_and_logspace_res, sizeof(T), i, DEAL_NUM_IN_A_LOOP);
+        }else if(rem_num==1){
+          __bang_pow2(inc_list_and_logspace_res+i*DEAL_NUM_IN_A_LOOP,inc_list_and_logspace_res+i*DEAL_NUM_IN_A_LOOP,rem_ram_num);
+          Float2DifferentType(d_type, res_with_different_dtype, inc_list_and_logspace_res, sizeof(T), i, rem_ram_num);
+        }
+      }
+      __sync();
+    }
+  }
+}
+
+mluOpStatus_t MLUOP_WIN_API
+KernelLogspace(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type, const cnrtQueue_t queue, const mluOpDataType_t d_type,
+                        const float start, const float end, const int steps, const float base, void *res) {    
+  switch(d_type){
+    case MLUOP_DTYPE_FLOAT:{
+        KERNEL_CHECK(MLUKernelLogspace<<<k_dim, k_type, queue>>>(
+            start, end, steps, base, (float *)res, d_type));
+    };break;
+    case MLUOP_DTYPE_BFLOAT16:{
+        KERNEL_CHECK(MLUKernelLogspace<<<k_dim, k_type, queue>>>(
+            start, end, steps, base, (bfloat16_t *)res, d_type));
+    };break;
+    case MLUOP_DTYPE_HALF:{
+        KERNEL_CHECK(MLUKernelLogspace<<<k_dim, k_type, queue>>>(
+            start, end, steps, base, (half *)res, d_type));
+    };break;
+    case MLUOP_DTYPE_INT32:{
+        KERNEL_CHECK(MLUKernelLogspace<<<k_dim, k_type, queue>>>(
+            start, end, steps, base, (int32_t *)res, d_type));
+    };break;
+    default:
+      break;
+  }
+  return MLUOP_STATUS_SUCCESS;
+}
