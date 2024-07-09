@@ -71,6 +71,7 @@ const int arr_size = FLOOR_ALIGN(LGAMMA_NRAM_USED / sizeof(float) / AUX_N, UNARY
 
 template<typename T>
 __mlu_func__ void calc_lgamma(T *buf_in, T *buf_out, int deal_num) {
+  // __asm__ volatile("readperf.begin;\n\t");
   static const int numCoeff = 4;
   static const float log_pi = 1.144730;
   static const float coeffs[numCoeff] = {2.50663, 34.7892, -20.8994, 1.35914,};
@@ -211,6 +212,7 @@ __mlu_func__ void calc_lgamma(T *buf_in, T *buf_out, int deal_num) {
   if (sizeof(half) == sizeof(T)) {
     __mluop_float2half((half *)buf_out, (float*)buf_out, deal_num);
   }
+  // __asm__ volatile("readperf.end;\n\t");
   // __bang_printf("%d result(%f) = %f\n", taskId, input_x[0], buf_out[0]);
 }
 
@@ -229,14 +231,7 @@ __mlu_func__ void calc_lgamma(T *buf_in, T *buf_out, int deal_num) {
 
 template <typename T>
 __mlu_global__ void MLUBlockKernelLgamma(T *x, T *y, int total) { // FIXME: now is 3 stage pipeline
-
-  // // test sumpool
-  // __nram__ float mat[] = {0,1,2,3,4,5};
-  // __nram__ float res[10] = {0};
-  // // output, input, C, H, W, kh, kw, sx, xy
-  // __bang_sumpool((float*)res, (float*)mat, 1, 2, 3, 2, 1, 1, 1);
-  // __bang_printf("res[0]: %f, res[1]:%f, res[2]:%f, res[3]:%f\n\n", res[0], res[1], res[2], res[3]);
-
+  // __bang_printf("taskDim: %d, taskId: %d, clusterId: %d, coreid: %d\n", taskDim, taskId, clusterId, coreId);
   int core_n = total / taskDim;   // size of vector that each core computing 
   int rem_n = total % taskDim;    
   if (taskId <= rem_n) {
