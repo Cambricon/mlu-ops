@@ -48,7 +48,7 @@ void LogcumsumexpExecutor::cpuCompute() {
   GTEST_CHECK(parser_->getInputNum() == 1);
   GTEST_CHECK(parser_->getOutputNum() == 1);
   int32_t dim = parser_->getProtoNode()->logcumsumexp_param().dim();
-  int32_t data_size = parser_->input(0)->total_count;
+  int32_t data_num = parser_->input(0)->total_count;
 
   // Pamameter Preparing
   auto self_dim_size = tensor_desc_[0].tensor->dims[dim];
@@ -60,7 +60,7 @@ void LogcumsumexpExecutor::cpuCompute() {
   for (int i = dim - 1; i >= 0; i--) {
     batches *= tensor_desc_[0].tensor->dims[i];
   }
-  for (int i = 0; i < data_size; i++) {
+  for (int i = 0; i < data_num; i++) {
     cpu_fp32_input_[0][i] = exp(cpu_fp32_input_[0][i]);
   }
   // Cumsum Computing
@@ -76,12 +76,14 @@ void LogcumsumexpExecutor::cpuCompute() {
       }
       for (int j = 0; j < segNum; j++) {
         int32_t dealLength;
-        if (self_dim_size % CUMSUM_SIZE == 0)
+        if (self_dim_size % CUMSUM_SIZE == 0) {
           dealLength = CUMSUM_SIZE;
-        else if (j < segNum - 1)
+        } else if (j < segNum - 1) {
           dealLength = CUMSUM_SIZE;
-        else
+        } else {
           dealLength = self_dim_size % CUMSUM_SIZE;
+        }
+
         cum_number[j] = x_ptr[j * CUMSUM_SIZE * self_dim_stride];
         y_ptr[j * CUMSUM_SIZE * self_dim_stride] = cum_number[j];
 
@@ -123,7 +125,7 @@ void LogcumsumexpExecutor::cpuCompute() {
       y_ptr += 1;
     }
   }
-  for (int i = 0; i < data_size; i++) {
+  for (int i = 0; i < data_num; i++) {
     cpu_fp32_output_[0][i] = log(cpu_fp32_output_[0][i]);
   }
 }

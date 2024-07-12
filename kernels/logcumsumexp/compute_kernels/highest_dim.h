@@ -54,10 +54,10 @@ oneRowKernel(T *output, const T *source, int32_t deal_length,
     __mluop_exp(thisNram, thisNram, nullptr, 0, part_length);
     __bang_add(thisNram, thisNram, lastNram, part_length);
     __mluop_log(nram_out, thisNram, nullptr, 0, part_length);
-    __memcpy(output + i * address_offset + copy_offset,
-             nram_out,
-             part_length * sizeof(T),
-             NRAM2GDRAM);
+    __memcpy_async(output + i * address_offset + copy_offset,
+                   nram_out,
+                   part_length * sizeof(T),
+                   NRAM2GDRAM);
     __sync_cluster();
   }
 }
@@ -151,8 +151,8 @@ highestDimKernel(const T *input,
           else
             deal_length = lower_size - (batches_num - 1) * cluster_capacity;
           oneRowKernel(output + i * cluster_capacity,
-                     input + i * cluster_capacity,
-                     deal_length, axis_size, lower_size);
+                       input + i * cluster_capacity,
+                       deal_length, axis_size, lower_size);
         }
     } else {  // deal as parts
         T *offset_cores = (T *)sram_buffer;

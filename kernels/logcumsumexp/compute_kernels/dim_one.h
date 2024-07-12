@@ -23,8 +23,8 @@
 #pragma once
 
 #define N_ALIGN 128
-#define CoreCapacity 327680  // memory length of input per core
-#define ClusterCapacity 1310720  // memory length of input per cluster
+#define CoreCapacity MAX_NRAM_SIZE / 81920 * 81920  // memory length of input per core
+#define ClusterCapacity MAX_NRAM_SIZE / 81920 * 81920 * 4  // memory length of input per cluster
 #define DimOneDealLength 147456  // size of one NRAM in dim-one
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
@@ -207,11 +207,11 @@ dimOneKernel(const T *input,
     int32_t n_last_core = last_cluster_length >> 2;
     int32_t length_offset = last_cluster_length % 4;
     int32_t copy_offset = coreId * n_last_core
-      + __mluop_min(coreId, length_offset);
+            + __mluop_min(coreId, length_offset);
     if (coreId < length_offset)n_last_core += 1;
     int32_t padding_length = (n_last_core + N_ALIGN - 1) / N_ALIGN * N_ALIGN;
 
-    // first memory copy GDRAM2SRAM
+    // first memory copy GDRAM2NRAM
     if (rounds > 1)__memcpy(nram_src0,
       input + totalId * n_cluster + coreId * n_core,
       n_core * sizeof(T), GDRAM2NRAM);
@@ -292,7 +292,6 @@ dimOneKernel(const T *input,
         __memcpy(output + totalId * n_cluster + copy_offset, this_nram,
                  n_last_core * sizeof(T), NRAM2GDRAM);
       } else {
-        __sync_all();
         __sync_all();
       }
     }

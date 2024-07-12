@@ -14370,8 +14370,33 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
                   const int32_t dim,
                   const mluOpTensorDescriptor_t input_desc,
                   const void *input,
-                  const mluOpTensorDescriptor_t result_desc,
-                  void *result);
+                  const mluOpTensorDescriptor_t output_desc,
+                  void *output);
+// Group: Tensor
+/*!
+* @brief Compute the logarithm of the cumulative sum of the given
+* input. Specifically, given a tensor input, logcumsumexp(input) 
+* calculates along the dimension dim to obtain an array output of 
+* the same size as input, where each element output[i] is the logarithm 
+* of the sum of the exponentials of the first i elements of input.
+*
+* @par Return
+* - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
+*
+* @par Data Type
+* - ::MLUOP_DTYPE_FLOAT, ::MLUOP_DTYPE_HALT
+*
+* @par Data Layout
+* - ::MLUOP_LAYOUT_ARRAY
+*
+* @par Scale Limitation
+* - None.
+*
+* @par API Dependency
+* - None.
+*
+*/
+
 
 #if defined(__cplusplus)
 }
