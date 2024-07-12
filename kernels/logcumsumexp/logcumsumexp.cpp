@@ -96,7 +96,6 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
         return MLUOP_STATUS_BAD_PARAM;
     }
 
-
     // preprocess for negative dim
     int dim_adj = dim;
     if (dim_adj < 0) {
