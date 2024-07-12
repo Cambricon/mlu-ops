@@ -41,9 +41,9 @@
 | 输入数据类型                                                 | input: half/float，dim: int32_t            |
 | 输入Shape                                                    | input: 无要求                              |
 | 输入Layout                                                   | input:  ARRAY                              |
-| 输出数据类型                                                 | result: 与input保持一致                    |
-| 输出Shape                                                    | result: 与input保持一致                    |
-| 输出Layout                                                   | result: ARRAY                              |
+| 输出数据类型                                                 | output: 与input保持一致                    |
+| 输出Shape                                                    | output: 与input保持一致                    |
+| 输出Layout                                                   | output: ARRAY                              |
 | 模式(可选）                                                  | 无                                         |
 | 是否含有dim/axis等类似语义的参数且该参数支持负数/其他特殊处理 | 否                                         |
 | 是否含有labels/index等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 否                                         |
@@ -68,8 +68,8 @@ $$
 ```python
 >>>input=torch.tensor([[ 1.,  2.,  3.,  4.],
                        [ 5.,  6.,  7.,  8.]])
->>>result=torch.logcumsumexp(input,1)
->>>print(result)
+>>>output=torch.logcumsumexp(input,1)
+>>>print(output)
 tensor([[1.0000, 2.3133, 3.4076, 4.4402],
         [5.0000, 6.3133, 7.4076, 8.4402]])
 
@@ -83,8 +83,8 @@ tensor([[1.0000, 2.3133, 3.4076, 4.4402],
 | input_desc  | 输入input的描述信息                 | 输入              | /             | /        | /                             |
 | input       | 输入数据，指向input的mlu地址的指针  | 输入              | half, float   | ARRAY    | /                             |
 | dim         | 进行logcumsumexp操作的目标维度      | 输入              | int32_t       | scalar   | /                             |
-| result_desc | 输出result的描述信息                | 输入              | /             | /        | result的维数应与input保持一致 |
-| result      | 输出数据，指向result的mlu地址的指针 | 输出              | half, float   | ARRAY    | /                             |
+| output_desc | 输出output的描述信息                | 输入              | /             | /        | output的维数应与input保持一致 |
+| output      | 输出数据，指向output的mlu地址的指针 | 输出              | half, float   | ARRAY    | /                             |
 
 ### 1.4 算子限制
 
@@ -94,7 +94,7 @@ tensor([[1.0000, 2.3133, 3.4076, 4.4402],
 | stride限制   | 不支持`stride`机制                                         |
 | 广播限制     | 不支持广播                                                 |
 | 数据范围限制 | 无                     |
-| 数据类型限制 | 张量数据支持`half`、`float`，且`input`和`result`须保持一致 |
+| 数据类型限制 | 张量数据支持`half`、`float`，且`input`和`output`须保持一致 |
 
 ### 1.5 验收标准
 
@@ -120,7 +120,7 @@ tensor([[1.0000, 2.3133, 3.4076, 4.4402],
 ```c++
 Tensor& _logcumsumexp_out_cuda(const Tensor& self, 
                                int64_t dim, 
-                               Tensor& result);
+                               Tensor& output);
 ```
 
 ### 2.2 接口设计
@@ -131,8 +131,8 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
                   const int32_t dim,
                   const mluOpTensorDescriptor_t input_desc,
                   const void *input,
-                  const mluOpTensorDescriptor_t result_desc,
-                  const void *result);
+                  const mluOpTensorDescriptor_t output_desc,
+                  const void *output);
 ```
 
 ## 3 实现方案设计
@@ -142,7 +142,7 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
 `tensor.shape`：
 
 - `input` 维度任意（在bangc平台下最高为8）。
-- `result`应与`input`保持一致。
+- `output`应与`input`保持一致。
 
 **计算原理说明：**
 
@@ -150,7 +150,7 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
 
 - 对`input`沿着指定维度，两两进行指数和求对数计算，即求$$log({e^a} + {e^b}) $$。
 - 如示例中，沿着维度1，计算$$log({e^1} + {e^2}) $$，结果为2.3133，存入与2对应的位置；再计算$$log({e^{2.3133}} + {e^3}) $$，结果为3.4076，将结果存入与3对应的位置，以此类推，直到该行的最后一个元素。
-- 对每一行进行上述操作，最终得到一个与`input`相同`shape`的输出张量：`result`。
+- 对每一行进行上述操作，最终得到一个与`input`相同`shape`的输出张量：`output`。
 
 **实现方案：** 
 
@@ -164,17 +164,15 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
 
 - 其他。
 
-对于第一种情况和第二种情况，我们的目标类似于实现prefix scan中的inclusive scan。
-
 第一种情况，当目标张量为一维张量（即向量）时，我们直接将数据分块后载入不同cluster内的不同core，对每个元素求exp后进行累加求和，具体来说就是将目标数据转置之后进行逐行的向量加，再用最后一行算出每一列的补偿值，再通过cycle_add让每一行的元素获得补偿值，最后转置使数据回到原排列。在这之后，根据数据分配的情况进行core间及cluster间的补偿，最后进行log计算得到结果。
 
 <img src="dimOne.png" style="zoom:50%;" />
 
-第二种情况，当目标维度为张量的最低维时，我们把输入数据看作以目标维度为宽，以更低维度的乘积为高的矩阵。当目标维度较小时，我们可以把若干行放入一个nram，通过转置后的逐行向加来求和；当目标维度较大时，我们可以把每一行看作一个batch，每个batch独立调用第一种情况（当目标张量为一维张量）的kernel来计算。下图为目标维度较小时的策略：
+第二种情况，当目标维度为张量的最低维时，我们把输入数据看作以目标维度为宽，以更高维度的乘积为高的矩阵。当目标维度较小时，我们可以把若干行放入一个nram，通过转置后的逐行向加来求和；当目标维度较大时，我们可以把每一行看作一个batch，每个batch独立调用第一种情况（当目标张量为一维张量）的kernel来计算。下图为目标维度较小时的策略：
 
 <img src="lowestDim.png" style="zoom:50%;" />
 
-第三种情况，当目标维度为张量的最低维度时，我们把输入数据看作以目标维度为高，以更低维度的乘积为宽的矩阵。如果矩阵宽度较小，我们可以直接把它分成由若干行组成的块，每一块独立求和，然后前后各块之间进行计算补偿就行了；如果矩阵宽度非常大，我们则选择以列为单位，一列一列地载入，每次计算两列的向量加。下图为矩阵宽度较小的策略：
+第三种情况，当目标维度为张量的最高维度时，我们把输入数据看作以目标维度为高，以更低维度的乘积为宽的矩阵。如果矩阵宽度较小，我们可以直接把它分成由若干行组成的块，每一块独立求和，然后前后各块之间进行计算补偿就行了；如果矩阵宽度非常大，我们则选择以列为单位，一列一列地载入，每次计算两列的向量加。下图为矩阵宽度较小的策略：
 
 <img src="onePartKernel.png" style="zoom:50%;" />
 
@@ -216,13 +214,13 @@ _____________________________
 
  1、指针为空。
 
- 2、输入为0元素。
+ 2、输入和输出的布局不为ARRAY。
 
  3、对数据类型做检查，数据类型不为half且不为float类型。
 
- 4、对`input`和`result`的维数做检查，维数不大于8。
+ 4、`input`和`output`的数据类型不相同。
 
- 5、`input`和`result`的维数不同或各维度大小不相等。
+ 5、`input`和`output`的维数不同或各维度大小不相等。
 
 ## 4 算子性能优化记录
 
