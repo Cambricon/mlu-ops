@@ -14372,7 +14372,7 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
                   const void *input,
                   const mluOpTensorDescriptor_t output_desc,
                   void *output);
-// Group: Tensor
+// Group: Logcumsumexp
 /*!
 * @brief Compute the logarithm of the cumulative sum of the given
 * input. Specifically, given a tensor input, logcumsumexp(input) 
