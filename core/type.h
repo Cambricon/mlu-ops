@@ -52,8 +52,6 @@ static mluOpStatus_t getLowAndHighValueFrom64Bits(T value, uint32_t* high,
   return MLUOP_STATUS_SUCCESS;
 }
 
-// TODO(None) use const char * instead of std::string (need mluop_extra
-// fix first) hide visibility
 static inline size_t MLUOP_WIN_API getSizeOfDataType(mluOpDataType_t dtype) {
   switch (dtype) {
     default: {

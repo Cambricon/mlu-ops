@@ -39,16 +39,6 @@
 #define QUEUE_ARRAY_LENGTH 4
 
 struct alignas(64) mluOpTensorStruct {
-  mluOpTensorStruct()
-      : dim(0),
-        dtype(MLUOP_DTYPE_FLOAT),
-        onchip_dtype(MLUOP_DTYPE_INVALID),
-        layout(MLUOP_LAYOUT_ARRAY),
-        pointer_mode(MLUOP_POINTER_MODE_DEVICE),
-        position(0),
-        scale(1.0),
-        offset(0) {}
-
   /* methods */
   mluOpStatus_t tensorDimN(size_t &dim);
   mluOpStatus_t tensorDimC(size_t &dim);
@@ -64,32 +54,22 @@ struct alignas(64) mluOpTensorStruct {
   // to set those fields since they should make no assumption
   // that the descriptor is initialized with default value.
   inline void reset() {  // reset variable as default.
-    if (MLUOP_PREDICT_FALSE(larger_dims != nullptr)) {
-      delete[] larger_dims;
-      larger_dims = nullptr;
+    if (MLUOP_PREDICT_FALSE(dims != normal_dims)) {
+      delete[] dims;
       dims = normal_dims;
     }
-    if (MLUOP_PREDICT_FALSE(larger_strides != nullptr)) {
-      delete[] larger_strides;
-      larger_strides = nullptr;
+    if (MLUOP_PREDICT_FALSE(strides != normal_strides)) {
+      delete[] strides;
       strides = normal_strides;
     }
-    pointer_mode = MLUOP_POINTER_MODE_DEVICE;
-
-    // dtype = MLUOP_DTYPE_FLOAT;
-    // onchip_dtype = MLUOP_DTYPE_INVALID;
-    // layout = MLUOP_LAYOUT_ARRAY;
-    // dim = 0;
-    // total_element_num = 0;
-    // total_tensor_size = 0;
   }
 
   /* Try to pack and align the struct */
   /*  ------------------- 64 Bytes - 1 -------------------*/
-  int64_t normal_dims[MLUOP_DIM_MAX] = {-1};
+  int64_t normal_dims[MLUOP_DIM_MAX];
 
   /*  ------------------- 64 Bytes - 2 -------------------*/
-  int64_t normal_strides[MLUOP_DIM_MAX] = {-1};
+  int64_t normal_strides[MLUOP_DIM_MAX];
 
   /*  ------------------- 64 Bytes - 3 -------------------*/
   /* Offset - 0 */
@@ -111,13 +91,10 @@ struct alignas(64) mluOpTensorStruct {
   int64_t *strides = normal_strides;  // point the normal strides as default
 
   /* Offset - 36 */
-  int64_t *larger_strides = nullptr;
-  int64_t *larger_dims = nullptr;
-
   /* To be removed*/
-  int position = 0;
-  float scale = 1.0;
-  int offset = 0;
+  int position;
+  float scale;
+  int offset;
   std::vector<int> positions;
   std::vector<float> scales;
   std::vector<int> offsets;
