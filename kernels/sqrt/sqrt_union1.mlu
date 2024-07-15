@@ -27,6 +27,7 @@
 #include "kernels/debug.h"
 #include "kernels/unary_op/unary_op_3pipeline.h"
 #include "kernels/unary_op/unary_op_5pipeline.h"
+#include "kernels/utils/common.h"
 
 #define SQRT_HIGH_BOUND 1e4
 #define SQRT_SCALE 1e-6
@@ -69,14 +70,20 @@ __mlu_func__ void auxFunc3SqrtHighAcc(
 __mlu_func__ void funcSqrtFast(float *nram_output, float *nram_input,
                                float *auxiliary_a, float *auxiliary_b,
                                size_t actual_num, size_t deal_num) {
-  __bang_sqrt((float *)nram_output, (float *)nram_input, actual_num);
+  // __bang_sqrt((float *)nram_output, (float *)nram_input, actual_num);
+  for(int i = 0; i < actual_num; i++){
+    *((float *)nram_output + i) = sqrt_ulp0(*((float *)nram_input + i));
+  }
 }
 
 __mlu_func__ void funcSqrtFast(float *nram_output, int *nram_input,
                                float *auxiliary_a, float *auxiliary_b,
                                size_t actual_num, size_t deal_num) {
   __bang_int322float((float *)nram_output, (int *)nram_input, deal_num, 0);
-  __bang_sqrt((float *)nram_output, (float *)nram_output, actual_num);
+  // __bang_sqrt((float *)nram_output, (float *)nram_output, actual_num);
+  for(int i = 0; i < actual_num; i++){
+    *((float *)nram_output + i) = sqrt_ulp0(*((float *)nram_output + i));
+  }
 }
 
 __mlu_func__ void funcSqrtFast(bfloat16_t *nram_output, bfloat16_t *nram_input,
@@ -100,7 +107,10 @@ __mlu_func__ void computeSqrtHighAcc(char *nram_output, char *nram_input,
                                      char *auxiliary_a, char *auxiliary_b,
                                      size_t deal_num, size_t actual_num) {
   __bang_half2float((float *)nram_output, (half *)nram_input, deal_num);
-  __bang_sqrt((float *)nram_output, (float *)nram_output, actual_num);
+  // __bang_sqrt((float *)nram_output, (float *)nram_output, actual_num);
+  for(int i = 0; i < actual_num; i++){
+    *((float *)nram_output + i) = sqrt_ulp0(*((float *)nram_output + i));
+  }
   __mluop_float2half((half *)nram_output, (float *)nram_output, deal_num);
 }
 
