@@ -2,10 +2,8 @@ op_name: "logcumsumexp"
 input {
   id: "input"
   shape: {
-    dims: 2
-    dims: 135
-    dims: 45
-    dims: 256
+    dims: 1160
+    dims: 28
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
@@ -19,16 +17,14 @@ input {
 output {
   id: "output"
   shape: {
-    dims: 2
-    dims: 135
-    dims: 45
-    dims: 256
+    dims: 1160
+    dims: 28
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
 }
 logcumsumexp_param {
-  dim: 2
+  dim: 1
 }
 test_param: {
   error_func: DIFF1

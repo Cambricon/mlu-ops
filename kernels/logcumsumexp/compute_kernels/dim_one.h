@@ -23,8 +23,10 @@
 #pragma once
 
 #define N_ALIGN 128
-#define CoreCapacity MAX_NRAM_SIZE / 81920 * 81920  // memory length of input per core
-#define ClusterCapacity MAX_NRAM_SIZE / 81920 * 81920 * 4  // memory length of input per cluster
+#define CoreCapacity MAX_NRAM_SIZE / 81920 * 81920
+    // memory length of input per core
+#define ClusterCapacity MAX_NRAM_SIZE / 81920 * 81920 * 4
+    // memory length of input per cluster
 #define DimOneDealLength 147456  // size of one NRAM in dim-one
 
 __nram__ char nram_buffer[MAX_NRAM_SIZE];
@@ -107,9 +109,6 @@ __mlu_func__ void offsetCompute(T *nram_src0, T *cluster_offsets,
                 cluster_offsets[6] = cluster_offsets[5] + cluster_offsets[6];
                 cluster_offsets[7] = cluster_offsets[6] + cluster_offsets[7];
                 cluster_offsets[9] = cluster_offsets[7] + cluster_offsets[8];
-                __sync_all();
-                __bang_add_scalar(nram_src0, nram_src0,
-                                  cluster_offsets[clusterId], data_size);
             } else if (clusterDim == 4) {
                 cluster_offsets[4] = cluster_offsets[3];
                 cluster_offsets[3] = cluster_offsets[2];
@@ -120,24 +119,23 @@ __mlu_func__ void offsetCompute(T *nram_src0, T *cluster_offsets,
                 cluster_offsets[2] = cluster_offsets[1] + cluster_offsets[2];
                 cluster_offsets[3] = cluster_offsets[2] + cluster_offsets[3];
                 cluster_offsets[5] = cluster_offsets[3] + cluster_offsets[4];
-                __sync_all();
-                __bang_add_scalar(nram_src0, nram_src0,
-                                  cluster_offsets[clusterId], data_size);
             } else if (clusterDim == 2) {
                 cluster_offsets[2] = cluster_offsets[1];
                 cluster_offsets[1] = cluster_offsets[0];
                 cluster_offsets[0] = cluster_offsets[3];
                 cluster_offsets[1] = cluster_offsets[0] + cluster_offsets[1];
                 cluster_offsets[3] = cluster_offsets[1] + cluster_offsets[2];
-                __sync_all();
-                __bang_add_scalar(nram_src0, nram_src0,
-                                  cluster_offsets[clusterId], data_size);
             } else {
                 return;
             }
-    } else {
-        __bang_add_scalar(nram_src0, nram_src0, cum_offset, data_size);
     }
+    __sync_all();
+    __bang_add_scalar(nram_src0, nram_src0,
+                      cluster_offsets[clusterId], data_size);
+  } else {
+    __sync_all();
+    __sync_all();
+    __bang_add_scalar(nram_src0, nram_src0, cum_offset, data_size);
   }
 }
 // inclusive execution
@@ -154,9 +152,10 @@ __mlu_func__ void inclusiveScan(T* nram_src,
 
   __mluop_exp(nram_src0, nram_src0, nullptr, 0, data_size);
   dimOneCumsum(nram_src0, nram_src1, data_size);
-  core_offsets[coreId] = nram_src0[data_size-1];
+  if (__is_ipu()) {
+    core_offsets[coreId] = nram_src0[data_size-1];
+  }
   __sync_cluster();
-
   // offset between coresx
   if (coreId == 0) {
     core_offsets[1] = core_offsets[0] + core_offsets[1];
@@ -166,13 +165,14 @@ __mlu_func__ void inclusiveScan(T* nram_src,
     core_offsets[0] = 0;
   }
   __sync_cluster();
-  __bang_add_scalar(nram_src0, nram_src0,
-                    core_offsets[coreId], data_size);
-
+  if (__is_ipu()) {
+    __bang_add_scalar(nram_src0, nram_src0,
+                      core_offsets[coreId], data_size);
+  }
+  __sync_cluster();
   // offset between clusters
   offsetCompute(nram_src0, cluster_offsets, cum_offset,
                 data_size, offset_type);
-
   // log computing
   __mluop_log(nram_src0, nram_src0, nullptr, 0, data_size);
 }
@@ -229,6 +229,7 @@ dimOneKernel(const T *input,
       this_nram = (round % 2 == 0) ? nram_src0 : nram_src1;
       next_nram = (round % 2 == 0) ? nram_src1 : nram_src0;
       // data copy for next round
+
       if (round < rounds - 2) {
         __memcpy_async(next_nram,
           input + (totalId + clusterDim) * n_cluster + n_core * coreId,
@@ -245,22 +246,25 @@ dimOneKernel(const T *input,
             n_last_core * sizeof(T), GDRAM2NRAM);
         }
       }
+
       // compute
-      inclusiveScan(this_nram, n_core, 0, cluster_offsets, basenum);
+      inclusiveScan(this_nram, n_core, 0, cluster_offsets, basenum);\
+
       __memcpy(this_sram + n_core * coreId, this_nram,
                n_core * sizeof(T), NRAM2SRAM);
       __sync_cluster();
-      __memcpy_async(output + totalId * n_cluster + n_core * coreId,
-                     this_sram + n_core * coreId,
-                     n_cluster * sizeof(T), SRAM2GDRAM);
+      if (__is_mpu()) {
+        __memcpy_async(output + totalId * n_cluster, this_sram,
+                 n_cluster * sizeof(T), SRAM2GDRAM);
+      }
       round++;
     }
 
     this_sram = next_sram;
     this_nram = next_nram;
     totalId = round * clusterDim + clusterId;
-    // the last round
 
+    // the last round
     if (last_round_clusters == 1) {
       if (clusterId == 0) {
         if (rounds == 1) {
@@ -292,6 +296,7 @@ dimOneKernel(const T *input,
         __memcpy(output + totalId * n_cluster + copy_offset, this_nram,
                  n_last_core * sizeof(T), NRAM2GDRAM);
       } else {
+        __sync_all();
         __sync_all();
       }
     }

@@ -24,7 +24,7 @@
 
 // LCSE execution for small part
 template <typename T>
-__mlu_func__ void smallPartLCSE(T *output,
+__mlu_func__ void smallPartScan(T *output,
                                 const T *source,
                                 int32_t data_size,
                                 int32_t axis_size,
@@ -34,7 +34,6 @@ __mlu_func__ void smallPartLCSE(T *output,
     int32_t part_width = axis_size;
     int32_t part_height = N_ALIGN / sizeof(T);
     int32_t part_size = part_width * part_height;
-
     __memcpy(nram_src0, source, data_size * sizeof(T), GDRAM2NRAM);
     __mluop_exp(nram_src0, nram_src0, nullptr, 0, data_size);
     for (int i = 0; i < parts; i++) {
@@ -70,7 +69,7 @@ lowestDimKernel(const T *input,
     // there will be several parts on one nram every round;
     // if nram_size < part_size, call dimOneKernel for batches.
     int32_t data_size = axis_size * higher_size;
-    int32_t nram_size = CoreCapacity / sizeof(T);
+    int32_t nram_size = CoreCapacity / sizeof(T) / 2;
     int32_t nram_height = N_ALIGN / sizeof(T);
     int32_t nram_width = nram_size / nram_height;
     int32_t part_height = nram_height;
@@ -81,8 +80,9 @@ lowestDimKernel(const T *input,
     int32_t round_size = deal_size * taskDim;
     int32_t round = 0;
     int32_t deal_rounds = (data_size + round_size - 1) / round_size;
+
     while (round < deal_rounds - 1) {
-        smallPartLCSE(output + round * round_size + taskId * deal_size,
+        smallPartScan(output + round * round_size + taskId * deal_size,
                       input + round * round_size + taskId * deal_size,
                       deal_size, axis_size, parts_per_core);
         round++;
@@ -99,14 +99,14 @@ lowestDimKernel(const T *input,
       - (last_round_cores - 1) * deal_size;
 
     if (taskId < last_round_cores - 1) {
-      smallPartLCSE(output + round * round_size + taskId * deal_size,
+      smallPartScan(output + round * round_size + taskId * deal_size,
                     input + round * round_size + taskId * deal_size,
                     deal_size, axis_size, parts_per_core);
     } else if (taskId == last_round_cores - 1) {
-        T *nram_src = (T *)nram_buffer;
-        __bang_write_zero(nram_src, deal_size);
-        smallPartLCSE(output + round * round_size + taskId * deal_size,
-                      input + round * round_size + taskId * deal_size,
-                      last_core_size, axis_size, parts_per_core);
+      T *nram_src = (T *)nram_buffer;
+      __bang_write_zero(nram_src, deal_size);
+      smallPartScan(output + round * round_size + taskId * deal_size,
+                    input + round * round_size + taskId * deal_size,
+                    last_core_size, axis_size, parts_per_core);
     }
 }

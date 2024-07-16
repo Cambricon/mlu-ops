@@ -112,7 +112,7 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     for (int i = dim_adj + 1; i < input_desc->dim; i++) {
         lower_size *= input_desc->dims[i];
     }
-    policyFunc(handle, k_dim, k_type);
+    policyFunc(handle, &k_dim, &k_type);
 
     // task allocate
     if (higher_size == 1 && lower_size == 1) {
