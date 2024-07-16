@@ -110,3 +110,4 @@ lowestDimKernel(const T *input,
                     last_core_size, axis_size, parts_per_core);
     }
 }
+
