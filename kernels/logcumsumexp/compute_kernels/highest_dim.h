@@ -157,9 +157,9 @@ highestDimKernel(const T *input,
     } else {  // deal as parts
         T *offset_cores = (T *)sram_buffer;
         for (int i = 0; i < part_width; i++)
-          offset_cores[part_width * 4 + i] = 0;
+          offset_cores[part_width * coreDim + i] = 0;
         int32_t parts_num = (axis_size + part_height - 1) / part_height;
-        int32_t rounds_num = (parts_num + 3) / 4;
+        int32_t rounds_num = (parts_num + coreDim - 1) / coreDim;
         int32_t round = 0;
         __sync_cluster();
         while (round < rounds_num - 1) {
@@ -168,7 +168,7 @@ highestDimKernel(const T *input,
                           part_width, part_height, part_size);
             round++;
         }
-        int32_t last_round_parts = parts_num - (rounds_num - 1) * 4;
+        int32_t last_round_parts = parts_num - (rounds_num - 1) * coreDim;
         int32_t lastRoundCores = last_round_parts;
         int32_t last_part_size
           = data_size - part_size * ((rounds_num - 1)
