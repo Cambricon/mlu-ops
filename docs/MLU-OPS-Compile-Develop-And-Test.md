@@ -14,7 +14,7 @@
 - 编译所有算子
   ```sh
   cd mlu-ops
-  mlu-ops$ ./build.sh
+  mlu-ops$ ./independent_build.sh
   ```
 
   编译成功后在 `mlu-ops/build/lib` 目录下生成算子库文件 `libmluops.so`，在 `mlu-ops/build/test` 目录下生成测试用的可执行文件 `mluop_gtest` 。
@@ -25,7 +25,7 @@
 
   ```sh
   cd mlu-ops
-  mlu-ops$ ./build.sh --filter="abs;div;sqrt" # '--filter'参数后接要编译的算子，构建系统会根据'kernel_depends.toml'文件描述的依赖自动编译依赖的算子
+  mlu-ops$ ./independent_build.sh --filter="abs;div;sqrt" # '--filter'参数后接要编译的算子，构建系统会根据'kernel_depends.toml'文件描述的依赖自动编译依赖的算子
   ```
 
   算子名指的是`mlu-ops/kernels`目录下面的文件夹名。
@@ -54,7 +54,7 @@
 
     ```sh
     cd mlu-ops
-    mlu-ops$ ./build.sh --filter="op_name_forward(或op_name_backward)" 
+    mlu-ops$ ./independent_build.sh --filter="op_name_forward(或op_name_backward)" 
     ```
 
 - 多MLU平台架构编译
@@ -64,9 +64,9 @@
   - 编译指定MLU板卡
 
       ```sh
-      mlu-ops$ ./build.sh            # 编译多架构的版本，libmluops.so 体积较大，cncc使用多arch的cnfatbin封装
-      mlu-ops$ ./build.sh  --mlu370  # 编译 MLU370 板卡专用版本，cncc使用选项--bang-mlu-arch=mtp_372
-      mlu-ops$ ./build.sh  --mlu370 --filter="abs;div"  # mlu370 下编译 abs 算子和 div 算子
+      mlu-ops$ ./independent_build.sh            # 编译多架构的版本，libmluops.so 体积较大，cncc使用多arch的cnfatbin封装
+      mlu-ops$ ./independent_build.sh  --mlu370  # 编译 MLU370 板卡专用版本，cncc使用选项--bang-mlu-arch=mtp_372
+      mlu-ops$ ./independent_build.sh  --mlu370 --filter="abs;div"  # mlu370 下编译 abs 算子和 div 算子
       ```
 
 - kernel_depends.toml
@@ -93,7 +93,7 @@
 
 - 命令行参数
 
-  可通过`./build.sh -h`或`./build.sh --help`，查看命令行参数
+  可通过`./independent_build.sh -h`或`./independent_build.sh --help`，查看命令行参数
 
   | 变量名                      | 默认值                             | 说明                                                   | 关联cmake选项               | 关联命令行参数                       |
   | --------------------------- | ---------------------------------- | ------------------------------------------------------ | --------------------------- | ------------------------------------ |

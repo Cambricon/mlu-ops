@@ -188,7 +188,7 @@ test_param: {
 
 ```bash
 cd mlu-ops
-mlu-ops$ ./build.sh --filter="div" --enable-bang-memcheck
+mlu-ops$ ./independent_build.sh --filter="div" --enable-bang-memcheck
 cd build/test
 test$ ./mluop_gtest --gtest_filter=\*div\*  # 存在 DEVICE 内存泄漏会输出内存溢出提示
 ```
@@ -221,7 +221,7 @@ cd mlu-ops
 mlu-ops$ source env.sh
 # 若NEUWARE_HOME不是默认路径/usr/local/neuware则一定要指定NEUWARE_HOME，
 # 否则出现llvm-protobuf: command not found
-mlu-ops$ ./build.sh -c --filter="roi_crop_forward;roi_crop_backward"
+mlu-ops$ ./independent_build.sh -c --filter="roi_crop_forward;roi_crop_backward"
 ```
 - 情况2
 
@@ -232,7 +232,7 @@ cd mlu-ops
 mlu-ops$ source env.sh
 # 若NEUWARE_HOME不是默认路径/usr/local/neuware则一定要指定NEUWARE_HOME，
 # 否则出现llvm-protobuf: command not found
-mlu-ops$ ./build.sh -c --filter="dynamic_point_to_voxel_forward"
+mlu-ops$ ./independent_build.sh -c --filter="dynamic_point_to_voxel_forward"
 ```
 
 #### 7.3 测试
