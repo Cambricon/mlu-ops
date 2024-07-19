@@ -69,18 +69,19 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     cnrtFunctionType_t k_type;
     cnrtDim3_t k_dim;
 
+    PARAM_CHECK(API, input_desc != NULL);
+    PARAM_CHECK(API, output_desc != NULL);
     PARAM_CHECK(API, input_desc->dtype == MLUOP_DTYPE_FLOAT ||
                 input_desc->dtype == MLUOP_DTYPE_HALF);
     PARAM_CHECK(API, output_desc->dtype == MLUOP_DTYPE_FLOAT ||
                 output_desc->dtype == MLUOP_DTYPE_HALF);
     PARAM_CHECK(API, input_desc->dtype == output_desc->dtype);
-    PARAM_CHECK(API, input_desc->dim == output_desc->dim);
     PARAM_CHECK(API, input_desc->layout == MLUOP_LAYOUT_ARRAY);
     PARAM_CHECK(API, output_desc->layout == MLUOP_LAYOUT_ARRAY);
+    PARAM_CHECK(API, input_desc->dim == output_desc->dim);
     PARAM_CHECK(API, handle != NULL);
-    PARAM_CHECK(API, input_desc != NULL);
+
     PARAM_CHECK(API, input != NULL);
-    PARAM_CHECK(API, output_desc != NULL);
     PARAM_CHECK(API, output != NULL);
 
     if (dim < (-1) * input_desc->dim) {
@@ -144,8 +145,6 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
         }
     } else if (higher_size == 1) {
         // highestDim
-        k_type = CNRT_FUNC_TYPE_UNION1;
-        k_dim = {4, 1, 1};
         CHECK_RETURN(API, LogcumsumexpHighestDim(k_dim, k_type, handle->queue,
                      input_desc->dtype, input, output, axis_size, lower_size));
     } else {

@@ -55,12 +55,12 @@ midDimKernel(const T *input,
              int32_t axis_size,
              int32_t lower_size,
              int32_t higher_size) {
-  int32_t nram_size = CoreCapacity / sizeof(T);
-  int32_t batches_num = higher_size;
-  int32_t batch_size = axis_size * lower_size;
-  int32_t batches_per_core = nram_size / batch_size;
-  int32_t core_size = batch_size * batches_per_core;
-  int32_t rounds_num
+  const int32_t nram_size = CoreCapacity / sizeof(T);
+  const int32_t batches_num = higher_size;
+  const int32_t batch_size = axis_size * lower_size;
+  const int32_t batches_per_core = nram_size / batch_size;
+  const int32_t core_size = batch_size * batches_per_core;
+  const int32_t rounds_num
     = (batches_num + (batches_per_core * taskDim) - 1)
     / (batches_per_core * taskDim);
 

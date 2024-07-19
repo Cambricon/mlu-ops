@@ -58,7 +58,7 @@ __mlu_func__ void smallPartScan(T *output,
     __memcpy(output, nram_src0, data_size * sizeof(T), NRAM2GDRAM);
 }
 
-// highest dimension executing kernel====================================
+// lowest dimension executing kernel====================================
 template <typename T>
 __mlu_global__ void
 lowestDimKernel(const T *input,
@@ -68,16 +68,16 @@ lowestDimKernel(const T *input,
     // if nram_size > part_size,
     // there will be several parts on one nram every round;
     // if nram_size < part_size, call dimOneKernel for batches.
-    int32_t data_size = axis_size * higher_size;
-    int32_t nram_size = CoreCapacity / sizeof(T) / 2;
-    int32_t nram_height = N_ALIGN / sizeof(T);
-    int32_t nram_width = nram_size / nram_height;
-    int32_t part_height = nram_height;
-    int32_t part_width = axis_size;
-    int32_t parts_per_core = nram_width / part_width;
+    const int32_t data_size = axis_size * higher_size;
+    const int32_t nram_size = CoreCapacity / sizeof(T) / 2;
+    const int32_t nram_height = N_ALIGN / sizeof(T);
+    const int32_t nram_width = nram_size / nram_height;
+    const int32_t part_height = nram_height;
+    const int32_t part_width = axis_size;
+    const int32_t parts_per_core = nram_width / part_width;
 
-    int32_t deal_size = parts_per_core * part_width * part_height;
-    int32_t round_size = deal_size * taskDim;
+    const int32_t deal_size = parts_per_core * part_width * part_height;
+    const int32_t round_size = deal_size * taskDim;
     int32_t round = 0;
     int32_t deal_rounds = (data_size + round_size - 1) / round_size;
 

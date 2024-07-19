@@ -14365,14 +14365,6 @@ mluOpExecFFT(mluOpHandle_t handle,
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
 
-
-mluOpStatus_t MLUOP_WIN_API
-mluOpLogcumsumexp(mluOpHandle_t handle,
-                  const int32_t dim,
-                  const mluOpTensorDescriptor_t input_desc,
-                  const void *input,
-                  const mluOpTensorDescriptor_t output_desc,
-                  void *output);
 // Group: Logcumsumexp
 /*!
 * @brief Compute the logarithm of the cumulative sum of the given
@@ -14382,7 +14374,7 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
 * of the sum of the exponentials of the first i elements of input.
 *
 * @par Return
-* - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
+* - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED, MLUOP_STATUS_BAD_PARAM
 *
 * @par Data Type
 * - ::MLUOP_DTYPE_FLOAT, ::MLUOP_DTYPE_HALT
@@ -14397,7 +14389,13 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
 * - None.
 *
 */
-
+mluOpStatus_t MLUOP_WIN_API
+mluOpLogcumsumexp(mluOpHandle_t handle,
+                  const int32_t dim,
+                  const mluOpTensorDescriptor_t input_desc,
+                  const void *input,
+                  const mluOpTensorDescriptor_t output_desc,
+                  void *output);
 
 #if defined(__cplusplus)
 }
