@@ -29,12 +29,13 @@ class CholeskyExecutor : public Executor {
   size_t size_workspace_ = 0;
   int stride_ = 0;
   mluOpDataType_t type_ = MLUOP_DTYPE_FLOAT;
+  bool result_mul = false;
   int type_size_ = 4;
   bool trans_ = true;
   bool upper_ = false;
   int ldda_ = 0;
   int n_ = 0;
-  int batch_size_ = 1;
+  long int batch_size_ = 1;
 
  public:
   CholeskyExecutor() {}
@@ -42,8 +43,7 @@ class CholeskyExecutor : public Executor {
   void compute();
   void cpuCompute();
   void prepareComputeParam();
-//void workspaceMalloc();
-//  void workspaceFree();
+
   int64_t getTheoryOps() override;
 };
 }  // namespace mluoptest
