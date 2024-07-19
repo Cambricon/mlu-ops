@@ -1,5 +1,43 @@
 #include "cholesky.h"
+#include <cmath> 
+
+
 __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
+
+__mlu_func__
+float recur_add(float* input, int length)
+{
+    if(length == 1)
+    {
+        return input[0];
+    }
+    else
+    {
+        int half_length;
+        half_length = length / 2;
+        float sum1 = recur_add(input, half_length);
+        float sum2 = recur_add(input + half_length, length - half_length);
+        input[0] = sum1+sum2;
+        return sum1 + sum2;
+    }
+
+}
+
+__mlu_func__
+float kahansum(float* input, int length)
+{
+    float sum = 0.0;
+    float c = 0.0;
+    for(int i = 0; i < length; i++)
+    {
+        float y = input[i] - c;
+        float t = sum + y;
+        c = (t - sum) - y;
+        sum = t;
+    }
+    input[0] = sum;
+    return sum;
+}
     
 __mlu_func__ 
 void sgemm_fixwidth_device(int m, int k,
@@ -8,17 +46,20 @@ void sgemm_fixwidth_device(int m, int k,
 {
     int id = taskId % 4;
     
-    int span = POTF_NB;    
+    int span = POTF_NB;
+    
 
-        __nram__ float rC[M * POTF_NB/TASK_NUM ];
+    __nram__ float rC[M * POTF_NB/TASK_NUM ];
     __nram__ float rA[M * POTF_NB/TASK_NUM ];
     __nram__ float rp[M * POTF_NB/TASK_NUM ];
 
     __nram__ float rB[POTF_NB * POTF_NB];
 
-    
-    
-            if(id*span<m)
+    __nram__ float temp_result[POTF_NB * POTF_NB];
+    temp_result[0] = 0.0;
+
+
+    if(id*span<m)
         __memcpy(rp,OFFSET_ROW(A0,span*id,0),POTF_NB*sizeof(float),GDRAM2NRAM,POTF_NB*sizeof(float),lda*sizeof(float),span-1);
     __memset_nram(rC,POTF_NB*span,(float)ZERO);
     __sync_cluster();
@@ -28,31 +69,33 @@ void sgemm_fixwidth_device(int m, int k,
     if(id == 0)
     {
         __memcpy(sB,rp,POTF_NB*POTF_NB*sizeof(float),NRAM2SRAM);
-    } 
-    
+    }
+
+
     __sync_cluster();
 
 
     for(int iter = 0; iter < k; iter+= POTF_NB)
     {
-                __bang_move(rA,rp,POTF_NB*span*sizeof(float));
-        
+        __bang_move(rA,rp,POTF_NB*span*sizeof(float));
         __memcpy(rB,sB,POTF_NB*POTF_NB*sizeof(float),SRAM2NRAM);
         
-        
         __sync_cluster();
-        
         if(id*span<m)
             __memcpy_async(rp,OFFSET_ROW(A0,span*id,iter+POTF_NB),POTF_NB*sizeof(float),GDRAM2NRAM,POTF_NB*sizeof(float),lda*sizeof(float),span-1);
-               
+        
+
         for(int i = 0; i < span; i++)
         {
             for(int j = 0; j < POTF_NB; j++)
             {
+
                 for(int h = 0; h < POTF_NB; h++)
                 {
-                    rC[i*POTF_NB+j] += rA[i*POTF_NB+h] * rB[j*POTF_NB+h];
+                    temp_result[h] = rA[i*POTF_NB+h] * rB[j*POTF_NB+h];
                 }
+
+                rC[i*POTF_NB+j] +=kahansum(temp_result,POTF_NB);
             }
         }
        
@@ -63,6 +106,8 @@ void sgemm_fixwidth_device(int m, int k,
     }
 
     
+
+
     __bang_sub(rp,rp,rC,POTF_NB * span);
 
     if(id*span<m)
@@ -72,52 +117,96 @@ void sgemm_fixwidth_device(int m, int k,
 
 static __mlu_func__ void spotf2_sminout_fixsize_device(int m, float *A, int lda)
 {
-    float factor;
+    
     int id = coreId % 4;
     int span = POTF_NB;
-    
     float* diag = (float*)nram_buffer;
     float* nram_src = diag + span * span;
+    
     __memcpy(diag,A,span*span*sizeof(float),SRAM2NRAM);
     __memcpy(nram_src,A + id *span*POTF_NB,span*span*sizeof(float),SRAM2NRAM);
- 
+   
+    float factor;
     for(int iter = 0; iter < POTF_NB; iter++)
     {
-        factor=sqrt(diag[iter*POTF_NB+iter]);
-        factor = 1.0/factor;
         
+        
+        
+        if(iter>0)
+        {
+            float* temp_result = nram_src+span*span;
+            float* temp_result2 = temp_result + span * span;
+            float* temp_a = nram_src;
+            float* temp_b = diag+iter*span;
+            float* local_result = temp_result;
+            float* local_diag = temp_result2;
+         
+            for(int i = 0; i < span; i++)
+            {
+                __bang_mul(local_result, temp_a, temp_b, iter);
+                __bang_mul(local_diag, diag+i*span, temp_b,iter);
+                local_result = local_result + span;
+                temp_a = temp_a + span;
+                local_diag = local_diag + span;
+            }
+          
+            if(iter>1)
+            {
+                local_result = temp_result;
+                local_diag = temp_result2;
+                for(int i = 0; i < span; i++)
+                {
+                    kahansum(local_result,iter);
+                    kahansum(local_diag,iter);
+                    local_result = local_result + span;
+                    local_diag = local_diag + span;
+                }
+            }
+            for(int i = 0; i < span; i++)
+            {
+                nram_src[i*span+iter] -= temp_result[i*span];
+                diag[i*span+iter] -= temp_result2[i*span];
+            }
+            
+        }
+
+        if(factor<0)
+        {
+            if(id == 0)
+            {
+                printf("factor:%.3f\n",factor);
+                printf("iter:%d\n",iter);
+            }
+
+        }
+        factor = diag[iter*POTF_NB+iter];
+        __nram__ float temp[1];
+        __bang_rsqrt(temp,diag+iter*POTF_NB+iter,1);
+        factor = temp[0];
+
+ 
         for(int i = 0; i < span; i++)
         {
-            
-            
+           
             nram_src[i*POTF_NB+iter] *= factor;
             diag[i*POTF_NB+iter] *= factor;
-            
             
             
         }
         __sync();
 
-        
-
-        for(int i = iter + 1; i < POTF_NB; i++)
-        {
-            for(int j = 0; j < span; j++)
-            {
-                diag[j * POTF_NB + i ] -= diag[i*POTF_NB+iter] * diag[j * POTF_NB + iter];
-                nram_src[j * POTF_NB + i ] -= diag[i*POTF_NB+iter] * nram_src[j * POTF_NB + iter];
-            }
-        }
+      
         
         
 
     }
     __sync_cluster();
-     
+   
+    
     if(id*span<m)
         __memcpy(A + id *span * POTF_NB,nram_src,span*span*sizeof(float),NRAM2SRAM);
     __sync_cluster();
-  
+   
 }
 
 __mlu_func__ 
@@ -126,16 +215,26 @@ void sgemm_anywidth_device(int m, int k,
         float *sC, float  *sB)
 {
     int id = taskId % 4;
+    
+
     int remain = m - id * POTF_NB;
     bool if_execute = remain > 0;
     int span =  (remain > POTF_NB||remain <= 0) ? POTF_NB : remain;
 
     float *rA = (float*)nram_buffer + id * NB * NB * 4;
+
     float *rB = rA + NB * NB;
+
     float *rC = rB + NB * NB;
+
     float* rp = rC + NB * NB;
+
     int span_b = POTF_NB > m ? m : POTF_NB;
+
+
+
     __memset_nram(rC,span_b*span,(float)ZERO);
+
     if(if_execute)
     {
         if(k>0)
@@ -143,14 +242,20 @@ void sgemm_anywidth_device(int m, int k,
             __memcpy(rA,A0+id*POTF_NB*lda,k*sizeof(float),SRAM2NRAM,NB*sizeof(float),lda*sizeof(float),span-1);
         }
         __memcpy(rp,sC+id*POTF_NB*lda,span_b*sizeof(float),SRAM2NRAM,span_b*sizeof(float),lda*sizeof(float),span-1);
+
     }
         
     if(k>0)
     {
-      __memcpy(rB,A0,k*sizeof(float),SRAM2NRAM,NB*sizeof(float),lda*sizeof(float),span_b-1);
-     
+       
+        __memcpy(rB,A0,k*sizeof(float),SRAM2NRAM,NB*sizeof(float),lda*sizeof(float),span_b-1);
         
-    }  
+        
+    }
+
+ 
+    
+
     __sync_cluster();
 
     for(int i = 0; i < span; i++)
@@ -163,6 +268,7 @@ void sgemm_anywidth_device(int m, int k,
             }
         }
     }
+
     __bang_sub(rp,rp,rC,span_b * span);
 
     __sync_cluster();
@@ -179,7 +285,14 @@ void sgemm_anywidth_device(int m, int k,
     {
         __memcpy(sC+(id*POTF_NB*lda),rp,span_b*sizeof(float),NRAM2SRAM,lda*sizeof(float),span_b*sizeof(float),span-1);
     }
+    
+
+
+
+
+
 }
+
 
 static __mlu_func__ void spotf2_sminout_anysize_device(int m, float *A, int lda)
 {
@@ -197,14 +310,12 @@ static __mlu_func__ void spotf2_sminout_anysize_device(int m, float *A, int lda)
         __sync_cluster();
         for(int i = 0; i < span; i++)
         {
-            
-            
             if(if_execute)
-                A[i*lda+iter+id*POTF_NB*lda] *= factor;          
+                A[i*lda+iter+id*POTF_NB*lda] *= factor;
             
         }
         __sync_cluster();
-        
+
         if(if_execute)
         {
             for(int i = iter + 1; i < iter_num; i++)
@@ -231,35 +342,56 @@ __mlu_func__ void spotf2_smlpout_fixwidth_device(const int m, float *A0, float *
     float* sdata_A = shared_data;
     float* sdata_B = shared_data + m *POTF_NB/TASK_NUM * 4;
 
+    
+
     sgemm_fixwidth_device(m, localstep, A0, lda, sdata_A, sdata_B);
+
+
     __sync_cluster();
+
+   
+
     spotf2_sminout_fixsize_device(m, sdata_A, POTF_NB);
+
     __sync_cluster();
+
     int span = POTF_NB;
+
     if(id==0)
-    {    
+    {
         for(int i = 0; i < span; i++)
         {
-            __memcpy(A+(i*lda),sdata_A+i*POTF_NB,(i+1)*sizeof(float),SRAM2LDRAM);
-            
+
+             __memcpy(A+(i*lda),sdata_A+i*POTF_NB,(i+1)*sizeof(float),SRAM2LDRAM);
         }
        
     }
     else if(id*span < m)
     {
         __memcpy(A+(id*POTF_NB*lda),sdata_A+coreId*POTF_NB*POTF_NB,POTF_NB*sizeof(float),SRAM2LDRAM,lda*sizeof(float),POTF_NB*sizeof(float),span-1);
-        
     }
+
     __sync_cluster();
+
+
+
 
 }
 
 __mlu_func__ void spotf2_smlpout_anywidth_device(const int m, float *A0, float *A, int lda, const int localstep, const int gbstep)
 {
+
     sgemm_anywidth_device(m, localstep, A0, lda, A, nullptr);
+
+
+    
     spotf2_sminout_anysize_device(m, A, lda);
 
     __sync_cluster();
+
+
+
+
 }
 
 
@@ -267,11 +399,12 @@ __mlu_global__ void spotf2_smlpin_anywidth_kernel(int batch, int stride, bool tr
 {
     int id = taskId;
 
-    float* orignA = dA;    
-    int batch_id = id / 4;
-    if(batch_id >= batch)
-        return;
-    dA = orignA + batch_id * stride;
+    float* orignA = dA;
+
+        int batch_id = id / 4;
+        if(batch_id >= batch)
+            return;
+        dA = orignA + batch_id * stride;
 
     __mlu_shared__  float shared_data[NB * NB];
 
@@ -288,7 +421,7 @@ __mlu_global__ void spotf2_smlpin_anywidth_kernel(int batch, int stride, bool tr
         if(id == 0)
         {
             __memcpy(shared_data,dA,m*sizeof(float),GDRAM2SRAM,NB*sizeof(float),lda*sizeof(float),m-1);
-   
+
         }
         __sync_cluster();
 
@@ -304,7 +437,7 @@ __mlu_global__ void spotf2_smlpin_anywidth_kernel(int batch, int stride, bool tr
             __memcpy(dA,shared_data,m*sizeof(float),SRAM2GDRAM,lda*sizeof(float),NB*sizeof(float),m-1);
         }
         __sync_cluster();
-    }
+    } 
     
 
 }
@@ -314,7 +447,6 @@ void small_sgemm_batch(int m, int k,
         float* A0, const int lda,int width, 
         float* dst, float* nram_remain)
 {
-    
     int ldk = k;
     int ldm = m;
     float* src1 = nram_remain;
@@ -359,14 +491,12 @@ void small_sgemm_batch(int m, int k,
 __mlu_func__ void small_sminout_batch(int m, int width, float *dst, float *nram_remain, int lda)
 {
     float factor;
-    
     float* diag = dst;
 
     for(int iter = 0; iter < width; iter++)
     {
         factor=sqrt(diag[iter*width+iter]);
         factor = 1.0/factor;
-        
         for(int i = 0; i < m; i ++)
         {
             dst[i*width+iter] *= factor;
@@ -378,26 +508,31 @@ __mlu_func__ void small_sminout_batch(int m, int width, float *dst, float *nram_
             {
                 dst[j * width + i ] -= dst[i*width+iter] * dst[j * width + iter];
                 
-                
             }
         }
         __sync();
-  
+
+
+        
+        
 
     }
     __sync();
- 
+
+    
 }
 
-__mlu_func__ void smlpout_batch(const int m, float *A0, float *A, int lda, const int localstep, int width)
+__mlu_func__ 
+void smlpout_batch(const int m, float *A0, float *A, int lda, const int localstep, int width)
 {
     float* dst = (float*)nram_buffer;
     float* nram_remain = dst + m * m;
+
     
     small_sgemm_batch(m, localstep, A0, lda, width, dst, nram_remain);
 
     __sync();
-     
+    
     small_sminout_batch(m, width, dst, nram_remain, width);
 
     __sync();
@@ -433,6 +568,7 @@ __mlu_global__ void spotf2_batch_kernel(int batch, int stride, int m, float *dA,
         span = std::min(width, m - i);
         smlpout_batch(m-i,dA+i*lda,dA+i*lda+i,lda,i,span);
     }
+
 }
 
 mluOpStatus_t mlu_spotf2_lpin(int batch, int stride, bool trans,bool uplo, int n, int ldda, float* dA, int gbstep, cnrtQueue_t queue)
@@ -473,6 +609,7 @@ mluOpStatus_t mlu_spotf2_lpin(int batch, int stride, bool trans,bool uplo, int n
           spotf2_smlpin_anywidth_kernel<<<dim, func_type, queue>>>(batch, stride, trans, n, dA, ldda, 0,gbstep));
     
     }
+
     return MLUOP_STATUS_SUCCESS;
 }
 
@@ -490,7 +627,7 @@ __mlu_entry__ void mlu_strsm_rectile_batch_kernel(
     float* orignB = dB;
     dA = orignA + batch_id * stride;
     dB = orignB + batch_id * stride;
- 
+    
     int span = n;
     int start = 0;
 
@@ -505,12 +642,14 @@ __mlu_entry__ void mlu_strsm_rectile_batch_kernel(
 
 
     float temp_b = 0, factor = 0;
+    
+
 
     __memcpy_async(sA,dA,sizeof(float),GDRAM2NRAM);
 
     __memcpy(rBp,OFFSET_B_ROW(dB,start,0),sizeof(float),GDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
-    __sync(); 
-        
+    __sync();
+
     if(trans)
     {
         __memcpy_async(rA,sA,(1)*sizeof(float),NRAM2NRAM);
@@ -522,8 +661,6 @@ __mlu_entry__ void mlu_strsm_rectile_batch_kernel(
         factor = 1.0 / rA[0];
         for(int i = 0; i < span; i++)
         {
-            
-            
             rB[i*calc_length] *=  factor;
         }
 
@@ -540,11 +677,8 @@ __mlu_entry__ void mlu_strsm_rectile_batch_kernel(
             factor = 1.0 / rA[iter];
             for(int i = 0; i < span; i++)
             {
-                
                 __bang_mul(rC+i*calc_length,rA,rB+i*calc_length,iter);
-                
                 temp_b = 0;
-                
                 for(int j = 0; j < iter; j++)
                 {
                     temp_b += rC[i*calc_length+j];
@@ -562,11 +696,9 @@ __mlu_entry__ void mlu_strsm_rectile_batch_kernel(
         factor = 1.0 / rA[m-1];
         for(int i = 0; i < span; i++)
         {
-            
             __bang_mul(rC+i*calc_length,rA,rB+i*calc_length,m-1);
 
             temp_b = 0;
-            
             for(int j = 0; j < m-1; j++)
             {
                 temp_b += rC[i*calc_length+j];
@@ -576,6 +708,7 @@ __mlu_entry__ void mlu_strsm_rectile_batch_kernel(
             rB[i*calc_length+m-1] = temp_b * factor;
         }
         __sync();
+
 
         __memcpy(OFFSET_B_ROW(dB,start,0),rB,calc_length*sizeof(float),NRAM2GDRAM,ldb * sizeof(float), calc_length * sizeof(float), span - 1);
         __sync();
@@ -599,8 +732,9 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(
     float* orignA = dA;
     float* orignB = dB;
     dA = orignA + batch_id * stride;
-    dB = orignB + batch_id * stride;  
+    dB = orignB + batch_id * stride;
     
+
     int span = n / 4;
     int start = id * span;
     if(id == 3)
@@ -616,22 +750,27 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(
     __nram__ float rA[8*POTF_NB];
     int calc_length = (8 * POTF_NB) > m ? m : (8 * POTF_NB);
     __memset_nram(rB,POTF_NB*calc_length,(float)ZERO);
-    __sramset(sA,calc_length*calc_length,0);
 
 
     float temp_b = 0, factor = 0;
     float sum = 0.0;
     float c = 0.0;
     float t = 0.0;
+    sum = 0.0;
+    c = 0.0;
+    t =0.0;
+    temp_b = 0;
+    factor = 0;
     
 
     if(id == 0)
     {
-        __memcpy_async(sA,dA,sizeof(float),LDRAM2SRAM);
+        __memcpy(sA,dA,sizeof(float),LDRAM2SRAM);
     }
     if(if_execute)
-    __memcpy(rBp,OFFSET_B_ROW(dB,start,0),sizeof(float),LDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
-    __sync_cluster(); 
+        __memcpy(rBp,OFFSET_B_ROW(dB,start,0),sizeof(float),LDRAM2NRAM,sizeof(float), ldb * sizeof(float), span - 1);
+    __sync_cluster();
+
         
     if(trans)
     {
@@ -648,8 +787,6 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(
         factor = 1.0 / rA[0];
         for(int i = 0; i < span; i++)
         {
-            
-            
             rB[i*calc_length] *=  factor;
         }
 
@@ -670,19 +807,17 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(
             factor = 1.0 / rA[iter];
             for(int i = 0; i < span; i++)
             {
-                
                 __bang_mul(rC+i*calc_length,rA,rB+i*calc_length,iter);
-                
                 temp_b = 0;
                 sum = 0.0;
                 c = 0.0;
-                t = 0.0;           
-                
+                t = 0.0;
+
                 for(int j = 0; j < iter; j++)
                 {
-                    temp_b = rC[i*calc_length+j] - c;    
-                    t = sum + temp_b;      
-                    c = (t - sum) - temp_b;   
+                    temp_b = rC[i*calc_length+j] - c;   
+                    t = sum + temp_b;     
+                    c = (t - sum) - temp_b;  
                     sum = t;   
                 }
                 temp_b = sum;
@@ -700,18 +835,12 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(
         factor = 1.0 / rA[m-1];
         for(int i = 0; i < span; i++)
         {
-            
             __bang_mul(rC+i*calc_length,rA,rB+i*calc_length,m-1);
 
             sum = 0.0;
             c = 0.0;
             t = 0.0;
             temp_b = 0;
-            
-            
-            
-            
-            
             for(int j = 0; j < m-1; j++)
             {
                 temp_b = rC[i*calc_length+j] - c;    
@@ -735,7 +864,6 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(
     }
 
 }
-
 
 mluOpStatus_t strsm_rectile(int batch, int stride, bool upper, bool trans, int m, int n, float *d_a, int lda, float *d_b, int lddb, cnrtQueue_t queue)
 {
@@ -790,7 +918,6 @@ __mlu_global__
 void add_c_batch(int batch, int stride, float beta, float *d_c, float* src,int ldc, int ldsrc, int m, int n)
 {
     
-
     int id = taskId;
     int batch_id = id;
     if(batch_id >= batch)
@@ -802,7 +929,9 @@ void add_c_batch(int batch, int stride, float beta, float *d_c, float* src,int l
     
 
     if (beta == 0.0f)
-    {        
+    {
+
+            
         __memcpy(d_c,src,n*sizeof(float),GDRAM2GDRAM,ldc*sizeof(float),ldsrc*sizeof(float),m-1);
         return;
     }
@@ -835,7 +964,6 @@ __mlu_global__
 void add_c(int batch, int stride, float beta, float *d_c, float* src,int ldc, int ldsrc, int m, int n)
 {
     
-
     int id = taskId;
     int ipu_per_cluster = 4;
     int batch_id = id / ipu_per_cluster;
@@ -846,6 +974,8 @@ void add_c(int batch, int stride, float beta, float *d_c, float* src,int ldc, in
     float* orignSrc = src;
     d_c = orignC + batch_id * stride;
     src = orignSrc + batch_id * m*n;
+    
+
 
     __mlu_shared__ uint8_t sram_buffer[MAX_SRAM_SIZE];
     if (beta == 0.0f)
@@ -887,7 +1017,6 @@ void add_c(int batch, int stride, float beta, float *d_c, float* src,int ldc, in
 
   int32_t align_num = NFU_ALIGN_SIZE / sizeof(float);
 
-
   int32_t data_nram_num =
     MAX_NRAM_SIZE / sizeof(float) / 2 / align_num * align_num;
   float *a_nram = (float *)nram_buffer;
@@ -919,7 +1048,7 @@ void add_c(int batch, int stride, float beta, float *d_c, float* src,int ldc, in
 
   if (id == 0) {
       __memcpy(d_c,sram_buffer,n*sizeof(float),SRAM2GDRAM,ldc*sizeof(float),n*sizeof(float),m-1);
-  
+
   }
 
   __sync_cluster();
@@ -931,53 +1060,46 @@ mluOpStatus_t sgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k, 
 {
     if(k==0)
         return MLUOP_STATUS_SUCCESS;
-    int matmul_is_transA = trans_a;
-    int matmul_is_transB = trans_b;
-    
-    
-    int matmul_requested_algo = 1;
-    int matmul_recieved_algo = 0;
-    size_t tempSize_matmulExtra = 0;
-    int matmul_computetype = MLUOP_DTYPE_FLOAT;
-    float *workspace;
-    int matmul_use_beta = beta == 0.0f ? 0 : 1;
-    
+
+    int32_t batch_size_arr[1] = {batch};
+    int64_t stride_a_arr[1] = {stride_a};
+    int64_t stride_b_arr[1] = {stride_b};
+    int64_t stride_c_arr[1] = {stride_c};
+
+    std::string api_name = "Cholesky";
+   
 
     cnrtQueue_t queue;
     mluOpGetQueue(handle,&queue);
- 
+
+    cnnlStrideBatchMatMulAlgo_t algo;
+    CALL_CNNL(cnnlStrideBatchMatMulAlgoCreate(&algo));
+
+    cnnlStrideBatchMatMulHeuristicResult_t heuristic_result;
+    CALL_CNNL(cnnlCreateStrideBatchMatMulHeuristicResult(&heuristic_result));
+
+    
+
+    cnnlStrideBatchMatMulDescriptor_t stride_bmm_desc;
+    CALL_CNNL(cnnlStrideBatchMatMulDescCreate(&stride_bmm_desc));
+    int32_t allow_tf32 = 0, max_batch_dim = 1;
+    CALL_CNNL(cnnlSetStrideBatchMatMulDescAttr(stride_bmm_desc, CNNL_STRIDE_BMM_ALLOW_TF32,
+                                                &(allow_tf32), sizeof(int32_t)));
+    CALL_CNNL(cnnlSetStrideBatchMatMulDescAttr(stride_bmm_desc, CNNL_STRIDE_BMM_MAX_BATCH_DIM,
+                                                &(max_batch_dim), sizeof(int32_t)));
+
+    
     mluOpTensorDescriptor_t matmul_a_desc, matmul_b_desc, matmul_c_desc;
 
-    cnnlMatMulDescriptor_t matmul_desc;
-    cnnlMatMulHeuristicResult_t heuristic_result;
-    cnnlMatMulAlgo_t matmul_algo;
-
-    std::string api_name = "Cholesky";
+    
 
     CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_a_desc));
     CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_b_desc));;
     CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_c_desc));
 
-    CALL_CNNL(cnnlMatMulDescCreate(&matmul_desc));
-    CALL_CNNL(cnnlMatMulAlgoCreate(&matmul_algo));
-    CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
-
-    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSA,
-                                  &matmul_is_transA, sizeof(int32_t)));
-    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSB,
-                                  &matmul_is_transB, sizeof(int32_t)));
-    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_COMPUTE_TYPE,
-                                    &matmul_computetype, sizeof(int32_t))); 
-
-    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_USE_BETA,
-                                    &matmul_use_beta, sizeof(int32_t))); 
-
-    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_USE_STRIDE,
-                                    &lda, sizeof(int32_t))); 
-
     int32_t matmul_a_shape[2] = {batch, stride_a};
     int32_t matmul_b_shape[2] = {batch, stride_b};
-    int32_t matmul_c_shape[2] = {batch, m*n};
+    int32_t matmul_c_shape[2] = {batch, stride_c};
 
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                matmul_a_desc, MLUOP_LAYOUT_ARRAY,
@@ -989,6 +1111,8 @@ mluOpStatus_t sgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k, 
                                matmul_c_desc, MLUOP_LAYOUT_ARRAY,
                                MLUOP_DTYPE_FLOAT, 2, matmul_c_shape));
 
+    
+
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_a_desc, cnnl_a_desc);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_b_desc, cnnl_b_desc);
@@ -996,59 +1120,37 @@ mluOpStatus_t sgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k, 
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_c_desc, cnnl_d_desc);
 
 
-
-    CALL_CNNL(cnnlGetMatMulAlgoHeuristic(
-        cnnl_handle, matmul_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc,
-        cnnl_d_desc, nullptr, matmul_requested_algo, &heuristic_result,
-        &matmul_recieved_algo));
-
-    CALL_CNNL(cnnlGetMatMulHeuristicResult(heuristic_result, matmul_algo,
-                                           &tempSize_matmulExtra));
+    int requested_algo_count = 1, return_algo_count = 0;
+    float *workspace;
+    size_t workspace_size;
 
 
-    CNRT_CHECK(cnrtMalloc((void **)&workspace, batch*m*n*sizeof(float)));
+    cnnlGetStrideBatchMatMulAlgoHeuristic(
+        cnnl_handle, stride_bmm_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc, cnnl_d_desc, trans_a, trans_b, false,
+        &(alpha), &(beta), m, n, k, lda, ldb, ldc, batch_size_arr, stride_a_arr, stride_b_arr,
+        stride_c_arr, nullptr, requested_algo_count, &heuristic_result, &return_algo_count);
+    
+    cnnlGetStrideBatchMatMulHeuristicResult(heuristic_result, &algo, &workspace_size);
+
+
+    if(workspace_size > 0)
+    {
+        CNRT_CHECK(cnrtMalloc((void **)&workspace, workspace_size));
+    }
+    else
+    {
+        CNRT_CHECK(cnrtMalloc((void **)&workspace, m*n*sizeof(float)));
+    }
 
     
-    cnnlStrideBatchMatMul(cnnl_handle, trans_a, trans_b, m, n, k, batch, alpha, cnnl_a_desc, d_a, lda, stride_a, cnnl_b_desc, d_b, ldb, stride_b, 0.0f, cnnl_c_desc, workspace, n, m*n);
+    
 
-    if ( beta == 1.0f || beta == 0.0f)
-    {
-        cnrtDim3_t dim;
-        cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_BLOCK;
-        dim.y = 1;
-        dim.z = 1;
-        int nram_space = 2 * m * n * sizeof(float);
-        if(batch > 1 && nram_space < MAX_NRAM_SIZE)
-        {
-            dim.x = batch;
-            KERNEL_CHECK(add_c_batch<<<dim, func_type, queue>>>(batch, stride_c, beta,d_c,workspace,ldc,n,m,n));
 
-        }
-        else
-        {
-            int carry_batch = batch;
-            if(batch == 1)
-            {
-                func_type = CNRT_FUNC_TYPE_UNION1;
-            }
-            else if(batch == 2)
-            {
-                func_type = CNRT_FUNC_TYPE_UNION2;
-            }
-            else if(batch <= 4)
-            {
-                func_type = CNRT_FUNC_TYPE_UNION4;
-                carry_batch = 4;
-            }
-            else 
-            {
-                func_type = CNRT_FUNC_TYPE_UNION8;
-                carry_batch = batch < 8 ? 8 : batch;
-            }
-            dim.x = carry_batch * 4;
-
-            KERNEL_CHECK(add_c<<<dim, func_type, queue>>>(batch, stride_c, beta,d_c,workspace,ldc,n,m,n));
-        }
+    CALL_CNNL(cnnlStrideBatchMatMul_v2(
+    cnnl_handle, stride_bmm_desc, algo, trans_a, trans_b, false, m, n, k, batch_size_arr, &(alpha), 
+    cnnl_a_desc, d_a, lda, stride_a_arr,
+    cnnl_b_desc, d_b, ldb, stride_b_arr, &(beta), cnnl_c_desc, d_c, ldc,
+    stride_c_arr, cnnl_d_desc, d_c, workspace, workspace_size)); 
 
     return MLUOP_STATUS_SUCCESS;
 }
@@ -1066,11 +1168,9 @@ void batch_inverse_kernel(int batch, float *d_input, int ld_input, int stride_in
     d_input = orign_input + batch_id * stride_input;
     d_output = orign_output + batch_id * stride_output;
 
-    
 
     float* nram_offset = (float*)nram_buffer;
     float* nram_src0 = nram_offset;
-    
     float* nram_src1 = nram_src0 + m * m;
     float* nram_src2 = nram_src1 + m * m;
     float* mul_result = nram_src2 + m;
@@ -1080,8 +1180,6 @@ void batch_inverse_kernel(int batch, float *d_input, int ld_input, int stride_in
 
     __memset_nram(nram_offset, 4 * m * m, (float)ZERO);
 
-    
-    
     __memcpy(nram_dst,d_input,m*sizeof(float),GDRAM2NRAM,m*sizeof(float),ld_input*sizeof(float),m-1);
     
     float result = 0.0;
@@ -1133,12 +1231,10 @@ void inverse_kernel(int batch, float *d_input, int ld_input, int stride_input, f
     float* orignOutput = d_output;
     d_input = orignInput + batch_id * stride_input;
     d_output = orignOutput + batch_id * stride_output;
-    
     __mlu_shared__ uint8_t sram_buffer[MAX_SRAM_SIZE];
     
 
     if (id == 0) {
-    
       __memcpy(sram_buffer,d_input,m*sizeof(float),GDRAM2SRAM,m*sizeof(float),ld_input*sizeof(float),m-1);
     }
     __sync_cluster();
@@ -1151,7 +1247,6 @@ void inverse_kernel(int batch, float *d_input, int ld_input, int stride_input, f
         span = m - 3 * span;
     }
     float* nram_offset = (float*)nram_buffer + id * 3 * m * m;
-    
     float* nram_src1 = nram_offset;
     float* nram_src2 = nram_src1 + m * m;
     float* mul_result = nram_src2 + m;
@@ -1183,7 +1278,7 @@ void inverse_kernel(int batch, float *d_input, int ld_input, int stride_input, f
         for(int j = 0; j < num; j++)
         {
             float temp = 0.0;
-           
+
             __bang_mul(mul_result,nram_src2,nram_src1+j*height,i);
             for(int k = 0; k< i; k++)
             {
@@ -1205,9 +1300,9 @@ void inverse_kernel(int batch, float *d_input, int ld_input, int stride_input, f
     __sync_cluster();
 
     if (id == 0) {
-    
       __memcpy(d_output,sram_buffer,m*sizeof(float),SRAM2GDRAM,ld_output*sizeof(float), m*sizeof(float),m-1);
     }
+    
     
 
 }
@@ -1221,7 +1316,7 @@ __mlu_global__ void set_zero(int batch, int stride, bool upper, int m, float* d_
     float* orignC = d_c;
     d_c = orignC + batch_id * stride;
     id = taskId % 4;
-    int span = m/taskDim;
+    int span = m/4;
     int pre = id * span;
     float* start_c = d_c + pre * lddc + pre;
     float* temp_c = start_c;
@@ -1236,7 +1331,7 @@ __mlu_global__ void set_zero(int batch, int stride, bool upper, int m, float* d_
         int num = m - pre - i;
         __ldramset(temp_c+1, num - 1, 0);
     }
-    if (id != 3)
+    if (id != 3&&span > 0)
     {
         temp_c = start_c + (span - 1) * lddc + span - 1;
         int num = m - pre - span + 1;
@@ -1244,6 +1339,7 @@ __mlu_global__ void set_zero(int batch, int stride, bool upper, int m, float* d_
     
     }
 }
+
 mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n, float* d_a, int lda, float* d_b, int ldb, mluOpHandle_t handle)
 {
     if(n==0)
@@ -1278,7 +1374,7 @@ mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n,
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_a_desc, cnnl_a_desc);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_b_desc, cnnl_b_desc);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(info_desc, cnnl_info_desc);
-  
+
     float* workspace;
     CNRT_CHECK(cnrtMalloc((void **)&workspace, batch*m*m*sizeof(float)));
     CNRT_CHECK(cnrtMemset(workspace, 0.0, batch*m*m*sizeof(float)));
@@ -1334,7 +1430,6 @@ mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n,
     sgemm(batch, false,false,m2,m1,m1,1.0f,0.0f,d_a+m1*lda,lda,stride,workspace1,m,m*m,workspace1+m1*m,m,m*m,handle);
     sgemm(batch, false,false,m2,m2,m1,-1.0f,0.0f,workspace2,m,m*m,workspace1+m1*m,m,m*m,workspace1+m1*m,m,m*m,handle);
     cnrtQueueSync(queue);
-
     cnnlStrideBatchMatMul(cnnl_handle, false, true, n,m, m, batch, 1.0, cnnl_b_desc, d_b, ldb, stride, cnnl_a_desc, workspace, m, m*m, 0.0f, cnnl_b_desc, d_b, ldb, stride);
 
     return MLUOP_STATUS_SUCCESS;
@@ -1346,7 +1441,7 @@ mluOpStatus_t set_half_zero(int batch,int stride,float* d_a, int lda, int m, mlu
     mluOpGetQueue(handle,&queue);
     cnrtDim3_t dim;
     cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
-    dim.x = 4;
+    dim.x = 4 * batch;
     dim.y = 1;
     dim.z = 1;
     KERNEL_CHECK(set_zero<<<dim, func_type, queue>>>(batch, stride, false, m, d_a,lda));
@@ -1401,30 +1496,23 @@ mluOpStatus_t mlu_spotrf_rectile(int batch, int stride, bool trans, bool uplo, i
     
     if(n <=recnb)
     {
-        
         mlu_spotf2_lpin(batch, stride, trans, uplo,n,lda,d_A,gbstep,queue);
     }
     else
     {
         int n1 = n/2;
         int n2 = n-n1;
-        
         mlu_spotrf_rectile(batch,stride,trans,uplo,n1,recnb,OFFSET_ROW(d_A,0,0),lda,gbstep, handle);
-        
-        
         strsm_rectile(batch, stride, uplo,trans,n1,n2,OFFSET_ROW(d_A,0,0),lda,OFFSET_ROW(d_A,n1,0),lda,queue);
-        
         ssyrk(batch,stride,uplo,trans,n2,n1,d_A+n1*lda,lda,OFFSET_ROW(d_A,n1,n1),lda,handle);
-        
         mlu_spotrf_rectile(batch,stride,trans,uplo,n2,recnb,OFFSET_ROW(d_A,n1,n1),lda,gbstep+n1,handle);
-       
-    }
-    
+
+        
     return MLUOP_STATUS_SUCCESS;
 }
 
-
-mluOpStatus_t transpose(int batch, int m, int n, float* d_input,float* d_output, mluOpHandle_t handle)
+// m * n
+mluOpStatus_t transpose(int batch, int m, int n, float* d_input,float* d_output, mluOpHandle_t handle,mluOpDataType_t type, float* workspace)
 {
     if(m==0)
         return MLUOP_STATUS_SUCCESS;
@@ -1443,11 +1531,11 @@ mluOpStatus_t transpose(int batch, int m, int n, float* d_input,float* d_output,
 
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                trans_input_desc, MLUOP_LAYOUT_ARRAY,
-                               MLUOP_DTYPE_FLOAT, 3, transpose_input_shape));
+                               type, 3, transpose_input_shape));
 
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                trans_output_desc, MLUOP_LAYOUT_ARRAY,
-                               MLUOP_DTYPE_FLOAT, 3, transpose_output_shape));
+                               type, 3, transpose_output_shape));
 
     int permute[3] = {0, 2, 1};
 
@@ -1461,26 +1549,21 @@ mluOpStatus_t transpose(int batch, int m, int n, float* d_input,float* d_output,
 
     CALL_CNNL(cnnlSetTransposeDescriptor(cnnl_trans_desc, input_dim, permute));
 
-    size_t *size = NULL;
-    size = (size_t*)malloc(sizeof(size_t));
+    size_t size=0;
     
 
-    CALL_CNNL(cnnlGetTransposeWorkspaceSize(cnnl_handle, cnnl_in_desc, cnnl_trans_desc, size));
-    
+    CALL_CNNL(cnnlGetTransposeWorkspaceSize(cnnl_handle, cnnl_in_desc, cnnl_trans_desc, &size));
 
-    float *workspace = NULL;
 
-    if(*size > 0ul)
+    if(size > 0ul)
     {
-        printf("start malloc\n");
-        CNRT_CHECK(cnrtMalloc((void **)&workspace, *size));
-        printf("transpose2 need size: %zu\n",*size);
+
+        printf("transpose2 need size: %zu\n",size);
     }
 
     CALL_CNNL(cnnlTranspose_v2(cnnl_handle, cnnl_trans_desc, cnnl_in_desc,
                              d_input, cnnl_out_desc, d_output,
-                             workspace, *size));
-
+                             workspace, size));
     return MLUOP_STATUS_SUCCESS;
 
 }
