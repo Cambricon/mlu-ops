@@ -81,6 +81,14 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     PARAM_CHECK(API, input_desc->dim == output_desc->dim);
     PARAM_CHECK(API, handle != NULL);
 
+    for (int i = 0; i < input_desc->dim; i++) {
+        if (input_desc->dims[i] == 0) {
+            LOG(ERROR)  << "[mluOpLogcumsumexp] there is a zero element"
+                         "in input tensor's shape"
+            return MLUOP_STATUS_BAD_PARAM;
+        }
+    }
+
     PARAM_CHECK(API, input != NULL);
     PARAM_CHECK(API, output != NULL);
 
