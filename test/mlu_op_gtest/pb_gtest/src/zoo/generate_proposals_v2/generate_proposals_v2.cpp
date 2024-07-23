@@ -120,8 +120,8 @@ void GenerateProposalsV2Executor::compute() {
   VLOG(4) << "[mluOpGenerateProposalsV2] call "
              "mluOpGetGenerateProposalsV2WorkspaceSize()";
   size_t workspace_size = 0;
-  MLUOP_CHECK(mluOpGetGenerateProposalsV2WorkspaceSize(handle_, tensor_scores,
-                                                       &workspace_size));
+  MLUOP_CHECK(mluOpGetGenerateProposalsV2WorkspaceSize_v2(
+      handle_, tensor_scores, pre_nms_top_n, &workspace_size));
   interface_timer_.start();
 
   VLOG(4) << "[mluOpGenerateProposalsV2] call "
