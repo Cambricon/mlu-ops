@@ -54,7 +54,7 @@ void SqrtExecutor::cpuCompute() {
   auto count1 = parser_->getInputDataCount(0);
   auto count2 = parser_->getOutputDataCount(0);
 
-  for (int i = 0; i < count1; ++i) {
+  for (size_t i = 0; i < count1; ++i) {
     cpu_fp32_output_[0][i] = sqrt(cpu_fp32_input_[0][i]);
   }
 }

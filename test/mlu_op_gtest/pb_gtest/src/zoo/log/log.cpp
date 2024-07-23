@@ -64,15 +64,15 @@ void LogExecutor::cpuCompute() {
       (mluOpLogBase_t)(parser_->getProtoNode()->log_param().log_base());
   VLOG(4) << "log base is " << base << " (e -> 0, 2 -> 1, 10 -> 2)";
   if (base == mluOpLogBase_t::MLUOP_LOG_E) {
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       cpu_fp32_output_[0][i] = log(cpu_fp32_input_[0][i]);
     }
   } else if (base == mluOpLogBase_t::MLUOP_LOG_2) {
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       cpu_fp32_output_[0][i] = log2(cpu_fp32_input_[0][i]);
     }
   } else if (base == mluOpLogBase_t::MLUOP_LOG_10) {
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       cpu_fp32_output_[0][i] = log10(cpu_fp32_input_[0][i]);
     }
   } else {

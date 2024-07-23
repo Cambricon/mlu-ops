@@ -21,9 +21,11 @@ if __name__ == '__main__':
         status_file = open(guard_status_file, "r")
         line = status_file.readline().strip()
         status_file.close()
-        if "success" in line:
+        if "success" in line or "Success" in line:
+            print("Task success.")
             break
-        elif "fail" in line:
+        elif "fail" in line or "Fail" in line or "error" in line or "Error" in line:
+            print("Task Fail.")
             exit(-1)
         # sleep for a while
         time.sleep(2)

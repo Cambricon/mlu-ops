@@ -25,9 +25,14 @@
 
 #include "mlu_op.h"
 
+mluOpStatus_t MLUOP_WIN_API Kernel5StagePipelineDiv(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
+    const void *x, const void *y, void *z, size_t num);
+
 mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineDiv(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
-    const void *x, const void *y, void *z, int num);
+    const void *x, const void *y, void *z, size_t num);
 
 #endif  // KERNELS_DIV_DIV_H

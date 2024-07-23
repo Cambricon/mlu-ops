@@ -20,121 +20,225 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+
 #ifndef KERNELS_UNARY_OP_UNARY_OP_3PIPELINE_H_
 #define KERNELS_UNARY_OP_UNARY_OP_3PIPELINE_H_
 
 #include "kernels/kernel.h"
+#include "kernels/debug.h"
 #include "kernels/utils/common.h"
 
-#define UNARY_ALIGN_NUM 64
+#define ALIGN_NUM 64
+#define UNARY_NRAM_SIZE (MAX_NRAM_SIZE + REM_FOR_STACK - 148 * 1024)
+#define UNARY_SRAM_SIZE (CORE_DIM * UNARY_NRAM_SIZE)
 
-#define UNARY_OP_KERNEL_3PIPELINE_DECLARE(Op, DType, Prefer)           \
-  __mlu_global__ void MLUBlockKernel3StagePipeline##Op##DType##Prefer( \
-      void *x, void *y, uint32_t num_total, float coef);
+#define U32_SIZE_OF(type) static_cast<uint32_t>(sizeof(type))
 
-#define UNARY_OP_KERNEL_3PIPELINE_IMPLE(Op, DType, Prefer)                 \
-  __mlu_global__ void MLUBlockKernel3StagePipeline##Op##DType##Prefer(     \
-      void *x, void *y, uint32_t num_total, float coef) {                  \
-    int32_t num_deal = 0, num_pong = 0;                                    \
-    int32_t offset_half = 0, offset_aux_a = 0, offset_aux_b = 0;           \
-    get3Offset##Op##Prefer<DType>(offset_half, offset_aux_a, offset_aux_b, \
-                                  num_deal, num_pong);                     \
-    block3Unary<DType, compute##Op##Prefer>(                               \
-        (DType *)x, (DType *)y, nram_buffer, num_total, offset_half,       \
-        offset_aux_a, offset_aux_b, num_deal, num_pong, coef);             \
+#define UNARY_OP_KERNEL_3PIPELINE_DECLARE(Op, Prefer)                \
+  template <typename DType_in, typename DType_out, typename... Args> \
+  __mlu_global__ void MLUBlockKernel3StagePipeline##Op##Prefer(      \
+      char *x, char *y, size_t element_num, Args... args);
+
+#define UNARY_OP_KERNEL_3PIPELINE_IMPLE(Op, Prefer)                            \
+  template <typename DType_in, typename DType_out, typename... Args>           \
+  __mlu_global__ void MLUBlockKernel3StagePipeline##Op##Prefer(                \
+      char *input_gdram, char *output_gdram, size_t element_num,               \
+      Args... args) {                                                          \
+    if (__is_mpu()) {                                                          \
+      return;                                                                  \
+    }                                                                          \
+    size_t output_input_gap = 0, ping_pong_gap = 0;                            \
+    size_t auxiliary_a_gap = 0, auxiliary_b_gap = 0;                           \
+    size_t span_num_deal = 0;                                                  \
+    size_t align_num = 1;                                                      \
+    auxFunc3##Op##Prefer<DType_in, DType_out>(                                 \
+        output_input_gap, ping_pong_gap, auxiliary_a_gap, auxiliary_b_gap,     \
+        span_num_deal, align_num, args...);                                    \
+    size_t num_per_core = element_num / taskDim;                               \
+    size_t num_rem = element_num % taskDim;                                    \
+    char *input_start =                                                        \
+        input_gdram + taskId * num_per_core * sizeof(DType_in);                \
+    char *output_start =                                                       \
+        output_gdram + taskId * num_per_core * sizeof(DType_out);              \
+    if (num_rem > 0 && taskId == taskDim - 1) {                                \
+      num_per_core = num_per_core + num_rem;                                   \
+    }                                                                          \
+    int repeat = num_per_core / span_num_deal;                                 \
+    size_t rem = num_per_core % span_num_deal;                                 \
+    size_t align_rem = CEIL_ALIGN(rem, align_num);                             \
+    char *ping_output = nram_buffer;                                           \
+    char *ping_input = nram_buffer + output_input_gap;                         \
+    char *auxiliary_a = nram_buffer + auxiliary_a_gap;                         \
+    char *auxiliary_b = nram_buffer + auxiliary_b_gap;                         \
+    size_t span_load_size = span_num_deal * sizeof(DType_in);                  \
+    size_t span_store_size = span_num_deal * sizeof(DType_out);                \
+    if (repeat > 0) {                                                          \
+      __memcpy_async(ping_input, input_start, span_load_size, GDRAM2NRAM);     \
+      __asm__ volatile("sync;");                                               \
+    }                                                                          \
+    if (repeat > 1) {                                                          \
+      __memcpy_async(ping_input + ping_pong_gap, input_start + span_load_size, \
+                     span_load_size, GDRAM2NRAM);                              \
+      compute##Op##Prefer<DType_in, DType_out>(                                \
+          ping_output, ping_input, auxiliary_a, auxiliary_b, span_num_deal,    \
+          span_num_deal, args...);                                             \
+      __asm__ volatile("sync;");                                               \
+    }                                                                          \
+    for (int i = 0; i < repeat - 2; i++) {                                     \
+      pvLock();                                                                \
+      __memcpy_async(output_start + i * span_store_size,                       \
+                     ping_output + (i % 2) * ping_pong_gap, span_store_size,   \
+                     NRAM2GDRAM);                                              \
+      pvUnlock();                                                              \
+      __memcpy_async(ping_input + (i % 2) * ping_pong_gap,                     \
+                     input_start + (i + 2) * span_load_size, span_load_size,   \
+                     GDRAM2NRAM);                                              \
+      compute##Op##Prefer<DType_in, DType_out>(                                \
+          ping_output + ((i + 1) % 2) * ping_pong_gap,                         \
+          ping_input + ((i + 1) % 2) * ping_pong_gap, auxiliary_a,             \
+          auxiliary_b, span_num_deal, span_num_deal, args...);                 \
+      __asm__ volatile("sync;");                                               \
+    }                                                                          \
+    if (repeat > 1) {                                                          \
+      __memcpy_async(output_start + (repeat - 2) * span_store_size,            \
+                     ping_output + ((repeat - 2) % 2) * ping_pong_gap,         \
+                     span_store_size, NRAM2GDRAM);                             \
+    }                                                                          \
+    if (rem > 0) {                                                             \
+      __memcpy_async(ping_input + (repeat % 2) * ping_pong_gap,                \
+                     input_start + repeat * span_load_size,                    \
+                     rem * sizeof(DType_in), GDRAM2NRAM);                      \
+    }                                                                          \
+    if (repeat > 0) {                                                          \
+      compute##Op##Prefer<DType_in, DType_out>(                                \
+          ping_output + ((repeat - 1) % 2) * ping_pong_gap,                    \
+          ping_input + ((repeat - 1) % 2) * ping_pong_gap, auxiliary_a,        \
+          auxiliary_b, span_num_deal, span_num_deal, args...);                 \
+    }                                                                          \
+    __asm__ volatile("sync;");                                                 \
+    if (repeat > 0) {                                                          \
+      __memcpy_async(output_start + (repeat - 1) * span_store_size,            \
+                     ping_output + ((repeat - 1) % 2) * ping_pong_gap,         \
+                     span_store_size, NRAM2GDRAM);                             \
+    }                                                                          \
+    if (rem > 0) {                                                             \
+      compute##Op##Prefer<DType_in, DType_out>(                                \
+          ping_output + (repeat % 2) * ping_pong_gap,                          \
+          ping_input + (repeat % 2) * ping_pong_gap, auxiliary_a, auxiliary_b, \
+          align_rem, rem, args...);                                            \
+      __asm__ volatile("sync;");                                               \
+      __memcpy_async(output_start + repeat * span_store_size,                  \
+                     ping_output + (repeat % 2) * ping_pong_gap,               \
+                     rem * sizeof(DType_out), NRAM2GDRAM);                     \
+    }                                                                          \
   }
 
-template <typename T, void (*OpFunc)(T *, T *, T *, T *, int, int, float)>
-__mlu_func__ void block3Unary(T *x, T *y, char *nram_buffer, int32_t num_total,
-                              int32_t offset_x_half, int32_t offset_aux_a,
-                              int32_t offset_aux_b, int32_t num_deal,
-                              int32_t num_pong, float coef) {
-  if (__is_mpu()) {
-    return;
+// Divide tasks in host
+#define UNARY_OP_KERNEL_3PIPELINE_V2_DECLARE(Op, Prefer)                    \
+  template <typename DType_in, typename DType_out, typename... Args>        \
+  __mlu_global__ void MLUBlockKernel3StagePipelineV2##Op##Prefer(           \
+      char *x, char *y, size_t normal_core_elem_num,                        \
+      size_t tail_core_elem_num, uint32_t output_input_gap,                 \
+      uint32_t ping_pong_gap, uint32_t auxiliary_a_gap,                     \
+      uint32_t auxiliary_b_gap, uint32_t span_num_deal, uint32_t align_num, \
+      Args... args);
+
+// Divide tasks in host
+#define UNARY_OP_KERNEL_3PIPELINE_V2_IMPLE(Op, Prefer)                         \
+  template <typename DType_in, typename DType_out, typename... Args>           \
+  __mlu_global__ void MLUBlockKernel3StagePipelineV2##Op##Prefer(              \
+      char *input_gdram, char *output_gdram, size_t normal_core_elem_num,      \
+      size_t tail_core_elem_num, uint32_t output_input_gap,                    \
+      uint32_t ping_pong_gap, uint32_t auxiliary_a_gap,                        \
+      uint32_t auxiliary_b_gap, uint32_t span_num_deal, uint32_t align_num,    \
+      Args... args) {                                                          \
+    const char *const input_start =                                            \
+        input_gdram + taskId * normal_core_elem_num * sizeof(DType_in);        \
+    char *const output_start =                                                 \
+        output_gdram + taskId * normal_core_elem_num * sizeof(DType_out);      \
+    const size_t num_cur_core =                                                \
+        (taskId + 1 == taskDim) ? tail_core_elem_num : normal_core_elem_num;   \
+                                                                               \
+    const uint32_t repeat = num_cur_core / span_num_deal;                      \
+    const uint32_t rem = num_cur_core % span_num_deal;                         \
+    const uint32_t align_rem = CEIL_ALIGN(rem, align_num);                     \
+    char *ping_output = nram_buffer;                                           \
+    char *ping_input = nram_buffer + output_input_gap;                         \
+    char *auxiliary_a = nram_buffer + auxiliary_a_gap;                         \
+    char *auxiliary_b = nram_buffer + auxiliary_b_gap;                         \
+    size_t span_load_size = span_num_deal * U32_SIZE_OF(DType_in);             \
+    size_t span_store_size = span_num_deal * U32_SIZE_OF(DType_out);           \
+                                                                               \
+    if (repeat > 0) {                                                          \
+      __memcpy_async(ping_input, input_start, span_load_size, GDRAM2NRAM);     \
+      __asm__ volatile("sync;");                                               \
+    }                                                                          \
+    if (repeat > 1) {                                                          \
+      __memcpy_async(ping_input + ping_pong_gap, input_start + span_load_size, \
+                     span_load_size, GDRAM2NRAM);                              \
+      compute##Op##Prefer<DType_in, DType_out>(                                \
+          ping_output, ping_input, auxiliary_a, auxiliary_b, span_num_deal,    \
+          span_num_deal, args...);                                             \
+      __asm__ volatile("sync;");                                               \
+    }                                                                          \
+                                                                               \
+    const uint32_t lcs_loop_num = repeat >= 2 ? (repeat - 2) : 0;              \
+    uint32_t ith_buffer_offset = 0;                                            \
+    uint32_t i_plus_th_buffer_offset = ith_buffer_offset ^ ping_pong_gap;      \
+    for (uint32_t i = 0; i < lcs_loop_num; ++i) {                              \
+      __memcpy_async(output_start + i * span_store_size,                       \
+                     ping_output + ith_buffer_offset, span_store_size,         \
+                     NRAM2GDRAM);                                              \
+      __memcpy_async(ping_input + ith_buffer_offset,                           \
+                     input_start + (i + 2) * span_load_size, span_load_size,   \
+                     GDRAM2NRAM);                                              \
+      compute##Op##Prefer<DType_in, DType_out>(                                \
+          ping_output + i_plus_th_buffer_offset,                               \
+          ping_input + i_plus_th_buffer_offset, auxiliary_a, auxiliary_b,      \
+          span_num_deal, span_num_deal, args...);                              \
+      ith_buffer_offset = ith_buffer_offset ^ ping_pong_gap;                   \
+      i_plus_th_buffer_offset = ith_buffer_offset ^ ping_pong_gap;             \
+      __asm__ volatile("sync;");                                               \
+    }                                                                          \
+                                                                               \
+    if (repeat > 1) {                                                          \
+      const uint32_t lcs_loop_num_th_buffer_offset = ith_buffer_offset;        \
+      __memcpy_async(output_start + lcs_loop_num * span_store_size,            \
+                     ping_output + lcs_loop_num_th_buffer_offset,              \
+                     span_store_size, NRAM2GDRAM);                             \
+    }                                                                          \
+    const uint32_t repeat_th_buffer_offset =                                   \
+        (repeat == 1) ? i_plus_th_buffer_offset : ith_buffer_offset;           \
+    if (rem > 0) {                                                             \
+      __memcpy_async(ping_input + repeat_th_buffer_offset,                     \
+                     input_start + repeat * span_load_size,                    \
+                     rem * U32_SIZE_OF(DType_in), GDRAM2NRAM);                 \
+    }                                                                          \
+    /* if repeat ==1, repeat-1 == i  */                                        \
+    const uint32_t repeat_minus_1_th_buffer_offset =                           \
+        (repeat == 1) ? ith_buffer_offset : i_plus_th_buffer_offset;           \
+    if (repeat > 0) {                                                          \
+      compute##Op##Prefer<DType_in, DType_out>(                                \
+          ping_output + repeat_minus_1_th_buffer_offset,                       \
+          ping_input + repeat_minus_1_th_buffer_offset, auxiliary_a,           \
+          auxiliary_b, span_num_deal, span_num_deal, args...);                 \
+    }                                                                          \
+    __asm__ volatile("sync;");                                                 \
+    if (repeat > 0) {                                                          \
+      __memcpy_async(output_start + (repeat - 1) * span_store_size,            \
+                     ping_output + repeat_minus_1_th_buffer_offset,            \
+                     span_store_size, NRAM2GDRAM);                             \
+    }                                                                          \
+    if (rem > 0) {                                                             \
+      compute##Op##Prefer<DType_in, DType_out>(                                \
+          ping_output + repeat_th_buffer_offset,                               \
+          ping_input + repeat_th_buffer_offset, auxiliary_a, auxiliary_b,      \
+          align_rem, rem, args...);                                            \
+      __asm__ volatile("sync;");                                               \
+      __memcpy_async(output_start + repeat * span_store_size,                  \
+                     ping_output + repeat_th_buffer_offset,                    \
+                     rem * U32_SIZE_OF(DType_out), NRAM2GDRAM);                \
+    }                                                                          \
   }
-  int32_t num_per_core = num_total / taskDim;
-  int32_t num_rem = num_total % taskDim;
-  T *addr_x = (T *)x + taskId * num_per_core;
-  T *addr_y = (T *)y + taskId * num_per_core;
-  if (num_rem > 0 && taskId == taskDim - 1) {
-    num_per_core = num_per_core + num_rem;
-  }
-  int32_t repeat = num_per_core / num_deal;
-  int32_t rem = num_per_core % num_deal;
-  int32_t align_rem = CEIL_ALIGN(rem, UNARY_ALIGN_NUM);
 
-  T *nram_x = (T *)nram_buffer;
-  T *nram_x_half = (T *)nram_buffer + offset_x_half;
-  T *nram_aux_a = (T *)nram_buffer + offset_aux_a;
-  T *nram_aux_b = (T *)nram_buffer + offset_aux_b;
-  int32_t span_handle_size = num_deal * sizeof(T);
-
-  // 3 level pipeline.
-  if (repeat > 0) {
-    __memcpy_async(nram_x_half, addr_x, span_handle_size, GDRAM2NRAM);
-    __sync();
-  }
-
-  if (repeat > 1) {
-    __memcpy_async(nram_x_half + num_pong, addr_x + num_deal, span_handle_size,
-                   GDRAM2NRAM);
-    OpFunc(nram_x, nram_x_half, nram_aux_a, nram_aux_b, num_deal, num_deal,
-           coef);
-    __sync();
-  }
-
-  for (int i = 0; i < repeat - 2; i++) {
-    pvLock();
-    __memcpy_async(addr_y + i * num_deal, nram_x + (i % 2) * num_pong,
-                   span_handle_size, NRAM2GDRAM);
-    pvUnlock();
-
-    __memcpy_async(nram_x_half + (i % 2) * num_pong,
-                   addr_x + (i + 2) * num_deal, span_handle_size, GDRAM2NRAM);
-    OpFunc(nram_x + ((i + 1) % 2) * num_pong,
-           nram_x_half + ((i + 1) % 2) * num_pong, nram_aux_a, nram_aux_b,
-           num_deal, num_deal, coef);
-    __sync();
-  }
-
-  if (repeat > 1) {
-    pvLock();
-    __memcpy_async(addr_y + (repeat - 2) * num_deal,
-                   nram_x + ((repeat - 2) % 2) * num_pong, span_handle_size,
-                   NRAM2GDRAM);
-    pvUnlock();
-  }
-
-  if (rem > 0) {
-    __memcpy_async(nram_x_half + (repeat % 2) * num_pong,
-                   addr_x + repeat * num_deal, rem * sizeof(T), GDRAM2NRAM);
-  }
-
-  if (repeat > 0) {
-    OpFunc(nram_x + ((repeat - 1) % 2) * num_pong,
-           nram_x_half + ((repeat - 1) % 2) * num_pong, nram_aux_a, nram_aux_b,
-           num_deal, num_deal, coef);
-  }
-  __sync();
-
-  if (repeat > 0) {
-    pvLock();
-    __memcpy_async(addr_y + (repeat - 1) * num_deal,
-                   nram_x + ((repeat - 1) % 2) * num_pong, span_handle_size,
-                   NRAM2GDRAM);
-    pvUnlock();
-  }
-
-  if (rem > 0) {
-    OpFunc(nram_x + (repeat % 2) * num_pong,
-           nram_x_half + (repeat % 2) * num_pong, nram_aux_a, nram_aux_b,
-           align_rem, rem, coef);
-    __sync();
-
-    pvLock();
-    __memcpy_async(addr_y + repeat * num_deal, nram_x + (repeat % 2) * num_pong,
-                   rem * sizeof(T), NRAM2GDRAM);
-    pvUnlock();
-  }
-}
 #endif  // KERNELS_UNARY_OP_UNARY_OP_3PIPELINE_H_

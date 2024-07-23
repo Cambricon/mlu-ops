@@ -1,5 +1,5 @@
 {
-  "version": "1.1.1-1",
+  "version": "1.2.0-1",
   "python": "3.6.0",
   "build_requires": {"cntoolkit": ["release","3.8.4-1"],
                      "cnnl":["release","1.23.2-1"],

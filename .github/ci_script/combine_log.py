@@ -39,7 +39,7 @@ if __name__ == '__main__':
         status_file = open(status_path)
         status = status_file.readline().strip()
         status_file.close()
-        if "fail" in status or "success" in status:
+        if "fail" in status or "success" in status or "Success" in status or "Fail" in status or "error" in status or "Error" in status:
             break
         else:
             time.sleep(2)

@@ -28,7 +28,7 @@
  ******************************************************************************/
 
 #define MLUOP_MAJOR 1
-#define MLUOP_MINOR 0
+#define MLUOP_MINOR 2
 #define MLUOP_PATCHLEVEL 0
 
 /*********************************************************************************
@@ -2972,8 +2972,9 @@ mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
  * @par Data Type
  * - The date types of input tensor and output tensor should be the same.
  * - The supported data types of input and output tensors are as follows:
- *   - input tensor: half, float
- *   - output tensor: half, float
+ *   - input tensor: half, float, bfloat16, int32, complex_float
+ *   - output tensor: half, float, bfloat16, int32
+ * - The data type bfloat16 is only supported on MLU500 series.
  *
  * @par Data Layout
  * - None.
@@ -3998,9 +3999,12 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  * - None.
  *
  * @par Note
- * - This commit does not support NAN/INF or adaptive NMS.
+ * - The operater does not support adaptive NMS.
  * - The attribute `eta` should not be less than 1.
  * - ``nms_thresh`` should be more than 0.
+ * - On MLU300 series and above:
+ *   - If \b pixel_offset is false, input \b scores with NaN/INF is not supported.
+ *   - If \b pixel_offset is true, NaN/INF is not supported.
  *
  * @par Example
  * - None.
@@ -4133,7 +4137,7 @@ mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  * - None.
  *
  * @par Note
- * - This commit does not support NAN/INF.
+ * - The operator does not support NAN/INF.
  * - The coordinates of the input boxes must all be sorted clockwise or
  *   counterclockwise. If the coordinates of the boxes are out of order,
  *   the calculation result is not guaranteed and is consistent with the

@@ -26,6 +26,7 @@
 #include <string>
 
 namespace mluoptest {
+
 void RoiAlignRotatedForwardExecutor::preCalcForBilinearInterpolate(
     const int height, const int width, const int channel,
     const int pooled_height, const int pooled_width, const int roi_bin_grid_h,
@@ -40,12 +41,15 @@ void RoiAlignRotatedForwardExecutor::preCalcForBilinearInterpolate(
         const float yy = roi_start_y + ph * bin_size_h +
                          static_cast<float>(iy + 0.5) * bin_size_h /
                              static_cast<float>(roi_bin_grid_h);
+        theory_ops_ += 8;  // cur block
         for (int ix = 0; ix < roi_bin_grid_w; ++ix) {
           const float xx = roi_start_x + pw * bin_size_w +
                            static_cast<float>(ix + 0.5) * bin_size_w /
                                static_cast<float>(roi_bin_grid_w);
           float y = yy * cos_theta - xx * sin_theta + roi_center_y;
           float x = yy * sin_theta + xx * cos_theta + roi_center_x;
+          theory_ops_ += 16;  // cur block
+
           if (y < -1.0 || y > height || x < -1.0 || x > width) {
             PreCalc pc{0, 0, 0, 0, 0, 0, 0, 0};
             pre_calc[pre_calc_idx] = pc;
@@ -59,18 +63,23 @@ void RoiAlignRotatedForwardExecutor::preCalcForBilinearInterpolate(
           int y_low = (int)y;
           int x_low = (int)x;
           int y_high, x_high;
+          theory_ops_ += 2;  // cur block
 
           if (y_low >= height - 1) {
             y_high = y_low = height - 1;
             y = (float)y_low;
+            theory_ops_ += 2;  // cur block
           } else {
             y_high = y_low + 1;
+            theory_ops_ += 1;  // cur block
           }
           if (x_low >= width - 1) {
             x_high = x_low = width - 1;
             x = (float)x_low;
+            theory_ops_ += 2;  // cur block
           } else {
             x_high = x_low + 1;
+            theory_ops_ += 1;  // cur block
           }
 
           float ly = y - y_low;
@@ -88,7 +97,9 @@ void RoiAlignRotatedForwardExecutor::preCalcForBilinearInterpolate(
           pc.w3 = w3;
           pc.w4 = w4;
           pre_calc[pre_calc_idx] = pc;
+          // next stmt not count theory_ops_
           ++pre_calc_idx;
+          theory_ops_ += 20;  // cur block
         }
       }
     }
@@ -148,6 +159,7 @@ void RoiAlignRotatedForwardExecutor::compute() {
 
 void RoiAlignRotatedForwardExecutor::cpuCompute() {
   VLOG(4) << "RoiAlignRotatedForwardExecutor cpu compute ";
+  // not count theory_ops_ begin
   const int pooled_height = parser_->getProtoNode()
                                 ->roi_align_rotated_forward_param()
                                 .pooled_height();
@@ -162,6 +174,7 @@ void RoiAlignRotatedForwardExecutor::cpuCompute() {
       parser_->getProtoNode()->roi_align_rotated_forward_param().aligned();
   const bool clockwise =
       parser_->getProtoNode()->roi_align_rotated_forward_param().clockwise();
+  // not count theory_ops_ end
 
   auto features_desc = parser_->getMetaTensor(0).tensor;
   auto rois_desc = parser_->getMetaTensor(1).tensor;
@@ -182,22 +195,26 @@ void RoiAlignRotatedForwardExecutor::cpuCompute() {
   }
 
   for (int n_idx = 0; n_idx < rois_nums; ++n_idx) {
+    // not count theory_ops_ begin
     const int output_nidx = n_idx * pooled_height * pooled_width * channel;
-
     const float *current_roi = rois + n_idx * ROI_OFFSET;
-    const int roi_batch_idx = (int)current_roi[0];
+    // not count theory_ops_ end
 
+    const int roi_batch_idx = (int)current_roi[0];
     const float offset = aligned ? 0.5 : 0.0;
     const float roi_center_x = current_roi[1] * spatial_scale - offset;
     const float roi_center_y = current_roi[2] * spatial_scale - offset;
     float roi_width = current_roi[3] * spatial_scale;
     float roi_height = current_roi[4] * spatial_scale;
     float theta = current_roi[5];
+    theory_ops_ += 7;  // cur block
     if (clockwise) {
       theta = -theta;
+      theory_ops_ += 1;  // cur block
     }
     const float cos_theta = cos(theta);
     const float sin_theta = sin(theta);
+    theory_ops_ += 2;  // cur block
 
     if (aligned) {
       if (roi_width < 0 || roi_height < 0) {
@@ -208,6 +225,7 @@ void RoiAlignRotatedForwardExecutor::cpuCompute() {
     } else {
       roi_width = std::max(roi_width, (float)1.0);
       roi_height = std::max(roi_height, (float)1.0);
+      theory_ops_ += 4;  // cur block
     }
     const float bin_size_h = roi_height / static_cast<float>(pooled_height);
     const float bin_size_w = roi_width / static_cast<float>(pooled_width);
@@ -224,13 +242,17 @@ void RoiAlignRotatedForwardExecutor::cpuCompute() {
         height, width, channel, pooled_height, pooled_width, roi_bin_grid_h,
         roi_bin_grid_w, roi_start_x, roi_start_y, bin_size_h, bin_size_w,
         roi_center_x, roi_center_y, cos_theta, sin_theta, pre_calc);
+    theory_ops_ += 16;  // cur block
+
     for (int c_idx = 0; c_idx < channel; ++c_idx) {
+      // next stmt not count theory_ops_
       const float *offset_features =
           features + roi_batch_idx * height * width * channel;
       int pre_calc_idx = 0;
 
       for (int ph = 0; ph < pooled_height; ++ph) {
         for (int pw = 0; pw < pooled_width; ++pw) {
+          // next stmt not count theory_ops_
           int output_idx =
               output_nidx + (ph * pooled_width + pw) * channel + c_idx;
 
@@ -238,21 +260,20 @@ void RoiAlignRotatedForwardExecutor::cpuCompute() {
           for (int iy = 0; iy < roi_bin_grid_h; ++iy) {
             for (int ix = 0; ix < roi_bin_grid_w; ++ix) {
               auto pc = pre_calc[pre_calc_idx];
-              if (pc.w1 == 0 && pc.w2 == 0 && pc.w3 == 0 && pc.w4 == 0) {
-                output_val += 0;
-              } else {
+              if (!(pc.w1 == 0 && pc.w2 == 0 && pc.w3 == 0 && pc.w4 == 0)) {
                 output_val += pc.w1 * offset_features[pc.pos1 + c_idx] +
                               pc.w2 * offset_features[pc.pos2 + c_idx] +
                               pc.w3 * offset_features[pc.pos3 + c_idx] +
                               pc.w4 * offset_features[pc.pos4 + c_idx];
+                theory_ops_ += 9;  // cur block
               }
+              // next stmt not count theory_ops_
               ++pre_calc_idx;
-              theory_ops_ += 8;
             }
           }
           output_val /= count;
           output[output_idx] = output_val;
-          ++theory_ops_;
+          theory_ops_ += 2;  // cur block
         }
       }
     }
@@ -260,9 +281,50 @@ void RoiAlignRotatedForwardExecutor::cpuCompute() {
 }
 
 int64_t RoiAlignRotatedForwardExecutor::getTheoryOps() {
+#if 0
   if (parser_->device() != CPU) {
-    return -1;
+    for (int i = 0; i < parser_->getInputNum(); ++i) {
+      auto *ts = parser_->input(i);
+      if (unlikely(ts->empty())) {
+            return 0;
+      }
+      if (ts->dtype == MLUOP_DTYPE_FLOAT) {
+        ts->cpu_ptr =
+            (float *)cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
+        parser_->getInputTensorValue(i, (void *)ts->cpu_ptr, ts->shape_count);
+      } else {
+        void *temp = cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
+        parser_->getInputTensorValue(i, temp, ts->shape_count);
+        ts->cpu_ptr =
+            (float *)cpu_runtime_.allocate(ts->shape_count * sizeof(float));
+        castDataOut(temp, ts->dtype, ts->cpu_ptr, MLUOP_DTYPE_FLOAT,
+                        ts->shape_count, NO_QUANT);
+      }
+      cpu_fp32_input_.push_back(ts->cpu_ptr);
+    }
+    for (int i = 0; i < parser_->getOutputNum(); ++i) {
+      auto *ts = parser_->output(i);
+      if (unlikely(ts->empty())) {
+            return 0;
+      }
+      if (ts->dtype == MLUOP_DTYPE_FLOAT) {
+        ts->cpu_ptr =
+            (float *)cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
+        parser_->getOutputTensorValue(i, (void *)ts->cpu_ptr, ts->shape_count);
+      } else {
+        void *temp = cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
+        parser_->getOutputTensorValue(i, temp, ts->shape_count);
+        ts->cpu_ptr =
+            (float *)cpu_runtime_.allocate(ts->shape_count * sizeof(float));
+        castDataOut(temp, ts->dtype, ts->cpu_ptr, MLUOP_DTYPE_FLOAT,
+                        ts->shape_count, NO_QUANT);
+      }
+      cpu_fp32_output_.push_back(ts->cpu_ptr);
+    }
+    cpuCompute();
   }
+#endif
+
   VLOG(4) << "getTheoryOps: " << theory_ops_ << " ops";
   return theory_ops_;
 }

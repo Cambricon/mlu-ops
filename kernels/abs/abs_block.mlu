@@ -25,84 +25,134 @@
 #include "core/logging.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
+
 #include "kernels/unary_op/unary_op_3pipeline.h"
-#include "kernels/unary_op/unary_op_5pipeline.h"
+#include "kernels/tensor_stride_process/tensor_stride_process_common.h"
+#include "kernels/unary_op/unary_op_stride_3pipeline.h"
+#include "kernels/unary_op/complex_unary_op_3pipeline.h"
+#include "kernels/unary_op/complex_unary_op_stride_3pipeline.h"
 
-#define ABS_NRAM_USED MAX_NRAM_SIZE
-#define ABS_SRAM_USED (CORE_DIM * ABS_NRAM_USED)
+__nram__ char nram_buffer[UNARY_NRAM_SIZE];
 
-__nram__ float nram_tmp[NFU_ALIGN_SIZE];
-__nram__ char nram_buffer[ABS_NRAM_USED];
-__mlu_shared__ char sram_buffer[ABS_SRAM_USED];
-
-template <typename T>
-__mlu_func__ void get3OffsetAbsFast(int32_t &offset_x_half,
-                                    int32_t &offset_aux_a,
-                                    int32_t &offset_aux_b, int32_t &num_deal,
-                                    int32_t &num_pong) {
-  // need ping_pong nram sapce,
-  num_deal = FLOOR_ALIGN(ABS_NRAM_USED / sizeof(T) / 2, UNARY_ALIGN_NUM);
-  num_pong = num_deal;
-  offset_x_half = 0;
-  offset_aux_a = 0;
-  offset_aux_b = 0;
+template <typename T1, typename T2>
+__mlu_func__ void auxFunc3AbsFloat(size_t &output_input_gap,
+                                   size_t &ping_pong_gap,
+                                   size_t &auxiliary_a_gap,
+                                   size_t &auxiliary_b_gap,
+                                   size_t &span_num_deal, size_t &align_num) {
+  align_num = NFU_ALIGN_SIZE / sizeof(T1);
+  // need 2 pingpong sapce,
+  span_num_deal = PAD_DOWN(UNARY_NRAM_SIZE / sizeof(T1) / 2, align_num);
+  ping_pong_gap = span_num_deal * sizeof(T1);
+  output_input_gap = 0;
+  auxiliary_a_gap = 0;
+  auxiliary_b_gap = 0;
 }
 
-template <typename T>
-__mlu_func__ void computeAbsFast(T *nram_x, T *nram_x_half, T *nram_aux_a,
-                                 T *nram_aux_b, const int32_t deal_num,
-                                 const int32_t actual_num, const float coef) {
-  __bang_active_abs(nram_x, nram_x_half, deal_num);
+template <typename T1, typename T2>
+__mlu_func__ void auxFunc3AbsHalfBfloat16(
+    size_t &output_input_gap, size_t &ping_pong_gap, size_t &auxiliary_a_gap,
+    size_t &auxiliary_b_gap, size_t &span_num_deal, size_t &align_num) {
+  align_num = NFU_ALIGN_SIZE / sizeof(T1);
+  // need 2 pingpong sapce,
+  span_num_deal = PAD_DOWN(UNARY_NRAM_SIZE / sizeof(T1) / 2, align_num);
+  ping_pong_gap = span_num_deal * sizeof(T1) * 2;
+  output_input_gap = 0;
+  auxiliary_a_gap = 0;
+  auxiliary_b_gap = 0;
 }
 
-template <typename T>
-__mlu_func__ void get5OffsetAbsFast(int32_t &offset_x_half,
-                                    int32_t &offset_aux_a,
-                                    int32_t &offset_aux_b, int32_t &num_deal) {
-  // need ping_pong nram space.
-  num_deal = FLOOR_ALIGN(ABS_NRAM_USED / 2 / sizeof(T), UNARY_ALIGN_NUM);
-  offset_x_half = 0;
-  offset_aux_a = 0;
-  offset_aux_b = 0;
+template <typename T1, typename T2>
+__mlu_func__ void auxComplexFunc3AbsComplexFloat(
+    size_t &output_input_gap, size_t &ping_pong_gap, size_t &auxiliary_a_gap,
+    size_t &auxiliary_b_gap, size_t &span_num_deal, size_t &align_num) {
+  align_num = NFU_ALIGN_SIZE / sizeof(T2);
+  span_num_deal = PAD_DOWN(UNARY_NRAM_SIZE / sizeof(T2) / 14, align_num);
+  output_input_gap = 2 * span_num_deal * sizeof(T2);
+  ping_pong_gap = 6 * span_num_deal * sizeof(T2);
+  auxiliary_a_gap = 12 * span_num_deal * sizeof(T2);
+  auxiliary_b_gap = 13 * span_num_deal * sizeof(T2);
+}
+
+template <typename T1, typename T2>
+__mlu_func__ void computeAbsHalfBfloat16(char *nram_output, char *nram_input,
+                                         char *auxiliary_a, char *auxiliary_b,
+                                         size_t deal_num, size_t actual_num) {
+  __bang_abs((T2 *)nram_output, (T1 *)nram_input, deal_num);
+}
+
+template <typename T1, typename T2>
+__mlu_func__ void computeAbsFloat(char *nram_output, char *nram_input,
+                                  char *auxiliary_a, char *auxiliary_b,
+                                  size_t deal_num, size_t actual_num) {
+  __bang_abs((T2 *)nram_output, (T1 *)nram_input, deal_num);
+}
+
+template <typename T1, typename T2>
+__mlu_func__ void computeAbsComplexFloat(char *nram_output, char *nram_input,
+                                         char *auxiliary_a, char *auxiliary_b,
+                                         size_t deal_num, size_t actual_num) {
+  T2 *aux_a = (T2 *)nram_input + 2 * deal_num;
+  T2 *aux_b = (T2 *)nram_input + 3 * deal_num;
+  __bang_write_value((T2 *)auxiliary_a, deal_num * sizeof(T2), (int8_t)0xAA);
+  __bang_write_value((T2 *)auxiliary_b, deal_num * sizeof(T2), (int8_t)0x55);
+  // select [real,real,real...] and [imaginary,imaginary,imaginary...]
+  __bang_filter_bitindex((T2 *)aux_a, (T2 *)nram_input, auxiliary_a,
+                         deal_num * 2);
+  __bang_filter_bitindex((T2 *)aux_b, (T2 *)nram_input, auxiliary_b,
+                         deal_num * 2);
+  if (std::is_same<T2, float>::value) {
+    // currently this op only support fp32
+    __cn_vector_hypot_f32(deal_num, (T2 *)nram_output, (T2 *)aux_a,
+                          (T2 *)aux_b);
+  }
 }
 
 // function implementation
-UNARY_OP_KERNEL_3PIPELINE_IMPLE(Abs, float, Fast);
-UNARY_OP_KERNEL_3PIPELINE_IMPLE(Abs, half, Fast);
+UNARY_OP_KERNEL_3PIPELINE_WITH_STRIDE_IMPLE(Abs, Float);
+UNARY_OP_KERNEL_3PIPELINE_WITH_STRIDE_IMPLE(Abs, HalfBfloat16);
+COMPLEX_UNARY_OP_KERNEL_3PIPELINE_WITH_STRIDE_IMPLE(Abs, ComplexFloat);
 
-UNARY_OP_KERNEL_5PIPELINE_IMPLE(Abs, float, Fast);
-UNARY_OP_KERNEL_5PIPELINE_IMPLE(Abs, half, Fast);
+UNARY_OP_KERNEL_3PIPELINE_IMPLE(Abs, Float);
+UNARY_OP_KERNEL_3PIPELINE_IMPLE(Abs, HalfBfloat16);
+COMPLEX_UNARY_OP_KERNEL_3PIPELINE_IMPLE(Abs, ComplexFloat);
 
 mluOpStatus_t MLUOP_WIN_API
 Kernel3StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
                         const cnrtQueue_t queue, const mluOpDataType_t d_type,
-                        const void *x, void *y, const int32_t num) {
-  if (d_type == MLUOP_DTYPE_FLOAT) {
-    KERNEL_CHECK(
-        MLUBlockKernel3StagePipelineAbsfloatFast<<<k_dim, k_type, queue>>>(
-            (void *)x, (void *)y, num, 0.0));
+                        const void *x, void *y, size_t element_num) {
+  if (d_type == MLUOP_DTYPE_FLOAT || d_type == MLUOP_DTYPE_INT32) {
+    KERNEL_CHECK(MLUBlockKernel3StagePipelineAbsFloat<float, float>
+                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, element_num));
+  } else if (d_type == MLUOP_DTYPE_HALF || d_type == MLUOP_DTYPE_BFLOAT16) {
+    KERNEL_CHECK(MLUBlockKernel3StagePipelineAbsHalfBfloat16<half, half>
+                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, element_num));
   } else {
-    // half
     KERNEL_CHECK(
-        MLUBlockKernel3StagePipelineAbshalfFast<<<k_dim, k_type, queue>>>(
-            (void *)x, (void *)y, num, 0.0));
+        MLUBlockKernel3StagePipelineComplexAbsComplexFloat<double, float>
+        <<<k_dim, k_type, queue>>>((char *)x, (char *)y, element_num))
   }
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t MLUOP_WIN_API
-Kernel5StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
-                        const cnrtQueue_t queue, const mluOpDataType_t d_type,
-                        const void *x, void *y, const int32_t num) {
-  if (d_type == MLUOP_DTYPE_FLOAT) {
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineWithStrideAbs(
+    const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+    const cnrtQueue_t queue, const mluOpDataType_t d_type, const void *x,
+    mluop::TensorShape x_shape, void *y, mluop::TensorShape y_shape,
+    size_t element_num) {
+  if (d_type == MLUOP_DTYPE_FLOAT || d_type == MLUOP_DTYPE_INT32) {
+    KERNEL_CHECK(MLUBlockKernel3StagePipelineWithStrideAbsFloat<float, float>
+                 <<<k_dim, k_type, queue>>>((char *)x, x_shape, (char *)y,
+                                            y_shape, element_num));
+  } else if (d_type == MLUOP_DTYPE_HALF || d_type == MLUOP_DTYPE_BFLOAT16) {
     KERNEL_CHECK(
-        MLUBlockKernel5StagePipelineAbsfloatFast<<<k_dim, k_type, queue>>>(
-            (void *)x, (void *)y, num, 0.0));
+        MLUBlockKernel3StagePipelineWithStrideAbsHalfBfloat16<half, half>
+        <<<k_dim, k_type, queue>>>((char *)x, x_shape, (char *)y, y_shape,
+                                   element_num));
   } else {
-    // half
-    KERNEL_CHECK(
-        MLUBlockKernel5StagePipelineAbshalfFast<<<k_dim, k_type, queue>>>(
-            (void *)x, (void *)y, num, 0.0));
+    KERNEL_CHECK(MLUBlockKernel3StagePipelineWithStrideComplexAbsComplexFloat<
+                 double, float><<<k_dim, k_type, queue>>>(
+        (char *)x, x_shape, (char *)y, y_shape, element_num))
   }
   return MLUOP_STATUS_SUCCESS;
 }

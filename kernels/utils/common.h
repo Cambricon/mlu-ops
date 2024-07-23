@@ -53,12 +53,12 @@ __mlu_func__ bool __mluop_is_half<half>() {
 }
 
 template <typename T>
-__mlu_func__ inline T __mluop_min(T a, T b) {
+__mlu_func__ T __mluop_min(T a, T b) {
   return a < b ? a : b;
 }
 
 template <typename T>
-__mlu_func__ inline T __mluop_max(T a, T b) {
+__mlu_func__ T __mluop_max(T a, T b) {
   return a > b ? a : b;
 }
 
@@ -70,7 +70,7 @@ __mlu_func__ inline T __mluop_max(T a, T b) {
  * Note:
  *      The rounding mode on MLU200 is rd, on MLU300 is rn.
  ******************************************************************************/
-__mlu_func__ inline void __mluop_float2half(half *dst, float *src,
+__mlu_func__ void __mluop_float2half(half *dst, float *src,
                                             int src_count) {
 #if __BANG_ARCH__ >= 300
   __bang_float2half_rn(dst, src, src_count);
@@ -79,7 +79,7 @@ __mlu_func__ inline void __mluop_float2half(half *dst, float *src,
 #endif
 }
 
-__mlu_func__ inline half __mluop_float2half(float a) {
+__mlu_func__ half __mluop_float2half(float a) {
 #if __BANG_ARCH__ >= 300
   return __float2half_rn(a);
 #else

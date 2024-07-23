@@ -34,6 +34,7 @@ class DeformRoiPoolBackwardExecutor : public Executor {
   void paramCheck() override;
   void compute() override;
   void cpuCompute() override;
+  int64_t getTheoryOps() override;
 
  private:
   int batchs;
@@ -52,6 +53,7 @@ class DeformRoiPoolBackwardExecutor : public Executor {
   mluOpTensorDescriptor_t offset_desc = NULL;
   mluOpTensorDescriptor_t grad_input_desc = NULL;
   mluOpTensorDescriptor_t grad_offset_desc = NULL;
+  int64_t theory_ops_ = 0;
 };
 }  // namespace mluoptest
 #endif

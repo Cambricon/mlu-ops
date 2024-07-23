@@ -44,12 +44,27 @@ void AbsExecutor::compute() {
 }
 
 void AbsExecutor::cpuCompute() {
-  auto count = parser_->input(0)->shape_count;
-
-  for (int i = 0; i < count; ++i) {
-    cpu_fp32_output_[0][i] = (cpu_fp32_input_[0][i] >= 0)
-                                 ? cpu_fp32_input_[0][i]
-                                 : -1 * (cpu_fp32_input_[0][i]);
+  auto dtype = parser_->getInputDataType(0);
+  if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
+    auto count1 = parser_->getInputDataCount(0);
+    auto count2 = parser_->getOutputDataCount(0);
+    if (count1 == 0 || count2 == 0) {
+      return;
+    }
+    for (int i = 0; i < count1; ++i) {
+      cpu_fp32_output_[0][i] =
+          std::hypotf(cpu_fp32_input_[0][2 * i], cpu_fp32_input_[0][2 * i + 1]);
+    }
+  } else {
+    auto count = parser_->input(0)->shape_count;
+    if (count == 0) {
+      return;
+    }
+    for (size_t i = 0; i < count; ++i) {
+      cpu_fp32_output_[0][i] = (cpu_fp32_input_[0][i] >= 0)
+                                   ? cpu_fp32_input_[0][i]
+                                   : -1 * (cpu_fp32_input_[0][i]);
+    }
   }
 }
 

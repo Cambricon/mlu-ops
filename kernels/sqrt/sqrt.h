@@ -28,16 +28,11 @@
 mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineSqrt(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
-    const void *x, void *y, int num);
-
-mluOpStatus_t MLUOP_WIN_API Kernel5StagePipelineSqrt(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
-    const void *x, void *y, int num);
+    const void *x, void *y, size_t num);
 
 mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineSqrtBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *y, const void *diff_y, void *x,
-    int num);
+    size_t num);
 
 #endif  // KERNELS_SQRT_SQRT_H
