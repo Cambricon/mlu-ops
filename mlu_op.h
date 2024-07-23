@@ -53,53 +53,51 @@
 #endif
 
 #if defined(__cplusplus)
-extern "C"
-{
+extern "C" {
 #endif
 
-  /******************************************************************************
+/******************************************************************************
  * MLU-OPS Return Status
  ******************************************************************************/
-  /*! @brief Describes function return status.
+/*! @brief Describes function return status.
  */
-  typedef enum
-  {
-    MLUOP_STATUS_SUCCESS = 0, /*!< The operation is successfully completed. */
-    MLUOP_STATUS_NOT_INITIALIZED = 1,
-    /*!< MLU-OPS library is not initialized properly, which is usually caused by failing
+typedef enum {
+  MLUOP_STATUS_SUCCESS         = 0, /*!< The operation is successfully completed. */
+  MLUOP_STATUS_NOT_INITIALIZED = 1,
+  /*!< MLU-OPS library is not initialized properly, which is usually caused by failing
        to call ::mluOpCreate, ::mluOpCreateTensorDescriptor or ::mluOpSetTensorDescriptor.
        Such error is usually due to incompatible MLU device or invalid driver environment.
        Notice that ::mluOpCreate should be called prior to any other MLU-OPS function. */
-    MLUOP_STATUS_ALLOC_FAILED = 2,
-    /*!< This error occurs when the resource allocation fails, which is usually caused by
+  MLUOP_STATUS_ALLOC_FAILED = 2,
+  /*!< This error occurs when the resource allocation fails, which is usually caused by
        failing to call cnMallocHost due to exceeded memory usage. Make sure that
        the memory allocated previously is deallocated as much as possible. */
-    MLUOP_STATUS_BAD_PARAM = 3,
-    /*!< Invalid value or parameters are passed to the function, including data type, layout,
+  MLUOP_STATUS_BAD_PARAM = 3,
+  /*!< Invalid value or parameters are passed to the function, including data type, layout,
        dimensions, etc. */
-    MLUOP_STATUS_INTERNAL_ERROR = 4,
-    /*!< An error occurs inside of the function, which may indicate an internal error or bug in
+  MLUOP_STATUS_INTERNAL_ERROR = 4,
+  /*!< An error occurs inside of the function, which may indicate an internal error or bug in
        the library. This error is usually caused by failing to call cnrtMemcpyAsync.
        Check whether the memory passed to the function is deallocated before the completion
        of the routine. */
-    MLUOP_STATUS_ARCH_MISMATCH = 5,
-    /*!< Invalid MLU device which is not supported by current function. */
-    MLUOP_STATUS_EXECUTION_FAILED = 6,
-    /*!< An error occurs when the function fails to be executed on MLU device due to multiple reasons.
+  MLUOP_STATUS_ARCH_MISMATCH = 5,
+  /*!< Invalid MLU device which is not supported by current function. */
+  MLUOP_STATUS_EXECUTION_FAILED = 6,
+  /*!< An error occurs when the function fails to be executed on MLU device due to multiple reasons.
        You can check whether the hardware environment, driver version and other prerequisite
        libraries are correctly installed. */
-    MLUOP_STATUS_NOT_SUPPORTED = 7,
-    /*!< An error occurs when the requested functionality is not supported in this version but would
+  MLUOP_STATUS_NOT_SUPPORTED = 7,
+  /*!< An error occurs when the requested functionality is not supported in this version but would
        be supported in the future. */
-    MLUOP_STATUS_NUMERICAL_OVERFLOW = 8,
-    /*!< A numerical overflow occurs when executing the function, which is usually due to large scale
+  MLUOP_STATUS_NUMERICAL_OVERFLOW = 8,
+  /*!< A numerical overflow occurs when executing the function, which is usually due to large scale
        or inappropriate range of value of input tensor. */
-  } mluOpStatus_t;
+} mluOpStatus_t;
 
-  /******************************************************************************
+/******************************************************************************
  * MLU-OPS Tensor Layout
  ******************************************************************************/
-  /*!
+/*!
  * @brief Describes the data layouts in MLU-OPS.
  *
  * The data can be defined in three, four, or five dimensions.
@@ -115,266 +113,250 @@ extern "C"
  * - N: The batch size of sequence
  * - C: The alphabet size of sequence
  */
-  typedef enum
-  {
-    MLUOP_LAYOUT_NCHW = 0,
-    /*!< The data layout is in the following order: batch size, channel, height, and width. */
-    MLUOP_LAYOUT_NHWC = 1,
-    /*!< The data layout is in the following order: batch size, height, width, and channel. */
-    MLUOP_LAYOUT_HWCN = 2,
-    /*!< The data layout is in the following order: height, width, channel and batch size. */
-    MLUOP_LAYOUT_NDHWC = 3,
-    /*!< The data layout is in the following order: batch size, depth, height, width, and
+typedef enum {
+  MLUOP_LAYOUT_NCHW = 0,
+  /*!< The data layout is in the following order: batch size, channel, height, and width. */
+  MLUOP_LAYOUT_NHWC = 1,
+  /*!< The data layout is in the following order: batch size, height, width, and channel. */
+  MLUOP_LAYOUT_HWCN = 2,
+  /*!< The data layout is in the following order: height, width, channel and batch size. */
+  MLUOP_LAYOUT_NDHWC = 3,
+  /*!< The data layout is in the following order: batch size, depth, height, width, and
    *   channel. */
-    MLUOP_LAYOUT_ARRAY = 4,
-    /*!< The data is multi-dimensional tensor. */
-    MLUOP_LAYOUT_NCDHW = 5,
-    /*!< The data layout is in the following order: batch size, channel, depth, height, and
+  MLUOP_LAYOUT_ARRAY = 4,
+  /*!< The data is multi-dimensional tensor. */
+  MLUOP_LAYOUT_NCDHW = 5,
+  /*!< The data layout is in the following order: batch size, channel, depth, height, and
    *   width. */
-    MLUOP_LAYOUT_TNC = 6,
-    /*!< The data layout is in the following order: timing steps, batch size, alphabet size. */
-    MLUOP_LAYOUT_NTC = 7,
-    /*!< The data layout is in the following order: batch size, timing steps, alphabet size. */
-    MLUOP_LAYOUT_NC = 8,
-    /*!< The data layout is in the following order: batch size, channel. */
-    MLUOP_LAYOUT_NLC = 9,
-    /*!< The data layout is in the following order: batch size, width, channel. */
-    MLUOP_LAYOUT_NCL = 10,
-    /*!< The data layout is in the following order: batch size, channel, length.*/
-  } mluOpTensorLayout_t;
+  MLUOP_LAYOUT_TNC = 6,
+  /*!< The data layout is in the following order: timing steps, batch size, alphabet size. */
+  MLUOP_LAYOUT_NTC = 7,
+  /*!< The data layout is in the following order: batch size, timing steps, alphabet size. */
+  MLUOP_LAYOUT_NC = 8,
+  /*!< The data layout is in the following order: batch size, channel. */
+  MLUOP_LAYOUT_NLC = 9,
+  /*!< The data layout is in the following order: batch size, width, channel. */
+  MLUOP_LAYOUT_NCL = 10,
+  /*!< The data layout is in the following order: batch size, channel, length.*/
+} mluOpTensorLayout_t;
 
-  /******************************************************************************
+/******************************************************************************
  * Cambricon MLU-OPS sequence data Layout
  ******************************************************************************/
-  /*!
+/*!
  * @brief Enumeration variables describing the sequence data layouts.
  * N represents batch, B represents beam, T represents sequence length,
  * and C represents embedding size.
  */
-  typedef enum
-  {
-    MLUOP_SEQDATA_TNC = 0,        /*!< Sequence data layout order: TNC. */
-    MLUOP_SEQDATA_TNC_PACKED = 1, /*!< Sequence data layout order: TNC_PACKED. */
-    MLUOP_SEQDATA_NTC = 2,        /*!< Sequence data layout order: NTC. */
-    MLUOP_SEQDATA_NC = 3,         /*!< Sequence data layout order:  NC. */
-    MLUOP_SEQDATA_TNBC = 4,       /*!< Sequence data layout order: TNBC. */
-    MLUOP_SEQDATA_TBNC = 5,       /*!< Sequence data layout order: TBNC. */
-    MLUOP_SEQDATA_NBTC = 6,       /*!< Sequence data layout order: NBTC. */
-    MLUOP_SEQDATA_NTBC = 7,       /*!< Sequence data layout order: NTBC. */
-    MLUOP_SEQDATA_BNTC = 8,       /*!< Sequence data layout order: BNTC. */
-    MLUOP_SEQDATA_BTNC = 9,       /*!< Sequence data layout order: BTNC. */
-    MLUOP_SEQDATA_TN = 10,        /*!< Sequence data layout order: TN. */
-    MLUOP_SEQDATA_NT = 11,        /*!< Sequence data layout order: NT. */
-  } mluOpSeqDataLayout_t;
+typedef enum {
+  MLUOP_SEQDATA_TNC        = 0,  /*!< Sequence data layout order: TNC. */
+  MLUOP_SEQDATA_TNC_PACKED = 1,  /*!< Sequence data layout order: TNC_PACKED. */
+  MLUOP_SEQDATA_NTC        = 2,  /*!< Sequence data layout order: NTC. */
+  MLUOP_SEQDATA_NC         = 3,  /*!< Sequence data layout order:  NC. */
+  MLUOP_SEQDATA_TNBC       = 4,  /*!< Sequence data layout order: TNBC. */
+  MLUOP_SEQDATA_TBNC       = 5,  /*!< Sequence data layout order: TBNC. */
+  MLUOP_SEQDATA_NBTC       = 6,  /*!< Sequence data layout order: NBTC. */
+  MLUOP_SEQDATA_NTBC       = 7,  /*!< Sequence data layout order: NTBC. */
+  MLUOP_SEQDATA_BNTC       = 8,  /*!< Sequence data layout order: BNTC. */
+  MLUOP_SEQDATA_BTNC       = 9,  /*!< Sequence data layout order: BTNC. */
+  MLUOP_SEQDATA_TN         = 10, /*!< Sequence data layout order: TN. */
+  MLUOP_SEQDATA_NT         = 11, /*!< Sequence data layout order: NT. */
+} mluOpSeqDataLayout_t;
 
-  /******************************************************************************
+/******************************************************************************
  * MLU-OPS Data Type
  ******************************************************************************/
-  /*! @brief Describes the data types in MLU-OPS. */
-  typedef enum
-  {
-    MLUOP_DTYPE_INVALID = 0,        /*!< An invalid data type. */
-    MLUOP_DTYPE_HALF = 1,           /*!< A 16-bit floating-point data type. */
-    MLUOP_DTYPE_FLOAT = 2,          /*!< A 32-bit floating-point data type. */
-    MLUOP_DTYPE_DOUBLE = 14,        /*!< A 64-bit floating-point data type. */
-    MLUOP_DTYPE_INT8 = 3,           /*!< An 8-bit signed integer data type. */
-    MLUOP_DTYPE_INT16 = 4,          /*!< A 16-bit signed integer data type. */
-    MLUOP_DTYPE_INT31 = 5,          /*!< The data is a 31-bit signed integer data type. */
-    MLUOP_DTYPE_INT32 = 6,          /*!< A 32-bit signed integer data type. */
-    MLUOP_DTYPE_INT64 = 9,          /*!< A 64-bit signed integer data type. */
-    MLUOP_DTYPE_UINT8 = 7,          /*!< An 8-bit unsigned integer data type. */
-    MLUOP_DTYPE_UINT16 = 13,        /*!< A 16-bit unsigned integer data type. */
-    MLUOP_DTYPE_UINT32 = 11,        /*!< A 32-bit unsigned integer data type. */
-    MLUOP_DTYPE_UINT64 = 12,        /*!< A 64-bit unsigned integer data type. */
-    MLUOP_DTYPE_BOOL = 8,           /*!< A boolean data type. */
-    MLUOP_DTYPE_COMPLEX_HALF = 15,  /*!< A 32-bit complex number of two fp16. */
-    MLUOP_DTYPE_COMPLEX_FLOAT = 16, /*!< A 64-bit complex number of two fp32. */
-    MLUOP_DTYPE_BFLOAT16 = 17,
-    /*!< The data is a 16-bit floating-point data type with one bit for sign,
+/*! @brief Describes the data types in MLU-OPS. */
+typedef enum {
+  MLUOP_DTYPE_INVALID       = 0,  /*!< An invalid data type. */
+  MLUOP_DTYPE_HALF          = 1,  /*!< A 16-bit floating-point data type. */
+  MLUOP_DTYPE_FLOAT         = 2,  /*!< A 32-bit floating-point data type. */
+  MLUOP_DTYPE_DOUBLE        = 14, /*!< A 64-bit floating-point data type. */
+  MLUOP_DTYPE_INT8          = 3,  /*!< An 8-bit signed integer data type. */
+  MLUOP_DTYPE_INT16         = 4,  /*!< A 16-bit signed integer data type. */
+  MLUOP_DTYPE_INT31         = 5,  /*!< The data is a 31-bit signed integer data type. */
+  MLUOP_DTYPE_INT32         = 6,  /*!< A 32-bit signed integer data type. */
+  MLUOP_DTYPE_INT64         = 9,  /*!< A 64-bit signed integer data type. */
+  MLUOP_DTYPE_UINT8         = 7,  /*!< An 8-bit unsigned integer data type. */
+  MLUOP_DTYPE_UINT16        = 13, /*!< A 16-bit unsigned integer data type. */
+  MLUOP_DTYPE_UINT32        = 11, /*!< A 32-bit unsigned integer data type. */
+  MLUOP_DTYPE_UINT64        = 12, /*!< A 64-bit unsigned integer data type. */
+  MLUOP_DTYPE_BOOL          = 8,  /*!< A boolean data type. */
+  MLUOP_DTYPE_COMPLEX_HALF  = 15, /*!< A 32-bit complex number of two fp16. */
+  MLUOP_DTYPE_COMPLEX_FLOAT = 16, /*!< A 64-bit complex number of two fp32. */
+  MLUOP_DTYPE_BFLOAT16      = 17,
+  /*!< The data is a 16-bit floating-point data type with one bit for sign,
    * 8 bits for exponent and 7 bits for fraction. */
-  } mluOpDataType_t;
+} mluOpDataType_t;
 
-  /*!
+/*!
  * @brief Describes whether to propagate NaN numbers.
  */
-  typedef enum
-  {
-    MLUOP_NOT_PROPAGATE_NAN = 0, /*!< The NaN numbers are not propagated . */
-    MLUOP_PROPAGATE_NAN = 1,     /*!< The NaN numbers are propagated. */
-  } mluOpNanPropagation_t;
+typedef enum {
+  MLUOP_NOT_PROPAGATE_NAN = 0, /*!< The NaN numbers are not propagated . */
+  MLUOP_PROPAGATE_NAN     = 1, /*!< The NaN numbers are propagated. */
+} mluOpNanPropagation_t;
 
-  /*!
+/*!
  * @brief Describes the options that can help choose the best suited algorithm used for
  * implementation of the activation and accumulation operations.
  **/
-  typedef enum
-  {
-    MLUOP_COMPUTATION_FAST = 0,
-    /*!< Implementation with the fastest algorithm and lower precision. */
-    MLUOP_COMPUTATION_HIGH_PRECISION = 1,
-    /*!< Implementation with the high-precision algorithm regardless of the performance. */
-    MLUOP_COMPUTATION_ULTRAHIGH_PRECISION = 2,
-    /*!< Implementation with the ultrahigh-precision algorithm regardless of the performance. */
-  } mluOpComputationPreference_t;
+typedef enum {
+  MLUOP_COMPUTATION_FAST = 0,
+  /*!< Implementation with the fastest algorithm and lower precision. */
+  MLUOP_COMPUTATION_HIGH_PRECISION = 1,
+  /*!< Implementation with the high-precision algorithm regardless of the performance. */
+  MLUOP_COMPUTATION_ULTRAHIGH_PRECISION = 2,
+  /*!< Implementation with the ultrahigh-precision algorithm regardless of the performance. */
+} mluOpComputationPreference_t;
 
-  /*!
+/*!
  * @brief Describes the atomics modes in MLU-OPS.
  */
-  typedef enum
-  {
-    MLUOP_ATOMICS_NOT_ALLOWED = 1,
-    /*!< The atomics is not allowed to cumulate results. */
-    MLUOP_ATOMICS_ALLOWED = 2,
-    /*!< The atomics is allowed to cumulate results. */
-  } mluOpAtomicsMode_t;
+typedef enum {
+  MLUOP_ATOMICS_NOT_ALLOWED = 1,
+  /*!< The atomics is not allowed to cumulate results. */
+  MLUOP_ATOMICS_ALLOWED = 2,
+  /*!< The atomics is allowed to cumulate results. */
+} mluOpAtomicsMode_t;
 
-  /*!
+/*!
  * @brief Describes the rounding modes of quantization conversion.
  */
-  typedef enum
-  {
-    MLUOP_ROUND_HALF_TO_EVEN = 0,
-    /*!< The rounding mode to round towards the nearest even neighbor is used for
+typedef enum {
+  MLUOP_ROUND_HALF_TO_EVEN = 0,
+  /*!< The rounding mode to round towards the nearest even neighbor is used for
    *   quantization conversion. */
-    MLUOP_ROUND_HALF_UP = 1,
-    /*!< The rounding mode to round up towards the nearest neighbor is used for
+  MLUOP_ROUND_HALF_UP = 1,
+  /*!< The rounding mode to round up towards the nearest neighbor is used for
    *   quantization conversion. */
-    MLUOP_ROUND_HALF_OFF_ZERO = 2,
-    /*!< The rounding mode to round half away from zero is used for quantization
+  MLUOP_ROUND_HALF_OFF_ZERO = 2,
+  /*!< The rounding mode to round half away from zero is used for quantization
    *   conversion. */
-  } mluOpQuantizeRoundMode_t;
+} mluOpQuantizeRoundMode_t;
 
-  /*!
+/*!
  * @brief Describes the modes of quantization method.
  */
-  typedef enum
-  {
-    MLUOP_QUANTIZE_POSITION = 0,
-    /*!< Quantization method with position factor and without scale factor. */
-    MLUOP_QUANTIZE_POSITION_SCALE = 1,
-    /*!< Quantization method with position and scale factors. */
-    MLUOP_QUANTIZE_POSITION_SCALE_OFFSET = 2,
-    /*!< Asymmetric quantization method with position, scale, and offset factors. */
-  } mluOpQuantizeMode_t;
+typedef enum {
+  MLUOP_QUANTIZE_POSITION = 0,
+  /*!< Quantization method with position factor and without scale factor. */
+  MLUOP_QUANTIZE_POSITION_SCALE = 1,
+  /*!< Quantization method with position and scale factors. */
+  MLUOP_QUANTIZE_POSITION_SCALE_OFFSET = 2,
+  /*!< Asymmetric quantization method with position, scale, and offset factors. */
+} mluOpQuantizeMode_t;
 
-  /*!
+/*!
  * @brief Describes the bases that are used in the implementation of the log function.
  */
-  typedef enum
-  {
-    MLUOP_LOG_E = 0,  /*!< The base e is used. */
-    MLUOP_LOG_2 = 1,  /*!< The base 2 is used. */
-    MLUOP_LOG_10 = 2, /*!< The base 10 is used. */
-  } mluOpLogBase_t;
+typedef enum {
+  MLUOP_LOG_E  = 0, /*!< The base e is used. */
+  MLUOP_LOG_2  = 1, /*!< The base 2 is used. */
+  MLUOP_LOG_10 = 2, /*!< The base 10 is used. */
+} mluOpLogBase_t;
 
-  /*!
+/*!
  * @brief Describes the pointer modes that are used in the implementation of the fill function.
  */
-  typedef enum
-  {
-    MLUOP_POINTER_MODE_HOST = 0,
-    /*!< A host pointer, which means that the values passed by reference are on the host. */
-    MLUOP_POINTER_MODE_DEVICE = 1,
-    /*!< A device pointer, which means that the values passed by reference are on the device. */
-  } mluOpPointerMode_t;
+typedef enum {
+  MLUOP_POINTER_MODE_HOST = 0,
+  /*!< A host pointer, which means that the values passed by reference are on the host. */
+  MLUOP_POINTER_MODE_DEVICE = 1,
+  /*!< A device pointer, which means that the values passed by reference are on the device. */
+} mluOpPointerMode_t;
 
-  /*!
+/*!
  * @brief Describes the input box modes that can be used to implement the Nms operation.
  */
-  typedef enum
-  {
-    MLUOP_NMS_BOX_DIAGONAL = 0, /*!< The box mode is [x1, y1, x2, y2]. */
-    MLUOP_NMS_BOX_CENTER = 1,
-    /*!< The box mode is [x_center, y_center, width, height] where width > 0 and * height > 0. */
-  } mluOpNmsBoxPointMode_t;
+typedef enum {
+  MLUOP_NMS_BOX_DIAGONAL = 0, /*!< The box mode is [x1, y1, x2, y2]. */
+  MLUOP_NMS_BOX_CENTER   = 1,
+  /*!< The box mode is [x_center, y_center, width, height] where width > 0 and * height > 0. */
+} mluOpNmsBoxPointMode_t;
 
-  /*!
+/*!
  * @brief Describes the output modes that can be used to implement the Nms operation.
  */
-  typedef enum
-  {
-    MLUOP_NMS_OUTPUT_TARGET_INDICES = 0,
-    /*!< Returns target indices, which are sorted in decreasing order of confidences. */
-    MLUOP_NMS_OUTPUT_TARGET_CONFIDENCE_AND_POS_1 = 1,
-    /*!< Returns target confidences and positions with the order of confidence_0, x_01, y_01, x_02, y_02,
+typedef enum {
+  MLUOP_NMS_OUTPUT_TARGET_INDICES = 0,
+  /*!< Returns target indices, which are sorted in decreasing order of confidences. */
+  MLUOP_NMS_OUTPUT_TARGET_CONFIDENCE_AND_POS_1 = 1,
+  /*!< Returns target confidences and positions with the order of confidence_0, x_01, y_01, x_02, y_02,
    * confidence_1, x_11, y_11, x_12, y_12, ... ,
    * confidence_n, x_n1, y_n1, x_n2, and y_n2. The (x_01, y_01) and (x_02, y_02) represent the top left corner
    * and bottom right corner coordinates of the first box, respectively.
    */
-    MLUOP_NMS_OUTPUT_TARGET_CONFIDENCE_AND_POS_2 = 2,
-    /*!< Returns target confidences and positions with the order of confidence_0,
+  MLUOP_NMS_OUTPUT_TARGET_CONFIDENCE_AND_POS_2 = 2,
+  /*!< Returns target confidences and positions with the order of confidence_0,
    * confidence_1, ... , confidence_n, x_01, x_11, ... , x_n1, y_01, y_11, ... , y_n1, x_02, x_12, ... , x_n2, y_02,
    * y_12, ... , and y_n2. The (x_01, y_01) and (x_02, y_02) represent the top left corner and
    * bottom right corner coordinates of the first box, respectively.
    */
-    MLUOP_NMS_OUTPUT_TARGET_BATCH_AND_CLASS = 3,
-    /*!< Returns batch indices, class indices, and positions with the order of batch_0, class_0, box_0,
+  MLUOP_NMS_OUTPUT_TARGET_BATCH_AND_CLASS = 3,
+  /*!< Returns batch indices, class indices, and positions with the order of batch_0, class_0, box_0,
    * ... , batch_0, class_0, box_m, batch_0, class_1, box_0, ... , batch_0, class_1, box_m, ... , ... ,
    * batch_s, class_n, and box_m.
    */
-  } mluOpNmsOutputMode_t;
+} mluOpNmsOutputMode_t;
 
-  /*!
+/*!
  * @brief Describes the algorithms that can be used to implement the Nms operation.
  */
-  typedef enum
-  {
-    MLUOP_NMS_HARD_NMS = 0,
-    /*!< A type of algorithm which updates confidence using hard Nms, for example
+typedef enum {
+  MLUOP_NMS_HARD_NMS = 0,
+  /*!< A type of algorithm which updates confidence using hard Nms, for example
    *confidence = IOU < IOU_threshold ? confidence : 0.
    */
-    MLUOP_NMS_SOFT_NMS_LINEAR = 1,
-    /*!< A type of algorithm which updates confidence using linear method, for example
+  MLUOP_NMS_SOFT_NMS_LINEAR = 1,
+  /*!< A type of algorithm which updates confidence using linear method, for example
    * confidence = IOU < IOU_threshold ? confidence : confidence * (1 - IOU).
    */
-    MLUOP_NMS_SOFT_NMS_GAUSSIAN = 2,
-    /*!< A type of algorithm which updates confidence using Gaussian method, for example
+  MLUOP_NMS_SOFT_NMS_GAUSSIAN = 2,
+  /*!< A type of algorithm which updates confidence using Gaussian method, for example
    *confidence = confidence * exp{- \f$IOU^2\f$ / (2 * sigma)}.
    */
-  } mluOpNmsMethodMode_t;
+} mluOpNmsMethodMode_t;
 
-  /*!
+/*!
  * @brief Describes the algorithms that can be used to implement the Nms operation.
  */
-  typedef enum
-  {
-    MLUOP_NMS_ALGO_EXCLUDE_BOUNDARY = 0,
-    /*!< Implements Nms with boundary excluded. In this mode,
+typedef enum {
+  MLUOP_NMS_ALGO_EXCLUDE_BOUNDARY = 0,
+  /*!< Implements Nms with boundary excluded. In this mode,
    * the height or width of boxes is ``(x2 - x1)``.
    */
-    MLUOP_NMS_ALGO_INCLUDE_BOUNDARY = 1,
-    /*!< Implements Nms with boundary included. In this mode,
+  MLUOP_NMS_ALGO_INCLUDE_BOUNDARY = 1,
+  /*!< Implements Nms with boundary included. In this mode,
    * the height or width of boxes is ``(x2 - x1 + offset)``.
    */
-  } mluOpNmsAlgo_t;
+} mluOpNmsAlgo_t;
 
-  /******************************************************************************
+/******************************************************************************
  * MLU-OPS Data Structure: Customized Operation
  ******************************************************************************/
 
-  /*!
+/*!
  * @brief Describes the data type of indices used in the reduce function.
  */
-  typedef enum
-  {
-    MLUOP_32BIT_INDICES = 0, /*!< The data type of indices is unsigned int. */
-    MLUOP_16BIT_INDICES = 1, /*!< The data type of indices is unsigned short. */
-  } mluOpIndicesType_t;
+typedef enum {
+  MLUOP_32BIT_INDICES = 0, /*!< The data type of indices is unsigned int. */
+  MLUOP_16BIT_INDICES = 1, /*!< The data type of indices is unsigned short. */
+} mluOpIndicesType_t;
 
-  /*!
+/*!
  * @brief Describes the reduction applied to the output in the implementation of the loss function.
  */
-  typedef enum
-  {
-    MLUOP_LOSS_REDUCTION_NONE = 0,
-    /*!< No reduction is applied in the operation.*/
-    MLUOP_LOSS_REDUCTION_SUM = 1,
-    /*!< The elements of output are summed in the operation.*/
-    MLUOP_LOSS_REDUCTION_MEAN = 2,
-    /*!< The weighted mean of the output is applied in the operation.*/
-  } mluOpLossReduction_t;
+typedef enum {
+  MLUOP_LOSS_REDUCTION_NONE = 0,
+  /*!< No reduction is applied in the operation.*/
+  MLUOP_LOSS_REDUCTION_SUM = 1,
+  /*!< The elements of output are summed in the operation.*/
+  MLUOP_LOSS_REDUCTION_MEAN = 2,
+  /*!< The weighted mean of the output is applied in the operation.*/
+} mluOpLossReduction_t;
 
-  /*!
+/*!
  * @brief Describes the modes that are used in the Reduce function.
  */
 typedef enum {
@@ -383,34 +365,33 @@ typedef enum {
   MLUOP_REDUCE_DMAX  = 2, /*!< Computes the maximum value. */
 } mluOpReduceMode_t;
 
-  /*!
+/*!
  * @brief Enumeration variables describing the pooling modes that can be used to
  * implement the pooling operation.
  */
-  typedef enum
-  {
-    MLUOP_POOLING_MAX = 0, /*!< The max pooling mode is implemented.*/
-    MLUOP_POOLING_AVERAGE_COUNT_INCLUDE_PADDING = 1,
-    /*!< The average pooling with padding mode is implemented.*/
-    MLUOP_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING = 2,
-    /*!< The average pooling without padding mode is implemented.*/
-    MLUOP_POOLING_FIXED = 3,
-    /*!< The fixed mode is implemented. This mode is used in the unpool operation.
+typedef enum {
+  MLUOP_POOLING_MAX                           = 0, /*!< The max pooling mode is implemented.*/
+  MLUOP_POOLING_AVERAGE_COUNT_INCLUDE_PADDING = 1,
+  /*!< The average pooling with padding mode is implemented.*/
+  MLUOP_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING = 2,
+  /*!< The average pooling without padding mode is implemented.*/
+  MLUOP_POOLING_FIXED = 3,
+  /*!< The fixed mode is implemented. This mode is used in the unpool operation.
    * In this mode, each input pixel will be put to the center of the pooling kernel
    * regardless of the index.*/
-  } mluOpPoolingMode_t;
+} mluOpPoolingMode_t;
 
-  /******************************************************************************
+/******************************************************************************
  * MLU-OPS Runtime Management
  ******************************************************************************/
 
-  /*!
+/*!
  * @struct mluOpContext
  * @brief Describes the Cambricon MLU-OPS context.
  */
-  struct mluOpContext;
+struct mluOpContext;
 
-  /*!
+/*!
  * Pointer to ::mluOpContext struct that holds the Cambricon MLU-OPS context.
  *
  * MLU device resources cannot be accessed directly, so MLU-OPS uses
@@ -421,9 +402,9 @@ typedef enum {
  * handle should be passed to all the subsequent function calls.
  * You need to destroy the MLU-OPS context at the end with ::mluOpDestroy.
  */
-  typedef struct mluOpContext *mluOpHandle_t;
+typedef struct mluOpContext *mluOpHandle_t;
 
-  /*!
+/*!
  * The descriptor of the collection of tensor which is used in the RNN operation, such as weight,
  * bias.
  * You need to call ::mluOpCreateTensorSetDescriptor to create a descriptor, and
@@ -434,10 +415,10 @@ typedef enum {
  * At last, you need to destroy the descriptor at the end with
  * ::mluOpDestroyTensorSetDescriptor.
  */
-  typedef struct mluOpTensorSetStruct *mluOpTensorSetDescriptor_t;
+typedef struct mluOpTensorSetStruct *mluOpTensorSetDescriptor_t;
 
-  // Group: Runtime Management
-  /*!
+// Group: Runtime Management
+/*!
  * @brief Initializes the MLU-OPS library and creates a handle \b handle to a struct
  * that holds the MLU-OPS library context. It allocates hardware resources on the host
  * and device. You need to call this function before any other MLU-OPS function.
@@ -472,11 +453,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCreate(mluOpHandle_t *handle);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreate(mluOpHandle_t *handle);
 
-  // Group: Runtime Management
-  /*!
+// Group: Runtime Management
+/*!
  * @brief Updates the MLU-OPS context information that is held by \b handle. This function
  * should be called if you call CNDrv API cnSetCtxConfigParam to set the context information.
  * The related context information will be synchronized to MLU-OPS with this function. For
@@ -510,11 +491,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpUpdateContextInformation(mluOpHandle_t handle);
+mluOpStatus_t MLUOP_WIN_API
+mluOpUpdateContextInformation(mluOpHandle_t handle);
 
-  // Group: Runtime Management
-  /*!
+// Group: Runtime Management
+/*!
  * @brief Releases the resources of the specified MLU-OPS handle \b handle that was
  * created by ::mluOpCreate. It is usually the last call to destroy
  * the handle to the MLU-OPS handle.
@@ -546,11 +527,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDestroy(mluOpHandle_t handle);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroy(mluOpHandle_t handle);
 
-  // Group: Runtime Management
-  /*!
+// Group: Runtime Management
+/*!
  * @brief Sets the runtime queue \b queue in the handle \b handle. The queue is used to
  * launch kernels or to synchronize to this queue.
  *
@@ -587,11 +568,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetQueue(mluOpHandle_t handle, cnrtQueue_t queue);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetQueue(mluOpHandle_t handle, cnrtQueue_t queue);
 
-  // Group: Runtime Management
-  /*!
+// Group: Runtime Management
+/*!
  * @brief Retrieves the queue \b queue that was previously set to the handle \b handle.
  *
  * @param[in] handle
@@ -624,11 +605,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetQueue(mluOpHandle_t handle, cnrtQueue_t *queue);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetQueue(mluOpHandle_t handle, cnrtQueue_t *queue);
 
-  // Group: Runtime Management
-  /*!
+// Group: Runtime Management
+/*!
  * @brief Converts the MLU-OPS enumerated status code to ASCIIZ static string and returns
  * a pointer to the MLU memory that holds information about ASCIIZ static string with
  * the status name. For example, when the input argument is ::MLUOP_STATUS_SUCCESS, the
@@ -662,11 +643,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  const char *
-  mluOpGetErrorString(mluOpStatus_t status);
+const char *
+mluOpGetErrorString(mluOpStatus_t status);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Gets the size of a data type in ::mluOpDataType_t.
  *
  * @param[in] data_type
@@ -698,11 +679,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetSizeOfDataType(mluOpDataType_t data_type, size_t *size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSizeOfDataType(mluOpDataType_t data_type, size_t *size);
 
-  // Group: Version Management
-  /*!
+// Group: Version Management
+/*!
  * @brief Retrieves the version of MLU-OPS library. The version of MLU-OPS
  * is composed of \b major, \b minor, and \b patch. For instance, major = 1,
  * minor = 2, patch = 3, the version of MLU-OPS library is 1.2.3.
@@ -738,11 +719,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  void
-  mluOpGetLibVersion(int *major, int *minor, int *patch);
+void
+mluOpGetLibVersion(int *major, int *minor, int *patch);
 
-  // Group: QuantizeRoundMode
-  /*!
+// Group: QuantizeRoundMode
+/*!
  * @brief Updates the specific rounding mode of MLU-OPS context information that is held by the \b
  * handle. This function should be called if you want to change the MLU-OPS rounding mode that
  * is used to cumulate the results. For detailed information, see "Cambricon CNDrv Developer
@@ -777,11 +758,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetQuantizeRoundMode(mluOpHandle_t handle, mluOpQuantizeRoundMode_t round_mode);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetQuantizeRoundMode(mluOpHandle_t handle, mluOpQuantizeRoundMode_t round_mode);
 
-  // Group: QuantizeRoundMode
-  /*!
+// Group: QuantizeRoundMode
+/*!
  * @brief Retrieves the rounding mode of a specific MLU-OPS context.
  *
  * @param[in] handle
@@ -814,11 +795,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetQuantizeRoundMode(mluOpHandle_t handle, mluOpQuantizeRoundMode_t *round_mode);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetQuantizeRoundMode(mluOpHandle_t handle, mluOpQuantizeRoundMode_t *round_mode);
 
-  // Group: Runtime Management
-  /*!
+// Group: Runtime Management
+/*!
  * @brief Updates the specific atomics mode of MLU-OPS context information that is held by the
  * \b handle. This function should be called if you want to change the atomics mode that is
  * used to cumulate the results. For detailed information, see "Cambricon CNDrv Developer Guide".
@@ -853,11 +834,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetAtomicsMode(mluOpHandle_t handle, mluOpAtomicsMode_t atomics_mode);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetAtomicsMode(mluOpHandle_t handle, mluOpAtomicsMode_t atomics_mode);
 
-  // Group: Runtime Management
-  /*!
+// Group: Runtime Management
+/*!
  * @brief Retrieves the atomics mode of a specific MLU-OPS context.
  *
  * @param[in] handle
@@ -890,14 +871,14 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetAtomicsMode(mluOpHandle_t handle, mluOpAtomicsMode_t *atomics_mode);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetAtomicsMode(mluOpHandle_t handle, mluOpAtomicsMode_t *atomics_mode);
 
-  /******************************************************************************
+/******************************************************************************
  * MLU-OPS Data Structure: Descriptor
  * The struct represent node, weight and the AI network layer
  ******************************************************************************/
-  /*!
+/*!
  * The descriptor of a tensor that holds the information including tensor
  * layout, data type, the number of dimensions, shape and strides.
  *
@@ -906,9 +887,9 @@ typedef enum {
  * to set the tensor information to the descriptor. Also, you need to destroy
  * the MLU-OPS context at the end with ::mluOpDestroyTensorDescriptor.
  */
-  typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
+typedef struct mluOpTensorStruct *mluOpTensorDescriptor_t;
 
-  /*! The descriptor of Sequence Data that holds the dimensions,
+/*! The descriptor of Sequence Data that holds the dimensions,
  * layout, data type, sequence length, padding fill, position, and scale.
  * The total size of the tensor descriptor supports up to 2 Giga elements.
  * Call ::mluOpCreateSeqDataDescriptor to create a descriptor, and
@@ -917,10 +898,10 @@ typedef enum {
  * to set the position and scale of the sequence data.
  * To destroy the descriptor, call ::mluOpDestroySeqDataDescriptor.
  */
-  typedef struct mluOpSeqDataStruct *mluOpSeqDataDescriptor_t;
+typedef struct mluOpSeqDataStruct *mluOpSeqDataDescriptor_t;
 
-  // Group: SeqData
-  /*!
+// Group: SeqData
+/*!
  *  @brief Creates a sequence data instance \p seq_data_desc that holds the dimensions, data type,
  *  sequence lengths, padding fill and layout of sequence data on the host memory.
  *
@@ -946,11 +927,11 @@ typedef enum {
  *  @par Reference
  *  - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCreateSeqDataDescriptor(mluOpSeqDataDescriptor_t *seq_data_desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateSeqDataDescriptor(mluOpSeqDataDescriptor_t *seq_data_desc);
 
-  // Group: SeqData
-  /*!
+// Group: SeqData
+/*!
  * @brief Sets the sequence data descriptor \p seq_data_desc that holds the dimensions,
  * data type, sequence lengths, padding fill and layout of the sequence data.
  *
@@ -1032,18 +1013,18 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetSeqDataDescriptor_v2(mluOpSeqDataDescriptor_t seq_data_desc,
-                               mluOpSeqDataLayout_t layout,
-                               mluOpDataType_t dtype,
-                               int dimNb,
-                               const int64_t dimSize[],
-                               int seqLengthArraySize,
-                               const int seqLengthArray[],
-                               void *paddingFill);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetSeqDataDescriptor_v2(mluOpSeqDataDescriptor_t seq_data_desc,
+                             mluOpSeqDataLayout_t layout,
+                             mluOpDataType_t dtype,
+                             int dimNb,
+                             const int64_t dimSize[],
+                             int seqLengthArraySize,
+                             const int seqLengthArray[],
+                             void *paddingFill);
 
-  // Group: SeqData
-  /*!
+// Group: SeqData
+/*!
  * @brief Destroys a sequence data descriptor \p seq_data_desc that was created by
  * ::mluOpCreateSeqDataDescriptor.
  *
@@ -1064,11 +1045,11 @@ typedef enum {
  *  @par Reference
  *  - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDestroySeqDataDescriptor(mluOpSeqDataDescriptor_t seq_data_desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroySeqDataDescriptor(mluOpSeqDataDescriptor_t seq_data_desc);
 
-  // Group: SeqData
-  /*!
+// Group: SeqData
+/*!
  * @brief Sets the position \p position and scale \p scale factors used in fixed-point quantization.
  * It is only used if you have quantized the input data with the symmetric fixed-point
  * quantization with scale factor quantization method. For more information about quantization,
@@ -1102,11 +1083,11 @@ typedef enum {
  *  @par Reference
  *  - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetSeqDataDescriptorPositionAndScale(mluOpSeqDataDescriptor_t seq_data_desc, int position, float scale);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetSeqDataDescriptorPositionAndScale(mluOpSeqDataDescriptor_t seq_data_desc, int position, float scale);
 
-  // Group: SeqData
-  /*!
+// Group: SeqData
+/*!
  * @brief Retrieves the sequence data descriptor \p seq_data_desc that holds the dimensions,
  * data type, layout, padding fill, and the sequence lengths of the input sequence data.
  *
@@ -1148,17 +1129,17 @@ typedef enum {
  * @par Example
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetSeqDataDescriptor_v2(const mluOpSeqDataDescriptor_t seq_data_desc,
-                               mluOpSeqDataLayout_t *layout,
-                               mluOpDataType_t *dtype,
-                               int *dimNb,
-                               int64_t dimSize[],
-                               int64_t *seqLengthArraySize,
-                               int64_t seqLengthArray[],
-                               void *paddingFill);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSeqDataDescriptor_v2(const mluOpSeqDataDescriptor_t seq_data_desc,
+                             mluOpSeqDataLayout_t *layout,
+                             mluOpDataType_t *dtype,
+                             int *dimNb,
+                             int64_t dimSize[],
+                             int64_t *seqLengthArraySize,
+                             int64_t seqLengthArray[],
+                             void *paddingFill);
 
-  /*!
+/*!
  * The descriptor of the Nms function that holds compute type, bias type,
  * transpose flag.
  *
@@ -1167,9 +1148,9 @@ typedef enum {
  * to the descriptor. Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpDestroyNmsDescriptor.
  */
-  typedef struct cnnlNmsStruct *mluOpNmsDescriptor_t;
+typedef struct cnnlNmsStruct *mluOpNmsDescriptor_t;
 
-  /*!
+/*!
  * The descriptor of a tensor that holds the information including tensor
  * shape, the number of dimensions, pad, strides, dilation, sub_m, and transpose.
  *
@@ -1178,18 +1159,18 @@ typedef enum {
  * the descriptor. Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpDestroySparseConvolutionDescriptor.
  */
-  typedef struct mluOpSparseConvolutionStruct *mluOpSparseConvolutionDescriptor_t;
+typedef struct mluOpSparseConvolutionStruct *mluOpSparseConvolutionDescriptor_t;
 
-  /*! The descriptor of ::mluOpRoiAlignForward_v2 that holds parameter information.
+/*! The descriptor of ::mluOpRoiAlignForward_v2 that holds parameter information.
  *
  *  You need to call ::mluOpCreateRoiAlignForwardDescriptor to create a descriptor,
  *  and call ::mluOpSetRoiAlignForwardDescriptor_v2 to set the information of
  *  ::mluOpRoiAlignForward_v2 operation to the descriptor. Also, you need to destroy the MLU-OPS context
  *  at the end with ::mluOpDestroyRoiAlignForwardDescriptor.
  */
-  typedef struct cnnlRoiAlignStruct *mluOpRoiAlignForwardDescriptor_t;
+typedef struct cnnlRoiAlignStruct *mluOpRoiAlignForwardDescriptor_t;
 
-  /*!
+/*!
  * The descriptor of deformable convolution function that holds the deformable convolution
  * information including the number of input dimensions, padding, stride, dilation,
  * deformable group, convolution group, and img2col_step.
@@ -1198,9 +1179,9 @@ typedef enum {
  * ::mluOpSetDCNDescriptor function to set the information of the deformable convolution operation
  * to the descriptor. Also, you need to destroy the Cambricon MLU-OPS context at the end with the
  * ::mluOpDestroyDCNDescriptor function.*/
-  typedef struct cnnlDCNStruct *mluOpDCNDescriptor_t;
+typedef struct cnnlDCNStruct *mluOpDCNDescriptor_t;
 
-  /*!
+/*!
  * The descriptor of CARAFE (Content-Aware ReAssembly of FEatures) operation that holds
  * CARAFE information including the number of input dimensions, kernel size, group size,
  * and scale factor.
@@ -1210,10 +1191,10 @@ typedef enum {
  * to the descriptor. Also, you need to destroy the MLU-OPS context at the end with
  * ::mluOpDestroyCarafeDescriptor.
  */
-  typedef struct mluOpCarafeStruct *mluOpCarafeDescriptor_t;
+typedef struct mluOpCarafeStruct *mluOpCarafeDescriptor_t;
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Creates a tensor descriptor pointed by \b desc that holds the dimensions, data type,
  * and layout of input tensor. If the input tensor is in fixed-point data type,
  * ::mluOpSetTensorDescriptorPositionAndScale or ::mluOpSetTensorDescriptorPosition
@@ -1249,11 +1230,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateTensorDescriptor(mluOpTensorDescriptor_t *desc);
 
-  // Group: SparseConv
-  /*!
+// Group: SparseConv
+/*!
  * @brief Creates a tensor descriptor pointed by \b desc that holds the dimensions, pad, stride,
  * dilation, sub_m, transpose, inverse and layout of input filter and output tensor shape.
  * ::mluOpSetSparseConvolutionDescriptor needs to be called to set parameters.
@@ -1288,11 +1269,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCreateSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t *desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t *desc);
 
-  // Group: SparseConv
-  /*!
+// Group: SparseConv
+/*!
  * @brief Destroys a convolution descriptor \b desc that was previously created with the
  * ::mluOpCreateSparseConvolutionDescriptor function.
  *
@@ -1327,11 +1308,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDestroySparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroySparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Creates a group of tensor descriptor stored by \b group_desc that holds the
  * dimensions, data_type, and layout of input tensors. If the input tensor is in
  * fixed-point data type, ::mluOpSetTensorDescriptorPositionAndScale or
@@ -1369,11 +1350,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCreateGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const int desc_num);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const int desc_num);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Initializes the tensor descriptor pointed by \b desc that was previously created
  * with ::mluOpCreateTensorDescriptor, and sets the information about the
  * dimensions, data type, and layout of the input tensor.
@@ -1422,12 +1403,12 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetTensorDescriptor(
-      mluOpTensorDescriptor_t desc, mluOpTensorLayout_t layout, mluOpDataType_t dtype, int dimNb, const int dimSize[]);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetTensorDescriptor(
+    mluOpTensorDescriptor_t desc, mluOpTensorLayout_t layout, mluOpDataType_t dtype, int dimNb, const int dimSize[]);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Sets the pointer mode \p pointer_mode factor for the input tensor descriptor \p desc.
  *
  * @param[in,out] desc
@@ -1448,11 +1429,11 @@ typedef enum {
  * @par Example
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetTensorDescriptorPointerMode(mluOpTensorDescriptor_t desc, mluOpPointerMode_t pointer_mode);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetTensorDescriptorPointerMode(mluOpTensorDescriptor_t desc, mluOpPointerMode_t pointer_mode);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Retrieves the pointer mode of the input tensor descriptor \p desc set by
  * ::mluOpSetTensorDescriptorPointerMode.
  *
@@ -1474,11 +1455,11 @@ typedef enum {
  * @par Example
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetTensorDescriptorPointerMode(mluOpTensorDescriptor_t desc, mluOpPointerMode_t *pointer_mode);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorDescriptorPointerMode(mluOpTensorDescriptor_t desc, mluOpPointerMode_t *pointer_mode);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Initializes the tensor descriptor pointed by \b desc that was previously created
  * with ::mluOpCreateTensorDescriptor, and sets the information about the
  * dimensions, data type, and layout of the input tensor.
@@ -1527,15 +1508,15 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetTensorDescriptor_v2(mluOpTensorDescriptor_t desc,
-                              mluOpTensorLayout_t layout,
-                              mluOpDataType_t dtype,
-                              int dimNb,
-                              const int64_t dimSize[]);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetTensorDescriptor_v2(mluOpTensorDescriptor_t desc,
+                            mluOpTensorLayout_t layout,
+                            mluOpDataType_t dtype,
+                            int dimNb,
+                            const int64_t dimSize[]);
 
-  // Group: SparseConv
-  /*!
+// Group: SparseConv
+/*!
  * @brief Initializes the sparse convolution descriptor \b desc that was previously created
  * with ::mluOpCreateSparseConvolutionDescriptor, and sets the information
  * about the convolution forward and backward operation to the convolution descriptor
@@ -1623,22 +1604,22 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc,
-                                      int dimNb,
-                                      int batch_size,
-                                      const int pad[],
-                                      const int stride[],
-                                      const int dilation[],
-                                      const int input_space[],
-                                      const int filter_space[],
-                                      const int output_space[],
-                                      const int sub_m,
-                                      const int transpose,
-                                      const int inverse);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetSparseConvolutionDescriptor(mluOpSparseConvolutionDescriptor_t desc,
+                                    int dimNb,
+                                    int batch_size,
+                                    const int pad[],
+                                    const int stride[],
+                                    const int dilation[],
+                                    const int input_space[],
+                                    const int filter_space[],
+                                    const int output_space[],
+                                    const int sub_m,
+                                    const int transpose,
+                                    const int inverse);
 
-  // Group: SparseConv
-  /*!
+// Group: SparseConv
+/*!
  * @brief Obtains the parameter num_act_out from ::mluOpSparseConvolutionDescriptor_t.
  *
  * @param[in] desc
@@ -1670,11 +1651,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetSparseConvolutionNumActOut(mluOpSparseConvolutionDescriptor_t desc, int *num_act_out);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSparseConvolutionNumActOut(mluOpSparseConvolutionDescriptor_t desc, int *num_act_out);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Initializes the group of tensor descriptors stored by \b group_desc that was
  * previously created with ::mluOpCreateTensorDescriptor or
  * ::mluOpCreateGroupTensorDescriptors, and sets the information about
@@ -1732,16 +1713,16 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[],
-                                 const mluOpTensorLayout_t group_layout[],
-                                 const mluOpDataType_t group_dtype[],
-                                 const int group_dimNb[],
-                                 const int group_dimSize[],
-                                 const int desc_num);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[],
+                               const mluOpTensorLayout_t group_layout[],
+                               const mluOpDataType_t group_dtype[],
+                               const int group_dimNb[],
+                               const int group_dimSize[],
+                               const int desc_num);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Resets the tensor descriptor pointed by \b desc that was previously created with
  *  ::mluOpCreateTensorDescriptor. If ::mluOpResetTensorDescriptor is called,
  *  all the information about the tensor will be reset to initial value, which means layout
@@ -1777,11 +1758,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpResetTensorDescriptor(mluOpTensorDescriptor_t desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpResetTensorDescriptor(mluOpTensorDescriptor_t desc);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Initializes the tensor descriptor pointed by \b desc that was previously created
  * with ::mluOpCreateTensorDescriptor, and sets the information about the
  * dimensions, strides, data type, and layout of the input tensor.
@@ -1831,16 +1812,16 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t desc,
-                             mluOpTensorLayout_t layout,
-                             mluOpDataType_t dtype,
-                             int dimNb,
-                             const int dimSize[],
-                             const int dimStride[]);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetTensorDescriptorEx(mluOpTensorDescriptor_t desc,
+                           mluOpTensorLayout_t layout,
+                           mluOpDataType_t dtype,
+                           int dimNb,
+                           const int dimSize[],
+                           const int dimStride[]);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Initializes the tensor descriptor pointed by \b desc that was previously created
  * with ::mluOpCreateTensorDescriptor, and sets the information about the
  * dimensions, strides, data type, and layout of the input tensor.
@@ -1890,16 +1871,16 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetTensorDescriptorEx_v2(mluOpTensorDescriptor_t desc,
-                                mluOpTensorLayout_t layout,
-                                mluOpDataType_t dtype,
-                                int dimNb,
-                                const int64_t dimSize[],
-                                const int64_t dimStride[]);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetTensorDescriptorEx_v2(mluOpTensorDescriptor_t desc,
+                              mluOpTensorLayout_t layout,
+                              mluOpDataType_t dtype,
+                              int dimNb,
+                              const int64_t dimSize[],
+                              const int64_t dimStride[]);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Sets the \b dimNb and \b dimSize factors to the input tensor descriptor.
  * If ::mluOpSetTensorDescriptorDim is called, you do not need to specify the strides of all
  * dimensions. The strides are inferred by parameters passed to this function. Also, the data
@@ -1939,11 +1920,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t
-  mluOpSetTensorDescriptorDim(mluOpTensorDescriptor_t desc, int dimNb, const int *dimSize);
+mluOpStatus_t
+mluOpSetTensorDescriptorDim(mluOpTensorDescriptor_t desc, int dimNb, const int *dimSize);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Sets the \b dimNb and \b dimSize factors to the input tensor descriptor.
  * If ::mluOpSetTensorDescriptorDim_v2 is called, you do not need to specify the strides of all
  * dimensions. The strides are inferred by parameters passed to this function. Also, the data
@@ -1983,11 +1964,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t
-  mluOpSetTensorDescriptorDim_v2(mluOpTensorDescriptor_t desc, int dimNb, const int64_t *dimSize);
+mluOpStatus_t
+mluOpSetTensorDescriptorDim_v2(mluOpTensorDescriptor_t desc, int dimNb, const int64_t *dimSize);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Sets the on-chip data type to the descriptor of a tensor \b desc. The on-chip
  * data type \b onchip_dtype can be different from the off-chip data type of the tensor.
  * This function is optional. If the on-chip data type is not set with this function, the
@@ -2025,11 +2006,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetTensorDescriptorOnchipDataType(mluOpTensorDescriptor_t desc, mluOpDataType_t onchip_dtype);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetTensorDescriptorOnchipDataType(mluOpTensorDescriptor_t desc, mluOpDataType_t onchip_dtype);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Sets the \b position factor to the descriptor \b desc of fixed-point data in
  * fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION mode.
  *
@@ -2062,11 +2043,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetTensorDescriptorPosition(mluOpTensorDescriptor_t desc, int position);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetTensorDescriptorPosition(mluOpTensorDescriptor_t desc, int position);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Sets the \b position and \b scale factors to the descriptor of fixed-point
  * data in fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION_SCALE mode.
  *
@@ -2101,11 +2082,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetTensorDescriptorPositionAndScale(mluOpTensorDescriptor_t desc, int position, float scale);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetTensorDescriptorPositionAndScale(mluOpTensorDescriptor_t desc, int position, float scale);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Sets the \b position , \b scale , and \b offset factors to the descriptor of fixed-point
  * data in fixed-point quantization. It is used in ::MLUOP_QUANTIZE_POSITION_SCALE_OFFSET mode.
  *
@@ -2142,11 +2123,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetTensorDescriptorPositionScaleAndOffset(mluOpTensorDescriptor_t desc, int position, float scale, int offset);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetTensorDescriptorPositionScaleAndOffset(mluOpTensorDescriptor_t desc, int position, float scale, int offset);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Retrieves a tensor descriptor \b desc that was previously created with
  * ::mluOpCreateTensorDescriptor, and sets the information about the dimensions,
  * data type, and layout of input tensor.
@@ -2189,12 +2170,12 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetTensorDescriptor(
-      const mluOpTensorDescriptor_t desc, mluOpTensorLayout_t *layout, mluOpDataType_t *dtype, int *dimNb, int dimSize[]);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorDescriptor(
+    const mluOpTensorDescriptor_t desc, mluOpTensorLayout_t *layout, mluOpDataType_t *dtype, int *dimNb, int dimSize[]);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Retrieves a tensor descriptor \b desc that was previously created with
  * ::mluOpCreateTensorDescriptor, and sets the information about the dimensions,
  * data type, and layout of input tensor.
@@ -2237,15 +2218,15 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetTensorDescriptor_v2(const mluOpTensorDescriptor_t desc,
-                              mluOpTensorLayout_t *layout,
-                              mluOpDataType_t *dtype,
-                              int *dimNb,
-                              int64_t dimSize[]);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorDescriptor_v2(const mluOpTensorDescriptor_t desc,
+                            mluOpTensorLayout_t *layout,
+                            mluOpDataType_t *dtype,
+                            int *dimNb,
+                            int64_t dimSize[]);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Retrieves a tensor descriptor \b desc that was previously created with the
  * ::mluOpCreateTensorDescriptor and sets the information about the dimensions, data type,
  * stride and layout of input tensor with ::mluOpSetTensorDescriptorEx.
@@ -2290,16 +2271,16 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetTensorDescriptorEx(const mluOpTensorDescriptor_t desc,
-                             mluOpTensorLayout_t *layout,
-                             mluOpDataType_t *dtype,
-                             int *dimNb,
-                             int dimSize[],
-                             int dimStride[]);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorDescriptorEx(const mluOpTensorDescriptor_t desc,
+                           mluOpTensorLayout_t *layout,
+                           mluOpDataType_t *dtype,
+                           int *dimNb,
+                           int dimSize[],
+                           int dimStride[]);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Retrieves a tensor descriptor \b desc that was previously created with the
  * ::mluOpCreateTensorDescriptor and sets the information about the dimensions, data type,
  * stride and layout of input tensor with ::mluOpSetTensorDescriptorEx_v2.
@@ -2344,16 +2325,16 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetTensorDescriptorEx_v2(const mluOpTensorDescriptor_t desc,
-                                mluOpTensorLayout_t *layout,
-                                mluOpDataType_t *dtype,
-                                int *dimNb,
-                                int64_t dimSize[],
-                                int64_t dimStride[]);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorDescriptorEx_v2(const mluOpTensorDescriptor_t desc,
+                              mluOpTensorLayout_t *layout,
+                              mluOpDataType_t *dtype,
+                              int *dimNb,
+                              int64_t dimSize[],
+                              int64_t dimStride[]);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Retrieves the number of elements according to the input descriptor \b desc. You
  * need to call ::mluOpSetTensorDescriptor first to create a tensor descriptor
  * before calling this function.
@@ -2393,11 +2374,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  size_t MLUOP_WIN_API
-  mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc);
+size_t MLUOP_WIN_API
+mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Retrieves the on-chip data type of a tensor descriptor \b desc set by
  * ::mluOpSetTensorDescriptorOnchipDataType. If the on-chip data type is not set
  * with ::mluOpSetTensorDescriptorOnchipDataType, the
@@ -2434,11 +2415,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetTensorDescriptorOnchipDataType(const mluOpTensorDescriptor_t desc, mluOpDataType_t *onchip_dtype);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorDescriptorOnchipDataType(const mluOpTensorDescriptor_t desc, mluOpDataType_t *onchip_dtype);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Gets the \b position factor to the descriptor \b desc of fixed-point data in
  * fixed-point quantization.
  *
@@ -2471,11 +2452,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetTensorDescriptorPosition(const mluOpTensorDescriptor_t desc, int *position);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorDescriptorPosition(const mluOpTensorDescriptor_t desc, int *position);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Gets the position and scale factors of a tensor descriptor \b desc used in
  * fixed-point quantization.
  *
@@ -2510,11 +2491,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetTensorDescriptorPositionAndScale(const mluOpTensorDescriptor_t desc, int *position, float *scale);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorDescriptorPositionAndScale(const mluOpTensorDescriptor_t desc, int *position, float *scale);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Gets the \b position, \b scale and \b offset factors to the descriptor \b desc of
  * fixed-point data in fixed-point quantization.
  *
@@ -2552,14 +2533,14 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetTensorDescriptorPositionScaleAndOffset(const mluOpTensorDescriptor_t desc,
-                                                 int *position,
-                                                 float *scale,
-                                                 int *offset);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorDescriptorPositionScaleAndOffset(const mluOpTensorDescriptor_t desc,
+                                               int *position,
+                                               float *scale,
+                                               int *offset);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Destroys a tensor descriptor that was created by ::mluOpCreateTensorDescriptor.
  *
  * @param[in] desc
@@ -2589,11 +2570,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDestroyTensorDescriptor(mluOpTensorDescriptor_t desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyTensorDescriptor(mluOpTensorDescriptor_t desc);
 
-  // Group: Tensor
-  /*!
+// Group: Tensor
+/*!
  * @brief Destroys a group of tensor descriptors that were created by
  * ::mluOpCreateTensorDescriptor or ::mluOpCreateGroupTensorDescriptors.
  *
@@ -2627,11 +2608,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDestroyGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const int desc_num);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyGroupTensorDescriptors(mluOpTensorDescriptor_t *group_desc[], const int desc_num);
 
-  // Group: TensorSet
-  /*!
+// Group: TensorSet
+/*!
  * @brief Creates a descriptor \b tensorSetDesc of tensor set that holds a series of tensors.
  * The number of tensors of tensor set is jointly determined by \b setDimNb and \b setDimSize.
  * Use ::mluOpInitTensorSetMemberDescriptor to set information for descriptor.
@@ -2670,11 +2651,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCreateTensorSetDescriptor(mluOpTensorSetDescriptor_t *tensorSetDesc, const int setDimNb, const int setDimSize[]);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateTensorSetDescriptor(mluOpTensorSetDescriptor_t *tensorSetDesc, const int setDimNb, const int setDimSize[]);
 
-  // Group: TensorSet
-  /*!
+// Group: TensorSet
+/*!
  * @brief Retrieves a tensor set descriptor \b tensorSetDesc that was previously created
  * with ::mluOpCreateTensorSetDescriptor.
  *
@@ -2710,11 +2691,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc, int *setDimNb, int setDimSize[]);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc, int *setDimNb, int setDimSize[]);
 
-  // Group: TensorSet
-  /*!
+// Group: TensorSet
+/*!
  * @brief Destroys a tensor set descriptor \b tensorSetDesc that was previously created by
  * ::mluOpCreateTensorSetDescriptor.
  *
@@ -2746,11 +2727,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDestroyTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyTensorSetDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc);
 
-  // Group: TensorSet
-  /*!
+// Group: TensorSet
+/*!
  * @brief Initializes a member tensor in the tensor set descriptors pointed by
  * \b desc that was previously created with ::mluOpCreateTensorSetDescriptor,
  * and sets the information about the dimensions, data type, and
@@ -2804,17 +2785,17 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpInitTensorSetMemberDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc,
-                                     const int setDimNb,
-                                     const int tensorIndex[],
-                                     mluOpTensorLayout_t layout,
-                                     mluOpDataType_t dtype,
-                                     const int dimNb,
-                                     const int dimSize[]);
+mluOpStatus_t MLUOP_WIN_API
+mluOpInitTensorSetMemberDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc,
+                                   const int setDimNb,
+                                   const int tensorIndex[],
+                                   mluOpTensorLayout_t layout,
+                                   mluOpDataType_t dtype,
+                                   const int dimNb,
+                                   const int dimSize[]);
 
-  // Group: TensorSet
-  /*!
+// Group: TensorSet
+/*!
  * @brief Sets the position and scale factors used in fixed-point quantization.
  * It is only used if you have quantized the input data with the symmetric
  * fixed-point quantization with scale factor quantization method.
@@ -2864,15 +2845,15 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpInitTensorSetMemberDescriptorPositionAndScale(mluOpTensorSetDescriptor_t tensorSetDesc,
-                                                     const int setDimNb,
-                                                     const int tensorIndex[],
-                                                     const int position,
-                                                     const float scale);
+mluOpStatus_t MLUOP_WIN_API
+mluOpInitTensorSetMemberDescriptorPositionAndScale(mluOpTensorSetDescriptor_t tensorSetDesc,
+                                                   const int setDimNb,
+                                                   const int tensorIndex[],
+                                                   const int position,
+                                                   const float scale);
 
-  // Group: TensorSet
-  /*!
+// Group: TensorSet
+/*!
  * @brief Retrieves the size of tensor set according to the input descriptor \b
  * tensorSetDesc. You need to call ::mluOpInitTensorSetMemberDescriptor
  * first to create a tensor set descriptor before calling this
@@ -2909,11 +2890,11 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetTensorSetDescriptorSize(mluOpTensorSetDescriptor_t tensorSetDesc, int *sizeInBytes);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorSetDescriptorSize(mluOpTensorSetDescriptor_t tensorSetDesc, int *sizeInBytes);
 
-  // Group: TensorSet
-  /*!
+// Group: TensorSet
+/*!
  * @brief Retrieves the tensor descriptor in the tensor set and the corresponding offset
  * address based on the entire block of MLU memory through the index \b tensorIndex.
  *
@@ -2957,16 +2938,16 @@ typedef enum {
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
-                                     const int setDimNb,
-                                     const int tensorIndex[],
-                                     void *data,
-                                     mluOpTensorDescriptor_t *tensorDesc,
-                                     void **dataAddrInDevice);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
+                                   const int setDimNb,
+                                   const int tensorIndex[],
+                                   void *data,
+                                   mluOpTensorDescriptor_t *tensorDesc,
+                                   void **dataAddrInDevice);
 
-  // Group: Abs
-  /*!
+// Group: Abs
+/*!
  * @brief Computes the absolute value for every element of the input tensor \b x
  * and returns results in \b y.
  *
@@ -3022,15 +3003,15 @@ typedef enum {
  * @par Reference
  * - https://www.tensorflow.org/api_docs/python/tf/math/abs
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpAbs(mluOpHandle_t handle,
-           const mluOpTensorDescriptor_t x_desc,
-           const void *x,
-           const mluOpTensorDescriptor_t y_desc,
-           void *y);
+mluOpStatus_t MLUOP_WIN_API
+mluOpAbs(mluOpHandle_t handle,
+         const mluOpTensorDescriptor_t x_desc,
+         const void *x,
+         const mluOpTensorDescriptor_t y_desc,
+         void *y);
 
-  // Group: Log
-  /*!
+// Group: Log
+/*!
  * @brief Computes logarithm of input tensor \b x, and returns the results in
  * the output tensor \b y.
  *
@@ -3082,14 +3063,14 @@ typedef enum {
  * @par Reference
  * - https://www.tensorflow.org/api_docs/python/tf/math/log
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpLog(mluOpHandle_t handle,
-           const mluOpComputationPreference_t prefer,
-           const mluOpLogBase_t base,
-           const mluOpTensorDescriptor_t x_desc,
-           const void *x,
-           const mluOpTensorDescriptor_t y_desc,
-           void *y);
+mluOpStatus_t MLUOP_WIN_API
+mluOpLog(mluOpHandle_t handle,
+         const mluOpComputationPreference_t prefer,
+         const mluOpLogBase_t base,
+         const mluOpTensorDescriptor_t x_desc,
+         const void *x,
+         const mluOpTensorDescriptor_t y_desc,
+         void *y);
 
 // Group: Log
 /*!
@@ -3187,11 +3168,11 @@ mluOpLogspace(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCreateCarafeDescriptor(mluOpCarafeDescriptor_t *carafe_desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateCarafeDescriptor(mluOpCarafeDescriptor_t *carafe_desc);
 
-  // Group: Carafe
-  /*!
+// Group: Carafe
+/*!
  * @brief Initializes the CARAFE descriptor \b carafe_desc that was previously created with
  * ::mluOpCreateCarafeDescriptor, and sets the information about the
  * CARAFE forward and backward operations to the descriptor \b carafe_desc.
@@ -3234,15 +3215,15 @@ mluOpLogspace(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc,
-                           const int dimNb,
-                           const int kernel_size,
-                           const int group_size,
-                           const int scale_factor);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc,
+                         const int dimNb,
+                         const int kernel_size,
+                         const int group_size,
+                         const int scale_factor);
 
-  // Group: Carafe
-  /*!
+// Group: Carafe
+/*!
  * @brief Destroys a CARAFE descriptor \b carafe_desc that was previously created by
  * ::mluOpCreateCarafeDescriptor.
  *
@@ -3280,11 +3261,11 @@ mluOpLogspace(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDestroyCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyCarafeDescriptor(mluOpCarafeDescriptor_t carafe_desc);
 
-  // Group: Carafe
-  /*!
+// Group: Carafe
+/*!
  * @brief Performs the CARAFE upsampling operation on the input feature maps \b input using
  * weighted combination, where the filter is set with \b mask. The upsampled feature maps
  * are returned in the output tensor \b output.
@@ -3381,18 +3362,18 @@ mluOpLogspace(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/carafe.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCarafeForward(mluOpHandle_t handle,
-                     const mluOpCarafeDescriptor_t carafe_desc,
-                     const mluOpTensorDescriptor_t input_desc,
-                     const void *input,
-                     const mluOpTensorDescriptor_t mask_desc,
-                     const void *mask,
-                     const mluOpTensorDescriptor_t output_desc,
-                     void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCarafeForward(mluOpHandle_t handle,
+                   const mluOpCarafeDescriptor_t carafe_desc,
+                   const mluOpTensorDescriptor_t input_desc,
+                   const void *input,
+                   const mluOpTensorDescriptor_t mask_desc,
+                   const void *mask,
+                   const mluOpTensorDescriptor_t output_desc,
+                   void *output);
 
-  // Group: Carafe
-  /*!
+// Group: Carafe
+/*!
  * @brief Performs the back-propagation of CARAFE.
  * operation to compute the gradient with respect to input \b grad_input and
  * mask \b grad_mask based on the gradient of response \b grad_output.
@@ -3480,22 +3461,22 @@ mluOpLogspace(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/carafe.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCarafeBackward(mluOpHandle_t handle,
-                      const mluOpCarafeDescriptor_t carafe_desc,
-                      const mluOpTensorDescriptor_t input_desc,
-                      const void *input,
-                      const mluOpTensorDescriptor_t mask_desc,
-                      const void *mask,
-                      const mluOpTensorDescriptor_t grad_output_desc,
-                      const void *grad_output,
-                      const mluOpTensorDescriptor_t grad_input_desc,
-                      void *grad_input,
-                      const mluOpTensorDescriptor_t grad_mask_desc,
-                      void *grad_mask);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCarafeBackward(mluOpHandle_t handle,
+                    const mluOpCarafeDescriptor_t carafe_desc,
+                    const mluOpTensorDescriptor_t input_desc,
+                    const void *input,
+                    const mluOpTensorDescriptor_t mask_desc,
+                    const void *mask,
+                    const mluOpTensorDescriptor_t grad_output_desc,
+                    const void *grad_output,
+                    const mluOpTensorDescriptor_t grad_input_desc,
+                    void *grad_input,
+                    const mluOpTensorDescriptor_t grad_mask_desc,
+                    void *grad_mask);
 
-  // Group: Div
-  /*!
+// Group: Div
+/*!
  * @brief Computes division on input tensors \b x and \b y, and returns the
  * results in the output tensor \b output.
  *
@@ -3551,18 +3532,18 @@ mluOpLogspace(mluOpHandle_t handle,
  * @par Reference
  * - https://www.tensorflow.org/api_docs/python/tf/math/divide
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDiv(mluOpHandle_t handle,
-           const mluOpComputationPreference_t prefer,
-           const mluOpTensorDescriptor_t x_desc,
-           const void *x,
-           const mluOpTensorDescriptor_t y_desc,
-           const void *y,
-           const mluOpTensorDescriptor_t z_desc,
-           void *z);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDiv(mluOpHandle_t handle,
+         const mluOpComputationPreference_t prefer,
+         const mluOpTensorDescriptor_t x_desc,
+         const void *x,
+         const mluOpTensorDescriptor_t y_desc,
+         const void *y,
+         const mluOpTensorDescriptor_t z_desc,
+         void *z);
 
-  // Group: DynamicPointToVoxel
-  /*!
+// Group: DynamicPointToVoxel
+/*!
  * @brief Gets extra space size for the DynamicPointToVoxelBackward operation.
  *
  * @param[in] handle
@@ -3614,19 +3595,19 @@ mluOpLogspace(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
-                                                   const mluOpReduceMode_t reduce_type,
-                                                   const mluOpTensorDescriptor_t grad_voxel_feats_desc,
-                                                   const mluOpTensorDescriptor_t feats_desc,
-                                                   const mluOpTensorDescriptor_t voxel_feats_desc,
-                                                   const mluOpTensorDescriptor_t point2voxel_map_desc,
-                                                   const mluOpTensorDescriptor_t voxel_points_count_desc,
-                                                   const mluOpTensorDescriptor_t voxel_num_desc,
-                                                   size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
+                                                 const mluOpReduceMode_t reduce_type,
+                                                 const mluOpTensorDescriptor_t grad_voxel_feats_desc,
+                                                 const mluOpTensorDescriptor_t feats_desc,
+                                                 const mluOpTensorDescriptor_t voxel_feats_desc,
+                                                 const mluOpTensorDescriptor_t point2voxel_map_desc,
+                                                 const mluOpTensorDescriptor_t voxel_points_count_desc,
+                                                 const mluOpTensorDescriptor_t voxel_num_desc,
+                                                 size_t *workspace_size);
 
-  // Group: DynamicPointToVoxel
-  /*!
+// Group: DynamicPointToVoxel
+/*!
  * @brief Performs the back-propagation of DynamicPointToVoxelForward
  * operation to compute the gradient for input \b grad_voxel_feats
  * based on the gradient of response \b grad_feats.
@@ -3726,28 +3707,28 @@ mluOpLogspace(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/common/cuda/scatter_points_cuda_kernel.cuh
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDynamicPointToVoxelBackward(const mluOpHandle_t handle,
-                                   const mluOpReduceMode_t reduce_type,
-                                   const mluOpTensorDescriptor_t grad_voxel_feats_desc,
-                                   const void *grad_voxel_feats,
-                                   const mluOpTensorDescriptor_t feats_desc,
-                                   const void *feats,
-                                   const mluOpTensorDescriptor_t voxel_feats_desc,
-                                   const void *voxel_feats,
-                                   const mluOpTensorDescriptor_t point2voxel_map_desc,
-                                   const void *point2voxel_map,
-                                   const mluOpTensorDescriptor_t voxel_points_count_desc,
-                                   const void *voxel_points_count,
-                                   const mluOpTensorDescriptor_t voxel_num_desc,
-                                   const void *voxel_num,
-                                   void *workspace,
-                                   const size_t workspace_size,
-                                   const mluOpTensorDescriptor_t grad_feats_desc,
-                                   void *grad_feats);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDynamicPointToVoxelBackward(const mluOpHandle_t handle,
+                                 const mluOpReduceMode_t reduce_type,
+                                 const mluOpTensorDescriptor_t grad_voxel_feats_desc,
+                                 const void *grad_voxel_feats,
+                                 const mluOpTensorDescriptor_t feats_desc,
+                                 const void *feats,
+                                 const mluOpTensorDescriptor_t voxel_feats_desc,
+                                 const void *voxel_feats,
+                                 const mluOpTensorDescriptor_t point2voxel_map_desc,
+                                 const void *point2voxel_map,
+                                 const mluOpTensorDescriptor_t voxel_points_count_desc,
+                                 const void *voxel_points_count,
+                                 const mluOpTensorDescriptor_t voxel_num_desc,
+                                 const void *voxel_num,
+                                 void *workspace,
+                                 const size_t workspace_size,
+                                 const mluOpTensorDescriptor_t grad_feats_desc,
+                                 void *grad_feats);
 
-  // Group: DynamicPointToVoxel
-  /*!
+// Group: DynamicPointToVoxel
+/*!
  * @brief Gets extra space size that is needed in the DynamicPointToVoxelForward operation.
  *
  * @param[in] handle
@@ -3786,14 +3767,14 @@ mluOpLogspace(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetDynamicPointToVoxelForwardWorkspaceSize(mluOpHandle_t handle,
-                                                  const mluOpTensorDescriptor_t feats_desc,
-                                                  const mluOpTensorDescriptor_t coors_desc,
-                                                  size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetDynamicPointToVoxelForwardWorkspaceSize(mluOpHandle_t handle,
+                                                const mluOpTensorDescriptor_t feats_desc,
+                                                const mluOpTensorDescriptor_t coors_desc,
+                                                size_t *workspace_size);
 
-  // Group: DynamicPointToVoxel
-  /*!
+// Group: DynamicPointToVoxel
+/*!
  * @brief Scatters points features into voxels, used in the voxel encoder with
  * dynamic voxelization.
  *
@@ -3884,28 +3865,28 @@ mluOpLogspace(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/scatter_points.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDynamicPointToVoxelForward(const mluOpHandle_t handle,
-                                  const mluOpReduceMode_t reduce_type,
-                                  const mluOpTensorDescriptor_t feats_desc,
-                                  const void *feats,
-                                  const mluOpTensorDescriptor_t coors_desc,
-                                  void *coors,
-                                  void *workspace,
-                                  const size_t workspace_size,
-                                  const mluOpTensorDescriptor_t voxel_feats_desc,
-                                  void *voxel_feats,
-                                  const mluOpTensorDescriptor_t voxel_coors_desc,
-                                  void *voxel_coors,
-                                  const mluOpTensorDescriptor_t point2voxel_map_desc,
-                                  void *point2voxel_map,
-                                  const mluOpTensorDescriptor_t voxel_points_count_desc,
-                                  void *voxel_points_count,
-                                  const mluOpTensorDescriptor_t voxel_num_desc,
-                                  void *voxel_num);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDynamicPointToVoxelForward(const mluOpHandle_t handle,
+                                const mluOpReduceMode_t reduce_type,
+                                const mluOpTensorDescriptor_t feats_desc,
+                                const void *feats,
+                                const mluOpTensorDescriptor_t coors_desc,
+                                void *coors,
+                                void *workspace,
+                                const size_t workspace_size,
+                                const mluOpTensorDescriptor_t voxel_feats_desc,
+                                void *voxel_feats,
+                                const mluOpTensorDescriptor_t voxel_coors_desc,
+                                void *voxel_coors,
+                                const mluOpTensorDescriptor_t point2voxel_map_desc,
+                                void *point2voxel_map,
+                                const mluOpTensorDescriptor_t voxel_points_count_desc,
+                                void *voxel_points_count,
+                                const mluOpTensorDescriptor_t voxel_num_desc,
+                                void *voxel_num);
 
-  // Group: GenerateProposalsV2
-  /*!
+// Group: GenerateProposalsV2
+/*!
  * @brief Gets extra space size that is needed in the GenerateProposalsV2 operation.
  *
  * @par Deprecated
@@ -3945,8 +3926,8 @@ mluOpLogspace(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc, size_t *size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc, size_t *size);
 
 // Group: GenerateProposalsV2
 /*!
@@ -4138,36 +4119,36 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * -
  * https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/generate_proposals_kernel.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGenerateProposalsV2(mluOpHandle_t handle,
-                           const int pre_nms_top_n,
-                           const int post_nms_top_n,
-                           const float nms_thresh,
-                           const float min_size,
-                           const float eta,
-                           bool pixel_offset,
-                           const mluOpTensorDescriptor_t scores_desc,
-                           const void *scores,
-                           const mluOpTensorDescriptor_t bbox_deltas_desc,
-                           const void *bbox_deltas,
-                           const mluOpTensorDescriptor_t im_shape_desc,
-                           const void *im_shape,
-                           const mluOpTensorDescriptor_t anchors_desc,
-                           const void *anchors,
-                           const mluOpTensorDescriptor_t variances_desc,
-                           const void *variances,
-                           void *workspace,
-                           size_t workspace_size,
-                           const mluOpTensorDescriptor_t rpn_rois_desc,
-                           void *rpn_rois,
-                           const mluOpTensorDescriptor_t rpn_roi_probs_desc,
-                           void *rpn_roi_probs,
-                           const mluOpTensorDescriptor_t rpn_rois_num_desc,
-                           void *rpn_rois_num,
-                           void *rpn_rois_batch_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGenerateProposalsV2(mluOpHandle_t handle,
+                         const int pre_nms_top_n,
+                         const int post_nms_top_n,
+                         const float nms_thresh,
+                         const float min_size,
+                         const float eta,
+                         bool pixel_offset,
+                         const mluOpTensorDescriptor_t scores_desc,
+                         const void *scores,
+                         const mluOpTensorDescriptor_t bbox_deltas_desc,
+                         const void *bbox_deltas,
+                         const mluOpTensorDescriptor_t im_shape_desc,
+                         const void *im_shape,
+                         const mluOpTensorDescriptor_t anchors_desc,
+                         const void *anchors,
+                         const mluOpTensorDescriptor_t variances_desc,
+                         const void *variances,
+                         void *workspace,
+                         size_t workspace_size,
+                         const mluOpTensorDescriptor_t rpn_rois_desc,
+                         void *rpn_rois,
+                         const mluOpTensorDescriptor_t rpn_roi_probs_desc,
+                         void *rpn_roi_probs,
+                         const mluOpTensorDescriptor_t rpn_rois_num_desc,
+                         void *rpn_rois_num,
+                         void *rpn_rois_batch_size);
 
-  // Group: PolyNms
-  /*!
+// Group: PolyNms
+/*!
  * @brief Gets extra space size that is needed in the poly_nms operation.
  *
  * @param[in] handle
@@ -4203,11 +4184,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc, size_t *size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetPolyNmsWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc, size_t *size);
 
-  // Group: PolyNms
-  /*!
+// Group: PolyNms
+/*!
  * @brief Computes the NMS (Non-Maximum Suppression) of polygon.
  *
  * @param[in] handle
@@ -4277,19 +4258,19 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/dingjiansw101/AerialDetection/tree/master/mmdet/ops/poly_nms
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpPolyNms(mluOpHandle_t handle,
-               const mluOpTensorDescriptor_t boxes_desc,
-               const void *boxes,
-               const float iou_threshold,
-               void *workspace,
-               size_t workspace_size,
-               const mluOpTensorDescriptor_t output_desc,
-               void *output,
-               void *output_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpPolyNms(mluOpHandle_t handle,
+             const mluOpTensorDescriptor_t boxes_desc,
+             const void *boxes,
+             const float iou_threshold,
+             void *workspace,
+             size_t workspace_size,
+             const mluOpTensorDescriptor_t output_desc,
+             void *output,
+             void *output_size);
 
-  // Group: Nms
-  /*!
+// Group: Nms
+/*!
  * @brief Creates a descriptor pointed to \b desc for ::mluOpNms, and allocates
  * memory for holding the information about the Nms function. The information
  * is defined in ::mluOpNmsDescriptor_t.
@@ -4314,11 +4295,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Example
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCreateNmsDescriptor(mluOpNmsDescriptor_t *desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateNmsDescriptor(mluOpNmsDescriptor_t *desc);
 
-  // Group: Nms
-  /*!
+// Group: Nms
+/*!
  *
  * @brief Destroys an Nms descriptor \b desc that was previously created with
  * ::mluOpCreateNmsDescriptor.
@@ -4343,11 +4324,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Example
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyNmsDescriptor(mluOpNmsDescriptor_t desc);
 
-  // Group: Nms
-  /*!
+// Group: Nms
+/*!
  * @brief Initializes the Nms descriptor \b nms_desc that was previously created with
  * ::mluOpCreateNmsDescriptor, and sets the information about the Nms operation
  * to the Nms descriptor \b nms_desc.
@@ -4424,22 +4405,22 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Example
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
-                        const mluOpNmsBoxPointMode_t box_mode,
-                        const mluOpNmsOutputMode_t output_mode,
-                        const mluOpNmsAlgo_t algo,
-                        const mluOpNmsMethodMode_t method_mode,
-                        const float iou_threshold,
-                        const float soft_nms_sigma,
-                        const int max_output_size,
-                        const float confidence_threshold,
-                        const float offset,
-                        const int input_layout,
-                        const bool pad_to_max_output_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
+                      const mluOpNmsBoxPointMode_t box_mode,
+                      const mluOpNmsOutputMode_t output_mode,
+                      const mluOpNmsAlgo_t algo,
+                      const mluOpNmsMethodMode_t method_mode,
+                      const float iou_threshold,
+                      const float soft_nms_sigma,
+                      const int max_output_size,
+                      const float confidence_threshold,
+                      const float offset,
+                      const int input_layout,
+                      const bool pad_to_max_output_size);
 
-  // Group: Nms
-  /*!
+// Group: Nms
+/*!
  * @brief Calculates the subset of input tensor \b boxes with the scores of \b confidence, and returns
  * the results in the output tensors \b output and \b output_size.
  * *
@@ -4534,21 +4515,21 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://www.tensorflow.google.cn/api_docs/python/tf/
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpNms(mluOpHandle_t handle,
-           const mluOpNmsDescriptor_t nms_desc,
-           const mluOpTensorDescriptor_t boxes_desc,
-           const void *boxes,
-           const mluOpTensorDescriptor_t confidence_desc,
-           const void *confidence,
-           void *workspace,
-           size_t workspace_size,
-           const mluOpTensorDescriptor_t output_desc,
-           void *output,
-           void *output_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpNms(mluOpHandle_t handle,
+         const mluOpNmsDescriptor_t nms_desc,
+         const mluOpTensorDescriptor_t boxes_desc,
+         const void *boxes,
+         const mluOpTensorDescriptor_t confidence_desc,
+         const void *confidence,
+         void *workspace,
+         size_t workspace_size,
+         const mluOpTensorDescriptor_t output_desc,
+         void *output,
+         void *output_size);
 
-  // Group: Nms
-  /*!
+// Group: Nms
+/*!
  * @brief Returns in \b size the size of the MLU memory that is used as an extra workspace
  * needed in Nms operation.
  *
@@ -4597,14 +4578,14 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Example
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
-                           const mluOpTensorDescriptor_t boxes_desc,
-                           const mluOpTensorDescriptor_t confidence_desc,
-                           size_t *size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
+                         const mluOpTensorDescriptor_t boxes_desc,
+                         const mluOpTensorDescriptor_t confidence_desc,
+                         size_t *size);
 
-  // Group: PriorBox
-  /*!
+// Group: PriorBox
+/*!
  * @brief Generates prior boxes for SSD (Single Shot MultiBox Detector) algorithm.
  *
  * @param[in] handle
@@ -4729,32 +4710,32 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/PaddlePaddle/Paddle/blob/develop/paddle/phi/kernels/gpu/prior_box_kernel.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpPriorBox(mluOpHandle_t handle,
-                const mluOpTensorDescriptor_t min_sizes_desc,
-                const void *min_sizes,
-                const mluOpTensorDescriptor_t aspect_ratios_desc,
-                const void *aspect_ratios,
-                const mluOpTensorDescriptor_t variances_desc,
-                const void *variances,
-                const mluOpTensorDescriptor_t max_sizes_desc,
-                const void *max_sizes,
-                const int height,
-                const int width,
-                const int im_height,
-                const int im_width,
-                const float step_h,
-                const float step_w,
-                const float offset,
-                const bool clip,
-                const bool min_max_aspect_ratios_order,
-                const mluOpTensorDescriptor_t output_desc,
-                void *output,
-                const mluOpTensorDescriptor_t var_desc,
-                void *var);
+mluOpStatus_t MLUOP_WIN_API
+mluOpPriorBox(mluOpHandle_t handle,
+              const mluOpTensorDescriptor_t min_sizes_desc,
+              const void *min_sizes,
+              const mluOpTensorDescriptor_t aspect_ratios_desc,
+              const void *aspect_ratios,
+              const mluOpTensorDescriptor_t variances_desc,
+              const void *variances,
+              const mluOpTensorDescriptor_t max_sizes_desc,
+              const void *max_sizes,
+              const int height,
+              const int width,
+              const int im_height,
+              const int im_width,
+              const float step_h,
+              const float step_w,
+              const float offset,
+              const bool clip,
+              const bool min_max_aspect_ratios_order,
+              const mluOpTensorDescriptor_t output_desc,
+              void *output,
+              const mluOpTensorDescriptor_t var_desc,
+              void *var);
 
-  // Group: PsRoiPool
-  /*!
+// Group: PsRoiPool
+/*!
  * @brief Generates fixed size feature map for each ROI (Regions of Interest).
  *
  * @param[in] handle
@@ -4845,24 +4826,24 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/lib/model/psroi_pooling
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpPsRoiPoolForward(mluOpHandle_t handle,
-                        const int pooled_height,
-                        const int pooled_width,
-                        const float spatial_scale,
-                        const int group_size,
-                        const int output_dim,
-                        const mluOpTensorDescriptor_t input_desc,
-                        const void *input,
-                        const mluOpTensorDescriptor_t rois_desc,
-                        const void *rois,
-                        const mluOpTensorDescriptor_t output_desc,
-                        void *output,
-                        const mluOpTensorDescriptor_t mapping_channel_desc,
-                        void *mapping_channel);
+mluOpStatus_t MLUOP_WIN_API
+mluOpPsRoiPoolForward(mluOpHandle_t handle,
+                      const int pooled_height,
+                      const int pooled_width,
+                      const float spatial_scale,
+                      const int group_size,
+                      const int output_dim,
+                      const mluOpTensorDescriptor_t input_desc,
+                      const void *input,
+                      const mluOpTensorDescriptor_t rois_desc,
+                      const void *rois,
+                      const mluOpTensorDescriptor_t output_desc,
+                      void *output,
+                      const mluOpTensorDescriptor_t mapping_channel_desc,
+                      void *mapping_channel);
 
-  // Group: PsRoiPool
-  /*!
+// Group: PsRoiPool
+/*!
  * @brief Computes the gradients of feature map \b bottom_grad based on the
  * inputs \b top_grad, \b rois, and \b mapping_channel to perform the backpropagation
  * of ::mluOpPsRoiPoolForward.
@@ -4945,23 +4926,23 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/lib/model/psroi_pooling
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpPsRoiPoolBackward(mluOpHandle_t handle,
-                         const int pooled_height,
-                         const int pooled_width,
-                         const float spatial_scale,
-                         const int output_dim,
-                         const mluOpTensorDescriptor_t top_grad_desc,
-                         const void *top_grad,
-                         const mluOpTensorDescriptor_t rois_desc,
-                         const void *rois,
-                         const mluOpTensorDescriptor_t mapping_channel_desc,
-                         const void *mapping_channel,
-                         const mluOpTensorDescriptor_t bottom_grad_desc,
-                         void *bottom_grad);
+mluOpStatus_t MLUOP_WIN_API
+mluOpPsRoiPoolBackward(mluOpHandle_t handle,
+                       const int pooled_height,
+                       const int pooled_width,
+                       const float spatial_scale,
+                       const int output_dim,
+                       const mluOpTensorDescriptor_t top_grad_desc,
+                       const void *top_grad,
+                       const mluOpTensorDescriptor_t rois_desc,
+                       const void *rois,
+                       const mluOpTensorDescriptor_t mapping_channel_desc,
+                       const void *mapping_channel,
+                       const mluOpTensorDescriptor_t bottom_grad_desc,
+                       void *bottom_grad);
 
-  // Group: RoiAlign
-  /*!
+// Group: RoiAlign
+/*!
  * @brief Creates a descriptor pointed by \b desc for ::mluOpRoiAlignForward_v2,
  * and allocates memory for holding the information about the function.
  * The information is defined in ::mluOpRoiAlignForwardDescriptor_t.
@@ -4995,11 +4976,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - None.
  */
 
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCreateRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t *desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t *desc);
 
-  // Group: RoiAlign
-  /*!
+// Group: RoiAlign
+/*!
  * @brief Initializes the descriptor \b desc that was previously created with
  * ::mluOpCreateRoiAlignForwardDescriptor function, and sets RoiAlign information
  * to the descriptor \b desc. The information includes height \b pooled_height and
@@ -5049,17 +5030,17 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetRoiAlignForwardDescriptor_v2(mluOpRoiAlignForwardDescriptor_t roialign_desc,
-                                       const int pooled_height,
-                                       const int pooled_width,
-                                       const int sampling_ratio,
-                                       const float spatial_scale,
-                                       const int pool_mode,
-                                       const bool aligned);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetRoiAlignForwardDescriptor_v2(mluOpRoiAlignForwardDescriptor_t roialign_desc,
+                                     const int pooled_height,
+                                     const int pooled_width,
+                                     const int sampling_ratio,
+                                     const float spatial_scale,
+                                     const int pool_mode,
+                                     const bool aligned);
 
-  // Group: RoiAlign
-  /*!
+// Group: RoiAlign
+/*!
  * @brief Destroys a RoiAlign descriptor \b desc that was previously created
  * with ::mluOpCreateRoiAlignForwardDescriptor function.
  *
@@ -5095,11 +5076,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - None.
  */
 
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc);
 
-  // Group: RoiAlign
-  /*!
+// Group: RoiAlign
+/*!
  * @brief Computes the output feature map \b output based on the input feature map \b input
  * and bounding boxes \b boxes to perform this function. This function supports
  * maximum pooling mode with two more output \b argmax_x and \b argmax_y.
@@ -5208,22 +5189,22 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/roi_align_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiAlignForward_v2(mluOpHandle_t handle,
-                          const mluOpRoiAlignForwardDescriptor_t roialign_desc,
-                          const mluOpTensorDescriptor_t input_desc,
-                          const void *input,
-                          const mluOpTensorDescriptor_t boxes_desc,
-                          const void *boxes,
-                          const mluOpTensorDescriptor_t output_desc,
-                          void *output,
-                          const mluOpTensorDescriptor_t argmax_x_desc,
-                          void *argmax_x,
-                          const mluOpTensorDescriptor_t argmax_y_desc,
-                          void *argmax_y);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignForward_v2(mluOpHandle_t handle,
+                        const mluOpRoiAlignForwardDescriptor_t roialign_desc,
+                        const mluOpTensorDescriptor_t input_desc,
+                        const void *input,
+                        const mluOpTensorDescriptor_t boxes_desc,
+                        const void *boxes,
+                        const mluOpTensorDescriptor_t output_desc,
+                        void *output,
+                        const mluOpTensorDescriptor_t argmax_x_desc,
+                        void *argmax_x,
+                        const mluOpTensorDescriptor_t argmax_y_desc,
+                        void *argmax_y);
 
-  // Group: RoiAlignRotated
-  /*!
+// Group: RoiAlignRotated
+/*!
  * @brief Extracts the corresponding \b features information to \b output by bilinear interpolation
  * according to the \b rois with rotation.
  *
@@ -5317,23 +5298,23 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/roi_align_rotated.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
-                              const mluOpTensorDescriptor_t features_desc,
-                              const void *features,
-                              const mluOpTensorDescriptor_t rois_desc,
-                              const void *rois,
-                              const int pooled_height,
-                              const int pooled_width,
-                              const int sample_ratio,
-                              const float spatial_scale,
-                              const bool aligned,
-                              const bool clockwise,
-                              const mluOpTensorDescriptor_t output_desc,
-                              void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
+                            const mluOpTensorDescriptor_t features_desc,
+                            const void *features,
+                            const mluOpTensorDescriptor_t rois_desc,
+                            const void *rois,
+                            const int pooled_height,
+                            const int pooled_width,
+                            const int sample_ratio,
+                            const float spatial_scale,
+                            const bool aligned,
+                            const bool clockwise,
+                            const mluOpTensorDescriptor_t output_desc,
+                            void *output);
 
-  // Group: RoiAlignRotated
-  /*!
+// Group: RoiAlignRotated
+/*!
  * @brief Computes the gradients of feature map \b bottom_grad based on the input \b top_grad and
  * \b rois to perform the backpropagation of ::mluOpRoiAlignRotatedForward.
  *
@@ -5426,23 +5407,23 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/roi_align_rotated.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
-                               const mluOpTensorDescriptor_t top_grad_desc,
-                               const void *top_grad,
-                               const mluOpTensorDescriptor_t rois_desc,
-                               const void *rois,
-                               const int pooled_height,
-                               const int pooled_width,
-                               const int sample_ratio,
-                               const float spatial_scale,
-                               const bool aligned,
-                               const bool clockwise,
-                               const mluOpTensorDescriptor_t bottom_grad_desc,
-                               void *bottom_grad);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
+                             const mluOpTensorDescriptor_t top_grad_desc,
+                             const void *top_grad,
+                             const mluOpTensorDescriptor_t rois_desc,
+                             const void *rois,
+                             const int pooled_height,
+                             const int pooled_width,
+                             const int sample_ratio,
+                             const float spatial_scale,
+                             const bool aligned,
+                             const bool clockwise,
+                             const mluOpTensorDescriptor_t bottom_grad_desc,
+                             void *bottom_grad);
 
-  // Group: RoiCrop
-  /*!
+// Group: RoiCrop
+/*!
  * @brief Generates fixed size feature map for each grid. Each value in the
  * feature map is interpolated by bilinear sampling.
  *
@@ -5507,17 +5488,17 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/lib/model/roi_crop
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiCropForward(mluOpHandle_t handle,
-                      const mluOpTensorDescriptor_t input_desc,
-                      const void *input,
-                      const mluOpTensorDescriptor_t grid_desc,
-                      const void *grid,
-                      const mluOpTensorDescriptor_t output_desc,
-                      void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiCropForward(mluOpHandle_t handle,
+                    const mluOpTensorDescriptor_t input_desc,
+                    const void *input,
+                    const mluOpTensorDescriptor_t grid_desc,
+                    const void *grid,
+                    const mluOpTensorDescriptor_t output_desc,
+                    void *output);
 
-  // Group: RoiCrop
-  /*!
+// Group: RoiCrop
+/*!
  * @brief Computes the gradients of images \b grad_input based on the gradients
  * \b grad_output and coordinates mapping parameter \b grid to perform the
  * backpropagation.
@@ -5589,17 +5570,17 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/princewang1994/R-FCN.pytorch/tree/master/lib/model/roi_crop
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiCropBackward(mluOpHandle_t handle,
-                       const mluOpTensorDescriptor_t grad_output_desc,
-                       const void *grad_output,
-                       const mluOpTensorDescriptor_t grid_desc,
-                       const void *grid,
-                       const mluOpTensorDescriptor_t grad_input_desc,
-                       void *grad_input);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiCropBackward(mluOpHandle_t handle,
+                     const mluOpTensorDescriptor_t grad_output_desc,
+                     const void *grad_output,
+                     const mluOpTensorDescriptor_t grid_desc,
+                     const void *grid,
+                     const mluOpTensorDescriptor_t grad_input_desc,
+                     void *grad_input);
 
-  // Group: RotatedFeatureAlign
-  /*!
+// Group: RotatedFeatureAlign
+/*!
  * @brief Uses the feature interpolation to obtain the position information corresponding to the
  * refined rotate anchors \b bboxes and reconstructs the feature maps \b output in pixel-wise
  * manner to achieve feature alignment.
@@ -5679,19 +5660,19 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/rotated_feature_align.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle,
-                                  const mluOpTensorDescriptor_t input_desc,
-                                  const void *input,
-                                  const mluOpTensorDescriptor_t bboxes_desc,
-                                  const void *bboxes,
-                                  const float spatial_scale,
-                                  const int points,
-                                  const mluOpTensorDescriptor_t output_desc,
-                                  void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRotatedFeatureAlignForward(const mluOpHandle_t handle,
+                                const mluOpTensorDescriptor_t input_desc,
+                                const void *input,
+                                const mluOpTensorDescriptor_t bboxes_desc,
+                                const void *bboxes,
+                                const float spatial_scale,
+                                const int points,
+                                const mluOpTensorDescriptor_t output_desc,
+                                void *output);
 
-  // Group: RotatedFeatureAlign
-  /*!
+// Group: RotatedFeatureAlign
+/*!
  * @brief Computes the gradients of feature map \b bottom_input based on the inputs \b top_output
  * and \b bboxes to perform the backpropagation of ::mluOpRotatedFeatureAlignForward.
  *
@@ -5759,19 +5740,19 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/rotated_feature_align.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRotatedFeatureAlignBackward(const mluOpHandle_t handle,
-                                   const mluOpTensorDescriptor_t top_output_desc,
-                                   const void *top_output,
-                                   const mluOpTensorDescriptor_t bboxes_desc,
-                                   const void *bboxes,
-                                   const float spatial_scale,
-                                   const int points,
-                                   const mluOpTensorDescriptor_t bottom_input_desc,
-                                   void *bottom_input);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRotatedFeatureAlignBackward(const mluOpHandle_t handle,
+                                 const mluOpTensorDescriptor_t top_output_desc,
+                                 const void *top_output,
+                                 const mluOpTensorDescriptor_t bboxes_desc,
+                                 const void *bboxes,
+                                 const float spatial_scale,
+                                 const int points,
+                                 const mluOpTensorDescriptor_t bottom_input_desc,
+                                 void *bottom_input);
 
-  // Group: Sqrt
-  /*!
+// Group: Sqrt
+/*!
  * @brief Computes sqrt on input tensor \b x, and returns the results in the
  * output tensor \b y.
  *
@@ -5822,17 +5803,17 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://www.tensorflow.org/api_docs/python/tf/math/sqrt
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSqrt(mluOpHandle_t handle,
-            const mluOpComputationPreference_t prefer,
-            const mluOpTensorDescriptor_t x_desc,
-            const void *x,
-            const mluOpTensorDescriptor_t y_desc,
-            void *y);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSqrt(mluOpHandle_t handle,
+          const mluOpComputationPreference_t prefer,
+          const mluOpTensorDescriptor_t x_desc,
+          const void *x,
+          const mluOpTensorDescriptor_t y_desc,
+          void *y);
 
-  // Group: Sqrt
+// Group: Sqrt
 
-  /*!
+/*!
  * @brief Computes gradient of sqrt on input tensor \b y and \b diff_y, and
  *  returns the results in the output tensor \b diff_x.
  *
@@ -5886,17 +5867,17 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://www.tensorflow.org/api_docs/python/tf/raw_ops/SqrtGrad
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSqrtBackward(mluOpHandle_t handle,
-                    const mluOpTensorDescriptor_t y_desc,
-                    const void *y,
-                    const mluOpTensorDescriptor_t dy_desc,
-                    const void *diff_y,
-                    const mluOpTensorDescriptor_t dx_desc,
-                    void *diff_x);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSqrtBackward(mluOpHandle_t handle,
+                  const mluOpTensorDescriptor_t y_desc,
+                  const void *y,
+                  const mluOpTensorDescriptor_t dy_desc,
+                  const void *diff_y,
+                  const mluOpTensorDescriptor_t dx_desc,
+                  void *diff_x);
 
-  // Group: Voxelization
-  /*!
+// Group: Voxelization
+/*!
  * @brief Gets extra space size that is needed in voxelization operation.
  *
  * @param[in] handle
@@ -5964,23 +5945,23 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - None.
  */
 
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetVoxelizationWorkspaceSize(mluOpHandle_t handle,
-                                    const mluOpTensorDescriptor_t points_desc,
-                                    const mluOpTensorDescriptor_t voxel_size_desc,
-                                    const mluOpTensorDescriptor_t coors_range_desc,
-                                    const int32_t max_points,
-                                    const int32_t max_voxels,
-                                    const int32_t NDim,
-                                    const bool deterministic,
-                                    const mluOpTensorDescriptor_t voxels_desc,
-                                    const mluOpTensorDescriptor_t coors_desc,
-                                    const mluOpTensorDescriptor_t num_points_per_voxel_desc,
-                                    const mluOpTensorDescriptor_t voxel_num_desc,
-                                    size_t *size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetVoxelizationWorkspaceSize(mluOpHandle_t handle,
+                                  const mluOpTensorDescriptor_t points_desc,
+                                  const mluOpTensorDescriptor_t voxel_size_desc,
+                                  const mluOpTensorDescriptor_t coors_range_desc,
+                                  const int32_t max_points,
+                                  const int32_t max_voxels,
+                                  const int32_t NDim,
+                                  const bool deterministic,
+                                  const mluOpTensorDescriptor_t voxels_desc,
+                                  const mluOpTensorDescriptor_t coors_desc,
+                                  const mluOpTensorDescriptor_t num_points_per_voxel_desc,
+                                  const mluOpTensorDescriptor_t voxel_num_desc,
+                                  size_t *size);
 
-  // Group: Voxelization
-  /*!
+// Group: Voxelization
+/*!
  * @brief Generates voxelization of input tensor \b points. Output tensor
  * \b voxels contains points in voxels; \b coors is the voxel coordinates;
  * \b num_points_per_voxel is the number of points per voxel; \b voxel_num
@@ -6073,31 +6054,31 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/voxelize.py
  */
 
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpVoxelization(mluOpHandle_t handle,
-                    const mluOpTensorDescriptor_t points_desc,
-                    const void *points,
-                    const mluOpTensorDescriptor_t voxel_size_desc,
-                    const void *voxel_size,
-                    const mluOpTensorDescriptor_t coors_range_desc,
-                    const void *coors_range,
-                    const int32_t max_points,
-                    const int32_t max_voxels,
-                    const int32_t NDim,
-                    const bool deterministic,
-                    void *workspace,
-                    size_t workspace_size,
-                    const mluOpTensorDescriptor_t voxels_desc,
-                    void *voxels,
-                    const mluOpTensorDescriptor_t coors_desc,
-                    void *coors,
-                    const mluOpTensorDescriptor_t num_points_per_voxel_desc,
-                    void *num_points_per_voxel,
-                    const mluOpTensorDescriptor_t voxel_num_desc,
-                    void *voxel_num);
+mluOpStatus_t MLUOP_WIN_API
+mluOpVoxelization(mluOpHandle_t handle,
+                  const mluOpTensorDescriptor_t points_desc,
+                  const void *points,
+                  const mluOpTensorDescriptor_t voxel_size_desc,
+                  const void *voxel_size,
+                  const mluOpTensorDescriptor_t coors_range_desc,
+                  const void *coors_range,
+                  const int32_t max_points,
+                  const int32_t max_voxels,
+                  const int32_t NDim,
+                  const bool deterministic,
+                  void *workspace,
+                  size_t workspace_size,
+                  const mluOpTensorDescriptor_t voxels_desc,
+                  void *voxels,
+                  const mluOpTensorDescriptor_t coors_desc,
+                  void *coors,
+                  const mluOpTensorDescriptor_t num_points_per_voxel_desc,
+                  void *num_points_per_voxel,
+                  const mluOpTensorDescriptor_t voxel_num_desc,
+                  void *voxel_num);
 
-  // Group: YoloBox
-  /*!
+// Group: YoloBox
+/*!
  * @brief Computes bounding box information from the backbone output of the
  * detected network.
  *
@@ -6188,28 +6169,28 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/PaddlePaddle/Paddle/blob/release/2.3/python/paddle/vision/ops.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpYoloBox(mluOpHandle_t handle,
-               const mluOpTensorDescriptor_t x_desc,
-               const void *x,
-               const mluOpTensorDescriptor_t img_size_desc,
-               const void *img_size,
-               const mluOpTensorDescriptor_t anchors_desc,
-               const void *anchors,
-               const int class_num,
-               const float conf_thresh,
-               const int downsample_ratio,
-               const bool clip_bbox,
-               const float scale,
-               const bool iou_aware,
-               const float iou_aware_factor,
-               const mluOpTensorDescriptor_t boxes_desc,
-               void *boxes,
-               const mluOpTensorDescriptor_t scores_desc,
-               void *scores);
+mluOpStatus_t MLUOP_WIN_API
+mluOpYoloBox(mluOpHandle_t handle,
+             const mluOpTensorDescriptor_t x_desc,
+             const void *x,
+             const mluOpTensorDescriptor_t img_size_desc,
+             const void *img_size,
+             const mluOpTensorDescriptor_t anchors_desc,
+             const void *anchors,
+             const int class_num,
+             const float conf_thresh,
+             const int downsample_ratio,
+             const bool clip_bbox,
+             const float scale,
+             const bool iou_aware,
+             const float iou_aware_factor,
+             const mluOpTensorDescriptor_t boxes_desc,
+             void *boxes,
+             const mluOpTensorDescriptor_t scores_desc,
+             void *scores);
 
-  // Group: VoxelPooling
-  /*!
+// Group: VoxelPooling
+/*!
  * @brief Adds the eigenvalues of all the channels on the same x and y coordinates,
  * and then pools them to all the channels in the bev 2D area on the corresponding coordinates.
  *
@@ -6289,25 +6270,25 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * -
  * https://github.com/Megvii-BaseDetection/BEVDepth/blob/main/bevdepth/ops/voxel_pooling/src/voxel_pooling_forward_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpVoxelPoolingForward(mluOpHandle_t handle,
-                           const int batch_size,
-                           const int num_points,
-                           const int num_channels,
-                           const int num_voxel_x,
-                           const int num_voxel_y,
-                           const int num_voxel_z,
-                           const mluOpTensorDescriptor_t geom_xyz_desc,
-                           const void *geom_xyz,
-                           const mluOpTensorDescriptor_t input_features_desc,
-                           const void *input_features,
-                           const mluOpTensorDescriptor_t output_features_desc,
-                           void *output_features,
-                           const mluOpTensorDescriptor_t pos_memo_desc,
-                           void *pos_memo);
+mluOpStatus_t MLUOP_WIN_API
+mluOpVoxelPoolingForward(mluOpHandle_t handle,
+                         const int batch_size,
+                         const int num_points,
+                         const int num_channels,
+                         const int num_voxel_x,
+                         const int num_voxel_y,
+                         const int num_voxel_z,
+                         const mluOpTensorDescriptor_t geom_xyz_desc,
+                         const void *geom_xyz,
+                         const mluOpTensorDescriptor_t input_features_desc,
+                         const void *input_features,
+                         const mluOpTensorDescriptor_t output_features_desc,
+                         void *output_features,
+                         const mluOpTensorDescriptor_t pos_memo_desc,
+                         void *pos_memo);
 
-  // Group: BoxIouRotated
-  /*!
+// Group: BoxIouRotated
+/*!
  * @brief Computes the intersection-over-union (Jaccard index, IOU) of rotated
  * bounding-boxes. If \b aligned is false, then calculates the IOU
  * between each rotated bounding-box of \b bbox1 and \b bbox2, otherwise calculates
@@ -6391,19 +6372,19 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/box_iou_rotated.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpBoxIouRotated(mluOpHandle_t handle,
-                     const int mode,
-                     const bool aligned,
-                     const mluOpTensorDescriptor_t bbox1_desc,
-                     const void *bbox1,
-                     const mluOpTensorDescriptor_t bbox2_desc,
-                     const void *bbox2,
-                     const mluOpTensorDescriptor_t ious_desc,
-                     void *ious);
+mluOpStatus_t MLUOP_WIN_API
+mluOpBoxIouRotated(mluOpHandle_t handle,
+                   const int mode,
+                   const bool aligned,
+                   const mluOpTensorDescriptor_t bbox1_desc,
+                   const void *bbox1,
+                   const mluOpTensorDescriptor_t bbox2_desc,
+                   const void *bbox2,
+                   const mluOpTensorDescriptor_t ious_desc,
+                   void *ious);
 
-  // Group: NmsRotated
-  /*!
+// Group: NmsRotated
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize ::mluOpNmsRotated.
  *
@@ -6430,11 +6411,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc, size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc, size_t *workspace_size);
 
-  // Group: NmsRotated
-  /*!
+// Group: NmsRotated
+/*!
  * @brief Computes the index of nms with IOU of rotated bounding boxes.
  *
  * @param[in] handle
@@ -6497,21 +6478,21 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/nms.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpNmsRotated(mluOpHandle_t handle,
-                  const float iou_threshold,
-                  const mluOpTensorDescriptor_t boxes_desc,
-                  const void *boxes,
-                  const mluOpTensorDescriptor_t scores_desc,
-                  const void *scores,
-                  void *workspace,
-                  size_t workspace_size,
-                  const mluOpTensorDescriptor_t output_desc,
-                  void *output,
-                  int32_t *result_num);
+mluOpStatus_t MLUOP_WIN_API
+mluOpNmsRotated(mluOpHandle_t handle,
+                const float iou_threshold,
+                const mluOpTensorDescriptor_t boxes_desc,
+                const void *boxes,
+                const mluOpTensorDescriptor_t scores_desc,
+                const void *scores,
+                void *workspace,
+                size_t workspace_size,
+                const mluOpTensorDescriptor_t output_desc,
+                void *output,
+                int32_t *result_num);
 
-  // Group: BboxOverlaps
-  /*!
+// Group: BboxOverlaps
+/*!
  * @brief Computes the IOUs or IOFs between two sets of
  * bounding-boxes. If \b aligned is false, this operation calculates the IOU of each row between each bounding-box
  * of \b bbox1 and \b bbox2, otherwise, it calculates the IOU of the corresponding row between each aligned
@@ -6610,20 +6591,20 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/bbox_overlaps_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpBboxOverlaps(mluOpHandle_t handle,
-                    const int mode,
-                    const bool aligned,
-                    const int offset,
-                    const mluOpTensorDescriptor_t bbox1_desc,
-                    const void *bbox1,
-                    const mluOpTensorDescriptor_t bbox2_desc,
-                    const void *bbox2,
-                    const mluOpTensorDescriptor_t ious_desc,
-                    void *ious);
+mluOpStatus_t MLUOP_WIN_API
+mluOpBboxOverlaps(mluOpHandle_t handle,
+                  const int mode,
+                  const bool aligned,
+                  const int offset,
+                  const mluOpTensorDescriptor_t bbox1_desc,
+                  const void *bbox1,
+                  const mluOpTensorDescriptor_t bbox2_desc,
+                  const void *bbox2,
+                  const mluOpTensorDescriptor_t ious_desc,
+                  void *ious);
 
-  // Group: ThreeInterpolate
-  /*!
+// Group: ThreeInterpolate
+/*!
  * @brief Computes weighted linear interpolation on 3 points by using
  * 3 indices in \b indices to select 3 points in \b features, uses the
  * 3 points to multiply with corresponding 3 weights in \b weights,
@@ -6705,19 +6686,19 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/three_interpolate.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpThreeInterpolateForward(mluOpHandle_t handle,
-                               const mluOpTensorDescriptor_t features_desc,
-                               const void *features,
-                               const mluOpTensorDescriptor_t indices_desc,
-                               const void *indices,
-                               const mluOpTensorDescriptor_t weights_desc,
-                               const void *weights,
-                               const mluOpTensorDescriptor_t output_desc,
-                               void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpThreeInterpolateForward(mluOpHandle_t handle,
+                             const mluOpTensorDescriptor_t features_desc,
+                             const void *features,
+                             const mluOpTensorDescriptor_t indices_desc,
+                             const void *indices,
+                             const mluOpTensorDescriptor_t weights_desc,
+                             const void *weights,
+                             const mluOpTensorDescriptor_t output_desc,
+                             void *output);
 
-  // Group: ThreeInterpolate
-  /*!
+// Group: ThreeInterpolate
+/*!
  * @brief Computes the gradients of feature map \b grad_features based on the
  * inputs \b grad_output, \b indices, and \b weights to perform the backpropagation
  * of ::mluOpThreeInterpolateForward.
@@ -6792,19 +6773,19 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/three_interpolate.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpThreeInterpolateBackward(mluOpHandle_t handle,
-                                const mluOpTensorDescriptor_t grad_output_desc,
-                                const void *grad_output,
-                                const mluOpTensorDescriptor_t indices_desc,
-                                const void *indices,
-                                const mluOpTensorDescriptor_t weights_desc,
-                                const void *weights,
-                                const mluOpTensorDescriptor_t grad_features_desc,
-                                void *grad_features);
+mluOpStatus_t MLUOP_WIN_API
+mluOpThreeInterpolateBackward(mluOpHandle_t handle,
+                              const mluOpTensorDescriptor_t grad_output_desc,
+                              const void *grad_output,
+                              const mluOpTensorDescriptor_t indices_desc,
+                              const void *indices,
+                              const mluOpTensorDescriptor_t weights_desc,
+                              const void *weights,
+                              const mluOpTensorDescriptor_t grad_features_desc,
+                              void *grad_features);
 
-  // Group: BallQuery
-  /*!
+// Group: BallQuery
+/*!
  * @brief Takes the point's index in the \b new_xyz set as the center of the sphere,
  * uses \b min_radius and \b max_radius as the radius, and returns the \b idx of
  * the first \n nsample points in the \b xyz set in the spherical domain.
@@ -6883,20 +6864,20 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/ball_query.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpBallQuery(mluOpHandle_t handle,
-                 const mluOpTensorDescriptor_t new_xyz_desc,
-                 const void *new_xyz,
-                 const mluOpTensorDescriptor_t xyz_desc,
-                 const void *xyz,
-                 const float min_radius,
-                 const float max_radius,
-                 const int nsample,
-                 const mluOpTensorDescriptor_t idx_desc,
-                 void *idx);
+mluOpStatus_t MLUOP_WIN_API
+mluOpBallQuery(mluOpHandle_t handle,
+               const mluOpTensorDescriptor_t new_xyz_desc,
+               const void *new_xyz,
+               const mluOpTensorDescriptor_t xyz_desc,
+               const void *xyz,
+               const float min_radius,
+               const float max_radius,
+               const int nsample,
+               const mluOpTensorDescriptor_t idx_desc,
+               void *idx);
 
-  // Group: FocalLossSigmoid
-  /*!
+// Group: FocalLossSigmoid
+/*!
  * @brief Computes cross entropy loss with weighting factor and focusing factor
  * to reduce the filter of samples which are easy to classify.
  *
@@ -6991,23 +6972,23 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  *   International Conference on Computer Vision(ICCV), 2017, oo.2980-2988
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/focal_loss.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
-                               const mluOpComputationPreference_t prefer,
-                               const mluOpLossReduction_t reduction,
-                               const mluOpTensorDescriptor_t input_desc,
-                               const void *input,
-                               const mluOpTensorDescriptor_t target_desc,
-                               const void *target,
-                               const mluOpTensorDescriptor_t weight_desc,
-                               const void *weight,
-                               const float alpha,
-                               const float gamma,
-                               const mluOpTensorDescriptor_t output_desc,
-                               void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
+                             const mluOpComputationPreference_t prefer,
+                             const mluOpLossReduction_t reduction,
+                             const mluOpTensorDescriptor_t input_desc,
+                             const void *input,
+                             const mluOpTensorDescriptor_t target_desc,
+                             const void *target,
+                             const mluOpTensorDescriptor_t weight_desc,
+                             const void *weight,
+                             const float alpha,
+                             const float gamma,
+                             const mluOpTensorDescriptor_t output_desc,
+                             void *output);
 
-  // Group: FocalLossSigmoid
-  /*!
+// Group: FocalLossSigmoid
+/*!
  * @brief Computes the gradients of ::mluOpFocalLossSigmoidBackward with \b input tensor,
  * \b target tensor, \b weight tensor, and returns the results in
  * the \b grad_input tensor.
@@ -7099,23 +7080,23 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/focal_loss.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpFocalLossSigmoidBackward(mluOpHandle_t handle,
-                                const mluOpComputationPreference_t prefer,
-                                const mluOpLossReduction_t reduction,
-                                const mluOpTensorDescriptor_t input_desc,
-                                const void *input,
-                                const mluOpTensorDescriptor_t target_desc,
-                                const void *target,
-                                const mluOpTensorDescriptor_t weight_desc,
-                                const void *weight,
-                                const float alpha,
-                                const float gamma,
-                                const mluOpTensorDescriptor_t grad_input_desc,
-                                void *grad_input);
+mluOpStatus_t MLUOP_WIN_API
+mluOpFocalLossSigmoidBackward(mluOpHandle_t handle,
+                              const mluOpComputationPreference_t prefer,
+                              const mluOpLossReduction_t reduction,
+                              const mluOpTensorDescriptor_t input_desc,
+                              const void *input,
+                              const mluOpTensorDescriptor_t target_desc,
+                              const void *target,
+                              const mluOpTensorDescriptor_t weight_desc,
+                              const void *weight,
+                              const float alpha,
+                              const float gamma,
+                              const mluOpTensorDescriptor_t grad_input_desc,
+                              void *grad_input);
 
-  // Group: MaskedIm2col
-  /*!
+// Group: MaskedIm2col
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace to
  * optimize ::mluOpMaskedIm2colForward.
  *
@@ -7166,18 +7147,18 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
-                                           const mluOpTensorDescriptor_t feature_desc,
-                                           const mluOpTensorDescriptor_t mask_h_idx_desc,
-                                           const mluOpTensorDescriptor_t mask_w_idx_desc,
-                                           const int kernel_h,
-                                           const int kernel_w,
-                                           const mluOpTensorDescriptor_t data_col_desc,
-                                           size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
+                                         const mluOpTensorDescriptor_t feature_desc,
+                                         const mluOpTensorDescriptor_t mask_h_idx_desc,
+                                         const mluOpTensorDescriptor_t mask_w_idx_desc,
+                                         const int kernel_h,
+                                         const int kernel_w,
+                                         const mluOpTensorDescriptor_t data_col_desc,
+                                         size_t *workspace_size);
 
-  // Group: MaskedIm2col
-  /*!
+// Group: MaskedIm2col
+/*!
  * @brief Copies the data of the input tensor \b feature covered by mask to the output tensor \b data_col.
  * The area of mask that is out of \b feature is padded with 0. This function firstly generates mask coordinates
  * by combining \b mask_h_idx tensor and \b mask_w_idx tensor, then copies the \b feature data covered by mask.
@@ -7274,25 +7255,25 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/masked_conv2d_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpMaskedIm2colForward(mluOpHandle_t handle,
-                           const mluOpTensorDescriptor_t feature_desc,
-                           const void *feature,
-                           const mluOpTensorDescriptor_t mask_h_idx_desc,
-                           const void *mask_h_idx,
-                           const mluOpTensorDescriptor_t mask_w_idx_desc,
-                           const void *mask_w_idx,
-                           const int kernel_h,
-                           const int kernel_w,
-                           const int pad_h,
-                           const int pad_w,
-                           void *workspace,
-                           const size_t workspace_size,
-                           const mluOpTensorDescriptor_t data_col_desc,
-                           void *data_col);
+mluOpStatus_t MLUOP_WIN_API
+mluOpMaskedIm2colForward(mluOpHandle_t handle,
+                         const mluOpTensorDescriptor_t feature_desc,
+                         const void *feature,
+                         const mluOpTensorDescriptor_t mask_h_idx_desc,
+                         const void *mask_h_idx,
+                         const mluOpTensorDescriptor_t mask_w_idx_desc,
+                         const void *mask_w_idx,
+                         const int kernel_h,
+                         const int kernel_w,
+                         const int pad_h,
+                         const int pad_w,
+                         void *workspace,
+                         const size_t workspace_size,
+                         const mluOpTensorDescriptor_t data_col_desc,
+                         void *data_col);
 
-  // Group: MoeDispatch
-  /*!
+// Group: MoeDispatch
+/*!
  * @brief Calculates the inverse gradient of \b input tensor, and returns the results in the output
  * tensor \b grad_input.
  *
@@ -7381,25 +7362,25 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/microsoft/tutel/blob/v0.2.0/tutel/jit_kernels/sparse.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
-                               const mluOpTensorDescriptor_t gates_desc,
-                               const void *gates,
-                               const mluOpTensorDescriptor_t indices_desc,
-                               const void *indices,
-                               const mluOpTensorDescriptor_t locations_desc,
-                               const void *locations,
-                               const mluOpTensorDescriptor_t dispatch_desc,
-                               const void *dispatch,
-                               const int samples,
-                               const int capacity,
-                               const int hidden,
-                               const int num_experts,
-                               const mluOpTensorDescriptor_t grad_input_desc,
-                               void *grad_input);
+mluOpStatus_t MLUOP_WIN_API
+mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
+                             const mluOpTensorDescriptor_t gates_desc,
+                             const void *gates,
+                             const mluOpTensorDescriptor_t indices_desc,
+                             const void *indices,
+                             const mluOpTensorDescriptor_t locations_desc,
+                             const void *locations,
+                             const mluOpTensorDescriptor_t dispatch_desc,
+                             const void *dispatch,
+                             const int samples,
+                             const int capacity,
+                             const int hidden,
+                             const int num_experts,
+                             const mluOpTensorDescriptor_t grad_input_desc,
+                             void *grad_input);
 
-  // Group: MsDeformAttn
-  /*!
+// Group: MsDeformAttn
+/*!
  * @brief Computes the gradient of the input tensors of ::mluOpMsDeformAttnForward.
  *
  * @param[in] handle
@@ -7490,30 +7471,30 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/common/cuda/ms_deform_attn_cuda_kernel.cuh
  */
 
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpMsDeformAttnBackward(mluOpHandle_t handle,
-                            const mluOpTensorDescriptor_t value_desc,
-                            const void *value,
-                            const mluOpTensorDescriptor_t spatial_shapes_desc,
-                            const void *spatial_shapes,
-                            const mluOpTensorDescriptor_t level_start_index_desc,
-                            const void *level_start_index,
-                            const mluOpTensorDescriptor_t sampling_loc_desc,
-                            const void *sampling_loc,
-                            const mluOpTensorDescriptor_t attn_weight_desc,
-                            const void *attn_weight,
-                            const mluOpTensorDescriptor_t grad_output_desc,
-                            const void *grad_output,
-                            const int32_t im2col_step,
-                            const mluOpTensorDescriptor_t grad_value_desc,
-                            void *grad_value,
-                            const mluOpTensorDescriptor_t grad_sampling_loc_desc,
-                            void *grad_sampling_loc,
-                            const mluOpTensorDescriptor_t grad_attn_weight_desc,
-                            void *grad_attn_weight);
+mluOpStatus_t MLUOP_WIN_API
+mluOpMsDeformAttnBackward(mluOpHandle_t handle,
+                          const mluOpTensorDescriptor_t value_desc,
+                          const void *value,
+                          const mluOpTensorDescriptor_t spatial_shapes_desc,
+                          const void *spatial_shapes,
+                          const mluOpTensorDescriptor_t level_start_index_desc,
+                          const void *level_start_index,
+                          const mluOpTensorDescriptor_t sampling_loc_desc,
+                          const void *sampling_loc,
+                          const mluOpTensorDescriptor_t attn_weight_desc,
+                          const void *attn_weight,
+                          const mluOpTensorDescriptor_t grad_output_desc,
+                          const void *grad_output,
+                          const int32_t im2col_step,
+                          const mluOpTensorDescriptor_t grad_value_desc,
+                          void *grad_value,
+                          const mluOpTensorDescriptor_t grad_sampling_loc_desc,
+                          void *grad_sampling_loc,
+                          const mluOpTensorDescriptor_t grad_attn_weight_desc,
+                          void *grad_attn_weight);
 
-  // Group: MutualInformation
-  /*!
+// Group: MutualInformation
+/*!
  * @brief Returns the size of the MLU memory as an extra workspace
  * to optimize ::mluOpMutualInformationBackward.
  *
@@ -7564,18 +7545,18 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
-                                                 const mluOpTensorDescriptor_t px_desc,
-                                                 const mluOpTensorDescriptor_t py_desc,
-                                                 const mluOpTensorDescriptor_t opt_boundary_desc,
-                                                 const mluOpTensorDescriptor_t p_desc,
-                                                 const mluOpTensorDescriptor_t ans_grad_desc,
-                                                 const bool overwrite_ans_grad,
-                                                 size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
+                                               const mluOpTensorDescriptor_t px_desc,
+                                               const mluOpTensorDescriptor_t py_desc,
+                                               const mluOpTensorDescriptor_t opt_boundary_desc,
+                                               const mluOpTensorDescriptor_t p_desc,
+                                               const mluOpTensorDescriptor_t ans_grad_desc,
+                                               const bool overwrite_ans_grad,
+                                               size_t *workspace_size);
 
-  // Group: MutualInformation
-  /*!
+// Group: MutualInformation
+/*!
  * @brief Computes the gradients of tensor \b px and tensor \b py.
  *
  * @param[in] handle
@@ -7672,28 +7653,28 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/k2-fsa/k2/blob/master/k2/python/csrc/torch/mutual_information_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpMutualInformationBackward(mluOpHandle_t handle,
-                                 const mluOpTensorDescriptor_t px_desc,
-                                 const void *px,
-                                 const mluOpTensorDescriptor_t py_desc,
-                                 const void *py,
-                                 const mluOpTensorDescriptor_t opt_boundary_desc,
-                                 const void *opt_boundary,
-                                 const mluOpTensorDescriptor_t p_desc,
-                                 const void *p,
-                                 const mluOpTensorDescriptor_t ans_grad_desc,
-                                 void *ans_grad,
-                                 const bool overwrite_ans_grad,
-                                 void *workspace,
-                                 const size_t workspace_size,
-                                 const mluOpTensorDescriptor_t px_grad_desc,
-                                 void *px_grad,
-                                 const mluOpTensorDescriptor_t py_grad_desc,
-                                 void *py_grad);
+mluOpStatus_t MLUOP_WIN_API
+mluOpMutualInformationBackward(mluOpHandle_t handle,
+                               const mluOpTensorDescriptor_t px_desc,
+                               const void *px,
+                               const mluOpTensorDescriptor_t py_desc,
+                               const void *py,
+                               const mluOpTensorDescriptor_t opt_boundary_desc,
+                               const void *opt_boundary,
+                               const mluOpTensorDescriptor_t p_desc,
+                               const void *p,
+                               const mluOpTensorDescriptor_t ans_grad_desc,
+                               void *ans_grad,
+                               const bool overwrite_ans_grad,
+                               void *workspace,
+                               const size_t workspace_size,
+                               const mluOpTensorDescriptor_t px_grad_desc,
+                               void *px_grad,
+                               const mluOpTensorDescriptor_t py_grad_desc,
+                               void *py_grad);
 
-  // Group: MutualInformation
-  /*!
+// Group: MutualInformation
+/*!
  * @brief Returns the size of the MLU memory as an extra workspace
  * to optimize ::mluOpMutualInformationForward.
  *
@@ -7742,17 +7723,17 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetMutualInformationForwardWorkspaceSize(mluOpHandle_t handle,
-                                                const mluOpTensorDescriptor_t px_desc,
-                                                const mluOpTensorDescriptor_t py_desc,
-                                                const mluOpTensorDescriptor_t opt_boundary_desc,
-                                                const mluOpTensorDescriptor_t p_desc,
-                                                const mluOpTensorDescriptor_t ans_desc,
-                                                size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetMutualInformationForwardWorkspaceSize(mluOpHandle_t handle,
+                                              const mluOpTensorDescriptor_t px_desc,
+                                              const mluOpTensorDescriptor_t py_desc,
+                                              const mluOpTensorDescriptor_t opt_boundary_desc,
+                                              const mluOpTensorDescriptor_t p_desc,
+                                              const mluOpTensorDescriptor_t ans_desc,
+                                              size_t *workspace_size);
 
-  // Group: MutualInformation
-  /*!
+// Group: MutualInformation
+/*!
  * @brief Computes mutual information between tensor \b px and tensor \b py.
  *
  * @param[in] handle
@@ -7830,23 +7811,23 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/k2-fsa/k2/blob/master/k2/python/csrc/torch/mutual_information_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpMutualInformationForward(mluOpHandle_t handle,
-                                const mluOpTensorDescriptor_t px_desc,
-                                const void *px,
-                                const mluOpTensorDescriptor_t py_desc,
-                                const void *py,
-                                const mluOpTensorDescriptor_t opt_boundary_desc,
-                                const void *opt_boundary,
-                                const mluOpTensorDescriptor_t p_desc,
-                                void *p,
-                                void *workspace,
-                                const size_t workspace_size,
-                                const mluOpTensorDescriptor_t ans_desc,
-                                void *ans);
+mluOpStatus_t MLUOP_WIN_API
+mluOpMutualInformationForward(mluOpHandle_t handle,
+                              const mluOpTensorDescriptor_t px_desc,
+                              const void *px,
+                              const mluOpTensorDescriptor_t py_desc,
+                              const void *py,
+                              const mluOpTensorDescriptor_t opt_boundary_desc,
+                              const void *opt_boundary,
+                              const mluOpTensorDescriptor_t p_desc,
+                              void *p,
+                              void *workspace,
+                              const size_t workspace_size,
+                              const mluOpTensorDescriptor_t ans_desc,
+                              void *ans);
 
-  // Group: Deprecated APIs
-  /*!
+// Group: Deprecated APIs
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize ::mluOpRoiAwarePool3dForward.
  *
@@ -7894,15 +7875,15 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
-                                             const mluOpTensorDescriptor_t rois_desc,
-                                             const mluOpTensorDescriptor_t pts_desc,
-                                             const mluOpTensorDescriptor_t pts_feature_desc,
-                                             size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetRoiawarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
+                                           const mluOpTensorDescriptor_t rois_desc,
+                                           const mluOpTensorDescriptor_t pts_desc,
+                                           const mluOpTensorDescriptor_t pts_feature_desc,
+                                           size_t *workspace_size);
 
-  // Group: RoiAwarePool3d
-  /*!
+// Group: RoiAwarePool3d
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize ::mluOpRoiAwarePool3dForward.
  *
@@ -7946,15 +7927,15 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetRoiAwarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
-                                             const mluOpTensorDescriptor_t rois_desc,
-                                             const mluOpTensorDescriptor_t pts_desc,
-                                             const mluOpTensorDescriptor_t pts_feature_desc,
-                                             size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetRoiAwarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
+                                           const mluOpTensorDescriptor_t rois_desc,
+                                           const mluOpTensorDescriptor_t pts_desc,
+                                           const mluOpTensorDescriptor_t pts_feature_desc,
+                                           size_t *workspace_size);
 
-  // Group: Deprecated APIs
-  /*!
+// Group: Deprecated APIs
+/*!
  * @brief Returns \b argmax, \b pts_idx_of_voxels and \b pooled_features calculated by
  * this operator.
  *
@@ -8062,33 +8043,33 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/roiaware_pool3d.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiawarePool3dForward(mluOpHandle_t handle,
-                             const int pool_method,
-                             const int boxes_num,
-                             const int pts_num,
-                             const int channels,
-                             const mluOpTensorDescriptor_t rois_desc,
-                             const void *rois,
-                             const mluOpTensorDescriptor_t pts_desc,
-                             const void *pts,
-                             const mluOpTensorDescriptor_t pts_feature_desc,
-                             const void *pts_feature,
-                             void *workspace,
-                             size_t workspace_size,
-                             const int max_pts_each_voxel,
-                             const int out_x,
-                             const int out_y,
-                             const int out_z,
-                             const mluOpTensorDescriptor_t argmax_desc,
-                             void *argmax,
-                             const mluOpTensorDescriptor_t pts_idx_of_voxels_desc,
-                             void *pts_idx_of_voxels,
-                             const mluOpTensorDescriptor_t pooled_features_desc,
-                             void *pooled_features);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiawarePool3dForward(mluOpHandle_t handle,
+                           const int pool_method,
+                           const int boxes_num,
+                           const int pts_num,
+                           const int channels,
+                           const mluOpTensorDescriptor_t rois_desc,
+                           const void *rois,
+                           const mluOpTensorDescriptor_t pts_desc,
+                           const void *pts,
+                           const mluOpTensorDescriptor_t pts_feature_desc,
+                           const void *pts_feature,
+                           void *workspace,
+                           size_t workspace_size,
+                           const int max_pts_each_voxel,
+                           const int out_x,
+                           const int out_y,
+                           const int out_z,
+                           const mluOpTensorDescriptor_t argmax_desc,
+                           void *argmax,
+                           const mluOpTensorDescriptor_t pts_idx_of_voxels_desc,
+                           void *pts_idx_of_voxels,
+                           const mluOpTensorDescriptor_t pooled_features_desc,
+                           void *pooled_features);
 
-  // Group: RoiAwarePool3d
-  /*!
+// Group: RoiAwarePool3d
+/*!
  * @brief Returns \b argmax, \b pts_idx_of_voxels and \b pooled_features calculated by
  * this operator.
  *
@@ -8192,33 +8173,33 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/roiaware_pool3d.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiAwarePool3dForward(mluOpHandle_t handle,
-                             const int pool_method,
-                             const int boxes_num,
-                             const int pts_num,
-                             const int channels,
-                             const mluOpTensorDescriptor_t rois_desc,
-                             const void *rois,
-                             const mluOpTensorDescriptor_t pts_desc,
-                             const void *pts,
-                             const mluOpTensorDescriptor_t pts_feature_desc,
-                             const void *pts_feature,
-                             void *workspace,
-                             size_t workspace_size,
-                             const int max_pts_each_voxel,
-                             const int out_x,
-                             const int out_y,
-                             const int out_z,
-                             const mluOpTensorDescriptor_t argmax_desc,
-                             void *argmax,
-                             const mluOpTensorDescriptor_t pts_idx_of_voxels_desc,
-                             void *pts_idx_of_voxels,
-                             const mluOpTensorDescriptor_t pooled_features_desc,
-                             void *pooled_features);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAwarePool3dForward(mluOpHandle_t handle,
+                           const int pool_method,
+                           const int boxes_num,
+                           const int pts_num,
+                           const int channels,
+                           const mluOpTensorDescriptor_t rois_desc,
+                           const void *rois,
+                           const mluOpTensorDescriptor_t pts_desc,
+                           const void *pts,
+                           const mluOpTensorDescriptor_t pts_feature_desc,
+                           const void *pts_feature,
+                           void *workspace,
+                           size_t workspace_size,
+                           const int max_pts_each_voxel,
+                           const int out_x,
+                           const int out_y,
+                           const int out_z,
+                           const mluOpTensorDescriptor_t argmax_desc,
+                           void *argmax,
+                           const mluOpTensorDescriptor_t pts_idx_of_voxels_desc,
+                           void *pts_idx_of_voxels,
+                           const mluOpTensorDescriptor_t pooled_features_desc,
+                           void *pooled_features);
 
-  // Group: Deprecated APIs
-  /*!
+// Group: Deprecated APIs
+/*!
  * @brief Returns \b pts_idx_of_voxels, \b argmax, \b grad_out and \b grad_in by
  * performing the backpropagation of ::mluOpRoiAwarePool3dForward.
  *
@@ -8296,26 +8277,26 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/roiaware_pool3d.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiawarePool3dBackward(mluOpHandle_t handle,
-                              const int pool_method,
-                              const int boxes_num,
-                              const int out_x,
-                              const int out_y,
-                              const int out_z,
-                              const int channels,
-                              const int max_pts_each_voxel,
-                              const mluOpTensorDescriptor_t pts_idx_of_voxels_desc,
-                              const void *pts_idx_of_voxels,
-                              const mluOpTensorDescriptor_t argmax_desc,
-                              const void *argmax,
-                              const mluOpTensorDescriptor_t grad_out_desc,
-                              const void *grad_out,
-                              const mluOpTensorDescriptor_t grad_in_desc,
-                              void *grad_in);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiawarePool3dBackward(mluOpHandle_t handle,
+                            const int pool_method,
+                            const int boxes_num,
+                            const int out_x,
+                            const int out_y,
+                            const int out_z,
+                            const int channels,
+                            const int max_pts_each_voxel,
+                            const mluOpTensorDescriptor_t pts_idx_of_voxels_desc,
+                            const void *pts_idx_of_voxels,
+                            const mluOpTensorDescriptor_t argmax_desc,
+                            const void *argmax,
+                            const mluOpTensorDescriptor_t grad_out_desc,
+                            const void *grad_out,
+                            const mluOpTensorDescriptor_t grad_in_desc,
+                            void *grad_in);
 
-  // Group: RoiAwarePool3d
-  /*!
+// Group: RoiAwarePool3d
+/*!
  * @brief Returns \b pts_idx_of_voxels, \b argmax, \b grad_out and \b grad_in by
  * performing the backpropagation of ::mluOpRoiAwarePool3dForward.
  *
@@ -8389,23 +8370,23 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/roiaware_pool3d.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiAwarePool3dBackward(mluOpHandle_t handle,
-                              const int pool_method,
-                              const int boxes_num,
-                              const int out_x,
-                              const int out_y,
-                              const int out_z,
-                              const int channels,
-                              const int max_pts_each_voxel,
-                              const mluOpTensorDescriptor_t pts_idx_of_voxels_desc,
-                              const void *pts_idx_of_voxels,
-                              const mluOpTensorDescriptor_t argmax_desc,
-                              const void *argmax,
-                              const mluOpTensorDescriptor_t grad_out_desc,
-                              const void *grad_out,
-                              const mluOpTensorDescriptor_t grad_in_desc,
-                              void *grad_in);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAwarePool3dBackward(mluOpHandle_t handle,
+                            const int pool_method,
+                            const int boxes_num,
+                            const int out_x,
+                            const int out_y,
+                            const int out_z,
+                            const int channels,
+                            const int max_pts_each_voxel,
+                            const mluOpTensorDescriptor_t pts_idx_of_voxels_desc,
+                            const void *pts_idx_of_voxels,
+                            const mluOpTensorDescriptor_t argmax_desc,
+                            const void *argmax,
+                            const mluOpTensorDescriptor_t grad_out_desc,
+                            const void *grad_out,
+                            const mluOpTensorDescriptor_t grad_in_desc,
+                            void *grad_in);
 
 // Group: Psamask
 /*!
@@ -8471,18 +8452,18 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpPsamaskForward(mluOpHandle_t handle,
-                      const int psa_type,
-                      const mluOpTensorDescriptor_t x_desc,
-                      const void *x,
-                      const int h_mask,
-                      const int w_mask,
-                      const mluOpTensorDescriptor_t y_desc,
-                      void *y);
+mluOpStatus_t MLUOP_WIN_API
+mluOpPsamaskForward(mluOpHandle_t handle,
+                    const int psa_type,
+                    const mluOpTensorDescriptor_t x_desc,
+                    const void *x,
+                    const int h_mask,
+                    const int w_mask,
+                    const mluOpTensorDescriptor_t y_desc,
+                    void *y);
 
-  // Group: Psamask
-  /*!
+// Group: Psamask
+/*!
  * @brief Computes the gradients of input tensor \b dx with the gradients of output tensor \b dy
  * according to \b h_mask, \b w_mask, and \b psa_type.
  *
@@ -8545,18 +8526,18 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/psa_mask.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpPsamaskBackward(mluOpHandle_t handle,
-                       const int psa_type,
-                       const mluOpTensorDescriptor_t dy_desc,
-                       const void *dy,
-                       const int h_mask,
-                       const int w_mask,
-                       const mluOpTensorDescriptor_t dx_desc,
-                       void *dx);
+mluOpStatus_t MLUOP_WIN_API
+mluOpPsamaskBackward(mluOpHandle_t handle,
+                     const int psa_type,
+                     const mluOpTensorDescriptor_t dy_desc,
+                     const void *dy,
+                     const int h_mask,
+                     const int w_mask,
+                     const mluOpTensorDescriptor_t dx_desc,
+                     void *dx);
 
-  // Group: SparseConv
-  /*!
+// Group: SparseConv
+/*!
  * @brief Computes the get_indice_paris operation, then returns the results in the output
  * tensor \b out_indices, \b indice_pairs and \b ind, ice_num.
  *
@@ -8640,22 +8621,22 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/spconv_ops_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetIndicePairs(mluOpHandle_t handle,
-                      const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
-                      const mluOpTensorDescriptor_t indices_desc,
-                      const void *indices,
-                      void *workspace,
-                      const size_t workspace_size,
-                      const mluOpTensorDescriptor_t indice_pairs_desc,
-                      void *indice_pairs,
-                      const mluOpTensorDescriptor_t out_indices_desc,
-                      void *out_indices,
-                      const mluOpTensorDescriptor_t indice_num_desc,
-                      void *indice_num);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetIndicePairs(mluOpHandle_t handle,
+                    const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+                    const mluOpTensorDescriptor_t indices_desc,
+                    const void *indices,
+                    void *workspace,
+                    const size_t workspace_size,
+                    const mluOpTensorDescriptor_t indice_pairs_desc,
+                    void *indice_pairs,
+                    const mluOpTensorDescriptor_t out_indices_desc,
+                    void *out_indices,
+                    const mluOpTensorDescriptor_t indice_num_desc,
+                    void *indice_num);
 
-  // Group: SparseConv
-  /*!
+// Group: SparseConv
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
  * to optimize the get_indice_pairs operation.
  *
@@ -8716,17 +8697,17 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetIndicePairsWorkspaceSize(mluOpHandle_t handle,
-                                   const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
-                                   const mluOpTensorDescriptor_t indices_desc,
-                                   const mluOpTensorDescriptor_t indice_pairs_desc,
-                                   const mluOpTensorDescriptor_t out_indices_desc,
-                                   const mluOpTensorDescriptor_t indice_num_desc,
-                                   size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetIndicePairsWorkspaceSize(mluOpHandle_t handle,
+                                 const mluOpSparseConvolutionDescriptor_t sparse_conv_desc,
+                                 const mluOpTensorDescriptor_t indices_desc,
+                                 const mluOpTensorDescriptor_t indice_pairs_desc,
+                                 const mluOpTensorDescriptor_t out_indices_desc,
+                                 const mluOpTensorDescriptor_t indice_num_desc,
+                                 size_t *workspace_size);
 
-  // Group: ActiveRotatedFilter
-  /*!
+// Group: ActiveRotatedFilter
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize ::mluOpActiveRotatedFilterForward. The size of the extra
  * workspace is based on the given information of the ActiveRotatedFilterForward operation,
@@ -8766,13 +8747,13 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
-                                                  const mluOpTensorDescriptor_t input_desc,
-                                                  size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetActiveRotatedFilterForwardWorkspaceSize(const mluOpHandle_t handle,
+                                                const mluOpTensorDescriptor_t input_desc,
+                                                size_t *workspace_size);
 
-  // Group: ActiveRotatedFilter
-  /*!
+// Group: ActiveRotatedFilter
+/*!
  * @brief Rotates \b input according to \b indices. This function encodes
  * the orientation information and generates orientation-sensitive features.
  *
@@ -8849,34 +8830,33 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * -
  * https://github.com/open-mmlab/mmcv/blob/v1.5.2/mmcv/ops/csrc/pytorch/cuda/active_rotated_filter_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
-                                  const mluOpTensorDescriptor_t input_desc,
-                                  const void *input,
-                                  const mluOpTensorDescriptor_t indices_desc,
-                                  const void *indices,
-                                  void *workspace,
-                                  const size_t workspace_size,
-                                  const mluOpTensorDescriptor_t output_desc,
-                                  void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpActiveRotatedFilterForward(const mluOpHandle_t handle,
+                                const mluOpTensorDescriptor_t input_desc,
+                                const void *input,
+                                const mluOpTensorDescriptor_t indices_desc,
+                                const void *indices,
+                                void *workspace,
+                                const size_t workspace_size,
+                                const mluOpTensorDescriptor_t output_desc,
+                                void *output);
 
-  /*!
+/*!
  * @brief Enumeration variables describing the attributes of the AdamW computation.
  */
-  typedef enum
-  {
-    MLUOP_ADAMW_WEIGHT_DECAY = 0,
-    /*!< Set the weight_decay attribute for the AdamW operation. */
-    MLUOP_ADAMW_GRAD_SCALE = 1,
-    /*!< Set the grad_scale attribute for the AdamW operation. */
-    MLUOP_ADAMW_USE_NESTEROV = 2,
-    /*!< Specifies whether to use nesterov on the AdamW operation. */
-  } mluOpAdamWDescAttribute_t;
+typedef enum {
+  MLUOP_ADAMW_WEIGHT_DECAY = 0,
+  /*!< Set the weight_decay attribute for the AdamW operation. */
+  MLUOP_ADAMW_GRAD_SCALE = 1,
+  /*!< Set the grad_scale attribute for the AdamW operation. */
+  MLUOP_ADAMW_USE_NESTEROV = 2,
+  /*!< Specifies whether to use nesterov on the AdamW operation. */
+} mluOpAdamWDescAttribute_t;
 
-  typedef struct mluOpAdamWStruct *mluOpAdamWDescriptor_t;
+typedef struct mluOpAdamWStruct *mluOpAdamWDescriptor_t;
 
-  // Group: AdamW
-  /*!
+// Group: AdamW
+/*!
  * @brief Updates each attribute by using AdamW.
  *
  * @param[in] handle
@@ -8957,28 +8937,28 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/OpenBMB/BMTrain/blob/6abcf772aa1e120192f7656e55c4adbcde53c886/csrc/cuda/adam_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpAdamW(mluOpHandle_t handle,
-             mluOpAdamWDescriptor_t adamw_desc,
-             const mluOpTensorDescriptor_t param_desc,
-             void *param,
-             const mluOpTensorDescriptor_t paramh_desc,
-             void *param_h,
-             const mluOpTensorDescriptor_t momentum_desc,
-             void *momentum,
-             const mluOpTensorDescriptor_t velocity_desc,
-             void *velocity,
-             const mluOpTensorDescriptor_t grad_desc,
-             void *grad,
-             const float lr,
-             const float beta1,
-             const float beta2,
-             const float bias1,
-             const float bias2,
-             const float epsilon);
+mluOpStatus_t MLUOP_WIN_API
+mluOpAdamW(mluOpHandle_t handle,
+           mluOpAdamWDescriptor_t adamw_desc,
+           const mluOpTensorDescriptor_t param_desc,
+           void *param,
+           const mluOpTensorDescriptor_t paramh_desc,
+           void *param_h,
+           const mluOpTensorDescriptor_t momentum_desc,
+           void *momentum,
+           const mluOpTensorDescriptor_t velocity_desc,
+           void *velocity,
+           const mluOpTensorDescriptor_t grad_desc,
+           void *grad,
+           const float lr,
+           const float beta1,
+           const float beta2,
+           const float bias1,
+           const float bias2,
+           const float epsilon);
 
-  // Group: AdamW
-  /*!
+// Group: AdamW
+/*!
  * @brief Creates a descriptor pointed by \p adamw_desc for AdamW operation.
  * The information is defined in ::mluOpAdamWDescriptor_t.
  * For more information about the descriptor, see "Cambricon MLU-OPS User Guide".
@@ -9006,11 +8986,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCreateAdamWDescriptor(mluOpAdamWDescriptor_t *adamw_desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateAdamWDescriptor(mluOpAdamWDescriptor_t *adamw_desc);
 
-  // Group: AdamW
-  /*!
+// Group: AdamW
+/*!
  * @brief Initializes the descriptor \b adamw_desc that was previously created with
  * ::mluOpCreateAdamWDescriptor function, and sets AdamW information
  * to the descriptor \b adamw_desc. The information includes \b weight_decay, \b grad_scale
@@ -9051,14 +9031,14 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetAdamWDescAttr(mluOpAdamWDescriptor_t adamw_desc,
-                        mluOpAdamWDescAttribute_t attr,
-                        const void *buf,
-                        const size_t size_in_bytes);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetAdamWDescAttr(mluOpAdamWDescriptor_t adamw_desc,
+                      mluOpAdamWDescAttribute_t attr,
+                      const void *buf,
+                      const size_t size_in_bytes);
 
-  // Group: AdamW
-  /*!
+// Group: AdamW
+/*!
  * @brief Destroys the AdamW descriptor \p adamw_desc that was previously created by
  * ::mluOpCreateAdamWDescriptor.
  *
@@ -9080,11 +9060,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDestroyAdamWDescriptor(mluOpAdamWDescriptor_t adamw_desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyAdamWDescriptor(mluOpAdamWDescriptor_t adamw_desc);
 
-  // Group: DeformRoiPool
-  /*!
+// Group: DeformRoiPool
+/*!
  * @brief Computes deformable roi pooling over \b input tensor. This function firstly divides the obtained
  * candidate region into regions with the same size according to the specified pooling width and pooling height,
  * then adds offsets to rois, and finally calculates the mean value of the sampling points in each bin as output.
@@ -9178,24 +9158,24 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/deform_roi_pool.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
-                            const mluOpTensorDescriptor_t input_desc,
-                            const void *input,
-                            const mluOpTensorDescriptor_t rois_desc,
-                            const void *rois,
-                            const mluOpTensorDescriptor_t offset_desc,
-                            const void *offset,
-                            const int pooled_height,
-                            const int pooled_width,
-                            const float spatial_scale,
-                            const int sampling_ratio,
-                            const float gamma,
-                            const mluOpTensorDescriptor_t output_desc,
-                            void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
+                          const mluOpTensorDescriptor_t input_desc,
+                          const void *input,
+                          const mluOpTensorDescriptor_t rois_desc,
+                          const void *rois,
+                          const mluOpTensorDescriptor_t offset_desc,
+                          const void *offset,
+                          const int pooled_height,
+                          const int pooled_width,
+                          const float spatial_scale,
+                          const int sampling_ratio,
+                          const float gamma,
+                          const mluOpTensorDescriptor_t output_desc,
+                          void *output);
 
-  // Group: DeformRoiPool
-  /*!
+// Group: DeformRoiPool
+/*!
  * @brief Computes the gradient of input \b grad_input and the gradient of offset \b grad_offset
  * based on the gradient of output \b grad_output, input \b input, ROI \b rois, and offset \b offset.
  *
@@ -9292,28 +9272,28 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/deform_roi_pool.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
-                             const mluOpTensorDescriptor_t grad_output_desc,
-                             const void *grad_output,
-                             const mluOpTensorDescriptor_t input_desc,
-                             const void *input,
-                             const mluOpTensorDescriptor_t rois_desc,
-                             const void *rois,
-                             const mluOpTensorDescriptor_t offset_desc,
-                             const void *offset,
-                             const int pooled_height,
-                             const int pooled_width,
-                             const float spatial_scale,
-                             const int sampling_ratio,
-                             const float gamma,
-                             const mluOpTensorDescriptor_t grad_input_desc,
-                             void *grad_input,
-                             const mluOpTensorDescriptor_t grad_offset_desc,
-                             void *grad_offset);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
+                           const mluOpTensorDescriptor_t grad_output_desc,
+                           const void *grad_output,
+                           const mluOpTensorDescriptor_t input_desc,
+                           const void *input,
+                           const mluOpTensorDescriptor_t rois_desc,
+                           const void *rois,
+                           const mluOpTensorDescriptor_t offset_desc,
+                           const void *offset,
+                           const int pooled_height,
+                           const int pooled_width,
+                           const float spatial_scale,
+                           const int sampling_ratio,
+                           const float gamma,
+                           const mluOpTensorDescriptor_t grad_input_desc,
+                           void *grad_input,
+                           const mluOpTensorDescriptor_t grad_offset_desc,
+                           void *grad_offset);
 
-  // Group: BorderAlign
-  /*!
+// Group: BorderAlign
+/*!
  * @brief Extracts the border features of \b input based on the bounding boxes
  * to compute the maximum border features of \b input with the maximum pooling.
  * The computing process of this operation is as follows:
@@ -9449,20 +9429,20 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - http://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/border_align.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpBorderAlignForward(mluOpHandle_t handle,
-                          const mluOpTensorDescriptor_t input_desc,
-                          const void *input,
-                          const mluOpTensorDescriptor_t boxes_desc,
-                          const void *boxes,
-                          const int32_t pool_size,
-                          const mluOpTensorDescriptor_t output_desc,
-                          void *output,
-                          const mluOpTensorDescriptor_t argmax_idx_desc,
-                          void *argmax_idx);
+mluOpStatus_t MLUOP_WIN_API
+mluOpBorderAlignForward(mluOpHandle_t handle,
+                        const mluOpTensorDescriptor_t input_desc,
+                        const void *input,
+                        const mluOpTensorDescriptor_t boxes_desc,
+                        const void *boxes,
+                        const int32_t pool_size,
+                        const mluOpTensorDescriptor_t output_desc,
+                        void *output,
+                        const mluOpTensorDescriptor_t argmax_idx_desc,
+                        void *argmax_idx);
 
-  // Group: BorderAlign
-  /*!
+// Group: BorderAlign
+/*!
  * @brief Computes the gradient of the input tensor of ::mluOpBorderAlignForward
  * according to the output gradient \b grad_output, the maximum pooling index \b
  * argmax_idx and bounding boxes \b boxes .
@@ -9592,20 +9572,20 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - github.com/open-mmlab/mmcv/blob/master/mmcv/ops/border_align.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpBorderAlignBackward(mluOpHandle_t handle,
-                           const mluOpTensorDescriptor_t grad_output_desc,
-                           const void *grad_output,
-                           const mluOpTensorDescriptor_t boxes_desc,
-                           const void *boxes,
-                           const mluOpTensorDescriptor_t argmax_idx_desc,
-                           const void *argmax_idx,
-                           const int32_t pool_size,
-                           const mluOpTensorDescriptor_t grad_input_desc,
-                           void *grad_input);
+mluOpStatus_t MLUOP_WIN_API
+mluOpBorderAlignBackward(mluOpHandle_t handle,
+                         const mluOpTensorDescriptor_t grad_output_desc,
+                         const void *grad_output,
+                         const mluOpTensorDescriptor_t boxes_desc,
+                         const void *boxes,
+                         const mluOpTensorDescriptor_t argmax_idx_desc,
+                         const void *argmax_idx,
+                         const int32_t pool_size,
+                         const mluOpTensorDescriptor_t grad_input_desc,
+                         void *grad_input);
 
-  // Group: SparseConv
-  /*!
+// Group: SparseConv
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as
  * an extra workspace to optimize the indice convolution backward data operation.
  *
@@ -9667,18 +9647,18 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
-                                                     const mluOpTensorDescriptor_t output_grad_desc,
-                                                     const mluOpTensorDescriptor_t filters_desc,
-                                                     const mluOpTensorDescriptor_t indice_pairs_desc,
-                                                     const mluOpTensorDescriptor_t input_grad_desc,
-                                                     const int64_t indice_num[],
-                                                     const int64_t inverse,
-                                                     size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
+                                                   const mluOpTensorDescriptor_t output_grad_desc,
+                                                   const mluOpTensorDescriptor_t filters_desc,
+                                                   const mluOpTensorDescriptor_t indice_pairs_desc,
+                                                   const mluOpTensorDescriptor_t input_grad_desc,
+                                                   const int64_t indice_num[],
+                                                   const int64_t inverse,
+                                                   size_t *workspace_size);
 
-  // Group: SparseConv
-  /*!
+// Group: SparseConv
+/*!
  * @brief Performs the back propagation of an indice convolution operation to
  * compute the gradient of input \b input_grad based on the gradient of response
  * \b output_grad, the filter tensor \b filter, the indice tensor \b indice_pairs,
@@ -9801,24 +9781,24 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/v1.6.1/mmcv/ops/csrc/pytorch/cuda/spconv_ops_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
-                                     const mluOpTensorDescriptor_t output_grad_desc,
-                                     const void *output_grad,
-                                     const mluOpTensorDescriptor_t filters_desc,
-                                     const void *filters,
-                                     const mluOpTensorDescriptor_t indice_pairs_desc,
-                                     const void *indice_pairs,
-                                     const int64_t indice_num[],
-                                     const int64_t inverse,
-                                     const int64_t sub_m,
-                                     void *workspace,
-                                     const size_t workspace_size,
-                                     const mluOpTensorDescriptor_t input_grad_desc,
-                                     void *input_grad);
+mluOpStatus_t MLUOP_WIN_API
+mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
+                                   const mluOpTensorDescriptor_t output_grad_desc,
+                                   const void *output_grad,
+                                   const mluOpTensorDescriptor_t filters_desc,
+                                   const void *filters,
+                                   const mluOpTensorDescriptor_t indice_pairs_desc,
+                                   const void *indice_pairs,
+                                   const int64_t indice_num[],
+                                   const int64_t inverse,
+                                   const int64_t sub_m,
+                                   void *workspace,
+                                   const size_t workspace_size,
+                                   const mluOpTensorDescriptor_t input_grad_desc,
+                                   void *input_grad);
 
-  // Group: SparseConv
-  /*!
+// Group: SparseConv
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
  * to optimize the indice_convolution_backward_filter operation.
  *
@@ -9879,19 +9859,19 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
-                                                       const mluOpTensorDescriptor_t features_desc,
-                                                       const mluOpTensorDescriptor_t output_grad_desc,
-                                                       const mluOpTensorDescriptor_t indice_pairs_desc,
-                                                       const mluOpTensorDescriptor_t filters_grad_desc,
-                                                       const int64_t indice_num[],
-                                                       const int64_t inverse,
-                                                       const int64_t sub_m,
-                                                       size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
+                                                     const mluOpTensorDescriptor_t features_desc,
+                                                     const mluOpTensorDescriptor_t output_grad_desc,
+                                                     const mluOpTensorDescriptor_t indice_pairs_desc,
+                                                     const mluOpTensorDescriptor_t filters_grad_desc,
+                                                     const int64_t indice_num[],
+                                                     const int64_t inverse,
+                                                     const int64_t sub_m,
+                                                     size_t *workspace_size);
 
-  // Group: SparseConv
-  /*!
+// Group: SparseConv
+/*!
  * @brief Computes the indice_convolution_backward_filter operation, then returns the results in the output
  * tensor \b filters_grad.
  *
@@ -9975,24 +9955,24 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/spconv_ops_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
-                                       const mluOpTensorDescriptor_t features_desc,
-                                       const void *features,
-                                       const mluOpTensorDescriptor_t output_grad_desc,
-                                       const void *output_grad,
-                                       const mluOpTensorDescriptor_t indice_pairs_desc,
-                                       const void *indice_pairs,
-                                       const int64_t indice_num[],
-                                       const int64_t inverse,
-                                       const int64_t sub_m,
-                                       void *workspace,
-                                       const size_t workspace_size,
-                                       const mluOpTensorDescriptor_t filters_grad_desc,
-                                       void *filters_grad);
+mluOpStatus_t MLUOP_WIN_API
+mluOpIndiceConvolutionBackwardFilter(mluOpHandle_t handle,
+                                     const mluOpTensorDescriptor_t features_desc,
+                                     const void *features,
+                                     const mluOpTensorDescriptor_t output_grad_desc,
+                                     const void *output_grad,
+                                     const mluOpTensorDescriptor_t indice_pairs_desc,
+                                     const void *indice_pairs,
+                                     const int64_t indice_num[],
+                                     const int64_t inverse,
+                                     const int64_t sub_m,
+                                     void *workspace,
+                                     const size_t workspace_size,
+                                     const mluOpTensorDescriptor_t filters_grad_desc,
+                                     void *filters_grad);
 
-  // Group: RoiPointPool3d
-  /*!
+// Group: RoiPointPool3d
+/*!
  * @brief Returns in \b size the size of the MLU memory in bytes that is used as
  * an extra workspace to optimize ::mluOpRoiPointPool3d.
  *
@@ -10056,22 +10036,22 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
-                                      const int batch_size,
-                                      const int pts_num,
-                                      const int boxes_num,
-                                      const int feature_in_len,
-                                      const int sampled_pts_num,
-                                      const mluOpTensorDescriptor_t points_desc,
-                                      const mluOpTensorDescriptor_t point_features_desc,
-                                      const mluOpTensorDescriptor_t boxes3d_desc,
-                                      const mluOpTensorDescriptor_t pooled_features_desc,
-                                      const mluOpTensorDescriptor_t pooled_empty_flag_desc,
-                                      size_t *size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
+                                    const int batch_size,
+                                    const int pts_num,
+                                    const int boxes_num,
+                                    const int feature_in_len,
+                                    const int sampled_pts_num,
+                                    const mluOpTensorDescriptor_t points_desc,
+                                    const mluOpTensorDescriptor_t point_features_desc,
+                                    const mluOpTensorDescriptor_t boxes3d_desc,
+                                    const mluOpTensorDescriptor_t pooled_features_desc,
+                                    const mluOpTensorDescriptor_t pooled_empty_flag_desc,
+                                    size_t *size);
 
-  // Group: RoiPointPool3d
-  /*!
+// Group: RoiPointPool3d
+/*!
  * @brief Implements a linear interpolation of two tensors \b a and \b b based on
  * a scalar or tensor \b w and returns the results in \b d tensor.
  *
@@ -10151,28 +10131,28 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/v1.5.1/mmcv/ops/csrc/pytorch/cuda/roipoint_pool3d_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiPointPool3d(mluOpHandle_t handle,
-                      const int batch_size,
-                      const int pts_num,
-                      const int boxes_num,
-                      const int feature_in_len,
-                      const int sampled_pts_num,
-                      const mluOpTensorDescriptor_t points_desc,
-                      const void *points,
-                      const mluOpTensorDescriptor_t point_features_desc,
-                      const void *point_features,
-                      const mluOpTensorDescriptor_t boxes3d_desc,
-                      const void *boxes3d,
-                      void *workspace,
-                      size_t workspace_size,
-                      const mluOpTensorDescriptor_t pooled_features_desc,
-                      void *pooled_features,
-                      const mluOpTensorDescriptor_t pooled_empty_flag_desc,
-                      void *pooled_empty_flag);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiPointPool3d(mluOpHandle_t handle,
+                    const int batch_size,
+                    const int pts_num,
+                    const int boxes_num,
+                    const int feature_in_len,
+                    const int sampled_pts_num,
+                    const mluOpTensorDescriptor_t points_desc,
+                    const void *points,
+                    const mluOpTensorDescriptor_t point_features_desc,
+                    const void *point_features,
+                    const mluOpTensorDescriptor_t boxes3d_desc,
+                    const void *boxes3d,
+                    void *workspace,
+                    size_t workspace_size,
+                    const mluOpTensorDescriptor_t pooled_features_desc,
+                    void *pooled_features,
+                    const mluOpTensorDescriptor_t pooled_empty_flag_desc,
+                    void *pooled_empty_flag);
 
-  // Group: ThreeNN
-  /*!
+// Group: ThreeNN
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize ::mluOpThreeNNForward. The size of the extra workspace is
  * based on the given information of ::mluOpThreeNNForward, including the input
@@ -10212,13 +10192,13 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetThreeNNForwardWorkspaceSize(const mluOpHandle_t handle,
-                                      const mluOpTensorDescriptor_t known_desc,
-                                      size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetThreeNNForwardWorkspaceSize(const mluOpHandle_t handle,
+                                    const mluOpTensorDescriptor_t known_desc,
+                                    size_t *workspace_size);
 
-  // Group: ThreeNN
-  /*!
+// Group: ThreeNN
+/*!
  * @brief Finds the closest 3 points of \b unknown among \b known, and outputs \b dist and index
  * \b idx tensor. This function firstly computes dist of each known point to a unknown point, and
  * finds the closest 3 points, and outputs the dist and index of the known point in known dataset.
@@ -10286,21 +10266,21 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/v1.5.2/mmcv/ops/csrc/pytorch/cuda/three_nn_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpThreeNNForward(const mluOpHandle_t handle,
-                      const mluOpTensorDescriptor_t unknown_desc,
-                      const void *unknown,
-                      const mluOpTensorDescriptor_t known_desc,
-                      const void *known,
-                      void *workspace,
-                      const size_t workspace_size,
-                      const mluOpTensorDescriptor_t dist2_desc,
-                      void *dist2,
-                      const mluOpTensorDescriptor_t idx_desc,
-                      void *idx);
+mluOpStatus_t MLUOP_WIN_API
+mluOpThreeNNForward(const mluOpHandle_t handle,
+                    const mluOpTensorDescriptor_t unknown_desc,
+                    const void *unknown,
+                    const mluOpTensorDescriptor_t known_desc,
+                    const void *known,
+                    void *workspace,
+                    const size_t workspace_size,
+                    const mluOpTensorDescriptor_t dist2_desc,
+                    void *dist2,
+                    const mluOpTensorDescriptor_t idx_desc,
+                    void *idx);
 
-  // Group: SparseConv
-  /*!
+// Group: SparseConv
+/*!
  * @brief Returns in \b workspace_size of the MLU memory which is used as an extra workspace
  * to boost up indice_convolution_forward computation.
  *
@@ -10363,20 +10343,20 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
-                                                const mluOpTensorDescriptor_t features_desc,
-                                                const mluOpTensorDescriptor_t filters_desc,
-                                                const mluOpTensorDescriptor_t indice_pairs_desc,
-                                                const mluOpTensorDescriptor_t features_out_desc,
-                                                const int64_t indice_num[],
-                                                const int64_t num_act_out,
-                                                const int64_t inverse,
-                                                const int64_t sub_m,
-                                                size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
+                                              const mluOpTensorDescriptor_t features_desc,
+                                              const mluOpTensorDescriptor_t filters_desc,
+                                              const mluOpTensorDescriptor_t indice_pairs_desc,
+                                              const mluOpTensorDescriptor_t features_out_desc,
+                                              const int64_t indice_num[],
+                                              const int64_t num_act_out,
+                                              const int64_t inverse,
+                                              const int64_t sub_m,
+                                              size_t *workspace_size);
 
-  // Group: SparseConv
-  /*!
+// Group: SparseConv
+/*!
  * @brief Performs convolution on input sparse tensor \b features with kernel \b filters,
  * then returns the output sparse tensor \b features_out.
  *
@@ -10475,25 +10455,25 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/v1.6.1/mmcv/ops/csrc/pytorch/cuda/spconv_ops_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpIndiceConvolutionForward(mluOpHandle_t handle,
-                                const mluOpTensorDescriptor_t features_desc,
-                                const void *features,
-                                const mluOpTensorDescriptor_t filters_desc,
-                                const void *filters,
-                                const mluOpTensorDescriptor_t indice_pairs_desc,
-                                const void *indice_pairs,
-                                const int64_t indice_num[],
-                                const int64_t num_act_out,
-                                const int64_t inverse,
-                                const int64_t sub_m,
-                                void *workspace,
-                                size_t workspace_size,
-                                const mluOpTensorDescriptor_t features_out_desc,
-                                void *features_out);
+mluOpStatus_t MLUOP_WIN_API
+mluOpIndiceConvolutionForward(mluOpHandle_t handle,
+                              const mluOpTensorDescriptor_t features_desc,
+                              const void *features,
+                              const mluOpTensorDescriptor_t filters_desc,
+                              const void *filters,
+                              const mluOpTensorDescriptor_t indice_pairs_desc,
+                              const void *indice_pairs,
+                              const int64_t indice_num[],
+                              const int64_t num_act_out,
+                              const int64_t inverse,
+                              const int64_t sub_m,
+                              void *workspace,
+                              size_t workspace_size,
+                              const mluOpTensorDescriptor_t features_out_desc,
+                              void *features_out);
 
-  // Group: MoeDispatch
-  /*!
+// Group: MoeDispatch
+/*!
  * @brief Dispatches the order of \b input tensor, and returns the
  * results in the output tensor \b dispatch in the MoE algorithm.
  *
@@ -10581,25 +10561,25 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/microsoft/tutel/blob/v0.2.0/tutel/jit_kernels/sparse.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpMoeDispatchForward(mluOpHandle_t handle,
-                          const mluOpTensorDescriptor_t gates_desc,
-                          const void *gates,
-                          const mluOpTensorDescriptor_t indices_desc,
-                          const void *indices,
-                          const mluOpTensorDescriptor_t locations_desc,
-                          const void *locations,
-                          const mluOpTensorDescriptor_t input_desc,
-                          const void *input,
-                          const int samples,
-                          const int capacity,
-                          const int hidden,
-                          const int num_experts,
-                          const mluOpTensorDescriptor_t dispatch_desc,
-                          void *dispatch);
+mluOpStatus_t MLUOP_WIN_API
+mluOpMoeDispatchForward(mluOpHandle_t handle,
+                        const mluOpTensorDescriptor_t gates_desc,
+                        const void *gates,
+                        const mluOpTensorDescriptor_t indices_desc,
+                        const void *indices,
+                        const mluOpTensorDescriptor_t locations_desc,
+                        const void *locations,
+                        const mluOpTensorDescriptor_t input_desc,
+                        const void *input,
+                        const int samples,
+                        const int capacity,
+                        const int hidden,
+                        const int num_experts,
+                        const mluOpTensorDescriptor_t dispatch_desc,
+                        void *dispatch);
 
-  // Group: MoeDispatch
-  /*!
+// Group: MoeDispatch
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace
  * to optimize the moe_dispatch_backward_gate operation.
  *
@@ -10640,13 +10620,13 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
-                                               const mluOpTensorDescriptor_t input_desc,
-                                               size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
+                                             const mluOpTensorDescriptor_t input_desc,
+                                             size_t *workspace_size);
 
-  // Group: MoeDispatch
-  /*!
+// Group: MoeDispatch
+/*!
  * @brief Calculates the inverse gradient of \b gates tensor, and returns the results in the output
  * tensor \b grad_gates.
  *
@@ -10741,27 +10721,27 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/microsoft/tutel/blob/v0.2.0/tutel/jit_kernels/sparse.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
-                               const mluOpTensorDescriptor_t indices_desc,
-                               const void *indices,
-                               const mluOpTensorDescriptor_t locations_desc,
-                               const void *locations,
-                               const mluOpTensorDescriptor_t input_desc,
-                               const void *input,
-                               const mluOpTensorDescriptor_t dispatch_desc,
-                               const void *dispatch,
-                               const int samples,
-                               const int capacity,
-                               const int hidden,
-                               const int num_experts,
-                               void *workspace,
-                               const size_t workspace_size,
-                               const mluOpTensorDescriptor_t grad_gates_desc,
-                               void *grad_gates);
+mluOpStatus_t MLUOP_WIN_API
+mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
+                             const mluOpTensorDescriptor_t indices_desc,
+                             const void *indices,
+                             const mluOpTensorDescriptor_t locations_desc,
+                             const void *locations,
+                             const mluOpTensorDescriptor_t input_desc,
+                             const void *input,
+                             const mluOpTensorDescriptor_t dispatch_desc,
+                             const void *dispatch,
+                             const int samples,
+                             const int capacity,
+                             const int hidden,
+                             const int num_experts,
+                             void *workspace,
+                             const size_t workspace_size,
+                             const mluOpTensorDescriptor_t grad_gates_desc,
+                             void *grad_gates);
 
-  // Group: PointsInBoxes
-  /*!
+// Group: PointsInBoxes
+/*!
  * @brief Detects the first 3D box that each point belongs to in given points cloud data.
  *
  * @param[in] handle
@@ -10816,17 +10796,17 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - https://github.com/open-mmlab/OpenPCDet/blob/master/pcdet/
  *   ops/roiaware_pool3d/src/roiaware_pool3d_kernel.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpPointsInBoxes(mluOpHandle_t handle,
-                     const mluOpTensorDescriptor_t points_desc,
-                     const void *points,
-                     const mluOpTensorDescriptor_t boxes_desc,
-                     const void *boxes,
-                     const mluOpTensorDescriptor_t points_indices_desc,
-                     void *points_indices);
+mluOpStatus_t MLUOP_WIN_API
+mluOpPointsInBoxes(mluOpHandle_t handle,
+                   const mluOpTensorDescriptor_t points_desc,
+                   const void *points,
+                   const mluOpTensorDescriptor_t boxes_desc,
+                   const void *boxes,
+                   const mluOpTensorDescriptor_t points_indices_desc,
+                   void *points_indices);
 
-  // Group: RoiAlign
-  /*!
+// Group: RoiAlign
+/*!
  * @brief Computes the gradients of images \b grads_image using the gradients \b grads and
  * bounding boxes \b boxes to perform the backpropagation of ::mluOpRoiAlignForward_v2
  * function.
@@ -10909,20 +10889,20 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://pytorch.org/vision/stable/ops.html#torchvision.ops.roi_align
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiAlignBackward(mluOpHandle_t handle,
-                        const float spatial_scale,
-                        const int sampling_ratio,
-                        const bool aligned,
-                        const mluOpTensorDescriptor_t grads_desc,
-                        const void *grads,
-                        const mluOpTensorDescriptor_t boxes_desc,
-                        const void *boxes,
-                        const mluOpTensorDescriptor_t grads_image_desc,
-                        void *grads_image);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignBackward(mluOpHandle_t handle,
+                      const float spatial_scale,
+                      const int sampling_ratio,
+                      const bool aligned,
+                      const mluOpTensorDescriptor_t grads_desc,
+                      const void *grads,
+                      const mluOpTensorDescriptor_t boxes_desc,
+                      const void *boxes,
+                      const mluOpTensorDescriptor_t grads_image_desc,
+                      void *grads_image);
 
-  // Group: RoiAlign
-  /*!
+// Group: RoiAlign
+/*!
  * @brief Computes the gradients of images \b grads_image based on the gradients \b grads,
  * bounding boxes \b boxes, the coordinate of x axis \b argmax_x, and the coordinate of y axis
  * \b argmax_y to perform this function. Compared with ::mluOpRoiAlignBackward, in addition to
@@ -11042,25 +11022,25 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - http://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/roi_align_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiAlignBackward_v2(mluOpHandle_t handle,
-                           const mluOpTensorDescriptor_t grads_desc,
-                           const void *grads,
-                           const mluOpTensorDescriptor_t boxes_desc,
-                           const void *boxes,
-                           const mluOpTensorDescriptor_t argmax_x_desc,
-                           const void *argmax_x,
-                           const mluOpTensorDescriptor_t argmax_y_desc,
-                           const void *argmax_y,
-                           const float spatial_scale,
-                           const int sampling_ratio,
-                           const bool aligned,
-                           const int pool_mode,
-                           const mluOpTensorDescriptor_t grads_image_desc,
-                           void *grads_image);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiAlignBackward_v2(mluOpHandle_t handle,
+                         const mluOpTensorDescriptor_t grads_desc,
+                         const void *grads,
+                         const mluOpTensorDescriptor_t boxes_desc,
+                         const void *boxes,
+                         const mluOpTensorDescriptor_t argmax_x_desc,
+                         const void *argmax_x,
+                         const mluOpTensorDescriptor_t argmax_y_desc,
+                         const void *argmax_y,
+                         const float spatial_scale,
+                         const int sampling_ratio,
+                         const bool aligned,
+                         const int pool_mode,
+                         const mluOpTensorDescriptor_t grads_image_desc,
+                         void *grads_image);
 
-  // Group: MsDeformAttn
-  /*!
+// Group: MsDeformAttn
+/*!
  * @brief Implements a multi-scale deformable attention module used in Deformable-Detr.
  * For detailed information about Deformable-Detr, see "Deformable DETR: Deformable
  * Transformers for End-to-End Object Detection".
@@ -11122,24 +11102,24 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - Deformable DETR: Deformable Transformers for End-to-End Object Detection, Xizhou Zhu, 2020.
  * - https://arxiv.org/pdf/2010.04159
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpMsDeformAttnForward(mluOpHandle_t handle,
-                           const mluOpTensorDescriptor_t data_value_desc,
-                           const void *data_value,
-                           const mluOpTensorDescriptor_t data_spatial_shapes_desc,
-                           const void *data_spatial_shapes,
-                           const mluOpTensorDescriptor_t data_level_start_index_desc,
-                           const void *data_level_start_index,
-                           const mluOpTensorDescriptor_t data_sampling_loc_desc,
-                           const void *data_sampling_loc,
-                           const mluOpTensorDescriptor_t data_attn_weight_desc,
-                           const void *data_attn_weight,
-                           const int im2col_step,
-                           const mluOpTensorDescriptor_t data_col_desc,
-                           void *data_col);
+mluOpStatus_t MLUOP_WIN_API
+mluOpMsDeformAttnForward(mluOpHandle_t handle,
+                         const mluOpTensorDescriptor_t data_value_desc,
+                         const void *data_value,
+                         const mluOpTensorDescriptor_t data_spatial_shapes_desc,
+                         const void *data_spatial_shapes,
+                         const mluOpTensorDescriptor_t data_level_start_index_desc,
+                         const void *data_level_start_index,
+                         const mluOpTensorDescriptor_t data_sampling_loc_desc,
+                         const void *data_sampling_loc,
+                         const mluOpTensorDescriptor_t data_attn_weight_desc,
+                         const void *data_attn_weight,
+                         const int im2col_step,
+                         const mluOpTensorDescriptor_t data_col_desc,
+                         void *data_col);
 
-  // Group: TinShift
-  /*!
+// Group: TinShift
+/*!
  * @brief Shifts gradients from \b grad_output according to shift information in \b shifts and stores the
  * result into \b grad_input.
  *
@@ -11193,17 +11173,17 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - http://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/tin_shift.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpTinShiftBackward(mluOpHandle_t handle,
-                        const mluOpTensorDescriptor_t grad_output_desc,
-                        const void *grad_output,
-                        const mluOpTensorDescriptor_t shifts_desc,
-                        const void *shifts,
-                        const mluOpTensorDescriptor_t grad_input_desc,
-                        void *grad_input);
+mluOpStatus_t MLUOP_WIN_API
+mluOpTinShiftBackward(mluOpHandle_t handle,
+                      const mluOpTensorDescriptor_t grad_output_desc,
+                      const void *grad_output,
+                      const mluOpTensorDescriptor_t shifts_desc,
+                      const void *shifts,
+                      const mluOpTensorDescriptor_t grad_input_desc,
+                      void *grad_input);
 
-  // Group: TinShift
-  /*!
+// Group: TinShift
+/*!
  * @brief Shifts datas from \b input according to shift information in \b shifts and stores the
  * result into \b output.
  *
@@ -11257,17 +11237,17 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - http://github.com/open-mmlab/mmcv/tree/master/mmcv/ops/tin_shift.py
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpTinShiftForward(mluOpHandle_t handle,
-                       const mluOpTensorDescriptor_t input_desc,
-                       const void *input,
-                       const mluOpTensorDescriptor_t shifts_desc,
-                       const void *shifts,
-                       const mluOpTensorDescriptor_t output_desc,
-                       void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpTinShiftForward(mluOpHandle_t handle,
+                     const mluOpTensorDescriptor_t input_desc,
+                     const void *input,
+                     const mluOpTensorDescriptor_t shifts_desc,
+                     const void *shifts,
+                     const mluOpTensorDescriptor_t output_desc,
+                     void *output);
 
-  // Group: MaskedIm2col
-  /*!
+// Group: MaskedIm2col
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra workspace to
  * optimize the MaskedCol2imForward operation.
  *
@@ -11313,16 +11293,16 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetMaskedCol2imForwardWorkspaceSize(mluOpHandle_t handle,
-                                           const mluOpTensorDescriptor_t col_desc,
-                                           const mluOpTensorDescriptor_t mask_h_idx_desc,
-                                           const mluOpTensorDescriptor_t mask_w_idx_desc,
-                                           const mluOpTensorDescriptor_t im_desc,
-                                           size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetMaskedCol2imForwardWorkspaceSize(mluOpHandle_t handle,
+                                         const mluOpTensorDescriptor_t col_desc,
+                                         const mluOpTensorDescriptor_t mask_h_idx_desc,
+                                         const mluOpTensorDescriptor_t mask_w_idx_desc,
+                                         const mluOpTensorDescriptor_t im_desc,
+                                         size_t *workspace_size);
 
-  // Group: MaskedIm2col
-  /*!
+// Group: MaskedIm2col
+/*!
  * @brief  Copies the data of the input tensor \b col to the special coordinates by combining \b mask_h_idx tensor
  * and \b mask_w_idx tensor of output tensor \b im.
  *
@@ -11400,21 +11380,21 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/master/mmcv/ops/csrc/pytorch/cuda/masked_conv2d_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpMaskedCol2imForward(mluOpHandle_t handle,
-                           const mluOpTensorDescriptor_t col_desc,
-                           const void *col,
-                           const mluOpTensorDescriptor_t mask_h_idx_desc,
-                           const void *mask_h_idx,
-                           const mluOpTensorDescriptor_t mask_w_idx_desc,
-                           const void *mask_w_idx,
-                           const size_t workspace_size,
-                           void *workspace,
-                           const mluOpTensorDescriptor_t im_desc,
-                           void *im);
+mluOpStatus_t MLUOP_WIN_API
+mluOpMaskedCol2imForward(mluOpHandle_t handle,
+                         const mluOpTensorDescriptor_t col_desc,
+                         const void *col,
+                         const mluOpTensorDescriptor_t mask_h_idx_desc,
+                         const void *mask_h_idx,
+                         const mluOpTensorDescriptor_t mask_w_idx_desc,
+                         const void *mask_w_idx,
+                         const size_t workspace_size,
+                         void *workspace,
+                         const mluOpTensorDescriptor_t im_desc,
+                         void *im);
 
-  // Group: DiffIouRotatedSortVertices
-  /*!
+// Group: DiffIouRotatedSortVertices
+/*!
  * @brief Sorts the effective vertices of the polygon formed by the intersection of two boxes,
  * and outputs the sorted vertex index.
  *
@@ -11474,19 +11454,19 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/open-mmlab/mmcv/blob/main/mmcv/ops/csrc/pytorch/cuda/diff_iou_rotated_cuda.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
-                                         const mluOpTensorDescriptor_t vertices_desc,
-                                         const void *vertices,
-                                         const mluOpTensorDescriptor_t mask_desc,
-                                         const void *mask,
-                                         const mluOpTensorDescriptor_t num_valid_desc,
-                                         const void *num_valid,
-                                         const mluOpTensorDescriptor_t idx_desc,
-                                         void *idx);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
+                                       const mluOpTensorDescriptor_t vertices_desc,
+                                       const void *vertices,
+                                       const mluOpTensorDescriptor_t mask_desc,
+                                       const void *mask,
+                                       const mluOpTensorDescriptor_t num_valid_desc,
+                                       const void *num_valid,
+                                       const mluOpTensorDescriptor_t idx_desc,
+                                       void *idx);
 
-  // Group: RoiPooling
-  /*!
+// Group: RoiPooling
+/*!
  * @brief Generates a fixed size feature map and input feature index
  * of argmax for each ROI (Regions of Interest) to perform ::mluOpRoiPoolingForward operation.
  *
@@ -11615,20 +11595,20 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://github.com/pytorch/pytorch/caffe2/operators/roi_pool_op.cu
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiPoolingForward(mluOpHandle_t handle,
-                         mluOpPoolingMode_t pooling_mode,
-                         const mluOpTensorDescriptor_t input_desc,
-                         const void *input,
-                         const mluOpTensorDescriptor_t rois_desc,
-                         const void *rois,
-                         float spatial_scale,
-                         const mluOpTensorDescriptor_t output_desc,
-                         void *output,
-                         int *argmax);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiPoolingForward(mluOpHandle_t handle,
+                       mluOpPoolingMode_t pooling_mode,
+                       const mluOpTensorDescriptor_t input_desc,
+                       const void *input,
+                       const mluOpTensorDescriptor_t rois_desc,
+                       const void *rois,
+                       float spatial_scale,
+                       const mluOpTensorDescriptor_t output_desc,
+                       void *output,
+                       int *argmax);
 
-  // Group: RoiPooling
-  /*!
+// Group: RoiPooling
+/*!
  * @brief Computes the gradients of image \b grads_image based on the gradients \b grads and
  * region proposals \b rois to perform the backpropagation of ::mluOpRoiPoolingForward operation.
  *
@@ -11716,21 +11696,21 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - https://pytorch.org/vision/stable/ops.html#torchvision.ops.roi_pool
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpRoiPoolingBackward(mluOpHandle_t handle,
-                          mluOpPoolingMode_t pooling_mode,
-                          const mluOpTensorDescriptor_t grads_desc,
-                          const void *grads,
-                          const mluOpTensorDescriptor_t rois_desc,
-                          const void *rois,
-                          const mluOpTensorDescriptor_t argmax_desc,
-                          const int *argmax,
-                          const float spatial_scale,
-                          const mluOpTensorDescriptor_t grads_image_desc,
-                          void *grads_image);
+mluOpStatus_t MLUOP_WIN_API
+mluOpRoiPoolingBackward(mluOpHandle_t handle,
+                        mluOpPoolingMode_t pooling_mode,
+                        const mluOpTensorDescriptor_t grads_desc,
+                        const void *grads,
+                        const mluOpTensorDescriptor_t rois_desc,
+                        const void *rois,
+                        const mluOpTensorDescriptor_t argmax_desc,
+                        const int *argmax,
+                        const float spatial_scale,
+                        const mluOpTensorDescriptor_t grads_image_desc,
+                        void *grads_image);
 
-  // Group: SyncBatchNorm
-  /*!
+// Group: SyncBatchNorm
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize ::mluOpSyncBatchNormStats_v2 operation.
  *
@@ -11772,13 +11752,13 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetSyncBatchNormStatsWorkspaceSize(mluOpHandle_t handle,
-                                          const mluOpTensorDescriptor_t x_desc,
-                                          size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSyncBatchNormStatsWorkspaceSize(mluOpHandle_t handle,
+                                        const mluOpTensorDescriptor_t x_desc,
+                                        size_t *workspace_size);
 
-  // Group: SyncBatchNorm
-  /*!
+// Group: SyncBatchNorm
+/*!
  * @brief Computes the local mean and the local inverse standard deviation for each channel
  * across a batch of data in the training scenario.
  *
@@ -11860,20 +11840,20 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - https://pytorch.org/docs/1.6.0/jit_builtin_functions.html?highlight=batch_norm_stats
  *
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSyncBatchNormStats_v2(mluOpHandle_t handle,
-                             const mluOpTensorDescriptor_t x_desc,
-                             const void *x,
-                             void *workspace,
-                             size_t workspace_size,
-                             const float eps,
-                             const mluOpTensorDescriptor_t mean_desc,
-                             void *mean,
-                             const mluOpTensorDescriptor_t invstd_desc,
-                             void *invstd);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormStats_v2(mluOpHandle_t handle,
+                           const mluOpTensorDescriptor_t x_desc,
+                           const void *x,
+                           void *workspace,
+                           size_t workspace_size,
+                           const float eps,
+                           const mluOpTensorDescriptor_t mean_desc,
+                           void *mean,
+                           const mluOpTensorDescriptor_t invstd_desc,
+                           void *invstd);
 
-  // Group: SyncBatchNorm
-  /*!
+// Group: SyncBatchNorm
+/*!
  * @brief Computes the local mean and the local inverse standard deviation for each channel
  * across a batch of data in the training scenario.
  *
@@ -11946,18 +11926,18 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - https://pytorch.org/docs/1.6.0/jit_builtin_functions.html?highlight=batch_norm_stats
  *
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSyncBatchNormStats(mluOpHandle_t handle,
-                          const mluOpTensorDescriptor_t x_desc,
-                          const void *x,
-                          const float eps,
-                          const mluOpTensorDescriptor_t mean_desc,
-                          void *mean,
-                          const mluOpTensorDescriptor_t invstd_desc,
-                          void *invstd);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormStats(mluOpHandle_t handle,
+                        const mluOpTensorDescriptor_t x_desc,
+                        const void *x,
+                        const float eps,
+                        const mluOpTensorDescriptor_t mean_desc,
+                        void *mean,
+                        const mluOpTensorDescriptor_t invstd_desc,
+                        void *invstd);
 
-  // Group: SyncBatchNorm
-  /*!
+// Group: SyncBatchNorm
+/*!
  * @brief Computes the global mean and the global inverse standard deviation across aggregation
  * of the local mean and local inverse standard deviation of multiple MLU devices.
  *
@@ -12066,27 +12046,27 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - https://pytorch.org/docs/1.6.0/jit_builtin_functions.html?highlight=batch_norm_stats
  *
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSyncBatchNormGatherStatsWithCounts(mluOpHandle_t handle,
-                                          const mluOpTensorDescriptor_t mean_all_desc,
-                                          const void *mean_all,
-                                          const mluOpTensorDescriptor_t invstd_all_desc,
-                                          const void *invstd_all,
-                                          const mluOpTensorDescriptor_t moving_mean_desc,
-                                          void *moving_mean,
-                                          const mluOpTensorDescriptor_t moving_var_desc,
-                                          void *moving_var,
-                                          float momentum,
-                                          float eps,
-                                          const mluOpTensorDescriptor_t count_all_desc,
-                                          const void *count_all,
-                                          const mluOpTensorDescriptor_t mean_desc,
-                                          void *mean,
-                                          const mluOpTensorDescriptor_t invstd_desc,
-                                          void *invstd);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormGatherStatsWithCounts(mluOpHandle_t handle,
+                                        const mluOpTensorDescriptor_t mean_all_desc,
+                                        const void *mean_all,
+                                        const mluOpTensorDescriptor_t invstd_all_desc,
+                                        const void *invstd_all,
+                                        const mluOpTensorDescriptor_t moving_mean_desc,
+                                        void *moving_mean,
+                                        const mluOpTensorDescriptor_t moving_var_desc,
+                                        void *moving_var,
+                                        float momentum,
+                                        float eps,
+                                        const mluOpTensorDescriptor_t count_all_desc,
+                                        const void *count_all,
+                                        const mluOpTensorDescriptor_t mean_desc,
+                                        void *mean,
+                                        const mluOpTensorDescriptor_t invstd_desc,
+                                        void *invstd);
 
-  // Group: SyncBatchNorm
-  /*!
+// Group: SyncBatchNorm
+/*!
  * @brief Applies Batch Normalization for each channel across a batch of data with the given mean,
  *        inverse variance and scaling factors.
  *
@@ -12184,23 +12164,23 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  *   Sergey Ioffe, 2015.
  *
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSyncBatchNormElemt(mluOpHandle_t handle,
-                          const mluOpTensorDescriptor_t x_desc,
-                          const void *x,
-                          const mluOpTensorDescriptor_t mean_desc,
-                          const void *mean,
-                          const mluOpTensorDescriptor_t invstd_desc,
-                          const void *invstd,
-                          const mluOpTensorDescriptor_t filter_desc,
-                          const void *filter,
-                          const mluOpTensorDescriptor_t bias_desc,
-                          const void *bias,
-                          const mluOpTensorDescriptor_t y_desc,
-                          void *y);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormElemt(mluOpHandle_t handle,
+                        const mluOpTensorDescriptor_t x_desc,
+                        const void *x,
+                        const mluOpTensorDescriptor_t mean_desc,
+                        const void *mean,
+                        const mluOpTensorDescriptor_t invstd_desc,
+                        const void *invstd,
+                        const mluOpTensorDescriptor_t filter_desc,
+                        const void *filter,
+                        const mluOpTensorDescriptor_t bias_desc,
+                        const void *bias,
+                        const mluOpTensorDescriptor_t y_desc,
+                        void *y);
 
-  // Group: SyncBatchNorm
-  /*!
+// Group: SyncBatchNorm
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize the sync_batchnorm_backward_reduce operation.
  *
@@ -12242,13 +12222,13 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetSyncBatchNormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
-                                                   const mluOpTensorDescriptor_t x_desc,
-                                                   size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSyncBatchNormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
+                                                 const mluOpTensorDescriptor_t x_desc,
+                                                 size_t *workspace_size);
 
-  // Group: Deprecated APIs
-  /*!
+// Group: Deprecated APIs
+/*!
  * @brief Returns in \b workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize the sync_batchnorm_backward_reduce operation.
  *
@@ -12295,13 +12275,13 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
-                                                   const mluOpTensorDescriptor_t x_desc,
-                                                   size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(mluOpHandle_t handle,
+                                                 const mluOpTensorDescriptor_t x_desc,
+                                                 size_t *workspace_size);
 
-  // Group: SyncBatchNorm
-  /*!
+// Group: SyncBatchNorm
+/*!
  * @brief Applies Synchronized Batch Normalization Reduce operator to backwardly compute grad
  * filters, grad bias, sum_dy and sum_dy_xmu on each MLU device.
  *
@@ -12448,32 +12428,32 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  *   Sergey Ioffe, 2015.
  *
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSyncBatchNormBackwardReduce_v2(mluOpHandle_t handle,
-                                      const mluOpTensorDescriptor_t desc_dz,
-                                      const void *dz,
-                                      const mluOpTensorDescriptor_t desc_x,
-                                      const void *x,
-                                      const mluOpTensorDescriptor_t desc_mean,
-                                      const void *mean,
-                                      const mluOpTensorDescriptor_t desc_invstd,
-                                      const void *invstd,
-                                      void *workspace,
-                                      size_t workspace_size,
-                                      const mluOpTensorDescriptor_t desc_dfilter,
-                                      void *dfilter,
-                                      const mluOpTensorDescriptor_t desc_dbias,
-                                      void *dbias,
-                                      const mluOpTensorDescriptor_t desc_sum_dy,
-                                      void *sum_dy,
-                                      const mluOpTensorDescriptor_t desc_sum_dy_xmu,
-                                      void *sum_dy_xmu,
-                                      const bool needs_input_grad0,
-                                      const bool needs_input_grad1,
-                                      const bool needs_input_grad2);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormBackwardReduce_v2(mluOpHandle_t handle,
+                                    const mluOpTensorDescriptor_t desc_dz,
+                                    const void *dz,
+                                    const mluOpTensorDescriptor_t desc_x,
+                                    const void *x,
+                                    const mluOpTensorDescriptor_t desc_mean,
+                                    const void *mean,
+                                    const mluOpTensorDescriptor_t desc_invstd,
+                                    const void *invstd,
+                                    void *workspace,
+                                    size_t workspace_size,
+                                    const mluOpTensorDescriptor_t desc_dfilter,
+                                    void *dfilter,
+                                    const mluOpTensorDescriptor_t desc_dbias,
+                                    void *dbias,
+                                    const mluOpTensorDescriptor_t desc_sum_dy,
+                                    void *sum_dy,
+                                    const mluOpTensorDescriptor_t desc_sum_dy_xmu,
+                                    void *sum_dy_xmu,
+                                    const bool needs_input_grad0,
+                                    const bool needs_input_grad1,
+                                    const bool needs_input_grad2);
 
-  // Group: Deprecated APIs
-  /*!
+// Group: Deprecated APIs
+/*!
  * @brief Applies Synchronized Batch Normalization Reduce operator to backwardly compute grad
  * filters, grad bias, sum_dy and sum_dy_xmu on each MLU device.
  *
@@ -12625,32 +12605,32 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  *   Sergey Ioffe, 2015.
  *
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSyncBatchnormBackwardReduce_v2(mluOpHandle_t handle,
-                                      const mluOpTensorDescriptor_t desc_dz,
-                                      const void *dz,
-                                      const mluOpTensorDescriptor_t desc_x,
-                                      const void *x,
-                                      const mluOpTensorDescriptor_t desc_mean,
-                                      const void *mean,
-                                      const mluOpTensorDescriptor_t desc_invstd,
-                                      const void *invstd,
-                                      void *workspace,
-                                      size_t workspace_size,
-                                      const mluOpTensorDescriptor_t desc_dfilter,
-                                      void *dfilter,
-                                      const mluOpTensorDescriptor_t desc_dbias,
-                                      void *dbias,
-                                      const mluOpTensorDescriptor_t desc_sum_dy,
-                                      void *sum_dy,
-                                      const mluOpTensorDescriptor_t desc_sum_dy_xmu,
-                                      void *sum_dy_xmu,
-                                      const bool needs_input_grad0,
-                                      const bool needs_input_grad1,
-                                      const bool needs_input_grad2);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchnormBackwardReduce_v2(mluOpHandle_t handle,
+                                    const mluOpTensorDescriptor_t desc_dz,
+                                    const void *dz,
+                                    const mluOpTensorDescriptor_t desc_x,
+                                    const void *x,
+                                    const mluOpTensorDescriptor_t desc_mean,
+                                    const void *mean,
+                                    const mluOpTensorDescriptor_t desc_invstd,
+                                    const void *invstd,
+                                    void *workspace,
+                                    size_t workspace_size,
+                                    const mluOpTensorDescriptor_t desc_dfilter,
+                                    void *dfilter,
+                                    const mluOpTensorDescriptor_t desc_dbias,
+                                    void *dbias,
+                                    const mluOpTensorDescriptor_t desc_sum_dy,
+                                    void *sum_dy,
+                                    const mluOpTensorDescriptor_t desc_sum_dy_xmu,
+                                    void *sum_dy_xmu,
+                                    const bool needs_input_grad0,
+                                    const bool needs_input_grad1,
+                                    const bool needs_input_grad2);
 
-  // Group: SyncBatchNorm
-  /*!
+// Group: SyncBatchNorm
+/*!
  * @brief Applies Synchronized Batch Normalization Reduce operator to backwardly compute grad filters,
  * grad bias, sum_dy and sum_dy_xmu on each MLU device.
  *
@@ -12782,30 +12762,30 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  *   Sergey Ioffe, 2015.
  *
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSyncBatchNormBackwardReduce(mluOpHandle_t handle,
-                                   const mluOpTensorDescriptor_t desc_dz,
-                                   const void *dz,
-                                   const mluOpTensorDescriptor_t desc_x,
-                                   const void *x,
-                                   const mluOpTensorDescriptor_t desc_mean,
-                                   const void *mean,
-                                   const mluOpTensorDescriptor_t desc_invstd,
-                                   const void *invstd,
-                                   const mluOpTensorDescriptor_t desc_dfilter,
-                                   void *dfilter,
-                                   const mluOpTensorDescriptor_t desc_dbias,
-                                   void *dbias,
-                                   const mluOpTensorDescriptor_t desc_sum_dy,
-                                   void *sum_dy,
-                                   const mluOpTensorDescriptor_t desc_sum_dy_xmu,
-                                   void *sum_dy_xmu,
-                                   const bool needs_input_grad0,
-                                   const bool needs_input_grad1,
-                                   const bool needs_input_grad2);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormBackwardReduce(mluOpHandle_t handle,
+                                 const mluOpTensorDescriptor_t desc_dz,
+                                 const void *dz,
+                                 const mluOpTensorDescriptor_t desc_x,
+                                 const void *x,
+                                 const mluOpTensorDescriptor_t desc_mean,
+                                 const void *mean,
+                                 const mluOpTensorDescriptor_t desc_invstd,
+                                 const void *invstd,
+                                 const mluOpTensorDescriptor_t desc_dfilter,
+                                 void *dfilter,
+                                 const mluOpTensorDescriptor_t desc_dbias,
+                                 void *dbias,
+                                 const mluOpTensorDescriptor_t desc_sum_dy,
+                                 void *sum_dy,
+                                 const mluOpTensorDescriptor_t desc_sum_dy_xmu,
+                                 void *sum_dy_xmu,
+                                 const bool needs_input_grad0,
+                                 const bool needs_input_grad1,
+                                 const bool needs_input_grad2);
 
-  // Group: Deprecated APIs
-  /*!
+// Group: Deprecated APIs
+/*!
  * @brief Applies Synchronized Batch Normalization Reduce operator to backwardly compute grad filters,
  * grad bias, sum_dy and sum_dy_xmu on each MLU device.
  *
@@ -12942,30 +12922,30 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  *   Sergey Ioffe, 2015.
  *
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSyncBatchnormBackwardReduce(mluOpHandle_t handle,
-                                   const mluOpTensorDescriptor_t desc_dz,
-                                   const void *dz,
-                                   const mluOpTensorDescriptor_t desc_x,
-                                   const void *x,
-                                   const mluOpTensorDescriptor_t desc_mean,
-                                   const void *mean,
-                                   const mluOpTensorDescriptor_t desc_invstd,
-                                   const void *invstd,
-                                   const mluOpTensorDescriptor_t desc_dfilter,
-                                   void *dfilter,
-                                   const mluOpTensorDescriptor_t desc_dbias,
-                                   void *dbias,
-                                   const mluOpTensorDescriptor_t desc_sum_dy,
-                                   void *sum_dy,
-                                   const mluOpTensorDescriptor_t desc_sum_dy_xmu,
-                                   void *sum_dy_xmu,
-                                   const bool needs_input_grad0,
-                                   const bool needs_input_grad1,
-                                   const bool needs_input_grad2);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchnormBackwardReduce(mluOpHandle_t handle,
+                                 const mluOpTensorDescriptor_t desc_dz,
+                                 const void *dz,
+                                 const mluOpTensorDescriptor_t desc_x,
+                                 const void *x,
+                                 const mluOpTensorDescriptor_t desc_mean,
+                                 const void *mean,
+                                 const mluOpTensorDescriptor_t desc_invstd,
+                                 const void *invstd,
+                                 const mluOpTensorDescriptor_t desc_dfilter,
+                                 void *dfilter,
+                                 const mluOpTensorDescriptor_t desc_dbias,
+                                 void *dbias,
+                                 const mluOpTensorDescriptor_t desc_sum_dy,
+                                 void *sum_dy,
+                                 const mluOpTensorDescriptor_t desc_sum_dy_xmu,
+                                 void *sum_dy_xmu,
+                                 const bool needs_input_grad0,
+                                 const bool needs_input_grad1,
+                                 const bool needs_input_grad2);
 
-  // Group: SyncBatchNorm
-  /*!
+// Group: SyncBatchNorm
+/*!
  * @brief Computes the gradients of input in the training scenario.
  *
  * This function is used in artificial intelligence, including but not limited
@@ -13073,27 +13053,27 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - https://pytorch.org/docs/1.6.0/jit_builtin_functions.html?highlight=batch_norm_backward_elemt
  *
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSyncBatchNormBackwardElemt(mluOpHandle_t handle,
-                                  const mluOpTensorDescriptor_t diff_y_desc,
-                                  const void *diff_y,
-                                  const mluOpTensorDescriptor_t x_desc,
-                                  const void *x,
-                                  const mluOpTensorDescriptor_t mean_desc,
-                                  const void *mean,
-                                  const mluOpTensorDescriptor_t invstd_desc,
-                                  const void *invstd,
-                                  const mluOpTensorDescriptor_t filter_desc,
-                                  const void *filter,
-                                  const mluOpTensorDescriptor_t mean_dy_desc,
-                                  const void *mean_dy,
-                                  const mluOpTensorDescriptor_t mean_dy_xmu_desc,
-                                  const void *mean_dy_xmu,
-                                  const mluOpTensorDescriptor_t diff_x_desc,
-                                  void *diff_x);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormBackwardElemt(mluOpHandle_t handle,
+                                const mluOpTensorDescriptor_t diff_y_desc,
+                                const void *diff_y,
+                                const mluOpTensorDescriptor_t x_desc,
+                                const void *x,
+                                const mluOpTensorDescriptor_t mean_desc,
+                                const void *mean,
+                                const mluOpTensorDescriptor_t invstd_desc,
+                                const void *invstd,
+                                const mluOpTensorDescriptor_t filter_desc,
+                                const void *filter,
+                                const mluOpTensorDescriptor_t mean_dy_desc,
+                                const void *mean_dy,
+                                const mluOpTensorDescriptor_t mean_dy_xmu_desc,
+                                const void *mean_dy_xmu,
+                                const mluOpTensorDescriptor_t diff_x_desc,
+                                void *diff_x);
 
-  // Group: SyncBatchNorm
-  /*!
+// Group: SyncBatchNorm
+/*!
  * @brief Computes the gradients of input in the training scenario.
  *
  * This function is used in ResNet (Residual Network), Yolo (You Only Look Once) and
@@ -13211,29 +13191,29 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - https://pytorch.org/docs/1.11.0/jit_builtin_functions.html?highlight=batch_norm_backward_elemt
  *
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
-                                    const mluOpTensorDescriptor_t diff_y_desc,
-                                    const void *diff_y,
-                                    const mluOpTensorDescriptor_t x_desc,
-                                    const void *x,
-                                    const mluOpTensorDescriptor_t mean_desc,
-                                    const void *mean,
-                                    const mluOpTensorDescriptor_t invstd_desc,
-                                    const void *invstd,
-                                    const mluOpTensorDescriptor_t filter_desc,
-                                    const void *filter,
-                                    const mluOpTensorDescriptor_t sum_dy_desc,
-                                    const void *sum_dy,
-                                    const mluOpTensorDescriptor_t sum_dy_xmu_desc,
-                                    const void *sum_dy_xmu,
-                                    const mluOpTensorDescriptor_t count_desc,
-                                    const void *count,
-                                    const mluOpTensorDescriptor_t diff_x_desc,
-                                    void *diff_x);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
+                                  const mluOpTensorDescriptor_t diff_y_desc,
+                                  const void *diff_y,
+                                  const mluOpTensorDescriptor_t x_desc,
+                                  const void *x,
+                                  const mluOpTensorDescriptor_t mean_desc,
+                                  const void *mean,
+                                  const mluOpTensorDescriptor_t invstd_desc,
+                                  const void *invstd,
+                                  const mluOpTensorDescriptor_t filter_desc,
+                                  const void *filter,
+                                  const mluOpTensorDescriptor_t sum_dy_desc,
+                                  const void *sum_dy,
+                                  const mluOpTensorDescriptor_t sum_dy_xmu_desc,
+                                  const void *sum_dy_xmu,
+                                  const mluOpTensorDescriptor_t count_desc,
+                                  const void *count,
+                                  const mluOpTensorDescriptor_t diff_x_desc,
+                                  void *diff_x);
 
-  // Group: Debugging
-  /*!
+// Group: Debugging
+/*!
  * @brief Sets the mode of a Cambricon MLU-OPS debugging tool that can generate operator
  * information files for all the operators that are called. The generated file
  * contains the operator information including inputs shapes, outputs shapes,
@@ -13271,11 +13251,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Example
  * - None.
  */
-  void MLUOP_WIN_API
-  mluOpSetGenCaseMode(int mode);
+void MLUOP_WIN_API
+mluOpSetGenCaseMode(int mode);
 
-  // Group: DeformConv
-  /*!
+// Group: DeformConv
+/*!
  * @brief Creates a descriptor pointed by \p dcn_desc for a deformable convolution forward
  * or backward operation, and allocates memory for holding the information about the
  * deformable convolution operation. The information is defined in ::mluOpDCNDescriptor_t.
@@ -13305,11 +13285,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc);
 
-  // Group: DeformConv
-  /*!
+// Group: DeformConv
+/*!
  * @brief Initializes the deformable convolution descriptor \p dcn_desc that was
  * created by ::mluOpCreateDCNDescriptor function, and sets the information about the
  * deformable convolution forward and backward operation to the deformable convolution descriptor
@@ -13396,19 +13376,19 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
-                        int dimNb,
-                        const int pad[],
-                        const int stride[],
-                        const int dilation[],
-                        int deformable_group,
-                        int conv_group,
-                        int im2col_step,
-                        const mluOpDataType_t compute_type);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetDCNDescriptor(mluOpDCNDescriptor_t dcn_desc,
+                      int dimNb,
+                      const int pad[],
+                      const int stride[],
+                      const int dilation[],
+                      int deformable_group,
+                      int conv_group,
+                      int im2col_step,
+                      const mluOpDataType_t compute_type);
 
-  // Group: DeformConv
-  /*!
+// Group: DeformConv
+/*!
  * @brief Destroys a deformable convolution descriptor \p dcn_desc that was previously created by
  * ::mluOpCreateDCNDescriptor.
  *
@@ -13432,11 +13412,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc);
 
-  // Group: DeformConv
-  /*!
+// Group: DeformConv
+/*!
  * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
  *        workspace to optimize the deformable convolution forward operation.
  *
@@ -13497,19 +13477,19 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetDCNForwardWorkspaceSize(mluOpHandle_t handle,
-                                  const mluOpDCNDescriptor_t dcn_desc,
-                                  const mluOpTensorDescriptor_t input_desc,
-                                  const mluOpTensorDescriptor_t offset_desc,
-                                  const mluOpTensorDescriptor_t mask_desc,
-                                  const mluOpTensorDescriptor_t filter_desc,
-                                  const mluOpTensorDescriptor_t bias_desc,
-                                  const mluOpTensorDescriptor_t output_desc,
-                                  size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetDCNForwardWorkspaceSize(mluOpHandle_t handle,
+                                const mluOpDCNDescriptor_t dcn_desc,
+                                const mluOpTensorDescriptor_t input_desc,
+                                const mluOpTensorDescriptor_t offset_desc,
+                                const mluOpTensorDescriptor_t mask_desc,
+                                const mluOpTensorDescriptor_t filter_desc,
+                                const mluOpTensorDescriptor_t bias_desc,
+                                const mluOpTensorDescriptor_t output_desc,
+                                size_t *workspace_size);
 
-  // Group: DeformConv
-  /*!
+// Group: DeformConv
+/*!
  * @brief Performs a 2D deformable convolution forward operation. Compared with the standard
  *        convolution, the deformable convolution introduces 2D offsets and masks to make
  *        the convolution adapt to the geometric variation of objects.
@@ -13654,26 +13634,26 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - Deformable Convolutional Networks, Jifeng Dai, et al., 2017.
  * - Deformable ConvNets v2: More Deformable, Better Results, Xizhou Zhu, et al., 2018.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDCNForward(mluOpHandle_t handle,
-                  const mluOpDCNDescriptor_t dcn_desc,
-                  const mluOpTensorDescriptor_t input_desc,
-                  const void *input,
-                  const mluOpTensorDescriptor_t offset_desc,
-                  const void *offset,
-                  const mluOpTensorDescriptor_t mask_desc,
-                  const void *mask,
-                  const mluOpTensorDescriptor_t filter_desc,
-                  const void *filter,
-                  const mluOpTensorDescriptor_t bias_desc,
-                  const void *bias,
-                  void *workspace,
-                  size_t workspace_size,
-                  const mluOpTensorDescriptor_t output_desc,
-                  void *output);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDCNForward(mluOpHandle_t handle,
+                const mluOpDCNDescriptor_t dcn_desc,
+                const mluOpTensorDescriptor_t input_desc,
+                const void *input,
+                const mluOpTensorDescriptor_t offset_desc,
+                const void *offset,
+                const mluOpTensorDescriptor_t mask_desc,
+                const void *mask,
+                const mluOpTensorDescriptor_t filter_desc,
+                const void *filter,
+                const mluOpTensorDescriptor_t bias_desc,
+                const void *bias,
+                void *workspace,
+                size_t workspace_size,
+                const mluOpTensorDescriptor_t output_desc,
+                void *output);
 
-  // Group: DeformConv
-  /*!
+// Group: DeformConv
+/*!
  * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
  *        workspace to optimize the deformable convolution backward filter operation.
  *
@@ -13738,19 +13718,19 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - None.
  */
 
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetDCNBackwardWeightWorkspaceSize(mluOpHandle_t handle,
-                                         const mluOpDCNDescriptor_t dcn_desc,
-                                         const mluOpTensorDescriptor_t input_desc,
-                                         const mluOpTensorDescriptor_t offset_desc,
-                                         const mluOpTensorDescriptor_t mask_desc,
-                                         const mluOpTensorDescriptor_t grad_output_desc,
-                                         const mluOpTensorDescriptor_t grad_filter_desc,
-                                         const mluOpTensorDescriptor_t grad_bias_desc,
-                                         size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetDCNBackwardWeightWorkspaceSize(mluOpHandle_t handle,
+                                       const mluOpDCNDescriptor_t dcn_desc,
+                                       const mluOpTensorDescriptor_t input_desc,
+                                       const mluOpTensorDescriptor_t offset_desc,
+                                       const mluOpTensorDescriptor_t mask_desc,
+                                       const mluOpTensorDescriptor_t grad_output_desc,
+                                       const mluOpTensorDescriptor_t grad_filter_desc,
+                                       const mluOpTensorDescriptor_t grad_bias_desc,
+                                       size_t *workspace_size);
 
-  // Group: DeformConv
-  /*!
+// Group: DeformConv
+/*!
  * @brief Performs the back-propagation of a deformable convolution operation to compute
  *        the gradient with respect to filter \p grad_filter and bias \p grad_bias
  *        based on the gradient of response \p grad_output.
@@ -13873,26 +13853,26 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - Deformable Convolutional Networks, Jifeng Dai, et al., 2017.
  * - Deformable ConvNets v2: More Deformable, Better Results, Xizhou Zhu, et al., 2018.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDCNBackwardWeight(mluOpHandle_t handle,
-                         const mluOpDCNDescriptor_t dcn_desc,
-                         const mluOpTensorDescriptor_t input_desc,
-                         const void *input,
-                         const mluOpTensorDescriptor_t offset_desc,
-                         const void *offset,
-                         const mluOpTensorDescriptor_t mask_desc,
-                         const void *mask,
-                         const mluOpTensorDescriptor_t grad_output_desc,
-                         const void *grad_output,
-                         void *workspace,
-                         size_t workspace_size,
-                         const mluOpTensorDescriptor_t grad_filter_desc,
-                         void *grad_filter,
-                         const mluOpTensorDescriptor_t grad_bias_desc,
-                         void *grad_bias);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDCNBackwardWeight(mluOpHandle_t handle,
+                       const mluOpDCNDescriptor_t dcn_desc,
+                       const mluOpTensorDescriptor_t input_desc,
+                       const void *input,
+                       const mluOpTensorDescriptor_t offset_desc,
+                       const void *offset,
+                       const mluOpTensorDescriptor_t mask_desc,
+                       const void *mask,
+                       const mluOpTensorDescriptor_t grad_output_desc,
+                       const void *grad_output,
+                       void *workspace,
+                       size_t workspace_size,
+                       const mluOpTensorDescriptor_t grad_filter_desc,
+                       void *grad_filter,
+                       const mluOpTensorDescriptor_t grad_bias_desc,
+                       void *grad_bias);
 
-  // Group: DeformConv
-  /*!
+// Group: DeformConv
+/*!
  * @brief Returns in \p workspace_size the size of the MLU memory that is used as an extra
  * workspace to optimize the deformable convolution backward data operation.
  *
@@ -13965,21 +13945,21 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
-                                       const mluOpDCNDescriptor_t dcn_desc,
-                                       const mluOpTensorDescriptor_t input_desc,
-                                       const mluOpTensorDescriptor_t offset_desc,
-                                       const mluOpTensorDescriptor_t mask_desc,
-                                       const mluOpTensorDescriptor_t filter_desc,
-                                       const mluOpTensorDescriptor_t grad_output_desc,
-                                       const mluOpTensorDescriptor_t grad_input_desc,
-                                       const mluOpTensorDescriptor_t grad_offset_desc,
-                                       const mluOpTensorDescriptor_t grad_mask_desc,
-                                       size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
+                                     const mluOpDCNDescriptor_t dcn_desc,
+                                     const mluOpTensorDescriptor_t input_desc,
+                                     const mluOpTensorDescriptor_t offset_desc,
+                                     const mluOpTensorDescriptor_t mask_desc,
+                                     const mluOpTensorDescriptor_t filter_desc,
+                                     const mluOpTensorDescriptor_t grad_output_desc,
+                                     const mluOpTensorDescriptor_t grad_input_desc,
+                                     const mluOpTensorDescriptor_t grad_offset_desc,
+                                     const mluOpTensorDescriptor_t grad_mask_desc,
+                                     size_t *workspace_size);
 
-  // Group: DeformConv
-  /*!
+// Group: DeformConv
+/*!
  * @brief Performs the back-propagation of a deformable convolution operation to compute
  * the gradient with respect to input \p grad_input, offset \p grad_offset, and mask
  * \p grad_mask based on the gradient of response \p grad_output.
@@ -14120,29 +14100,29 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - Deformable Convolutional Networks, Jifeng Dai, et al., 2017.
  * - Deformable ConvNets v2: More Deformable, Better Results, Xizhou Zhu, et al., 2018.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpDCNBackwardData(mluOpHandle_t handle,
-                       const mluOpDCNDescriptor_t dcn_desc,
-                       const mluOpTensorDescriptor_t input_desc,
-                       const void *input,
-                       const mluOpTensorDescriptor_t offset_desc,
-                       const void *offset,
-                       const mluOpTensorDescriptor_t mask_desc,
-                       const void *mask,
-                       const mluOpTensorDescriptor_t filter_desc,
-                       const void *filter,
-                       const mluOpTensorDescriptor_t grad_output_desc,
-                       const void *grad_output,
-                       void *workspace,
-                       const size_t workspace_size,
-                       const mluOpTensorDescriptor_t grad_input_desc,
-                       void *grad_input,
-                       const mluOpTensorDescriptor_t grad_offset_desc,
-                       void *grad_offset,
-                       const mluOpTensorDescriptor_t grad_mask_desc,
-                       void *grad_mask);
+mluOpStatus_t MLUOP_WIN_API
+mluOpDCNBackwardData(mluOpHandle_t handle,
+                     const mluOpDCNDescriptor_t dcn_desc,
+                     const mluOpTensorDescriptor_t input_desc,
+                     const void *input,
+                     const mluOpTensorDescriptor_t offset_desc,
+                     const void *offset,
+                     const mluOpTensorDescriptor_t mask_desc,
+                     const void *mask,
+                     const mluOpTensorDescriptor_t filter_desc,
+                     const void *filter,
+                     const mluOpTensorDescriptor_t grad_output_desc,
+                     const void *grad_output,
+                     void *workspace,
+                     const size_t workspace_size,
+                     const mluOpTensorDescriptor_t grad_input_desc,
+                     void *grad_input,
+                     const mluOpTensorDescriptor_t grad_offset_desc,
+                     void *grad_offset,
+                     const mluOpTensorDescriptor_t grad_mask_desc,
+                     void *grad_mask);
 
-  /*!
+/*!
  * @brief The descriptor of FFT (Fast Fourier Transform) operation that holds FFT information including
 
  * the tensor descriptor of input tensor and output tensor, the rank of FFT, the FFT size on each
@@ -14153,10 +14133,10 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * Then, you need to allocate the reserved space and set the space to the FFT descriptor by ::mluOpSetFFTReserveArea.
  * AT the end you need to destroy the Cambricon MLUOP context with the ::mluOpDestroyFFTPlan.
  */
-  typedef struct mluOpFFTStruct *mluOpFFTPlan_t;
+typedef struct mluOpFFTStruct *mluOpFFTPlan_t;
 
-  // Group: FFT
-  /*!
+// Group: FFT
+/*!
  * @brief Creates a descriptor pointed by \p fft_plan for the FFT operation, and allocates memory
  * for holding the information about the FFT operation. The information is defined in ::mluOpFFTPlan_t.
  *
@@ -14191,11 +14171,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference.
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
+mluOpStatus_t MLUOP_WIN_API
+mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
 
-  // Group: FFT
-  /*!
+// Group: FFT
+/*!
  * @brief Initializes the FFT descriptor pointed by \p fft_plan that is previously created
  * with the ::mluOpCreateFFTPlan function, and sets the information about the
  * tensor descriptors of input tensor and output tensor, the rank of FFT, and the FFT size on each
@@ -14278,18 +14258,18 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference.
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpMakeFFTPlanMany(mluOpHandle_t handle,
-                       mluOpFFTPlan_t fft_plan,
-                       const mluOpTensorDescriptor_t input_desc,
-                       const mluOpTensorDescriptor_t output_desc,
-                       const int rank,
-                       const int n[],
-                       size_t *reservespace_size,
-                       size_t *workspace_size);
+mluOpStatus_t MLUOP_WIN_API
+mluOpMakeFFTPlanMany(mluOpHandle_t handle,
+                     mluOpFFTPlan_t fft_plan,
+                     const mluOpTensorDescriptor_t input_desc,
+                     const mluOpTensorDescriptor_t output_desc,
+                     const int rank,
+                     const int n[],
+                     size_t *reservespace_size,
+                     size_t *workspace_size);
 
-  // Group:FFT
-  /*!
+// Group:FFT
+/*!
  * @brief Bonds the \p reservespace to the \p fft_plan. The size of reserved space can be derived
  * through ::mluOpMakeFFTPlanMany.
  *
@@ -14329,11 +14309,11 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference.
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *reservespace);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *reservespace);
 
-  // Group:FFT
-  /*!
+// Group:FFT
+/*!
  * @brief Executes any FFT. In case of complex-to-real and real-to-complex
  * transforms, \p direction parameter is ignored. This function stores the Fourier coefficients
  * in the output array. If the address of input and output are the same, an in-place FFT
@@ -14442,17 +14422,17 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * @par Reference.
  * - None.
  */
-  mluOpStatus_t MLUOP_WIN_API
-  mluOpExecFFT(mluOpHandle_t handle,
-               const mluOpFFTPlan_t fft_plan,
-               const void *input,
-               const float scale_factor,
-               void *workspace,
-               void *output,
-               int direction);
+mluOpStatus_t MLUOP_WIN_API
+mluOpExecFFT(mluOpHandle_t handle,
+             const mluOpFFTPlan_t fft_plan,
+             const void *input,
+             const float scale_factor,
+             void *workspace,
+             void *output,
+             int direction);
 
-  // Group:FFT
-  /*!
+// Group:FFT
+/*!
  * @brief Destroys an FFT plan \p fft_plan that is created with the
  * ::mluOpCreateFFTPlan function. The FFT plan is defined in ::mluOpFFTPlan_t and
  * holds the information about the FFT operation.
@@ -14546,8 +14526,11 @@ mluOpLgamma(mluOpHandle_t handle,
 
 =======
 >>>>>>> [WIP] add new operator LU factorization
+=======
+
+>>>>>>> finish all types LU operator
 #if defined(__cplusplus)
 }
 #endif
 
-#endif // MLUOP_EXAMPLE_H_
+#endif  // MLUOP_EXAMPLE_H_
