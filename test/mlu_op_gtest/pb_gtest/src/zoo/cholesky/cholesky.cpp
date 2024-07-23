@@ -22,6 +22,7 @@
  *************************************************************************/
 #include <vector>
 #include "cholesky.h"
+// #include "kernels/kernel_wrapper/export_statement.h"
 
 namespace mluoptest {
 
@@ -129,16 +130,21 @@ void trans_mul(float*A, float*C, int lda,bool upper_, bool trans_, int n_, int l
                 {
                     A[i+j*lda] = 0.0;
                     if(j == i && diag_add)
+                    {
                         A[j+i*lda] = 1.0;
+                    }
+                        
                     
-                }
-                    
+                }               
                 else if(type_ == MLUOP_DTYPE_COMPLEX_FLOAT && ((upper_==false && j >= i) || (upper_==true && j >= i)))
                 {
                     A[j*lda*2+i*2] = 0.0;
                     A[j*lda*2+i*2+1] = 0.0;
+                
                     if(j == i&& diag_add)
+                    {
                         A[j*lda*2+i*2] = 1.0;
+                    }                        
                 }
                 for(long int k = 0; k <=i; k++)
                 {
@@ -149,7 +155,10 @@ void trans_mul(float*A, float*C, int lda,bool upper_, bool trans_, int n_, int l
                         else
                         {
                             if(type_ == MLUOP_DTYPE_FLOAT)
+                            {
+
                                 A[i+j*lda] += (C[k+i*lda]*C[k+j*lda]);
+                            }
                             else
                             {
                                 A[(i+j*lda)*2] += (C[(k+i*lda)*2]*C[(k+j*lda)*2]+C[(k+i*lda)*2+1]*C[(k+j*lda)*2+1]);
@@ -179,24 +188,28 @@ void trans_mul(float*A, float*C, int lda,bool upper_, bool trans_, int n_, int l
                                 continue;
                             else
                             {
-                                A[(i+j*lda)*2] += (C[(k+i*lda)*2]*C[(k+j*lda)*2]+C[(k+i*lda)*2+1]*C[(k+j*lda)*2+1]);
-                                A[(i+j*lda)*2+1] += (C[(k+i*lda)*2]*C[(k+j*lda)*2+1]-C[(k+i*lda)*2+1]*C[(k+j*lda)*2]);
+ 
+                                A[(i+j*lda)*2] += (C[(k*lda+i)*2]*C[(k*lda+j)*2]+C[(k*lda+i)*2+1]*C[(k*lda+j)*2+1]);
+                                A[(i+j*lda)*2+1] += (-C[(k*lda+i)*2]*C[(k*lda+j)*2+1]+C[(k*lda+i)*2+1]*C[(k*lda+j)*2]);
                             }
-                            if(type_ != MLUOP_DTYPE_FLOAT && j != i)
-                            {
-                                A[(j+i*lda)*2] = A[(i+j*lda)*2];
-                                A[(j+i*lda)*2+1] = -A[(i+j*lda)*2+1];
-                            }
+
                         }
                         
 
-                        
                     }
                 }
-                if(type_ != MLUOP_DTYPE_FLOAT &&((upper_==false && j > i) || (upper_==true && j > i)))
+                if(((upper_) || (upper_==true && j > i)))
                 {
-                    A[(j+i*lda)*2] = A[(i+j*lda)*2];
-                    A[(j+i*lda)*2+1] = -A[(i+j*lda)*2+1];
+                    if(type_ != MLUOP_DTYPE_FLOAT)
+                    {
+                        A[(j+i*lda)*2] = A[(i+j*lda)*2];
+                        A[(j+i*lda)*2+1] = -A[(i+j*lda)*2+1];
+                    }
+                    else
+                    {
+                        A[(j+i*lda)] = A[(i+j*lda)];
+                    }
+                    
                 }
             }
         }
@@ -304,7 +317,7 @@ void print_matrix(int batch, float*A, int lda, bool trans_, int n_, int ldda_, m
                 for(int j = 0; j <lda; j++)
                 {
                     if(type_ == MLUOP_DTYPE_FLOAT)
-                        printf("%7.3f ",A[j+i*lda]);
+                        printf("%17.13f ",A[j+i*lda]);
                     else
                     {
                         printf("%7.3f",A[(j+i*lda)*2]);
@@ -340,9 +353,50 @@ void print_matrix(int batch, float*A, int lda, bool trans_, int n_, int ldda_, m
     
 }
 
+void cpu_transfer_data(float* dst, float* src, unsigned long data_size)
+{
+    unsigned long size_block = 1024*1024*1024; 
+    unsigned long  transfer_num = data_size / size_block;
+    unsigned long transfer_remain = data_size % size_block;
+    float* temp_dst= dst, *temp_src = src;
+    for(unsigned long i = 0; i < transfer_num; i++)
+    {
+      std::memcpy(temp_dst,temp_src,size_block);
+      temp_dst += (size_block/4);
+      temp_src += (size_block/4);
+    }
+    if(transfer_remain > 0)
+    {
+      std::memcpy(temp_dst,temp_src,transfer_remain);
+    }
+}
+
+void mlu_transfer_data(float* dst, float* src, unsigned long data_size,cnrtMemTransDir_t dir)
+{
+    unsigned long size_block = 1024*1024*1024; 
+    unsigned long  transfer_num = data_size / size_block;
+    unsigned long transfer_remain = data_size % size_block;
+    float* temp_dst= dst, *temp_src = src;
+
+    for(unsigned long i = 0; i < transfer_num; i++)
+    {
+        GTEST_CHECK(CNRT_RET_SUCCESS ==
+                  cnrtMemcpy(temp_dst, temp_src, size_block, dir));
+        temp_dst += (size_block/4);
+        temp_src += (size_block/4);
+    }
+    if(transfer_remain > 0)
+    {
+        GTEST_CHECK(CNRT_RET_SUCCESS ==
+                  cnrtMemcpy(temp_dst, temp_src, transfer_remain, dir));
+    }
+}
+
 void CholeskyExecutor::prepareComputeParam()
 {
-
+//cpu端把矩阵的一半设置成0
+//然后转置乘法，结果存到cpu端的另一个矩阵
+//然后传给gpu端
   printf("start prepare compute parameter.\n");
   int long_int_size = sizeof(long int);
   int int_size = sizeof(int);
@@ -384,7 +438,7 @@ void CholeskyExecutor::prepareComputeParam()
     stride_ = (input_desc_->strides)[dim-1];
     ldda_ = input_desc_->dims[2];
     printf("batch_size:%ld,n:%d,lda:%d,stride:%d,upper:%d,trans:%d\n",batch_size_,n_,ldda_,stride_,upper_,trans_);
-
+    
     int size = input_desc_->dims[1];
 
     printf("size:%d, dim:%d, \n",size,dim);
@@ -396,16 +450,38 @@ void CholeskyExecutor::prepareComputeParam()
     printf("\n");
     printf("data vector length : %ld\n",data_vector_.size());
   }
+  unsigned long  total_size = batch_size_ * n_ * ldda_ * type_size_;
+//   unsigned long size_2g = 1024*1024*1024-1+1024*1024*1024; 
+//   unsigned long size_2g = 1024*1024*10-1; 
+//   int transfer_num = total_size / size_2g;
+
+//   int transfer_remain = total_size % size_2g;
+//   printf("total size:%ld, transfer_num:%d, transfer_remain:%d\n",total_size,transfer_num,transfer_remain);   
   
-  if(batch_size_ > 16 && n_ > 2000)
-  {
-    std::memcpy(dev_c,dev_a,16*type_size_*n_*ldda_);
-    std::memcpy(dev_c+16*type_size_/4*n_*ldda_,dev_a+16*type_size_/4*n_*ldda_,(batch_size_-16)*type_size_*n_*ldda_);
-  }
-  else
-  {
-    std::memcpy(dev_c,dev_a,batch_size_*type_size_*n_*ldda_);
-  }
+//   printf("matrix random:\n");
+//   print_matrix(batch_size_, dev_a,ldda_,trans_,n_,ldda_,type_);
+//   print_matrix(batch_size_, base_line_out,ldda_,trans_,n_,ldda_,type_);
+
+//   for(unsigned long i = 0; i < transfer_num; i++)
+//   {
+//     std::memcpy(dev_c+(i*size_2g),dev_a+(i*size_2g),size_2g);
+//   }
+//   printf("ddd\n");
+//   if(transfer_remain > 0)
+//   {
+//     std::memcpy(dev_c+(transfer_num*size_2g),dev_a+(transfer_num*size_2g),transfer_remain);
+//   }
+//   printf("lll\n");
+  cpu_transfer_data(dev_c,dev_a,total_size);
+//   if(batch_size_ > 16 && n_ > 2000)
+//   {
+//     std::memcpy(dev_c,dev_a,16*type_size_*n_*ldda_);
+//     std::memcpy(dev_c+16*type_size_/4*n_*ldda_,dev_a+16*type_size_/4*n_*ldda_,(batch_size_-16)*type_size_*n_*ldda_);
+//   }
+//   else
+//   {
+//     std::memcpy(dev_c,dev_a,batch_size_*type_size_*n_*ldda_);
+//   }
   if(parser_->device() == CPU)
   {
     for(long int i = 0; i < batch_size_;i++)
@@ -415,6 +491,7 @@ void CholeskyExecutor::prepareComputeParam()
       else
           set_matrix_zero(dev_c+i*n_*ldda_*2,false,trans_,n_,ldda_,type_);
     }
+//     set_matrix_zero((float*)dev_c,upper_,trans_,n_,ldda_,type_);
     for(long int i = 0; i < batch_size_;i++)
     {
       if(type_ == MLUOP_DTYPE_FLOAT)
@@ -433,40 +510,27 @@ void CholeskyExecutor::prepareComputeParam()
   
     
 
-  if(batch_size_>16)
-  {
-    GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtMemcpy(dev_d, dev_a, type_size_*n_*ldda_*16, CNRT_MEM_TRANS_DIR_HOST2DEV));
-    GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtMemcpy(dev_d+16*type_size_/4*n_*ldda_, dev_a+16*type_size_/4*n_*ldda_, type_size_*n_*ldda_*(batch_size_-16), CNRT_MEM_TRANS_DIR_HOST2DEV));
-  }
-  else
-  {
-    GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtMemcpy(dev_d, dev_a, type_size_*n_*ldda_*batch_size_, CNRT_MEM_TRANS_DIR_HOST2DEV));
-  }
-  
+//   printf("matrix A:\n");
+//   print_matrix(batch_size_,dev_a,ldda_,trans_,n_,ldda_,type_);
+//   printf("matrix C:\n");
+//   print_matrix(batch_size_,dev_c,ldda_,trans_,n_,ldda_,type_);
+    mlu_transfer_data(dev_d,dev_a,total_size,CNRT_MEM_TRANS_DIR_HOST2DEV);
+
+
   if(parser_->device() == CPU)
   {
     float* cpu_a = cpu_fp32_input_[0];
-    if(batch_size_ > 16 && n_ > 2000)
-    {
-      std::memcpy(cpu_a,dev_a,16*type_size_*n_*ldda_);
-      std::memcpy(cpu_a+16*type_size_/4*n_*ldda_,dev_a+16*type_size_/4*n_*ldda_,(batch_size_-16)*type_size_*n_*ldda_);
-    }
-    else
-    {
-      std::memcpy(cpu_a,dev_a,batch_size_*type_size_*n_*ldda_);
-    }
+    cpu_transfer_data(cpu_a,dev_a,total_size);
+
   }
   
   
-  printf("end prepare compute.\n");
 
 }
 
 void CholeskyExecutor::compute() {
   
+//   prepareComputeParam();
   
   VLOG(4) <<"  CholeskyExecutor compute ";
   auto input_desc_ = tensor_desc_[0].tensor;
@@ -475,48 +539,26 @@ void CholeskyExecutor::compute() {
   auto h_output = (float*)(data_vector_[1].host_ptr);
   auto d_intput = (float*)(data_vector_[0].device_ptr);
   auto d_output = (float*)(data_vector_[1].device_ptr);
-  if(batch_size_>16)
-  {
-    std::memcpy(h_input,h_output,type_size_*n_*ldda_*16);
-    std::memcpy(h_input+type_size_/4*n_*ldda_*16,h_output+type_size_/4*n_*ldda_*16,type_size_*n_*ldda_*(batch_size_-16));
-  }
-  else
-  {
-    std::memcpy(h_input,h_output,type_size_*n_*ldda_*batch_size_);
-  }
-  if(batch_size_>16)
-  {
-    GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtMemcpy(h_output, d_intput, type_size_*n_*ldda_*16, CNRT_MEM_TRANS_DIR_DEV2HOST));
-    GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtMemcpy(h_output+16*type_size_/4*n_*ldda_, d_intput+16*type_size_/4*n_*ldda_, type_size_*n_*ldda_*(batch_size_-16), CNRT_MEM_TRANS_DIR_DEV2HOST));
-  }
-  else
-  {
-    GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtMemcpy(h_output, d_intput, type_size_*n_*ldda_*batch_size_, CNRT_MEM_TRANS_DIR_DEV2HOST));
-  }
   
+  unsigned long  total_size = batch_size_ * n_ * ldda_ * type_size_;
+  cpu_transfer_data(h_input,h_output,total_size);
+
+  mlu_transfer_data(h_output,d_intput,total_size,CNRT_MEM_TRANS_DIR_DEV2HOST);
+  
+//   printf("mlu before cholesky result:\n");
+//   print_matrix(batch_size_,h_output,ldda_,trans_,n_,ldda_,type_);
   interface_timer_.start();
   float* workspace = nullptr;
   size_t size = 0;
-  mluOpGetCholeskyWorkspace(input_desc_,&size,&workspace);
+  MLUOP_CHECK(mluOpGetCholeskyWorkspace(input_desc_,&size,&workspace));
 
 MLUOP_CHECK(mluOpCholesky(handle_,input_desc_,d_intput, output_desc_, d_output, upper_,workspace));
 
+MLUOP_CHECK(mluOpFreeCholeskyWorkspace(&workspace));
+
   interface_timer_.stop();
-  if(batch_size_>16)
-  {
-    GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtMemcpy(h_output, d_output, 16*type_size_*n_*ldda_, CNRT_MEM_TRANS_DIR_DEV2HOST));
-    GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtMemcpy(h_output+16*type_size_/4*n_*ldda_, d_output+16*type_size_/4*n_*ldda_, (batch_size_-16)*type_size_*n_*ldda_, CNRT_MEM_TRANS_DIR_DEV2HOST));
-  }
-  else
-  {
-    GTEST_CHECK(CNRT_RET_SUCCESS ==
-                  cnrtMemcpy(h_output, d_output, batch_size_*type_size_*n_*ldda_, CNRT_MEM_TRANS_DIR_DEV2HOST));
-  }
+
+  mlu_transfer_data(h_output,d_output,total_size,CNRT_MEM_TRANS_DIR_DEV2HOST);
 
   if(parser_->device() != CPU )
   {
@@ -524,11 +566,18 @@ MLUOP_CHECK(mluOpCholesky(handle_,input_desc_,d_intput, output_desc_, d_output, 
     {
         for(int i = 0; i < batch_size_;i++)
         {
-          if(type_ == MLUOP_DTYPE_FLOAT)
-              trans_mul(h_input+i*n_*ldda_,h_output+i*n_*ldda_,ldda_,upper_,trans_,n_,ldda_,type_,false);
-          else
-              trans_mul(h_input+i*n_*ldda_*2,h_output+i*n_*ldda_*2,ldda_,upper_,trans_,n_,ldda_,type_,false);
+            if(type_ == MLUOP_DTYPE_FLOAT)
+            {
+                trans_mul(h_input+i*n_*ldda_,h_output+i*n_*ldda_,ldda_,upper_,trans_,n_,ldda_,type_,false);
+            }
+            else
+            {
+                trans_mul(h_input+i*n_*ldda_*2,h_output+i*n_*ldda_*2,ldda_,upper_,trans_,n_,ldda_,type_,false);
+
+            }
         }
+        h_output = h_input;
+        fill_zero(h_output,upper_,batch_size_,n_,ldda_,type_,true);
     }
     else
     {
@@ -539,26 +588,27 @@ MLUOP_CHECK(mluOpCholesky(handle_,input_desc_,d_intput, output_desc_, d_output, 
     {
         set_diag_imag_one(h_output,batch_size_,n_,ldda_);
     }
-    if(batch_size_>16)
-    {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMemcpy(d_output, h_output, 16*type_size_*n_*ldda_, CNRT_MEM_TRANS_DIR_HOST2DEV));
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMemcpy(d_output+16*type_size_/4*n_*ldda_, h_output+16*type_size_/4*n_*ldda_, (batch_size_-16)*type_size_*n_*ldda_, CNRT_MEM_TRANS_DIR_HOST2DEV));
-    }
-    else
-    {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
-                    cnrtMemcpy(d_output, h_output, batch_size_*type_size_*n_*ldda_, CNRT_MEM_TRANS_DIR_HOST2DEV));
-    }
-    
-  }
 
+
+    mlu_transfer_data(d_output,h_output,total_size,CNRT_MEM_TRANS_DIR_HOST2DEV);
+    
+
+
+
+  }
+  
+//   printf("mlu after cholesky result:\n");
+//     print_matrix(batch_size_,h_output,ldda_,trans_,n_,ldda_,type_);
+
+  
+
+  
   return;
 }
 
 void cpu_compute(float* cpu_c, int n_, int ldda_, bool upper_, bool trans_, mluOpDataType_t type_)
 {
+    
     if(trans_)
     {
         for(long int i = 0; i < n_; i++)
@@ -639,7 +689,7 @@ void cpu_compute(float* cpu_c, int n_, int ldda_, bool upper_, bool trans_, mluO
                 }
                 else
                 {
-
+ 
                     for(long int j = i+1;j<n_;j++)
                     {
                         cpu_c[(j+i*ldda_)*2] = cpu_c[(j+i*ldda_)*2]/dia_root;   
@@ -682,54 +732,65 @@ void cpu_compute(float* cpu_c, int n_, int ldda_, bool upper_, bool trans_, mluO
 }
 
 void CholeskyExecutor::cpuCompute() {
+//   auto dev_a = (float*)(data_vector_[0].host_ptr);
    auto dev_c = (float*)(data_vector_[0].host_ptr);
+//    std::memcpy(dev_c,dev_a,sizeof(float)*n_*ldda_);
    float* cpu_a = cpu_fp32_input_[0];
    float* cpu_c = cpu_fp32_output_[0];
-  
-    if(batch_size_>16)
-    {
-      std::memcpy(cpu_c,cpu_a,type_size_*n_*ldda_*16);
-      std::memcpy(cpu_c+type_size_/4*n_*ldda_*16,cpu_a+type_size_/4*n_*ldda_*16,type_size_*n_*ldda_*(batch_size_-16));
-    }
-    else
-    {
-      std::memcpy(cpu_c,cpu_a,type_size_*n_*ldda_*batch_size_);
-    }
+   unsigned long  total_size = batch_size_ * n_ * ldda_ * type_size_;
+   unsigned long size_2g = 1024*1024*1024-1+1024*1024*1024; 
+   int transfer_num = total_size / size_2g;
+   int transfer_remain = total_size % size_2g; 
+
+
+    cpu_transfer_data(cpu_c,cpu_a,total_size);
+    
+
+    
 
     auto h_output = (float*)(data_vector_[1].host_ptr);
     auto h_input = (float*)(data_vector_[0].host_ptr);
 
-    printf("cpu before cholesky result:\n");
+    // printf("cpu before cholesky result:\n");
+    // print_matrix(batch_size_,cpu_c,ldda_,trans_,n_,ldda_,type_); 
 
     if(result_mul)
     {
       for(int i = 0; i < batch_size_;i++)
       {
         if(type_ == MLUOP_DTYPE_FLOAT)
+        {
             trans_mul(h_input+i*n_*ldda_,h_output+i*n_*ldda_,ldda_,upper_,trans_,n_,ldda_,type_,false);
+        }
         else
             trans_mul(h_input+i*n_*ldda_*2,h_output+i*n_*ldda_*2,ldda_,upper_,trans_,n_,ldda_,type_,false);
+        
       }
-      if(batch_size_>16)
-      {
-        std::memcpy(h_output,h_input,type_size_*n_*ldda_*16);
-        std::memcpy(h_output+type_size_/4*n_*ldda_*16,h_input+type_size_/4*n_*ldda_*16,type_size_*n_*ldda_*(batch_size_-16));
-      }
-      else
-      {
-        std::memcpy(h_output,h_input,type_size_*n_*ldda_*batch_size_);
-      }
+
+      cpu_transfer_data(h_output,h_input,total_size);
+
+      fill_zero(h_output,upper_,batch_size_,n_,ldda_,type_,true);
     }
     else
     {
         for(long int i = 0; i < batch_size_;i++)
         {
+
             cpu_compute(cpu_c+i*n_*ldda_*type_size_/4, n_, ldda_, upper_, trans_, type_);
         }
         fill_zero(cpu_c,upper_,batch_size_,n_,ldda_,type_,false);
         fill_zero(h_output,upper_,batch_size_,n_,ldda_,type_,false);
     }
 
+    // print_matrix(batch_size_,h_input,ldda_,trans_,n_,ldda_,type_); 
+    // printf("cpu cholesky result:\n");
+    // print_matrix(batch_size_,cpu_c,ldda_,trans_,n_,ldda_,type_); 
+
+    // printf("mlu cholesky result:\n");
+    // print_matrix(batch_size_,h_output,ldda_,trans_,n_,ldda_,type_); 
+
+    // printf("mlu after cholesky result1:\n");
+    // print_matrix(batch_size_,h_output,ldda_,trans_,n_,ldda_,type_);
 
 	return;
 }

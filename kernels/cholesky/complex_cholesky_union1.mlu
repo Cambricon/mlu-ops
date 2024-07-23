@@ -2,6 +2,7 @@
 #define COMPLEX_OFFSET(A,off) (((float*)A) + (2 * (off)))
 #define COMPLEX_TYPE_SIZE ((2) * sizeof(float))
 __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
+__mlu_shared__ uint8_t sram_buffer[MAX_SRAM_SIZE];
 
 __mlu_func__
 void small_cgemm(int m,int k,
@@ -90,7 +91,7 @@ void small_cgemm(int m,int k,
 
     __bang_sub(rp,rp,rC,CPOTF_NB * span);
     __bang_sub(ip,ip,iC,CPOTF_NB * span);
-   
+    
     if(if_execute)
     {
         __memcpy(rdst,rp,span*CPOTF_NB*sizeof(float),NRAM2NRAM);
@@ -127,7 +128,6 @@ void small_cminout(int m, int width,
 
         __memcpy(rdiag,sram_buffer,width*CPOTF_NB*sizeof(float),SRAM2NRAM);
         __memcpy(idiag,sram_buffer+CPOTF_NB*CPOTF_NB,width*CPOTF_NB*sizeof(float),SRAM2NRAM);
-       
         for(int iter = 0; iter < width; iter++)
         {
             factor = sqrt(rdiag[(iter * CPOTF_NB+iter)]);
@@ -141,9 +141,9 @@ void small_cminout(int m, int width,
                 rdst[(i * CPOTF_NB+iter)] *= factor;
                 idst[(i * CPOTF_NB+iter)] *= factor;
                 
-               
+
             }
-           
+
             __sync();
             for(int i = iter+1; i < width; i++)
             {
@@ -156,13 +156,13 @@ void small_cminout(int m, int width,
                     b2 = idiag[(i*CPOTF_NB+iter)];
                     a3 = rdiag[(j*CPOTF_NB+iter)];
                     b3 = idiag[(j*CPOTF_NB+iter)];
-                  
+
                     
                     rdst[(j * CPOTF_NB + i)] -= (a1*a2+b1*b2);//a4
                     idst[(j * CPOTF_NB + i)] -= (a2*b1-a1*b2);//b4
                     rdiag[(j * CPOTF_NB + i)] -= (a3*a2+b3*b2);//a5
                     idiag[(j * CPOTF_NB + i)] -= (a2*b3-a3*b2);//b5
-                    
+
                 }
                
                 
@@ -183,13 +183,12 @@ __mlu_func__ void cmplout(int batch, const int m, float *rA0, float *rA,float *i
     int remain = m - finish;
     bool if_execute = remain > 0;
     int span = (remain > CPOTF_NB||remain <= 0) ? CPOTF_NB : remain;
-    __mlu_shared__  uint8_t sram_buffer[MAX_SRAM_SIZE];
     float* dst = (float*)nram_buffer;
     small_cgemm(m, localstep, rA0, iA0, lda, width, (float*)sram_buffer, dst);
 
     __sync_cluster();
 
-   
+    
 
     small_cminout(m, width, dst, (float*)sram_buffer, CPOTF_NB);
 
@@ -218,8 +217,6 @@ __mlu_func__ void cmplout(int batch, const int m, float *rA0, float *rA,float *i
     
 }
 
-
-
 __mlu_func__
 void small_cgemm_batch(int batch, int m,int k,
         float* rA0, float* iA0, const int lda, 
@@ -227,6 +224,7 @@ void small_cgemm_batch(int batch, int m,int k,
 {
     int ldk = k;
     int ldm = m;
+
     float* r_dst2 = i_dst + m * width;
     float* i_dst2 = r_dst2 + m * width;
     float* r_src1 = i_dst2 + m * width;
@@ -258,8 +256,6 @@ void small_cgemm_batch(int batch, int m,int k,
     __memcpy(r_src2, r_src1, ldk*width*sizeof(float),NRAM2NRAM);
 
     __memcpy(i_src2, i_src1, ldk*width*sizeof(float),NRAM2NRAM);
-
-   
 
    
     float a1,a2,b1,b2;
@@ -305,7 +301,6 @@ void small_cminout_batch(int m, int width,
 
         if (r_diag[iter*width+iter]<0)
         {
-            printf("cccnm\n");
             printf("iter:%d,taskId:%d\n",iter,taskId);
         }
         factor = sqrt(r_diag[iter*width+iter]);
@@ -333,7 +328,7 @@ void small_cminout_batch(int m, int width,
     }
     __sync();
 
-    
+   
 }
 
 __mlu_func__ 
@@ -446,8 +441,6 @@ void add_c1(int batch, int stride, float beta, float *d_c, float* src,int ldc, i
     src = orignSrc + batch_id * m*n;
     
    
-
-    __mlu_shared__ uint8_t sram_buffer[MAX_SRAM_SIZE];
     if (beta == 0.0f)
     {
         if(id == 0)
@@ -569,6 +562,7 @@ void complex_add_c(int batch, int stride, float beta, float *d_c, float* src,int
     __memcpy(a_sram,src+src_offset,n*span*sizeof(float),LDRAM2NRAM);
 
 
+
   int32_t data_per_core = span*n;
   int32_t data_last_core = data_per_core;
   const float *a_offset = a_sram;
@@ -625,6 +619,14 @@ mluOpStatus_t workspace_malloc(size_t size, float** workspace)
     return MLUOP_STATUS_SUCCESS;
 }
 
+mluOpStatus_t workspace_free(float** workspace)
+{
+    CNRT_CHECK(cnrtFree((void *)(*workspace)));
+
+    return MLUOP_STATUS_SUCCESS;
+}
+
+
 __mlu_global__
 void complex_inverse_kernel(int batch, float *rd_input, float *id_input, int ld_input, int stride_input, float* rd_output, float* id_output, int ld_output, int stride_output, int m)
 {
@@ -641,8 +643,7 @@ void complex_inverse_kernel(int batch, float *rd_input, float *id_input, int ld_
     id_input = origin_i_input + batch_id * stride_input;
     rd_output = origin_r_output + batch_id * stride_output;
     id_output = origin_i_output + batch_id * stride_output;
-
-
+    
     
     int span = m/4;
     int start = id * span;
@@ -651,7 +652,6 @@ void complex_inverse_kernel(int batch, float *rd_input, float *id_input, int ld_
         span = m - 3 * span;
     }
     float* nram_offset = (float*)nram_buffer;
-    //diag_start:m*m ld:m
     float* rdiag_start = (float*)nram_offset;
     float* idiag_start = rdiag_start + m * m;
     float* r_nram_src1 = idiag_start + m * m;
@@ -696,13 +696,14 @@ void complex_inverse_kernel(int batch, float *rd_input, float *id_input, int ld_
         {
             float r_temp = 0.0;
             float i_temp = 0.0;
-           
+          
             __bang_mul(r_mul_result,r_nram_src2,r_nram_src1+j*height,i);
             __bang_mul(i_mul_result,r_nram_src2,i_nram_src1+j*height,i);
             for(int k = 0; k< i; k++)
             {
                 r_temp += r_mul_result[k];
                 i_temp += i_mul_result[k];
+               
             }
             __bang_mul(r_mul_result,i_nram_src2,i_nram_src1+j*height,i);
             __bang_mul(i_mul_result,i_nram_src2,r_nram_src1+j*height,i);
@@ -735,7 +736,7 @@ void complex_inverse_kernel(int batch, float *rd_input, float *id_input, int ld_
         __memcpy(id_output + ld_output * start + start,i_nram_dst,span*sizeof(float),NRAM2LDRAM,ld_output*sizeof(float),span*sizeof(float),height-1);
     }
     
-  
+   
     
 
 }
@@ -774,6 +775,7 @@ void complex_batch_inverse_kernel(int batch, float *rd_input, float* id_input, i
     int height = m, span = m;
 
     __memset_nram(nram_offset, 10 * m * m, (float)ZERO);
+
 
     __memcpy(r_nram_dst,rd_input,m*sizeof(float),GDRAM2NRAM,m*sizeof(float),ld_input*sizeof(float),m-1);
     __memcpy(i_nram_dst,id_input,m*sizeof(float),GDRAM2NRAM,m*sizeof(float),ld_input*sizeof(float),m-1);
@@ -831,10 +833,7 @@ void complex_batch_inverse_kernel(int batch, float *rd_input, float* id_input, i
 
 
 
-
-
-
-mluOpStatus_t cgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k, float alpha, float beta, float* d_ra, float* d_ia, int lda, int stride_a,  float* d_rb, float* d_ib, int ldb, int stride_b, float* d_rc, float* d_ic, int ldc, int stride_c, mluOpHandle_t handle)
+mluOpStatus_t cgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k, float alpha, float beta, float* d_ra, float* d_ia, int lda, int stride_a,  float* d_rb, float* d_ib, int ldb, int stride_b, float* d_rc, float* d_ic, int ldc, int stride_c, mluOpHandle_t handle,float* workspace)
 {
     if(k==0)
         return MLUOP_STATUS_SUCCESS;
@@ -842,8 +841,8 @@ mluOpStatus_t cgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k, 
     cnrtQueue_t queue;
     mluOpGetQueue(handle,&queue);
 
-    
-
+                                                                            
+                                                        
     float *r_c, *i_c;
     r_c = d_rc;
     i_c = d_ic;
@@ -852,26 +851,22 @@ mluOpStatus_t cgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k, 
     int s_stride_b = stride_b;
     int s_stride_c = stride_c;
 
-    
-    sgemm(batch,trans_a,trans_b,m,n,k,alpha,beta,d_ra,lda,s_stride_a,d_rb,ldb,s_stride_b,r_c,ldc,s_stride_c,handle);
+    sgemm(batch,trans_a,trans_b,m,n,k,alpha,beta,d_ra,lda,s_stride_a,d_rb,ldb,s_stride_b,r_c,ldc,s_stride_c,handle,workspace);
     cnrtQueueSync(queue);
     
-    sgemm(batch,trans_a,trans_b,m,n,k,alpha,1,d_ia,lda,s_stride_a,d_ib,ldb,s_stride_b,r_c,ldc,s_stride_c,handle);
+    sgemm(batch,trans_a,trans_b,m,n,k,alpha,1,d_ia,lda,s_stride_a,d_ib,ldb,s_stride_b,r_c,ldc,s_stride_c,handle,workspace);
     cnrtQueueSync(queue);
 
-    sgemm(batch,trans_a,trans_b,m,n,k,-alpha,beta,d_ra,lda,s_stride_a,d_ib,ldb,s_stride_b,i_c,ldc,s_stride_c,handle);
+    sgemm(batch,trans_a,trans_b,m,n,k,-alpha,beta,d_ra,lda,s_stride_a,d_ib,ldb,s_stride_b,i_c,ldc,s_stride_c,handle,workspace);
     cnrtQueueSync(queue);
-    sgemm(batch,trans_a,trans_b,m,n,k,alpha,1,d_ia,lda,s_stride_a,d_rb,ldb,s_stride_b,i_c,ldc,s_stride_c,handle);
+    sgemm(batch,trans_a,trans_b,m,n,k,alpha,1,d_ia,lda,s_stride_a,d_rb,ldb,s_stride_b,i_c,ldc,s_stride_c,handle,workspace);
     cnrtQueueSync(queue);
 
-
-
-   
     return MLUOP_STATUS_SUCCESS;
 }
 
 
-mluOpStatus_t cgemm_real(int batch, bool trans_a, bool trans_b, int m, int n, int k, float alpha, float beta, float* d_ra, float* d_ia, int lda, int stride_a,  float* d_rb, float* d_ib, int ldb, int stride_b, float* d_rc, float* d_ic, int ldc, int stride_c, mluOpHandle_t handle)
+mluOpStatus_t cgemm_real(int batch, bool trans_a, bool trans_b, int m, int n, int k, float alpha, float beta, float* d_ra, float* d_ia, int lda, int stride_a,  float* d_rb, float* d_ib, int ldb, int stride_b, float* d_rc, float* d_ic, int ldc, int stride_c, mluOpHandle_t handle, float* cgemm_workspace)
 {
     if(k==0)
         return MLUOP_STATUS_SUCCESS;
@@ -879,8 +874,8 @@ mluOpStatus_t cgemm_real(int batch, bool trans_a, bool trans_b, int m, int n, in
     cnrtQueue_t queue;
     mluOpGetQueue(handle,&queue);
 
-    float *workspace = NULL;
-    CNRT_CHECK(cnrtMalloc((void **)&workspace, ((unsigned long)batch)*sizeof(float)*2*(m*k)));
+    float *workspace = cgemm_workspace;
+    float* sgemm_workspace = cgemm_workspace + ((unsigned long)batch)*2*(m*k);
     float* copy_ra = workspace;
     float* copy_ia = copy_ra + ((unsigned long)batch)*m*k;
     int copy_lda = k;
@@ -894,44 +889,34 @@ mluOpStatus_t cgemm_real(int batch, bool trans_a, bool trans_b, int m, int n, in
                        k*sizeof(float), m, CNRT_MEM_TRANS_DIR_DEV2DEV));
     }
     
-    
 
     float *r_c, *i_c;
     r_c = d_rc;
     i_c = d_ic;
-    
+
     int s_stride_b = stride_b;
     int s_stride_c = stride_c;
 
    
     
-    sgemm(batch,trans_a,trans_b,m,n,k,alpha,beta,copy_ra,copy_lda,copy_stride_a,d_rb,ldb,s_stride_b,r_c,ldc,s_stride_c,handle);
+    sgemm(batch,trans_a,trans_b,m,n,k,alpha,beta,copy_ra,copy_lda,copy_stride_a,d_rb,ldb,s_stride_b,r_c,ldc,s_stride_c,handle,sgemm_workspace);
     cnrtQueueSync(queue);
     
-    sgemm(batch,trans_a,trans_b,m,n,k,-alpha,1,copy_ia,copy_lda,copy_stride_a,d_ib,ldb,s_stride_b,r_c,ldc,s_stride_c,handle);
+    sgemm(batch,trans_a,trans_b,m,n,k,-alpha,1,copy_ia,copy_lda,copy_stride_a,d_ib,ldb,s_stride_b,r_c,ldc,s_stride_c,handle,sgemm_workspace);
     cnrtQueueSync(queue);
 
 
-    sgemm(batch,trans_a,trans_b,m,n,k,alpha,beta,copy_ra,copy_lda,copy_stride_a,d_ib,ldb,s_stride_b,i_c,ldc,s_stride_c,handle);
+    sgemm(batch,trans_a,trans_b,m,n,k,alpha,beta,copy_ra,copy_lda,copy_stride_a,d_ib,ldb,s_stride_b,i_c,ldc,s_stride_c,handle,sgemm_workspace);
     cnrtQueueSync(queue);
-    sgemm(batch,trans_a,trans_b,m,n,k,alpha,1,copy_ia,copy_lda,copy_stride_a,d_rb,ldb,s_stride_b,i_c,ldc,s_stride_c,handle);
+    sgemm(batch,trans_a,trans_b,m,n,k,alpha,1,copy_ia,copy_lda,copy_stride_a,d_rb,ldb,s_stride_b,i_c,ldc,s_stride_c,handle,sgemm_workspace);
     cnrtQueueSync(queue);
 
-
-
-
-    
-
-    
+                                        
     return MLUOP_STATUS_SUCCESS;
 }
 
 
-
-
-
-
-mluOpStatus_t complex_inverse(int batch, float *rd_input, float *id_input, int ld_input, int stride_input, float* rd_output, float* id_output, int ld_output, int stride_output, int m, mluOpHandle_t handle)
+mluOpStatus_t complex_inverse(int batch, float *rd_input, float *id_input, int ld_input, int stride_input, float* rd_output, float* id_output, int ld_output, int stride_output, int m, mluOpHandle_t handle, float* workspace)
 {
     int inverse_rec = 16;
     cnrtQueue_t queue;
@@ -967,64 +952,56 @@ mluOpStatus_t complex_inverse(int batch, float *rd_input, float *id_input, int l
         float* output2_i = id_output + m1*m+m1;
 
 
-        complex_inverse(batch, rd_input, id_input, ld_input, stride_input, rd_output, id_output, ld_output, stride_output, m1, handle);
-        complex_inverse(batch, rd_input+m1*ld_input+m1, id_input+m1*ld_input+m1, ld_input, stride_input, output2_r, output2_i, ld_output, stride_output, m2, handle);
+        complex_inverse(batch, rd_input, id_input, ld_input, stride_input, rd_output, id_output, ld_output, stride_output, m1, handle, workspace);
+        complex_inverse(batch, rd_input+m1*ld_input+m1, id_input+m1*ld_input+m1, ld_input, stride_input, output2_r, output2_i, ld_output, stride_output, m2, handle, workspace);
         cnrtQueueSync(queue);
 
         
-        
-
-        float *workspace = NULL;
-        CNRT_CHECK(cnrtMalloc((void **)&workspace, batch*sizeof(float)*2*(m2*m1)));
+      
+        float* cgemm_workspace =  workspace + batch*2*(m2*m1);
         float* temp_r = workspace;
         float* temp_i = temp_r + batch*m2*m1;
         int temp_ld = m1;
         int temp_stride = m2*m1;
 
-        cgemm(batch, false,false,m2,m1,m1,1.0f,0.0f,rd_input+m1*ld_input,id_input+m1*ld_input,ld_input,stride_input,output1_r,output1_i,ld_output,stride_output,temp_r,temp_i,temp_ld,temp_stride,handle);
+        cgemm(batch, false,false,m2,m1,m1,1.0f,0.0f,rd_input+m1*ld_input,id_input+m1*ld_input,ld_input,stride_input,output1_r,output1_i,ld_output,stride_output,temp_r,temp_i,temp_ld,temp_stride,handle,cgemm_workspace);
         cnrtQueueSync(queue);
-        cgemm(batch, false,false,m2,m2,m1,-1.0f,0.0f,output2_r,output2_i,ld_output,stride_output,temp_r,temp_i,temp_ld,temp_stride,rd_output+m1*ld_output,id_output + m1*ld_output,ld_output,stride_output,handle);
+        cgemm(batch, false,false,m2,m2,m1,-1.0f,0.0f,output2_r,output2_i,ld_output,stride_output,temp_r,temp_i,temp_ld,temp_stride,rd_output+m1*ld_output,id_output + m1*ld_output,ld_output,stride_output,handle,cgemm_workspace);
         cnrtQueueSync(queue);
-
-        
-    }
-
     
+    }
 
     
     return MLUOP_STATUS_SUCCESS;
 }
 
 
-mluOpStatus_t ctrsm(int batch, int stride, int m, int n, float* rd_a, float* id_a, int lda, float* rd_b, float* id_b, int ldb, mluOpHandle_t handle)
+mluOpStatus_t ctrsm(int batch, int stride, int m, int n, float* rd_a, float* id_a, int lda, float* rd_b, float* id_b, int ldb, mluOpHandle_t handle, float* ctrsm_workspace)
 {
     if(n==0)
         return MLUOP_STATUS_SUCCESS;
     cnrtQueue_t queue;
     mluOpGetQueue(handle,&queue);
-    float* workspace;
-    CNRT_CHECK(cnrtMalloc((void **)&workspace, batch*m*m*2*sizeof(float)));
-    CNRT_CHECK(cnrtMemset(workspace, 0.0, batch*m*m*2*sizeof(float)));
+    float* workspace = ctrsm_workspace + batch*m*m*2;
+    CNRT_CHECK(cnrtMemset(ctrsm_workspace, 0.0, batch*m*m*2*sizeof(float)));
     float *r_inverse_result, *i_inverse_result;
-    r_inverse_result = workspace;
+    r_inverse_result = ctrsm_workspace;
     i_inverse_result = r_inverse_result + batch*m*m;
 
-    
-    complex_inverse(batch,rd_a,id_a,lda,stride,r_inverse_result,i_inverse_result,m,m*m,m,handle);
+ 
+    complex_inverse(batch,rd_a,id_a,lda,stride,r_inverse_result,i_inverse_result,m,m*m,m,handle,workspace);
     cnrtQueueSync(queue);
 
-   
-    cgemm_real(batch,false,true,n,m,m,1.0,0.0f,rd_b,id_b,ldb,stride,r_inverse_result,i_inverse_result,m,m*m,rd_b,id_b,ldb,stride,handle);
-    
-
+    cgemm_real(batch,false,true,n,m,m,1.0,0.0f,rd_b,id_b,ldb,stride,r_inverse_result,i_inverse_result,m,m*m,rd_b,id_b,ldb,stride,handle,workspace);
+  
     return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t cherk(int batch, int stride, int n,int k, float* rd_a, float* id_a, int lda, float* rd_c, float* id_c, int ldc, mluOpHandle_t handle)
+mluOpStatus_t cherk(int batch, int stride, int n,int k, float* rd_a, float* id_a, int lda, float* rd_c, float* id_c, int ldc, mluOpHandle_t handle,float* workspace)
 {
     if(k==0)
         return MLUOP_STATUS_SUCCESS;
-    cgemm(batch,false,true,n,n,k,-1.0f,1.0f,rd_a,id_a,lda,stride,rd_a,id_a,lda,stride,rd_c,id_c,ldc,stride,handle);
+    cgemm(batch,false,true,n,n,k,-1.0f,1.0f,rd_a,id_a,lda,stride,rd_a,id_a,lda,stride,rd_c,id_c,ldc,stride,handle,workspace);
     cnrtQueue_t queue;
     mluOpGetQueue(handle,&queue);
     cnrtQueueSync(queue);
@@ -1034,7 +1011,7 @@ mluOpStatus_t cherk(int batch, int stride, int n,int k, float* rd_a, float* id_a
 }
 
 
-mluOpStatus_t mlu_cpotrf_rectile(int batch, int stride, int n, int recnb, float* drA, float* diA, int lda, mluOpHandle_t handle)
+mluOpStatus_t mlu_cpotrf_rectile(int batch, int stride, int n, int recnb, float* drA, float* diA, int lda, mluOpHandle_t handle, float* workspace)
 {
     cnrtQueue_t queue;
     mluOpGetQueue(handle,&queue);
@@ -1046,10 +1023,10 @@ mluOpStatus_t mlu_cpotrf_rectile(int batch, int stride, int n, int recnb, float*
     {
         int n1 = n/2;
         int n2 = n-n1;
-        mlu_cpotrf_rectile(batch,stride,n1,recnb,drA,diA,lda,handle);
-        ctrsm(batch,stride,n1,n2,drA,diA,lda,drA+n1*lda,diA+n1*lda,lda,handle);
-        cherk(batch,stride,n2,n1,drA+n1*lda,diA+n1*lda,lda,drA+n1*lda+n1,diA+n1*lda+n1,lda,handle);
-        mlu_cpotrf_rectile(batch,stride,n2,recnb,drA+n1*lda+n1,diA+n1*lda+n1,lda,handle);
+        mlu_cpotrf_rectile(batch,stride,n1,recnb,drA,diA,lda,handle,workspace);
+        ctrsm(batch,stride,n1,n2,drA,diA,lda,drA+n1*lda,diA+n1*lda,lda,handle,workspace);
+        cherk(batch,stride,n2,n1,drA+n1*lda,diA+n1*lda,lda,drA+n1*lda+n1,diA+n1*lda+n1,lda,handle,workspace);
+        mlu_cpotrf_rectile(batch,stride,n2,recnb,drA+n1*lda+n1,diA+n1*lda+n1,lda,handle,workspace);
 
     }
     return MLUOP_STATUS_SUCCESS;

@@ -29,7 +29,7 @@ class CholeskyExecutor : public Executor {
   size_t size_workspace_ = 0;
   int stride_ = 0;
   mluOpDataType_t type_ = MLUOP_DTYPE_FLOAT;
-  bool result_mul = false;
+  bool result_mul = true;
   int type_size_ = 4;
   bool trans_ = true;
   bool upper_ = false;
