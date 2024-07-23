@@ -14581,6 +14581,10 @@ mluOpStatus_t MLUOP_WIN_API
 mluOpGetCholeskyWorkspace(mluOpTensorDescriptor_t input_desc, 
               size_t* size, float** workspace);
 
+mluOpStatus_t MLUOP_WIN_API 
+mluOpFreeCholeskyWorkspace(float** workspace);
+
+
 
 #if defined(__cplusplus)
 }
