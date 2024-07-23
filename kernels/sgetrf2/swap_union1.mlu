@@ -1,0 +1,307 @@
+#include "sgetrf2.h"
+
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+
+#define MAX_N_SIZE 2048
+#define MAX_N_SIZE_COMPLEX 1024
+#define NB 32
+#define MAX_SIZE 1024 * 127
+#define CEILDIV(x, y) ((x + y - 1) / y)
+
+__mlu_global__ void MLUKernelCSwap(
+    int batch, int M_size, int N_size, int ib, int J,
+    int m, int n, int step,
+    float *d_rA, float *d_iA, int lda, int stride_a,
+    int *dipiv, int *dipiv2, int *info, int gbstep)
+{
+    int id, batch_id, tx, taskdim;
+    if (batch > 1)
+    {
+        id = taskId;
+        batch_id = id / 4;
+        if (batch_id >= batch)
+            return;
+        tx = taskId % 4;
+        d_rA += batch_id * stride_a;
+        d_iA += batch_id * stride_a;
+        taskdim = TaskUnion1;
+    }
+    else
+    {
+        id = taskId;
+        batch_id = 0;
+        taskdim = taskDim;
+        tx = taskId;
+    }
+    const int NRAM_SIZE = MAX_NRAM_SIZE >> 4;
+    const int SRAM_SIZE = (MAX_SRAM_SIZE >> 2);
+    __nram__ float r_src_nram[NRAM_SIZE];
+    __nram__ float i_src_nram[NRAM_SIZE];
+    __mlu_shared__ int sram_ipiv2[SRAM_SIZE];
+
+    float *rA = d_rA;
+    float *iA = d_iA;
+    int mp = m / taskdim;
+    const int mp_ = mp;
+    mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
+
+    if (tx % TaskUnion1 == 0 && m < SRAM_SIZE)
+    {
+        if (gbstep + J == 0)
+        {
+            __memcpy(sram_ipiv2, dipiv, m * sizeof(int), GDRAM2SRAM);
+        }
+        else
+        {
+            __memcpy(sram_ipiv2, dipiv2, m * sizeof(int), GDRAM2SRAM);
+        }
+    }
+    __sync_cluster();
+
+    int cnt = 0;
+    int idx[128];
+    int np = n;
+    int seg = CEILDIV(np, MAX_N_SIZE_COMPLEX);
+    for (int k = 0; k < seg; k++)
+    {
+
+        int m_per_core = mp;
+        int remain_n = np - k * MAX_N_SIZE_COMPLEX;
+        int n_per_seg = remain_n < MAX_N_SIZE_COMPLEX ? remain_n : MAX_N_SIZE_COMPLEX;
+        if (m_per_core > 0)
+        {
+            for (int i = 0; i < m_per_core; i++)
+            {
+                if (m < SRAM_SIZE)
+                {
+                    if (sram_ipiv2[i + tx * mp_] != i + tx * mp_)
+                    {
+                        if (n_per_seg > 0)
+                        {
+                            __memcpy(r_src_nram + cnt * n_per_seg,
+                                     rA + (sram_ipiv2[i + tx * mp_]) * lda + k * MAX_N_SIZE_COMPLEX,
+                                     n_per_seg * sizeof(float),
+                                     GDRAM2NRAM);
+                            __memcpy(i_src_nram + cnt * n_per_seg,
+                                     iA + (sram_ipiv2[i + tx * mp_]) * lda + k * MAX_N_SIZE_COMPLEX,
+                                     n_per_seg * sizeof(float),
+                                     GDRAM2NRAM);
+                        }
+                        idx[cnt] = i;
+                        cnt++;
+                    }
+                }
+                else
+                {
+                    if (gbstep + J == 0)
+                    {
+                        if (dipiv[i + tx * mp_] != i + tx * mp_)
+                        {
+                            if (n_per_seg > 0)
+                            {
+                                __memcpy(r_src_nram + cnt * n_per_seg,
+                                         rA + (dipiv[i + tx * mp_]) * lda + k * MAX_N_SIZE_COMPLEX,
+                                         n_per_seg * sizeof(float),
+                                         GDRAM2NRAM);
+                                __memcpy(i_src_nram + cnt * n_per_seg,
+                                         iA + (dipiv[i + tx * mp_]) * lda + k * MAX_N_SIZE_COMPLEX,
+                                         n_per_seg * sizeof(float),
+                                         GDRAM2NRAM);
+                            }
+                            idx[cnt] = i;
+                            cnt++;
+                        }
+                    }
+                    else
+                    {
+                        if (dipiv2[i + tx * mp_] != i + tx * mp_)
+                        {
+                            if (n_per_seg > 0)
+                            {
+                                __memcpy(r_src_nram + cnt * n_per_seg,
+                                         rA + (dipiv2[i + tx * mp_]) * lda + k * MAX_N_SIZE_COMPLEX,
+                                         n_per_seg * sizeof(float),
+                                         GDRAM2NRAM);
+                                __memcpy(i_src_nram + cnt * n_per_seg,
+                                         iA + (dipiv2[i + tx * mp_]) * lda + k * MAX_N_SIZE_COMPLEX,
+                                         n_per_seg * sizeof(float),
+                                         GDRAM2NRAM);
+                            }
+                            idx[cnt] = i;
+                            cnt++;
+                        }
+                    }
+                }
+            }
+        }
+
+        __sync_all();
+        if (m_per_core > 0 && cnt > 0)
+        {
+            for (int i = 0; i < cnt; i++)
+            {
+                if (n_per_seg > 0)
+                {
+                    __memcpy(rA + tx * lda * mp_ + idx[i] * lda + k * MAX_N_SIZE_COMPLEX,
+                             r_src_nram + i * n_per_seg,
+                             n_per_seg * sizeof(float),
+                             NRAM2GDRAM);
+                    __memcpy(iA + tx * lda * mp_ + idx[i] * lda + k * MAX_N_SIZE_COMPLEX,
+                             i_src_nram + i * n_per_seg,
+                             n_per_seg * sizeof(float),
+                             NRAM2GDRAM);
+                }
+            }
+        }
+    }
+}
+
+__mlu_entry__ void MLUKernelSwap(
+    int batch, int M_size, int N_size, int ib, int J,
+    int m, int n, int step,
+    float *dA, int lda, int stride_a,
+    int *dipiv, int *dipiv2, int *info, int gbstep)
+{
+    int id, batch_id, tx, taskdim;
+    if (batch > 1)
+    {
+        id = taskId;
+        batch_id = id / 4;
+        if (batch_id >= batch)
+            return;
+        tx = taskId % 4;
+        dA += batch_id * stride_a;
+        taskdim = TaskUnion1;
+    }
+    else
+    {
+        id = taskId;
+        batch_id = 0;
+        taskdim = taskDim;
+        tx = taskId;
+    }
+    const int NRAM_SIZE = MAX_NRAM_SIZE >> 2;
+    const int SRAM_SIZE = (MAX_SRAM_SIZE >> 2);
+    __nram__ float src_nram[NRAM_SIZE];
+    __mlu_shared__ int sram_ipiv2[SRAM_SIZE];
+
+    float *A = dA;
+    int mp = m / taskdim;
+    const int mp_ = mp;
+    mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
+
+    if (tx % TaskUnion1 == 0 && m < SRAM_SIZE)
+    {
+        if (gbstep + J == 0)
+        {
+            __memcpy(sram_ipiv2, dipiv, m * sizeof(int), GDRAM2SRAM);
+        }
+        else
+        {
+            __memcpy(sram_ipiv2, dipiv2, m * sizeof(int), GDRAM2SRAM);
+        }
+    }
+    __sync_cluster();
+
+    int cnt = 0;
+    int idx[128];
+    int np = n;
+    int seg = CEILDIV(np, MAX_N_SIZE);
+    for (int k = 0; k < seg; k++)
+    {
+        int m_per_core = mp;
+        int remain_n = np - k * MAX_N_SIZE;
+        int n_per_seg = remain_n < MAX_N_SIZE ? remain_n : MAX_N_SIZE;
+        if (m_per_core > 0)
+        {
+            for (int i = 0; i < m_per_core; i++)
+            {
+                if (m < SRAM_SIZE)
+                {
+                    if (sram_ipiv2[i + tx * mp_] != i + tx * mp_)
+                    {
+                        if (n_per_seg > 0)
+                        {
+                            __memcpy(src_nram + cnt * n_per_seg,
+                                     A + (sram_ipiv2[i + tx * mp_]) * lda + k * MAX_N_SIZE,
+                                     n_per_seg * sizeof(float),
+                                     GDRAM2NRAM);
+                        }
+                        idx[cnt] = i;
+                        cnt++;
+                    }
+                }
+                else
+                {
+                    if (gbstep + J == 0)
+                    {
+                        if (dipiv[i + tx * mp_] != i + tx * mp_)
+                        {
+                            if (n_per_seg > 0)
+                            {
+                                __memcpy(src_nram + cnt * n_per_seg,
+                                         A + (dipiv[i + tx * mp_]) * lda + k * MAX_N_SIZE,
+                                         n_per_seg * sizeof(float),
+                                         GDRAM2NRAM);
+                            }
+                            idx[cnt] = i;
+                            cnt++;
+                        }
+                    }
+                    else
+                    {
+                        if (dipiv2[i + tx * mp_] != i + tx * mp_)
+                        {
+                            if (n_per_seg > 0)
+                            {
+                                __memcpy(src_nram + cnt * n_per_seg,
+                                         A + (dipiv2[i + tx * mp_]) * lda + k * MAX_N_SIZE,
+                                         n_per_seg * sizeof(float),
+                                         GDRAM2NRAM);
+                            }
+                            idx[cnt] = i;
+                            cnt++;
+                        }
+                    }
+                }
+            }
+        }
+
+        __sync_all();
+        if (m_per_core > 0 && cnt > 0)
+        {
+            for (int i = 0; i < cnt; i++)
+            {
+                if (n_per_seg > 0)
+                {
+                    __memcpy(A + tx * lda * mp_ + idx[i] * lda + k * MAX_N_SIZE,
+                             src_nram + i * n_per_seg,
+                             n_per_seg * sizeof(float),
+                             NRAM2GDRAM);
+                }
+            }
+        }
+    }
+    return;
+}
+mluOpStatus_t MLUOP_WIN_API KernelSwap(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                                       cnrtQueue_t queue, mluOpDataType_t d_type,
+                                       int batch, int M_size, int N_size, int ib, int J,
+                                       int m, int n, int step,
+                                       float *dA, float *d_rA, float *d_iA, int lda, int stride_a,
+                                       int *dipiv, int *dipiv2, int *info, int gbstep)
+{
+    if (d_type == MLUOP_DTYPE_FLOAT)
+    {
+        KERNEL_CHECK(MLUKernelSwap<<<k_dim, k_type, queue>>>(batch, M_size, N_size, ib, J, m, n, step, dA, lda, stride_a, dipiv, dipiv2, info, gbstep));
+    }
+
+    else if (d_type == MLUOP_DTYPE_COMPLEX_FLOAT)
+    {
+        KERNEL_CHECK(MLUKernelCSwap<<<k_dim, k_type, queue>>>(batch, M_size, N_size, ib, J, m, n, step, d_rA, d_iA, lda, stride_a, dipiv, dipiv2, info, gbstep));
+    }
+
+    return MLUOP_STATUS_SUCCESS;
+}

@@ -1,9 +1,11 @@
-op_name: "test_sgetrf"
+op_name: "test_sgetrf2"
 input {
   id: "input"
   shape: {
-    dims: 1024
-    dims: 1024
+    dims: 1
+    dims: 1
+    dims: 65536
+    dims: 30
  
   }
   layout: LAYOUT_ARRAY
@@ -18,8 +20,10 @@ input {
 output {
   id: "output"
   shape: {
-    dims: 1024
-    dims: 1024
+    dims: 1
+    dims: 1
+    dims: 65536
+    dims: 30
    
   }
   layout: LAYOUT_ARRAY
@@ -28,6 +32,8 @@ output {
 test_param: {
   error_func: DIFF1
   error_func: DIFF2
+  error_func: DIFF3_2
+  error_threshold: 0.003
   error_threshold: 0.003
   error_threshold: 0.003
   baseline_device: CPU

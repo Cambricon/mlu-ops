@@ -26,10 +26,10 @@
 
 namespace mluoptest {
 
-class SgetrfExecutor : public Executor {
+class Sgetrf2Executor : public Executor {
  public:
-  SgetrfExecutor() {}
-  ~SgetrfExecutor() {}
+  Sgetrf2Executor() {}
+  ~Sgetrf2Executor() {}
 
   void paramCheck();
   void compute();
