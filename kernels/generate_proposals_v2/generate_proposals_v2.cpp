@@ -62,6 +62,12 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
 mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc,
     size_t *size) {
+  LOG_FIRST_N(WARNING, 1)
+      << "[mluOpGetGenerateProposalsV2WorkspaceSize] is deprecated and will be "
+         "removed in "
+      << "the future release, "
+      << "please use [mluOpGetGenerateProposalsV2WorkspaceSize_v2] instead.";
+
   const std::string API = "[mluOpGenerateProposalsV2]";
   PARAM_CHECK(API, handle != NULL);
   PARAM_CHECK(API, scores_desc != NULL);
@@ -127,6 +133,93 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
         PAD_UP(topk_workspace_size, GDRAM_ALIGN_SIZE);
     const size_t nhwa_size_align =
         PAD_UP(n * hwa * data_size, GDRAM_ALIGN_SIZE);
+    // topk_workspace_size_align: workspace be used in cnnlTopKTensor_v3.
+    // 2 * nhwa_size_align: workspace be used to store scores and indexes after
+    // topk.
+    // 10 * hwa: workspace be used to store proposals score and box.
+    // handle->core_num_per_cluster * data_size: workspace be used to store per
+    // core proposals_num.
+    *size = topk_workspace_size_align + 2 * nhwa_size_align +
+            10 * hwa * data_size +
+            handle->core_num_per_cluster * handle->cluster_num * data_size;
+  } else {
+    // 4 * hwa: workspace be used store proposals_box/scores
+    // 8 * hwa: workspace be used store decode boxes/scores
+    *size = 12 * hwa * 4 + handle->core_num_per_cluster * 4 * 3;
+  }
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize_v2(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc,
+    const int32_t pre_nms_top_n, size_t *size) {
+  const std::string API = "[mluOpGenerateProposalsV2]";
+  PARAM_CHECK(API, handle != NULL);
+  PARAM_CHECK(API, scores_desc != NULL);
+  PARAM_CHECK(API, size != NULL);
+
+  PARAM_CHECK(API, scores_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, scores_desc->layout == MLUOP_LAYOUT_ARRAY);
+
+  PARAM_CHECK_EQ(API, scores_desc->dim, 4);
+  PARAM_CHECK_NE(API, scores_desc->dims[1], 0);
+  PARAM_CHECK_NE(API, scores_desc->dims[2], 0);
+  PARAM_CHECK_NE(API, scores_desc->dims[3], 0);
+
+  const size_t scores_num = mluOpGetTensorElementNum(scores_desc);
+  TENSOR_NUM_CHECK(API, scores_num, LARGE_TENSOR_NUM, "");
+
+  const int64_t n = scores_desc->dims[0];
+  const int64_t h = scores_desc->dims[1];
+  const int64_t w = scores_desc->dims[2];
+  const int64_t a = scores_desc->dims[3];
+  const int64_t hwa = h * w * a;
+  if (handle->arch >= 592) {
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
+    cnnlTensorDescriptor_t origin_indices_desc;
+    cnnlTensorDescriptor_t sorted_score_desc;
+    cnnlTensorDescriptor_t sorted_index_desc;
+    CALL_CNNL(cnnlCreateTensorDescriptor(&origin_indices_desc));
+    CALL_CNNL(cnnlCreateTensorDescriptor(&sorted_score_desc));
+    CALL_CNNL(cnnlCreateTensorDescriptor(&sorted_index_desc));
+
+    const int64_t origin_indices_shape[2] = {n, (int64_t)hwa};
+    const int64_t max_k =
+        (pre_nms_top_n <= 0 || pre_nms_top_n > hwa) ? hwa : pre_nms_top_n;
+    const int64_t sorted_indices_shape[2] = {n, max_k};
+    const int64_t sorted_index_shape[2] = {n, max_k};
+
+    cnnlTensorLayout_t layout = CNNL_LAYOUT_ARRAY;
+    CALL_CNNL(cnnlSetTensorDescriptor_v2(origin_indices_desc, layout,
+                                         CNNL_DTYPE_FLOAT, 2,
+                                         origin_indices_shape));
+    CALL_CNNL(cnnlSetTensorDescriptor_v2(sorted_score_desc, layout,
+                                         CNNL_DTYPE_FLOAT, 2 /*dims:{n,hwa}*/,
+                                         sorted_indices_shape));
+    CALL_CNNL(cnnlSetTensorDescriptor_v2(sorted_index_desc, layout,
+                                         CNNL_DTYPE_INT32, 2 /*dims:{n,hwa}*/,
+                                         sorted_index_shape));
+
+    const bool largest = true;  // param for topk, sort from large to small
+    const bool sorted = true;   // param for topk, return sorted indices.
+    const bool lower_index_first = true;  // param for topk, sort preservation
+
+    size_t topk_workspace_size = 0;
+    CALL_CNNL(cnnlGetTopKTensorWorkspaceSize(
+        cnnl_handle, origin_indices_desc, max_k, 1, largest, sorted_score_desc,
+        sorted_index_desc, &topk_workspace_size));
+
+    CALL_CNNL(cnnlDestroyTensorDescriptor(origin_indices_desc));
+    CALL_CNNL(cnnlDestroyTensorDescriptor(sorted_score_desc));
+    CALL_CNNL(cnnlDestroyTensorDescriptor(sorted_index_desc));
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+    size_t data_size = 0;
+    mluOpGetSizeOfDataType(scores_desc->dtype, &data_size);
+
+    const size_t topk_workspace_size_align =
+        PAD_UP(topk_workspace_size, GDRAM_ALIGN_SIZE);
+    const size_t nhwa_size_align =
+        PAD_UP(n * max_k * data_size, GDRAM_ALIGN_SIZE);
     // topk_workspace_size_align: workspace be used in cnnlTopKTensor_v3.
     // 2 * nhwa_size_align: workspace be used to store scores and indexes after
     // topk.
@@ -360,11 +453,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
     CALL_CNNL(cnnlGetTopKTensorWorkspaceSize(
         cnnl_handle, origin_indices_desc, max_k, 1, largest, sorted_score_desc,
         sorted_index_desc, &topk_workspace_size));
+
     size_t tok_workspace_align_size =
         PAD_UP(topk_workspace_size, GDRAM_ALIGN_SIZE);
     size_t data_size = 0;
     mluOpGetSizeOfDataType(scores_desc->dtype, &data_size);
-    const size_t indices_size = n * max_k * data_size;
+    const size_t indices_size = PAD_UP(n * hwa * data_size, GDRAM_ALIGN_SIZE);
+    // const size_t indices_size = n * max_k * data_size;
     void *sorted_score = (void *)((char *)workspace + tok_workspace_align_size);
     void *sorted_index = (void *)((char *)sorted_score + indices_size);
 
