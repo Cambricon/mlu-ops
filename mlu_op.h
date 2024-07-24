@@ -3880,7 +3880,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  * @brief Gets extra space size that is needed in the GenerateProposalsV2 operation.
  *
  * Compared with ::mluOpGetGenerateProposalsV2WorkspaceSize, this function supports
- * the parameters of \p pre_nms_top_n.
+ * parameter \p pre_nms_top_n.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
