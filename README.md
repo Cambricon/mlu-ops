@@ -30,6 +30,9 @@
 
 </div>
 
+- 为了提供更好的开发体验，我们为您提供包含寒武纪完整软件栈的容器镜像，帮助您跳过环境部署环节
+- 如需获取该容器镜像，可提 `ISSUE` 留下您的联系方式
+
 ## 简介
 MLU-OPS™提供基于寒武纪人工智能单元（MLU），使用 C 接口开发高性能算子的示例代码。
 MLU-OPS™旨在通过提供示例代码，供开发者参考使用，可用于开发自定义算子，实现对应模型的计算。
@@ -49,7 +52,7 @@ MLU-OPS™提供了以下功能：
   - 支持 x86_64 架构下的 Ubuntu20.04、Centos7.6、Centos8.5、Kylin10
   - MLU-OPS™ v1.0.0版本后将不再支持 Ubuntu18.04。Ubuntu22.04系统将在后续的版本提供支持。
 - 寒武纪 MLU SDK：
-  - 编译和运行时依赖 CNToolkit v3.8.4 或更高版本，CNNL v1.23.2 或者更高版本
+  - 编译和运行时依赖 CNToolkit v3.12.3 或更高版本，CNNL v1.26.1 或者更高版本
 - 寒武纪 MLU 驱动：
   - 运行时依赖驱动 v5.10.25 或更高版本
 - 外部链接库：
@@ -73,12 +76,12 @@ MLU-OPS™提供了以下功能：
 - 准备 CNToolkit、CNNL 环境
 
   ```sh
-  wget https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu20.04/cntoolkit_3.8.4-1.ubuntu20.04_amd64.deb
-  wget https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu20.04/cnnl_1.23.2-1.ubuntu20.04_amd64.deb
-  sudo apt-get install ./cntoolkit-3.8.4-1.ubuntu20.04_amd64.deb
+  wget https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu20.04/cntoolkit_x.x.x-x.ubuntu20.04_amd64.deb
+  wget https://sdk.cambricon.com/static/Basis/MLU370_X86_ubuntu20.04/cnnl_x.x.x-x.ubuntu20.04_amd64.deb
+  sudo apt-get install ./cntoolkit-x.x.x-x.ubuntu20.04_amd64.deb
   sudo apt-get update
   sudo apt-get install cncc cnas cnbin cndrv cndev cnrt cnrtc cngdb cnperf
-  sudo apt-get install ./cnnl_1.23.2-1.ubuntu20.04_amd64.deb
+  sudo apt-get install ./cnnl_x.x.x-x.ubuntu20.04_amd64.deb
   ```
 
 - 准备 Python-3.8.0 环境
