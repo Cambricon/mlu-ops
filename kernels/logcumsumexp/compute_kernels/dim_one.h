@@ -219,6 +219,7 @@ dimOneKernel(const T *input,
       n_core * sizeof(T), GDRAM2NRAM);
     }
 
+
     T *this_sram = sram_src0;
     T *next_sram = sram_src1;
     T *this_nram = nram_src0;
