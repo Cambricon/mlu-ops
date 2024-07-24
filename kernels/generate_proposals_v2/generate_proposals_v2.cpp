@@ -64,8 +64,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize(
     size_t *size) {
   LOG_FIRST_N(WARNING, 1)
       << "[mluOpGetGenerateProposalsV2WorkspaceSize] is deprecated and will be "
-         "removed in "
-      << "the future release, "
+      << "removed in the future release,"
       << "please use [mluOpGetGenerateProposalsV2WorkspaceSize_v2] instead.";
 
   const std::string API = "[mluOpGenerateProposalsV2]";

@@ -3870,7 +3870,7 @@ mluOpDynamicPointToVoxelForward(const mluOpHandle_t handle,
  * - None.
  *
  * @par Reference
- *
+ * - None.
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc, size_t *size);
@@ -3879,6 +3879,9 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
 /*!
  * @brief Gets extra space size that is needed in the GenerateProposalsV2 operation.
  *
+ * Compared with ::mluOpGetGenerateProposalsV2WorkspaceSize, this function supports
+ * the parameters of \p pre_nms_top_n.
+ *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the GenerateProposalsV2 operation.
@@ -3886,7 +3889,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  * The descriptor of the tensor \b scores. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] pre_nms_top_n
- * The number of top scoring RPN proposals to keep before applying
+ * The number of top scoring RPN proposals to keep before applying NMS.
  * @param[out] size
  * A host pointer to the returned size of extra space in bytes.
  *
@@ -3912,7 +3915,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  * - None.
  *
  * @par Reference
- *
+ * - None.
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
