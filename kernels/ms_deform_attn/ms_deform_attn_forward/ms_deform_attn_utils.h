@@ -28,35 +28,11 @@
 
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
+#include "ms_deform_attn_forward.h"
 
 #define BIT_COLLECT_PAD (8)
 #define BACKWARD_MAX_NQ_NL_NP (1024)
 
-#if (__BANG_ARCH__ >= 372)
-
-__mlu_func__ void broadcastSpatialHW(
-    float* spatial_offset_bd_nram,  // (num_levels, num_points)
-    float* spatial_h_bd_nram,       // (num_levels, num_points)
-    float* spatial_w_bd_nram,       // (num_levels, num_points)
-    int32_t* spatial_shapes_nram,   // (num_levels, 2)
-    int32_t* spatial_offset_nram,   // (num_levels)
-    const int32_t num_levels, const int32_t num_points) {
-  __bang_int322float((float*)spatial_shapes_nram, spatial_shapes_nram,
-                     num_levels * 2, 0);
-  __memcpy(spatial_h_bd_nram, spatial_shapes_nram, sizeof(float), NRAM2NRAM,
-           sizeof(float), num_points - 1, num_points * sizeof(float),
-           num_levels - 1, 0, num_points - 1, 2 * sizeof(float),
-           num_levels - 1);
-  __memcpy(spatial_w_bd_nram, (float*)spatial_shapes_nram + 1, sizeof(float),
-           NRAM2NRAM, sizeof(float), num_points - 1, num_points * sizeof(float),
-           num_levels - 1, 0, num_points - 1, 2 * sizeof(float),
-           num_levels - 1);
-  __bang_int322float((float*)spatial_offset_nram, spatial_offset_nram,
-                     num_levels, 0);
-  __memcpy(spatial_offset_bd_nram, spatial_offset_nram, sizeof(float),
-           NRAM2NRAM, sizeof(float), num_points - 1, num_points * sizeof(float),
-           num_levels - 1, 0, num_points - 1, sizeof(float), num_levels - 1);
-}
 
 template <typename T>
 __mlu_func__ void prepareLoopV2(
@@ -168,10 +144,17 @@ __mlu_func__ void computePolationWeightOffsetCond(
   __bang_collect_bitindex(buf_x_nram, loc_nram, mask_x_nram, total_coord_pad);
   __bang_collect_bitindex(buf_y_nram, loc_nram, mask_y_nram, total_coord_pad);
   // x = loc_x * spatial_w - 0.5; y = loc_y * spatial_h - 0.5;
-  __bang_fusion(FUSION_FMS, buf_x_nram, buf_x_nram, spatial_w_bd_nram, (T)0.5,
-                total_points, block_points);
-  __bang_fusion(FUSION_FMS, buf_y_nram, buf_y_nram, spatial_h_bd_nram, (T)0.5,
-                total_points, block_points);
+  //FMS < dst >=< src0 > × < src1 > − < src2 >
+  // __bang_fusion(FUSION_FMS, buf_x_nram, buf_x_nram, spatial_w_bd_nram, (T)0.5,
+  //               total_points, block_points);
+  __bang_cycle_mul(buf_x_nram, buf_x_nram, spatial_w_bd_nram, total_points, block_points);
+  __bang_sub_scalar(buf_x_nram, buf_x_nram, (T)0.5, total_points);
+
+  // __bang_fusion(FUSION_FMS, buf_y_nram, buf_y_nram, spatial_h_bd_nram, (T)0.5,
+  //               total_points, block_points);
+  __bang_cycle_mul(buf_y_nram, buf_y_nram, spatial_h_bd_nram, total_points, block_points);
+  __bang_sub_scalar(buf_y_nram, buf_y_nram, (T)0.5, total_points);
+
   //================================================================================================
   // get point condition. use buf0, buf1, buf2
   // (x > -1 && y > -1 && y < spatial_h && x < spatial_w)
@@ -188,9 +171,9 @@ __mlu_func__ void computePolationWeightOffsetCond(
   __bang_and(cond_point_valid_nram, cond_point_valid_nram, buf_cond_nram,
              total_points);
   //================================================================================================
-  __bang_floor(buf_x_floor, buf_x_nram, total_points);
+  __mluop_floor(buf_x_floor, buf_x_nram, total_points);
   __bang_add_scalar(buf_x_ceil, buf_x_floor, 1.0, total_points);
-  __bang_floor(buf_y_floor, buf_y_nram, total_points);
+  __mluop_floor(buf_y_floor, buf_y_nram, total_points);
   __bang_add_scalar(buf_y_ceil, buf_y_floor, 1.0, total_points);
   T* cond_point_polation_nram_tl = cond_point_polation_nram;
   T* cond_point_polation_nram_bl = cond_point_polation_nram + total_points;
@@ -229,12 +212,19 @@ __mlu_func__ void computePolationWeightOffsetCond(
   // T* weight_polation_nram_buf = buf_nram + 4 * total_points;
   __bang_sub(buf_dx, buf_x_floor, buf_x_nram, total_points);  // -dx
   __bang_sub(buf_dy, buf_y_floor, buf_y_nram, total_points);  // -dy
-  __bang_fusion(FUSION_FSS, buf_dx_1, buf_x_nram, buf_x_floor,
-                (T)1.0,  // dx - 1
-                total_points, total_points);
-  __bang_fusion(FUSION_FSS, buf_dy_1, buf_y_nram, buf_y_floor,
-                (T)1.0,  // dy - 1
-                total_points, total_points);
+  // FUSION_FSS < dst >=< src0 > − < src1 > − < src2 >
+  // __bang_fusion(FUSION_FSS, buf_dx_1, buf_x_nram, buf_x_floor,
+  //               (T)1.0,  // dx - 1
+  //               total_points, total_points);
+  __bang_sub(buf_dx_1, buf_x_nram, buf_x_floor, total_points);
+  __bang_sub_scalar(buf_dx_1, buf_dx_1, (T)1.0, total_points);
+
+  // __bang_fusion(FUSION_FSS, buf_dy_1, buf_y_nram, buf_y_floor,
+  //               (T)1.0,  // dy - 1
+  //               total_points, total_points);
+  __bang_sub(buf_dy_1, buf_y_nram, buf_y_floor, total_points);
+  __bang_sub_scalar(buf_dy_1, buf_dy_1, (T)1.0, total_points);
+
   __bang_mul(weight_polation_nram_1, buf_dx_1, buf_dy,
              total_points);  // (-dy)(dx-1)
   __bang_mul(weight_polation_nram_2, buf_dx_1, buf_dy_1,
@@ -278,14 +268,21 @@ __mlu_func__ void computePolationWeightOffsetCond(
   T* data_offset_nram_tr = data_offset_nram_bl + total_points;
   T* data_offset_nram_br = data_offset_nram_tr + total_points;
   // y_ceil*w + offset + x_floor
-  __bang_fusion(FUSION_FMA, buf_hw_offset, buf_y_ceil, spatial_w_bd_nram,
-                spatial_offset_bd_nram, total_points, block_points);
+  // FUSION_FMA < dst >=< src0 > × < src1 > + < src2 >
+  // __bang_fusion(FUSION_FMA, buf_hw_offset, buf_y_ceil, spatial_w_bd_nram,
+  //               spatial_offset_bd_nram, total_points, block_points);
+  __bang_cycle_mul(buf_hw_offset, buf_y_ceil, spatial_w_bd_nram, total_points, block_points);
+  __bang_cycle_add(buf_hw_offset, buf_hw_offset, spatial_offset_bd_nram, total_points, block_points);
+
   __bang_add(data_offset_nram_tl, buf_hw_offset, buf_x_floor, total_points);
   // y_ceil*w + offset + x_ceil
   __bang_add(data_offset_nram_tr, buf_hw_offset, buf_x_ceil, total_points);
   // y_floor*w + offset + x_foor
-  __bang_fusion(FUSION_FMA, buf_hw_offset, buf_y_floor, spatial_w_bd_nram,
-                spatial_offset_bd_nram, total_points, block_points);
+  // __bang_fusion(FUSION_FMA, buf_hw_offset, buf_y_floor, spatial_w_bd_nram,
+  //               spatial_offset_bd_nram, total_points, block_points);
+  __bang_cycle_mul(buf_hw_offset, buf_y_floor, spatial_w_bd_nram, total_points, block_points);
+  __bang_cycle_add(buf_hw_offset, buf_hw_offset, spatial_offset_bd_nram,total_points, block_points);
+
   __bang_add(data_offset_nram_bl, buf_hw_offset, buf_x_floor, total_points);
   // y_floor*w + offset + x_ceil
   __bang_add(data_offset_nram_br, buf_hw_offset, buf_x_ceil, total_points);
@@ -375,7 +372,6 @@ __mlu_func__ void stageOneLoop(
   }
   __sync_io_move_compute();
 }
-#endif
 
 #if (__BANG_ARCH__ == 592)
 __mlu_func__ void gatherAsync(void* dst, void* src, unsigned int* offset,

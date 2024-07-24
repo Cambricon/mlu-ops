@@ -36,9 +36,12 @@ __mlu_func__ void broadcastSpatialHW(
   float* spatial_w_bd_nram,       // (num_levels, num_points)
   int32_t* spatial_shapes_nram,   // (num_levels, 2)
   int32_t* spatial_offset_nram,   // (num_levels)
-  const int32_t num_levels, const int32_t num_points) {
+  const int32_t num_levels, const int32_t num_points, const int32_t pad_num_points_levels) {
+  __bang_write_value(spatial_h_bd_nram, pad_num_points_levels, 0);
+  __bang_write_value(spatial_w_bd_nram, pad_num_points_levels, 0);
+  __bang_write_value(spatial_offset_bd_nram, pad_num_points_levels, 0);
   __bang_int322float((float*)spatial_shapes_nram, spatial_shapes_nram,
-                    num_levels * 2, 0);
+                    num_levels * 2, 0); // 这个指令还需要换成 mluop_int322float
   for(int i = 0; i < num_levels; i++) {
     __memcpy(spatial_h_bd_nram + i * num_points,
             spatial_shapes_nram + i * 2, sizeof(float),
@@ -50,7 +53,7 @@ __mlu_func__ void broadcastSpatialHW(
             NRAM2NRAM, sizeof(float), 0, num_points - 1);
   }
   __bang_int322float((float*)spatial_offset_nram, spatial_offset_nram,
-                    num_levels, 0);
+                    num_levels, 0); // 这个指令还需要换成 mluop_int322float
   for(int i = 0; i < num_levels; i++) {
     __memcpy(spatial_offset_bd_nram + i * num_points,
             spatial_offset_nram + i, sizeof(float),
@@ -66,74 +69,90 @@ __mlu_func__ void getConditionCoordWeight(
     T* spatial_offset_bd_nram, T* spatial_w_bd_nram, T* spatial_h_bd_nram,
     T* buf_nram, const int32_t deal_n, const int32_t num_levels, const int32_t num_points,
     const int32_t num_heads, const int32_t channels) {
-  int32_t total_points = deal_n * num_levels * num_points;
-  int32_t block_points = num_levels * num_points;
+  int32_t pad_num_points_levels =
+    PAD_UP(num_points * num_levels, NFU_ALIGN_SIZE / sizeof(T));
+  // int32_t total_points = deal_n * num_levels * num_points;
+  int32_t pad_total_points = deal_n * pad_num_points_levels;
+  // int32_t block_points = num_levels * num_points;
+  int32_t pad_block_points = pad_num_points_levels;
   T* buf_x_nram = buf_nram;
-  T* buf_y_nram = buf_nram + total_points;
-  T* buf_cond_nram = buf_nram + 2 * total_points;
-  T* buf_x_floor = buf_nram + 2 * total_points;
-  T* buf_x_ceil = buf_nram + 3 * total_points;
-  T* buf_y_floor = buf_nram + 4 * total_points;
-  T* buf_y_ceil = buf_nram + 5 * total_points;
+  T* buf_y_nram = buf_nram + pad_total_points;
+  T* buf_cond_nram = buf_nram + 2 * pad_total_points;
+  T* buf_x_floor = buf_nram + 2 * pad_total_points;
+  T* buf_x_ceil = buf_nram + 3 * pad_total_points;
+  T* buf_y_floor = buf_nram + 4 * pad_total_points;
+  T* buf_y_ceil = buf_nram + 5 * pad_total_points;
   //================================================================================================
-  int32_t total_coord_pad = PAD_UP(total_points * 2, BIT_COLLECT_PAD);
+  int32_t total_coord_pad = PAD_UP(pad_total_points * 2, BIT_COLLECT_PAD);
   __bang_collect_bitindex(buf_x_nram, loc_nram, mask_x_nram, total_coord_pad);
   __bang_collect_bitindex(buf_y_nram, loc_nram, mask_y_nram, total_coord_pad);
   // x = loc_x * spatial_w - 0.5; y = loc_y * spatial_h - 0.5;
-  __bang_fusion(FUSION_FMS, buf_x_nram, buf_x_nram, spatial_w_bd_nram, (T)0.5,
-                total_points, block_points);
-  __bang_fusion(FUSION_FMS, buf_y_nram, buf_y_nram, spatial_h_bd_nram, (T)0.5,
-                total_points, block_points);
+  // FUSION_FMS < dst >=< src0 > × < src1 > − < src2 >
+  // __bang_fusion(FUSION_FMS, buf_x_nram, buf_x_nram, spatial_w_bd_nram, (T)0.5,
+  //               total_points, block_points);
+  __bang_cycle_mul(buf_x_nram, buf_x_nram, spatial_w_bd_nram, pad_total_points, pad_block_points);
+  __bang_sub_scalar(buf_x_nram, buf_x_nram, (T)0.5, pad_total_points);
+
+  // __bang_fusion(FUSION_FMS, buf_y_nram, buf_y_nram, spatial_h_bd_nram, (T)0.5,
+  //               total_points, block_points);
+  __bang_cycle_mul(buf_y_nram, buf_y_nram, spatial_h_bd_nram, pad_total_points, pad_block_points);
+  __bang_sub_scalar(buf_y_nram, buf_y_nram, (T)0.5, pad_total_points);
   //================================================================================================
   // get point condition. use buf0, buf1, buf2
   // (x > -1 && y > -1 && y < spatial_h && x < spatial_w)
-  __bang_gt_scalar(cond_point_valid_nram, buf_x_nram, (T)-1.0, total_points);
-  __bang_gt_scalar(buf_cond_nram, buf_y_nram, (T)-1.0, total_points);
+  // __bang_gt_scalar(cond_point_valid_nram, buf_x_nram, (T)-1.0, total_points);
+  __bang_write_value(cond_point_valid_nram, pad_total_points, (T)-1.0);
+  __bang_gt(cond_point_valid_nram, buf_x_nram, cond_point_valid_nram, pad_total_points);
+
+  // __bang_gt_scalar(buf_cond_nram, buf_y_nram, (T)-1.0, total_points);
+  __bang_write_value(buf_cond_nram, pad_total_points, (T)-1.0);
+  __bang_gt(buf_cond_nram, buf_y_nram, buf_cond_nram, pad_total_points);
+
   __bang_and(cond_point_valid_nram, cond_point_valid_nram, buf_cond_nram,
-             total_points);
-  __bang_cycle_lt(buf_cond_nram, buf_x_nram, spatial_w_bd_nram, total_points,
-                  block_points);
+             pad_total_points);
+  __bang_cycle_lt(buf_cond_nram, buf_x_nram, spatial_w_bd_nram, pad_total_points,
+                  pad_block_points);
   __bang_and(cond_point_valid_nram, cond_point_valid_nram, buf_cond_nram,
-             total_points);
-  __bang_cycle_lt(buf_cond_nram, buf_y_nram, spatial_h_bd_nram, total_points,
-                  block_points);
+             pad_total_points);
+  __bang_cycle_lt(buf_cond_nram, buf_y_nram, spatial_h_bd_nram, pad_total_points,
+                  pad_block_points);
   __bang_and(cond_point_valid_nram, cond_point_valid_nram, buf_cond_nram,
-             total_points);
+             pad_total_points);
   //================================================================================================
-  __bang_floor(buf_x_floor, buf_x_nram, total_points);
-  __bang_add_scalar(buf_x_ceil, buf_x_floor, 1.0, total_points);
-  __bang_floor(buf_y_floor, buf_y_nram, total_points);
-  __bang_add_scalar(buf_y_ceil, buf_y_floor, 1.0, total_points);
+  __mluop_floor(buf_x_floor, buf_x_nram, pad_total_points);
+  __bang_add_scalar(buf_x_ceil, buf_x_floor, 1.0, pad_total_points);
+  __mluop_floor(buf_y_floor, buf_y_nram, pad_total_points);
+  __bang_add_scalar(buf_y_ceil, buf_y_floor, 1.0, pad_total_points);
   T* cond_point_polation_nram_tl = cond_point_polation_nram;
-  T* cond_point_polation_nram_bl = cond_point_polation_nram + total_points;
-  T* cond_point_polation_nram_tr = cond_point_polation_nram + 2 * total_points;
-  T* cond_point_polation_nram_br = cond_point_polation_nram + 3 * total_points;
+  T* cond_point_polation_nram_bl = cond_point_polation_nram + pad_total_points;
+  T* cond_point_polation_nram_tr = cond_point_polation_nram + 2 * pad_total_points;
+  T* cond_point_polation_nram_br = cond_point_polation_nram + 3 * pad_total_points;
   T* cond_point_polation_nram_cond1 = weight_polation_nram;
-  T* cond_point_polation_nram_cond2 = weight_polation_nram + total_points;
-  T* cond_point_polation_nram_cond3 = weight_polation_nram + 2 * total_points;
-  T* cond_point_polation_nram_cond4 = weight_polation_nram + 3 * total_points;
+  T* cond_point_polation_nram_cond2 = weight_polation_nram + pad_total_points;
+  T* cond_point_polation_nram_cond3 = weight_polation_nram + 2 * pad_total_points;
+  T* cond_point_polation_nram_cond4 = weight_polation_nram + 3 * pad_total_points;
   __bang_ge_scalar(cond_point_polation_nram_cond1, buf_x_floor, (T)0,
-                   total_points);
+                   pad_total_points);
   __bang_cycle_lt(cond_point_polation_nram_cond2, buf_x_ceil, spatial_w_bd_nram,
-                  total_points, block_points);
+                  pad_total_points, pad_block_points);
   __bang_ge_scalar(cond_point_polation_nram_cond3, buf_y_floor, (T)0,
-                   total_points);
+                   pad_total_points);
   __bang_cycle_lt(cond_point_polation_nram_cond4, buf_y_ceil, spatial_h_bd_nram,
-                  total_points, block_points);
+                  pad_total_points, pad_block_points);
   __bang_and(cond_point_polation_nram_tl, cond_point_polation_nram_cond1,
-             cond_point_polation_nram_cond4, total_points);
+             cond_point_polation_nram_cond4, pad_total_points);
   __bang_and(cond_point_polation_nram_bl, cond_point_polation_nram_cond1,
-             cond_point_polation_nram_cond3, total_points);
+             cond_point_polation_nram_cond3, pad_total_points);
   __bang_and(cond_point_polation_nram_tr, cond_point_polation_nram_cond2,
-             cond_point_polation_nram_cond4, total_points);
+             cond_point_polation_nram_cond4, pad_total_points);
   __bang_and(cond_point_polation_nram_br, cond_point_polation_nram_cond2,
-             cond_point_polation_nram_cond3, total_points);
+             cond_point_polation_nram_cond3, pad_total_points);
   //================================================================================================
   // get polation weight.
   T* buf_dx = (T*)data_offset_nram;
-  T* buf_dy = buf_dx + total_points;
-  T* buf_dx_1 = buf_dy + total_points;
-  T* buf_dy_1 = buf_dx_1 + total_points;
+  T* buf_dy = buf_dx + pad_total_points;
+  T* buf_dx_1 = buf_dy + pad_total_points;
+  T* buf_dy_1 = buf_dx_1 + pad_total_points;
   // -dx = x_floor-x
   // -dy = y_floor-y
   // w1 = (1-dx)*dy     = (dx-1)*(-dy)
@@ -141,68 +160,90 @@ __mlu_func__ void getConditionCoordWeight(
   // w3 = dx*dy         = (-dx)*(-dy)
   // w4 = dx*(1-dy)     = (-dx)*(dy-1)
   T* weight_polation_nram_1 = weight_polation_nram;
-  T* weight_polation_nram_2 = weight_polation_nram + 1 * total_points;
-  T* weight_polation_nram_3 = weight_polation_nram + 2 * total_points;
-  T* weight_polation_nram_4 = weight_polation_nram + 3 * total_points;
+  T* weight_polation_nram_2 = weight_polation_nram + 1 * pad_total_points;
+  T* weight_polation_nram_3 = weight_polation_nram + 2 * pad_total_points;
+  T* weight_polation_nram_4 = weight_polation_nram + 3 * pad_total_points;
   // T* weight_polation_nram_buf = buf_nram + 4 * total_points;
-  __bang_sub(buf_dx, buf_x_floor, buf_x_nram, total_points);
-  __bang_sub(buf_dy, buf_y_floor, buf_y_nram, total_points);
-  __bang_fusion(FUSION_FSS, buf_dx_1, buf_x_nram, buf_x_floor, (T)1.0,
-                total_points, total_points);
-  __bang_fusion(FUSION_FSS, buf_dy_1, buf_y_nram, buf_y_floor, (T)1.0,
-                total_points, total_points);
-  __bang_mul(weight_polation_nram_1, buf_dx_1, buf_dy, total_points);
-  __bang_mul(weight_polation_nram_2, buf_dx_1, buf_dy_1, total_points);
-  __bang_mul(weight_polation_nram_3, buf_dx, buf_dy, total_points);
-  __bang_mul(weight_polation_nram_4, buf_dx, buf_dy_1, total_points);
+  __bang_sub(buf_dx, buf_x_floor, buf_x_nram, pad_total_points);
+  __bang_sub(buf_dy, buf_y_floor, buf_y_nram, pad_total_points);
+  // FUSION_FSS < dst >=< src0 > − < src1 > − < src2 >
+  // __bang_fusion(FUSION_FSS, buf_dx_1, buf_x_nram, buf_x_floor, (T)1.0,
+  //               total_points, total_points);
+  __bang_sub(buf_dx_1, buf_x_nram, buf_x_floor, pad_total_points);
+  __bang_sub_scalar(buf_dx_1, buf_dx_1, (T)1.0, pad_total_points);
+
+  // __bang_fusion(FUSION_FSS, buf_dy_1, buf_y_nram, buf_y_floor, (T)1.0,
+  //               total_points, total_points);
+  __bang_sub(buf_dy_1, buf_y_nram, buf_y_floor, pad_total_points);
+  __bang_sub_scalar(buf_dy_1, buf_dy_1, (T)1.0, pad_total_points);
+
+  __bang_mul(weight_polation_nram_1, buf_dx_1, buf_dy, pad_total_points);
+  __bang_mul(weight_polation_nram_2, buf_dx_1, buf_dy_1, pad_total_points);
+  __bang_mul(weight_polation_nram_3, buf_dx, buf_dy, pad_total_points);
+  __bang_mul(weight_polation_nram_4, buf_dx, buf_dy_1, pad_total_points);
   //================================================================================================
   // correct the x,y in [0, w-1] and [0, h-1]
   T* spatial_w1_bd_nram = buf_nram;
-  T* spatial_h1_bd_nram = buf_nram + block_points;
-  __bang_sub_scalar(spatial_w1_bd_nram, spatial_w_bd_nram, (T)1, block_points);
-  __bang_sub_scalar(spatial_h1_bd_nram, spatial_h_bd_nram, (T)1, block_points);
-  __bang_maxeq_scalar(buf_x_floor, buf_x_floor, (T)0, total_points);
-  __bang_maxeq_scalar(buf_x_ceil, buf_x_ceil, (T)0, total_points);
+  T* spatial_h1_bd_nram = buf_nram + pad_block_points;
+  __bang_sub_scalar(spatial_w1_bd_nram, spatial_w_bd_nram, (T)1, pad_block_points);
+  __bang_sub_scalar(spatial_h1_bd_nram, spatial_h_bd_nram, (T)1, pad_block_points);
+  T* maxtemp = (T*)data_offset_nram;
+  __bang_write_value(maxtemp, pad_total_points, (T)0);
+  // __bang_maxeq_scalar(buf_x_floor, buf_x_floor, (T)0, total_points);
+  __bang_maxequal(buf_x_floor, buf_x_floor, maxtemp, pad_total_points);
+  // __bang_maxeq_scalar(buf_x_ceil, buf_x_ceil, (T)0, total_points);
+  __bang_maxequal(buf_x_ceil, buf_x_ceil, maxtemp, pad_total_points);
+
   __bang_cycle_minequal(buf_x_floor, buf_x_floor, spatial_w1_bd_nram,
-                        total_points, block_points);
+                        pad_total_points, pad_block_points);
   __bang_cycle_minequal(buf_x_ceil, buf_x_ceil, spatial_w1_bd_nram,
-                        total_points, block_points);
-  __bang_maxeq_scalar(buf_y_floor, buf_y_floor, (T)0, total_points);
-  __bang_maxeq_scalar(buf_y_ceil, buf_y_ceil, (T)0, total_points);
+                        pad_total_points, pad_block_points);
+  // __bang_maxeq_scalar(buf_y_floor, buf_y_floor, (T)0, total_points);
+  __bang_maxequal(buf_y_floor, buf_y_floor, maxtemp, pad_total_points);
+  // __bang_maxeq_scalar(buf_y_ceil, buf_y_ceil, (T)0, total_points);
+  __bang_maxequal(buf_y_ceil, buf_y_ceil, maxtemp, pad_total_points);
   __bang_cycle_minequal(buf_y_floor, buf_y_floor, spatial_h1_bd_nram,
-                        total_points, block_points);
+                        pad_total_points, pad_block_points);
   __bang_cycle_minequal(buf_y_ceil, buf_y_ceil, spatial_h1_bd_nram,
-                        total_points, block_points);
+                        pad_total_points, pad_block_points);
   //================================================================================================
   // offset = y*w + x
   T* buf_hw_offset = buf_nram;
   T* data_offset_nram_tl = (T*)data_offset_nram;
-  T* data_offset_nram_bl = data_offset_nram_tl + total_points;
-  T* data_offset_nram_tr = data_offset_nram_bl + total_points;
-  T* data_offset_nram_br = data_offset_nram_tr + total_points;
+  T* data_offset_nram_bl = data_offset_nram_tl + pad_total_points;
+  T* data_offset_nram_tr = data_offset_nram_bl + pad_total_points;
+  T* data_offset_nram_br = data_offset_nram_tr + pad_total_points;
   // y_ceil*w + offset + x_floor
-  __bang_fusion(FUSION_FMA, buf_hw_offset, buf_y_ceil, spatial_w_bd_nram,
-                spatial_offset_bd_nram, total_points, block_points);
-  __bang_add(data_offset_nram_tl, buf_hw_offset, buf_x_floor, total_points);
+  // FUSION_FMA < dst >=< src0 > × < src1 > + < src2 >
+  // __bang_fusion(FUSION_FMA, buf_hw_offset, buf_y_ceil, spatial_w_bd_nram,
+  //               spatial_offset_bd_nram, total_points, block_points);
+  __bang_cycle_mul(buf_hw_offset, buf_y_ceil, spatial_w_bd_nram, pad_total_points, pad_block_points);
+  __bang_cycle_add(buf_hw_offset, buf_hw_offset, spatial_offset_bd_nram, pad_total_points,
+                   pad_block_points);
+
+  __bang_add(data_offset_nram_tl, buf_hw_offset, buf_x_floor, pad_total_points);
   // y_ceil*w + offset + x_ceil
-  __bang_add(data_offset_nram_tr, buf_hw_offset, buf_x_ceil, total_points);
+  __bang_add(data_offset_nram_tr, buf_hw_offset, buf_x_ceil, pad_total_points);
   // y_floor*w + offset + x_foor
-  __bang_fusion(FUSION_FMA, buf_hw_offset, buf_y_floor, spatial_w_bd_nram,
-                spatial_offset_bd_nram, total_points, block_points);
-  __bang_add(data_offset_nram_bl, buf_hw_offset, buf_x_floor, total_points);
+  // __bang_fusion(FUSION_FMA, buf_hw_offset, buf_y_floor, spatial_w_bd_nram,
+  //               spatial_offset_bd_nram, total_points, block_points);
+  __bang_cycle_mul(buf_hw_offset, buf_y_floor, spatial_w_bd_nram, pad_total_points, pad_block_points);
+  __bang_cycle_add(buf_hw_offset, buf_hw_offset, spatial_offset_bd_nram, pad_total_points,
+                   pad_block_points);
+  __bang_add(data_offset_nram_bl, buf_hw_offset, buf_x_floor, pad_total_points);
   // y_floor*w + offset + x_ceil
-  __bang_add(data_offset_nram_br, buf_hw_offset, buf_x_ceil, total_points);
+  __bang_add(data_offset_nram_br, buf_hw_offset, buf_x_ceil, pad_total_points);
   __bang_cycle_and(cond_point_polation_nram, cond_point_polation_nram,
-                   cond_point_valid_nram, 4 * total_points, total_points);
+                   cond_point_valid_nram, 4 * pad_total_points, pad_total_points);
   __bang_cycle_mul(weight_polation_nram, weight_polation_nram,
-                   weight_attn_nram, 4 * total_points, total_points);
-  __bang_mul(weight_polation_nram, weight_polation_nram, cond_point_polation_nram, total_points * 4);
+                   weight_attn_nram, 4 * pad_total_points, pad_total_points);
+  __bang_mul(weight_polation_nram, weight_polation_nram, cond_point_polation_nram, pad_total_points * 4);
   __bang_sub((float*)data_offset_nram_bl,
              (float*)data_offset_nram_bl,
-             (float*)data_offset_nram_tl, total_points);
+             (float*)data_offset_nram_tl, pad_total_points);
   __bang_sub((float*)data_offset_nram_tr,
              (float*)data_offset_nram_tr,
-             (float*)data_offset_nram_tl, total_points);
+             (float*)data_offset_nram_tl, pad_total_points);
 }
 
 /*
@@ -227,18 +268,16 @@ __mlu_func__ void reduceLevelByConv(
     int32_t* cond_selected_base, T* weight_selected_base, T* weight_attn_nram,
     T* weight_compute, int32_t* cond_compute, const int32_t valid_num, const int32_t channels,
     const int32_t sample_stride_3) {
-    int32_t ci = 4 * valid_num;
-    int32_t co = channels;
+    // int32_t ci = 4 * valid_num;
+    // int32_t co = channels;
+    int32_t pad_channels = PAD_UP(channels, NFU_ALIGN_SIZE/sizeof(T));
     __memcpy(weight_compute, weight_selected_base, valid_num * sizeof(T),
                    NRAM2NRAM, valid_num * sizeof(T),
                    sample_stride_3 * sizeof(T), 3);
-    __bang_transpose(input_trans, input_nram, ci, co);
-    __sync_move();
-    __bang_cycle_mul(input_trans, input_trans, weight_compute, co * ci, ci);
-    __bang_sumpool(input_pooled, input_trans, valid_num, channels, 4, 1, 4, 1,
-                  1);
-    __bang_sumpool(output_nram, input_pooled, 1, channels, valid_num, 1,
-                  valid_num, 1, 1);
+    for(int k = 0; k < 4 *valid_num; k++) {
+      __bang_mul_scalar(input_nram + pad_channels * k, input_nram + pad_channels * k, weight_compute[k], pad_channels);
+    }
+    __bang_sumpool(output_nram, input_nram, pad_channels, 4, valid_num, 4, valid_num, 1, 1);
 }
 
 __mlu_func__ void loadNram2Gpr(int32_t& v1, int32_t& v2, int32_t& v3,
@@ -278,24 +317,28 @@ __mlu_func__ void loadDataValueXram2NramAsync(
   int32_t next = 0;
   int32_t loop_num = num_levels_points / 2;
   int32_t remain = num_levels_points % 2;
-  int32_t data_value_stride = num_levels_points * channel_size;
+  // int32_t data_value_stride = num_levels_points * channel_size;
+  int32_t pad_num_points_levels = PAD_UP(num_levels_points, NFU_ALIGN_SIZE/sizeof(T));
+  int32_t pad_channels = PAD_UP(channel_size, NFU_ALIGN_SIZE/sizeof(T));
+  int pad_data_value_stride = pad_num_points_levels * pad_channels; 
+
   for (int32_t j = 0; j < loop_num * 2; j += 2) {
-    value_offset = j * channel_size;
+    value_offset = j * pad_channels;
     next = j + 2;
     for(int i = 0; i < 2; i++)
     {
-      __memcpy_async((int8_t*)buf_value_nram_1 + value_offset + data_value_stride * i,
+      __memcpy_async((int8_t*)buf_value_nram_1 + value_offset + pad_data_value_stride * i,
                      (int8_t*)value_src + offset_1_a + i * stride_2_1_a,
-                      channel_size, GDRAM2NRAM, 2 * data_value_stride, stride_3_1_a, 1);
+                      channel_size, GDRAM2NRAM, 2 * pad_data_value_stride, stride_3_1_a, 1);
     }
 
     loadNram2Gpr(offset_1_a, stride_2_1_a, stride_3_1_a, offset_1 + next,
                  stride_2_1 + next, stride_3_1 + next, num_heads, channel_size);
     for(int i = 0; i < 2; i++)
     {
-      __memcpy_async((int8_t*)buf_value_nram_1 + value_offset + channel_size + data_value_stride * i,
+      __memcpy_async((int8_t*)buf_value_nram_1 + value_offset + pad_channels + pad_data_value_stride * i,
                      (int8_t*)value_src + offset_1_b + i * stride_2_1_b,
-                      channel_size, GDRAM2NRAM, 2 * data_value_stride, stride_3_1_b, 1);
+                      channel_size, GDRAM2NRAM, 2 * pad_data_value_stride, stride_3_1_b, 1);
     }
 
     loadNram2Gpr(offset_1_b, stride_2_1_b, stride_3_1_b, offset_1 + next + 1,
@@ -306,9 +349,9 @@ __mlu_func__ void loadDataValueXram2NramAsync(
     value_offset = loop_num * 2 * channel_size;
     for(int i = 0; i < 2; i++)
     {
-      __memcpy_async((int8_t*)buf_value_nram_1 + value_offset + data_value_stride * i,
+      __memcpy_async((int8_t*)buf_value_nram_1 + value_offset + pad_data_value_stride * i,
                      (int8_t*)value_src + offset_1_a + i * stride_2_1_a,
-                      channel_size, GDRAM2NRAM, 2 * data_value_stride, stride_3_1_a, 1);
+                      channel_size, GDRAM2NRAM, 2 * pad_data_value_stride, stride_3_1_a, 1);
     }
   }
 }
@@ -322,12 +365,16 @@ __mlu_func__ void loadNeighborPolationAttn(
     const int32_t num_levels, const int32_t num_points, const int32_t num_keys,
     const int32_t channels, const int32_t num_heads) {
   int32_t channel_size = channels * sizeof(T);
-  int32_t sample_stride_3 = deal_n * num_levels * num_points;
   int32_t value_stride_3 = num_levels * num_points * channels;
+  int32_t pad_num_points_levels = PAD_UP(num_levels*num_points, NFU_ALIGN_SIZE/sizeof(T));
+  int32_t sample_stride_3 = deal_n * num_levels * num_points;
+  int32_t pad_sample_stride_3 = deal_n * pad_num_points_levels;
+  int32_t pad_channels = PAD_UP(channels, NFU_ALIGN_SIZE/sizeof(T));
+  int32_t pad_value_stride_3 = pad_num_points_levels * pad_channels;
   int32_t value_stride_3_size = value_stride_3 * sizeof(T);
   T* buf_value_nram = buf_nram;  // (4, num_levels, num_points, channels)
   T* buf_value_nram_trans =
-      buf_nram + 4 * value_stride_3;  // (4, num_levels, num_points, channels)
+      buf_nram + 4 * pad_value_stride_3;  // (4, num_levels, num_points, channels)
   T* buf_value_nram_pool =
       buf_nram + 8 * value_stride_3;  // (1, num_levels, num_points, channels)
   T* weight_compute_nram = compute_buf_nram;      // (4, num_levels, num_points)
@@ -336,8 +383,8 @@ __mlu_func__ void loadNeighborPolationAttn(
   __sync_compute();
 
   int32_t* offset = data_offset_nram;
-  int32_t* stride_2_1 = offset + sample_stride_3;
-  int32_t* stride_3_1 = stride_2_1 + sample_stride_3;
+  int32_t* stride_2_1 = offset + pad_sample_stride_3;
+  int32_t* stride_3_1 = stride_2_1 + pad_sample_stride_3;
   T* output_nram = value_output_nram;
   int32_t step_offset = 0;
   for (int32_t i = 0; i < deal_n; i++) {
@@ -352,11 +399,11 @@ __mlu_func__ void loadNeighborPolationAttn(
         weight_polation_nram + step_offset, weight_attn_nram + step_offset,
         weight_compute_nram, cond_compute_nram, valid_num,
         channels, sample_stride_3);
-    step_offset += valid_num;
+    step_offset += pad_num_points_levels;
     offset = data_offset_nram + step_offset;
-    stride_2_1 = offset + sample_stride_3;
-    stride_3_1 = stride_2_1 + sample_stride_3;
-    output_nram += channels;
+    stride_2_1 = offset + pad_sample_stride_3;
+    stride_3_1 = stride_2_1 + pad_sample_stride_3;
+    output_nram += pad_channels;
   }
 }
 
@@ -382,7 +429,7 @@ __mlu_func__ void prepareLoop(
   __sync_io_move_compute();
   broadcastSpatialHW(spatial_offset_bd_nram, spatial_h_bd_nram,
                      spatial_w_bd_nram, spatial_hw_nram, spatial_offset_nram,
-                     num_levels, num_points);
+                     num_levels, num_points, pad_num_points_levels);
 }
 
 /*
@@ -409,64 +456,66 @@ __mlu_func__ void prepareLoop(
 */
 template <typename T>
 __mlu_func__ void memPolicyCommon(
-    T*& buf_compute_nram, T*& ones_nram, T*& value_output_nram,
-    int32_t*& data_offset_nram, T*& weight_polation_nram,
-    T*& cond_point_polation_nram, T*& cond_point_valid_nram, T*& loc_nram,
-    T*& weight_attn_nram, T*& buf_nram, T*& buf_nram_end, int8_t*& mask_x_nram,
-    int8_t*& mask_y_nram, T*& spatial_offset_bd_nram, T*& spatial_w_bd_nram,
-    T*& spatial_h_bd_nram, int32_t*& spatial_offset_nram,
-    int32_t*& spatial_hw_nram, int32_t& max_deal_n,
-    int32_t& mask_size, const int32_t batch_size, const int32_t num_keys,
-    const int32_t num_heads, const int32_t channels, const int32_t num_levels,
-    const int32_t num_queries, const int32_t num_points) {
-  int32_t num_points_levels = num_levels * num_points;
-  int32_t pad_num_points_levels =
-      PAD_UP(num_points_levels, NFU_ALIGN_SIZE / sizeof(T));
-  int32_t pad_num_points_levels_8 =
-      PAD_UP(8 * num_points_levels, NFU_ALIGN_SIZE / sizeof(T));
-  int32_t spatial_info_size =
-      PAD_UP(3 * num_levels * sizeof(int32_t), NFU_ALIGN_SIZE);
-  int32_t fix_space_size =
-      spatial_info_size + 2 * BIT_COLLECT_PAD * sizeof(T) +
-      (4 * pad_num_points_levels + pad_num_points_levels_8) * sizeof(T);
-  int32_t left_space_size = NRAM_AVALIABLE_SIZE - fix_space_size;
-  int32_t common_buffer_size_each = 6 * num_points_levels * sizeof(T);
-  int32_t inter_result_size_each =
-      17 * num_points_levels * sizeof(T) + channels * sizeof(T);
+  T*& buf_compute_nram, T*& ones_nram, T*& value_output_nram,
+  int32_t*& data_offset_nram, T*& weight_polation_nram,
+  T*& cond_point_polation_nram, T*& cond_point_valid_nram, T*& loc_nram,
+  T*& weight_attn_nram, T*& buf_nram, T*& buf_nram_end, int8_t*& mask_x_nram,
+  int8_t*& mask_y_nram, T*& spatial_offset_bd_nram, T*& spatial_w_bd_nram,
+  T*& spatial_h_bd_nram, int32_t*& spatial_offset_nram,
+  int32_t*& spatial_hw_nram, int32_t& max_deal_n,
+  int32_t& mask_size, const int32_t batch_size, const int32_t num_keys,
+  const int32_t num_heads, const int32_t channels, const int32_t num_levels,
+  const int32_t num_queries, const int32_t num_points) {
+int32_t pad_channels = PAD_UP(channels, NFU_ALIGN_SIZE/sizeof(T));
+int32_t num_points_levels = num_levels * num_points;
+int32_t pad_num_points_levels =
+    PAD_UP(num_points_levels, NFU_ALIGN_SIZE / sizeof(T));
+int32_t pad_num_points_levels_8 = 8 * pad_num_points_levels;
+    // PAD_UP(8 * num_points_levels, NFU_ALIGN_SIZE / sizeof(T));
+int32_t spatial_info_size =
+    PAD_UP(3 * num_levels * sizeof(int32_t), NFU_ALIGN_SIZE);
+int32_t fix_space_size =
+    spatial_info_size + 2 * BIT_COLLECT_PAD * sizeof(T) +
+    (4 * pad_num_points_levels + pad_num_points_levels_8) * sizeof(T);
+int32_t left_space_size = NRAM_AVALIABLE_SIZE - fix_space_size;
+int32_t common_buffer_size_each = 6 * pad_num_points_levels * sizeof(T);
+int32_t inter_result_size_each =
+    17 * pad_num_points_levels * sizeof(T) + pad_channels * sizeof(T);
 
-  max_deal_n =
-      left_space_size / (common_buffer_size_each + inter_result_size_each);
-  int32_t compute_buffer_size =
-      (9 * num_points_levels * channels + max_deal_n) * sizeof(T);
-  int32_t common_buffer_size = max_deal_n * common_buffer_size_each;
-  // make sure buf_nram is large enough for compute
-  if (compute_buffer_size > common_buffer_size) {
-    int32_t tmp_deal_n =
-        (left_space_size - compute_buffer_size) / inter_result_size_each;
-    max_deal_n = __mluop_min(max_deal_n, tmp_deal_n);
-  }
+max_deal_n =
+    left_space_size / (common_buffer_size_each + inter_result_size_each);
+int32_t compute_buffer_size =
+    (9 * pad_num_points_levels * pad_channels + max_deal_n) * sizeof(T);
+int32_t common_buffer_size = max_deal_n * common_buffer_size_each;
+// make sure buf_nram is large enough for compute
+if (compute_buffer_size > common_buffer_size) {
+  int32_t tmp_deal_n =
+      (left_space_size - compute_buffer_size) / inter_result_size_each;
+  max_deal_n = __mluop_min(max_deal_n, tmp_deal_n);
+}
 
-  int32_t total_points = max_deal_n * num_points_levels;
-  int32_t total_coord_pad = PAD_UP(total_points * 2, BIT_COLLECT_PAD);
-  mask_size = total_coord_pad / BIT_COLLECT_PAD;
-  ones_nram = (T*)nram_buffer;
-  buf_compute_nram = ones_nram + pad_num_points_levels;
-  spatial_offset_nram = (int32_t*)(buf_compute_nram + pad_num_points_levels_8);
-  spatial_hw_nram = spatial_offset_nram + num_levels;
-  spatial_offset_bd_nram = (T*)(spatial_hw_nram + num_levels * 2);
-  spatial_w_bd_nram = spatial_offset_bd_nram + num_points_levels;
-  spatial_h_bd_nram = spatial_w_bd_nram + num_points_levels;
-  mask_x_nram = (int8_t*)(spatial_h_bd_nram + num_points_levels);
-  mask_y_nram = mask_x_nram + mask_size;
-  value_output_nram = (T*)(mask_y_nram + mask_size);
-  data_offset_nram = (int32_t*)(value_output_nram + max_deal_n * channels);
-  weight_polation_nram = (T*)(data_offset_nram + 4 * total_points);
-  cond_point_polation_nram = weight_polation_nram + 4 * total_points;
-  cond_point_valid_nram = cond_point_polation_nram + 4 * total_points;
-  loc_nram = cond_point_valid_nram + total_points;
-  weight_attn_nram = loc_nram + total_coord_pad;
-  buf_nram = weight_attn_nram + total_points;
-  buf_nram_end = buf_nram + 6 * max_deal_n * num_points_levels;
+// int32_t total_points = max_deal_n * num_points_levels;
+int32_t pad_total_points = max_deal_n * pad_num_points_levels;
+int32_t total_coord_pad = PAD_UP(pad_total_points * 2, BIT_COLLECT_PAD);
+mask_size = total_coord_pad / BIT_COLLECT_PAD;
+ones_nram = (T*)nram_buffer;
+buf_compute_nram = ones_nram + pad_num_points_levels;
+spatial_offset_nram = (int32_t*)(buf_compute_nram + pad_num_points_levels_8);
+spatial_hw_nram = spatial_offset_nram + num_levels;
+spatial_offset_bd_nram = (T*)(spatial_hw_nram + num_levels * 2);
+spatial_w_bd_nram = spatial_offset_bd_nram + pad_num_points_levels;
+spatial_h_bd_nram = spatial_w_bd_nram + pad_num_points_levels;
+mask_x_nram = (int8_t*)(spatial_h_bd_nram + pad_num_points_levels);
+mask_y_nram = mask_x_nram + mask_size;
+value_output_nram = (T*)(mask_y_nram + mask_size);
+data_offset_nram = (int32_t*)(value_output_nram + max_deal_n * pad_channels);
+weight_polation_nram = (T*)(data_offset_nram + 4 * pad_total_points);
+cond_point_polation_nram = weight_polation_nram + 4 * pad_total_points;
+cond_point_valid_nram = cond_point_polation_nram + 4 * pad_total_points;
+loc_nram = cond_point_valid_nram + pad_total_points;
+weight_attn_nram = loc_nram + total_coord_pad;
+buf_nram = weight_attn_nram + pad_total_points;
+buf_nram_end = buf_nram + 6 * max_deal_n * pad_num_points_levels;
 }
 
 template <typename T>
@@ -504,6 +553,11 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
   T* ones_nram = nullptr;                  // (1, num_levels, num_points)
   int32_t max_deal_n = 0;
   int32_t mask_size = 0;
+  int32_t num_points_levels = num_levels * num_points;
+  int32_t pad_num_points_levels =
+      PAD_UP(num_points_levels, NFU_ALIGN_SIZE / sizeof(T));
+  int32_t pad_channels = PAD_UP(channels, NFU_ALIGN_SIZE/sizeof(T));
+
   memPolicyCommon(buf_compute_nram, ones_nram, value_output_nram,
                   data_offset_nram, weight_polation_nram,
                   cond_point_polation_nram, cond_point_valid_nram, loc_nram,
@@ -565,11 +619,11 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
       if (first_deal_query > 0) {
         __memcpy(loc_nram, (T*)data_sampling_loc_gdram + loc_offset,
                  input_stride_2 * 2 * sizeof(T), GDRAM2NRAM,
-                 input_stride_2 * 2 * sizeof(T), input_stride_3 * 2 * sizeof(T),
+                 pad_num_points_levels * 2 * sizeof(T), input_stride_3 * 2 * sizeof(T),
                  first_deal_query - 1);
         __memcpy(
             weight_attn_nram, (T*)data_attn_weight_gdram + attn_weight_offset,
-            input_stride_2 * sizeof(T), GDRAM2NRAM, input_stride_2 * sizeof(T),
+            input_stride_2 * sizeof(T), GDRAM2NRAM, pad_num_points_levels * sizeof(T),
             input_stride_3 * sizeof(T), first_deal_query - 1);
         getConditionCoordWeight<T>(
             data_offset_nram, weight_polation_nram, cond_point_polation_nram,
@@ -603,11 +657,11 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
         int32_t loc_offset = attn_weight_offset * 2;
         __memcpy_async(loc_nram, (T*)data_sampling_loc_gdram + loc_offset,
                        input_stride_2 * 2 * sizeof(T), GDRAM2NRAM,
-                       input_stride_2 * 2 * sizeof(T),
+                       pad_num_points_levels * 2 * sizeof(T),
                        input_stride_3 * 2 * sizeof(T), load_n - 1);
         __memcpy_async(
             weight_attn_nram, (T*)data_attn_weight_gdram + attn_weight_offset,
-            input_stride_2 * sizeof(T), GDRAM2NRAM, input_stride_2 * sizeof(T),
+            input_stride_2 * sizeof(T), GDRAM2NRAM, pad_num_points_levels * sizeof(T),
             input_stride_3 * sizeof(T), load_n - 1);
         __sync_io_move_compute();
       }
@@ -616,7 +670,7 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
           ((size_t)core_begin_query + i * core_step_query) * output_stride_2;
       __memcpy_async((T*)data_col_gdram + output_base_offset + output_offset,
                      value_output_nram, channels * sizeof(T), NRAM2GDRAM,
-                     output_stride_2 * sizeof(T), channels * sizeof(T),
+                     output_stride_2 * sizeof(T), pad_channels * sizeof(T),
                      deal_n - 1);
 
       // compute cond/weight/offset
