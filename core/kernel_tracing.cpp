@@ -51,7 +51,7 @@
 #undef DBG_LOG
 #endif
 #if MLUOP_TRACE_WITH_DLOPEN
-#define DBG_LOG VLOG(0) << "[KERNEL_HOOK_DLOPEN] "
+#define DBG_LOG VLOG(1) << "[KERNEL_HOOK_DLOPEN] "
 #else
 #define DBG_LOG VLOG(8) << "[KERNEL_HOOK] "
 #endif
