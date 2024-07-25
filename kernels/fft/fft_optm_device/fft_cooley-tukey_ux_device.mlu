@@ -25,6 +25,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 #include "kernels/fft/fft.h"
+#include "kernels/fft/fft_optm_device/fft_nram_wram_allocate.h"
 
 #define TRANS_ALIGN_SIZE 64
 
@@ -36,8 +37,6 @@
 
 #define COMPLEX_FACTOR 2
 #define YZ_FACTOR 2
-
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
 
 // Generate W matrix with alignment as interval.
 // For example: when W is [L_align * s], the valid range of values is

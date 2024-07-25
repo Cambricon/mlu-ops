@@ -20,24 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_FFT_IRFFT_IRFFT_H_
-#define KERNELS_FFT_IRFFT_IRFFT_H_
 
-#include <string>
-#include "kernels/fft/fft.h"
+#pragma once
 
-mluOpStatus_t makeIRFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan);
-
-mluOpStatus_t setIRFFT1dReserveArea(mluOpHandle_t handle,
-                                    mluOpFFTPlan_t fft_plan,
-                                    const std::string api);
-
-mluOpStatus_t execIRFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
-                          const void *input, const float scale_factor,
-                          void *workspace, void *output);
-
-mluOpStatus_t execIRFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
-                          const void *input, const float scale_factor,
-                          void *workspace, void *output);
-
-#endif  // KERNELS_FFT_IRFFT_IRFFT_H_
+__nram__ char nram_buffer[MAX_NRAM_SIZE + REM_FOR_STACK - 32 * 1024];
+__wram__ char wram_buffer[MAX_WRAM_SIZE];
