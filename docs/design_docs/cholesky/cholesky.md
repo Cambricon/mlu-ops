@@ -240,12 +240,168 @@ POTRF这个函数名取自LAPACK中Cholesky分解的函数，POTRF的目的是�
 
 每个列块，仍然需要先计算该列块的外部依赖（该列块左侧的所有列块），然后对列块中的每一列分别计算内部依赖，对于这两个部分可以分别用两个kernel来实现。由于这一步骤是严重的串行瓶颈，因此在划分小块时需要尽量让计算的快更小，减少串行瓶颈对性能的影响
 
-### 3.2 测试
+### 3.2 伪代码实现
 
-#### 3.2.1 测试样例构造
+整体计算流程伪代码如下：
+
+
+```
+function cholesky(row, nb, d_output):
+    for j from 0 to row, incrementing by nb:
+        jb = min(nb, row - j)
+
+        // Perform symmetric rank-k update
+        syrk(jb, j, OFFSET_ROW(d_output, j, 0), OFFSET_ROW(d_output, j, j))
+
+
+        // Perform recursive Cholesky factorization
+        potrf_rectile(jb, recnb, OFFSET_ROW(d_output, j, j))
+
+        if j + jb < row:
+            // Update matrix using matrix multiplication
+            gemm(row - j - jb, jb, j, OFFSET_ROW(d_output, j + jb, 0), OFFSET_ROW(d_output, j, 0), OFFSET_ROW(d_output, j + jb, j))
+
+
+        if j + jb < row:
+            // Solve triangular system
+            trsm(jb, row - j - jb, OFFSET_ROW(d_output, j, j), OFFSET_ROW(d_output, j + jb, j))
+```
+
+其中potrf_rectile伪代码如下：
+
+```
+function potrf_rectile(n, recnb, d_A):
+
+    if n == 0:
+        return SUCCESS
+
+    if n <= recnb:
+        potf2_lpin(n, d_A)
+    else:
+        n1 = n / 2
+        n2 = n - n1
+
+        potrf_rectile(n1, recnb, OFFSET_ROW(d_A, 0, 0))
+
+        trsm_rectile(n1, n2, OFFSET_ROW(d_A, 0, 0), OFFSET_ROW(d_A, n1, 0))
+
+        syrk(n2, n1, d_A + n1 * lda, OFFSET_ROW(d_A, n1, n1))
+
+        potrf_rectile(n2, recnb, OFFSET_ROW(d_A, n1, n1))
+
+    return SUCCESS
+
+
+function potf2_lpin(n, dA):
+    for i from 0 to n, incrementing by width:
+        potf2_smlpout_device(m - i, OFFSET_ROW(dA, i), OFFSET_ROW(dA, i, i)) // call mlu kernel
+
+
+
+function potf2_smlpout_device(m, A0, A):
+    id = taskId % 4
+    shared_data = allocate_shared_data()
+    sdata_A = shared_data
+    sdata_B = shared_data + m * POTF_NB / TASK_NUM * 4
+
+    // Perform matrix multiplication with fixed width
+    small_gemm(m, A0, sdata_A, sdata_B)
+
+    sync_cluster()
+
+    // Perform Cholesky factorization with fixed size
+    spotf2_sminout_device(m, sdata_A, POTF_NB)
+
+    sync_cluster()
+
+    span = POTF_NB
+
+    if id == 0:
+        for i from 0 to span:
+            copy_memory(A + (i * lda), sdata_A + i * POTF_NB, i + 1, SRAM2LDRAM)
+    else if id * span < m:
+        copy_memory(A + (id * POTF_NB * lda), sdata_A + id * POTF_NB * POTF_NB, POTF_NB, SRAM2LDRAM, span - 1)
+
+    sync_cluster()
+
+```
+
+trsm的实现伪代码如下：
+
+```
+function trsm(jb, row - j - jb, dA):
+	inverse(dA)
+	gemm
+```
+
+trsm调用的inverse内会使用inverse_kernel来对输入矩阵进行求逆：
+
+```
+function inverse_kernel(d_input, ld_input, stride_input, d_output, ld_output, stride_output, m):
+    id = taskId
+    if id == 0:
+        copy_memory(sram_buffer, d_input, m)
+
+    sync_cluster()
+
+    span = m / taskDim
+    start = id * span
+    if id == 3:
+        span = m - 3 * span
+
+    nram_offset = allocate_nram_buffer(id, m)
+    nram_src1 = nram_offset
+    nram_src2 = nram_src1 + m * m
+    mul_result = nram_src2 + m
+    nram_dst = nram_src2 + m * m
+    diag_start = calculate_diag_start(sram_buffer, start, m)
+    height = m - start
+
+    clear_memory(nram_offset, 3 * m * m)
+
+    for i from 0 to span:
+        offset = i * m + i
+        result = inverse_element(diag_start[offset])
+        nram_src1[i * height + i] = result
+        nram_dst[i * span + i] = result
+        diag_start[offset] = result
+
+    sync_cluster()
+
+    for i from 1 to height:
+        copy_memory(nram_src2, diag_start + i * m, i)
+        num = min(i, span)
+        diag_element = diag_start[i * m + i]
+
+        for j from 0 to num:
+            temp = perform_element_multiplication_and_sum(mul_result, nram_src2, nram_src1 + j * height, i)
+            temp = -1.0 * temp * diag_element
+            nram_dst[i * span + j] = temp
+            nram_src1[j * height + i] = temp
+
+        sync()
+
+    sync_cluster()
+
+    if span > 0:
+        copy_memory(diag_start, nram_dst, span, height)
+
+    sync_cluster()
+
+    if id == 0:
+        copy_memory(d_output, sram_buffer, m, ld_output)
+
+```
+
+
+
+
+### 3.3 测试
+
+#### 3.3.1 测试样例构造
 测试用例覆盖多种类型。按照数据类型（float，complex float），矩阵维度（单batch、多batch），输出矩阵为上三角/下三角（即输入参数upper为True/False），是否将矩阵还原（是否将分解出的L和U矩阵相乘），可以得到16种类型，对每种类型分别测试，diff1，diff2，diff3_2结果均小于动态阈值。
 
-#### 3.2.2 性能测试
+#### 3.3.2 性能测试
 float类型单batch性能测试如下，表格中数字为运行时间，单位为微秒（us），最右侧一列为mlu的运行时间与pytorch在gpu上的运行时间的比值：
 | 规模 | pytorch | mlu   | mlu/pytorch |
 | ---- | ------- | ----- | ----------- |
@@ -287,7 +443,7 @@ complex类型多batch性能测试：
 
 图中红框中为调用底层的矩阵乘法，且由于没有复数类型矩阵乘法的底层实现，当前复数矩阵乘是由4个float类型矩阵乘拼接而成。可以看到矩阵乘法的时间占比总和已经达到了60%，矩阵乘法所占用时间超过了2000微秒，已经超过了pytorch运行时间的10倍。
 
-### 3.3 防呆检查
+### 3.4 防呆检查
 算子中做了如下检查：
 * 所有指针不为NULL
 * 输入输出矩阵的维度为2或者3
