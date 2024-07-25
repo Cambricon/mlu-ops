@@ -17,6 +17,7 @@ carafe = ["tensor_stride_process"]
 # # mlu_op_gtest API dependencies under mlu_op_gtest/pb_gtest/src/zoo/<op>
 # ## If mlu_op_gtest use dlopen to call mluops, dependencies below may not be necessary
 
+fft =["tensor_stride_process"]
 psroipool_backward = ["psroipool"]
 psroipool_forward = ["psroipool"]
 roi_align_rotated_forward = ["roi_align_rotated"]
