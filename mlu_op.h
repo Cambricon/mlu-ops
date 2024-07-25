@@ -3835,6 +3835,10 @@ mluOpDynamicPointToVoxelForward(const mluOpHandle_t handle,
 /*!
  * @brief Gets extra space size that is needed in the GenerateProposalsV2 operation.
  *
+ * @par Deprecated
+ * - ::mluOpGetGenerateProposalsV2WorkspaceSize is deprecated and will be removed in the future
+ *   release. It is recommended to use ::mluOpGetGenerateProposalsV2WorkspaceSize_v2 instead.
+ *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
  * and queues in the GenerateProposalsV2 operation.
@@ -3866,10 +3870,58 @@ mluOpDynamicPointToVoxelForward(const mluOpHandle_t handle,
  * - None.
  *
  * @par Reference
- *
+ * - None.
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc, size_t *size);
+
+// Group: GenerateProposalsV2
+/*!
+ * @brief Gets extra space size that is needed in the GenerateProposalsV2 operation.
+ *
+ * Compared with ::mluOpGetGenerateProposalsV2WorkspaceSize, this function supports
+ * parameter \p pre_nms_top_n.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
+ * and queues in the GenerateProposalsV2 operation.
+ * @param[in] scores_desc
+ * The descriptor of the tensor \b scores. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] pre_nms_top_n
+ * The number of top scoring RPN proposals to keep before applying NMS.
+ * @param[out] size
+ * A host pointer to the returned size of extra space in bytes.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
+                                            const mluOpTensorDescriptor_t scores_desc,
+                                            const int32_t pre_nms_top_n,
+                                            size_t *size);
 
 // Group: GenerateProposalsV2
 /*!
