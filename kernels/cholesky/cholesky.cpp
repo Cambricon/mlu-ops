@@ -1,5 +1,5 @@
 #include "cholesky.h"
-
+// calculates the required workspace size for performing the Cholesky decomposition on a given matrix or batch of matrices.
 mluOpStatus_t MLUOP_WIN_API mluOpGetCholeskyWorkspace(mluOpTensorDescriptor_t input_desc, size_t* size, float** workspace)
 {
     PARAM_CHECK("mluOpCholesky", input_desc != NULL);
@@ -50,6 +50,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetCholeskyWorkspace(mluOpTensorDescriptor_t in
     return MLUOP_STATUS_SUCCESS;
 }
 
+// releases the allocated workspace memory used for Cholesky decomposition calculations.
+// It ensures that the workspace pointer is not only valid but also points to allocated memory before attempting to free it.
 mluOpStatus_t MLUOP_WIN_API mluOpFreeCholeskyWorkspace(float** workspace)
 {
     PARAM_CHECK("mluOpCholesky", workspace != NULL);
@@ -63,6 +65,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpFreeCholeskyWorkspace(float** workspace)
 
 }
 
+// performs the necessary operations to compute matrix transformations, 
+// potentially involving Cholesky decomposition or matrix transposition, depending on the input parameters.
 mluOpStatus_t MLUOP_WIN_API 
 calculate_body(mluOpHandle_t handle,int batch_size, const mluOpTensorDescriptor_t input_desc,float* d_input, const mluOpTensorDescriptor_t output_desc, float* d_output,bool upper, float* workspace)
 {
@@ -251,7 +255,11 @@ calculate_body(mluOpHandle_t handle,int batch_size, const mluOpTensorDescriptor_
     return MLUOP_STATUS_SUCCESS;
 }
 
-
+// computes the Cholesky decomposition.
+// This function is designed to handle both single and batch processing of matrices in either 2D or 3D formats.
+// The function ensures that the input matrices are either float or complex float types and performs the decomposition
+// either on the upper or lower triangular part of the matrix, based on the 'upper' boolean flag.
+mluOpStatus_t MLUOP_WIN_API 
 mluOpStatus_t MLUOP_WIN_API 
 mluOpCholesky(mluOpHandle_t handle,const mluOpTensorDescriptor_t input_desc,float* d_input, const mluOpTensorDescriptor_t output_desc, float* d_output,bool upper, float* workspace)
 {

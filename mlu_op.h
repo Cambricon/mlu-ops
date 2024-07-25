@@ -14577,9 +14577,82 @@ mluOpCholesky(mluOpHandle_t handle,
               const mluOpTensorDescriptor_t output_desc, 
               float* d_output,bool upper, float* workspace);
 
+/*!
+ * @brief Calculates the size of the workspace required for the Cholesky decomposition and initializes a workspace pointer. 
+ * This function must be called before performing Cholesky decomposition using mluOpCholesky.
+ *
+ * @param[in] input_desc
+ * The descriptor for the input tensor for which the Cholesky decomposition will be performed.
+ * @param[out] size
+ * Pointer to a size_t variable where the size of the required workspace will be stored.
+ * @param[out] workspace
+ * Double pointer to a float, used to allocate memory for the workspace. This pointer will be set to point to the allocated workspace.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS if the workspace size is successfully calculated and the workspace is successfully allocated,
+ * - ::MLUOP_STATUS_EXECUTION_FAILED if there are issues during the calculation or memory allocation.
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+
+
 mluOpStatus_t MLUOP_WIN_API 
 mluOpGetCholeskyWorkspace(mluOpTensorDescriptor_t input_desc, 
               size_t* size, float** workspace);
+
+/*!
+ * @brief Frees the memory allocated for the Cholesky decomposition workspace.
+ * This function should be called to release the workspace memory used by the Cholesky operations after they are no longer needed.
+ *
+ * @param[in,out] workspace
+ * Double pointer to the workspace memory that was allocated by mluOpGetCholeskyWorkspace or another allocation function. 
+ * After calling this function, the pointer will be set to NULL to prevent accidental reuse.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS if the workspace is successfully freed,
+ * - ::MLUOP_STATUS_EXECUTION_FAILED if there is an error during the free operation, such as if the pointer is NULL.
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+
 
 mluOpStatus_t MLUOP_WIN_API 
 mluOpFreeCholeskyWorkspace(float** workspace);
