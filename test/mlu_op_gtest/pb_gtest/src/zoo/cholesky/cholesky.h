@@ -39,7 +39,8 @@ class CholeskyExecutor : public Executor {
 
  public:
   CholeskyExecutor() {}
-  ~CholeskyExecutor() {}  void paramCheck();
+  ~CholeskyExecutor() {}
+  void paramCheck();
   void compute();
   void cpuCompute();
   void prepareComputeParam();
