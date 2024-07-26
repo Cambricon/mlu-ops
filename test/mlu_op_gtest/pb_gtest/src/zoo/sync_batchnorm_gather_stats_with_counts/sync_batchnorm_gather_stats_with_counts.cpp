@@ -47,12 +47,32 @@ void SyncBatchnormGatherStatsWithCountsExecutor::compute() {
   mean_all_desc = tensor_desc_[1].tensor;
   invstd_all_desc = tensor_desc_[2].tensor;
 
-  // if num_inputs = 4, then [input, mean_all, invstd_all, count_all] -> [mean,
-  // invstd] if num_inputs = 6, then [input, mean_all, invstd_all, moving_mean,
-  // moving_var, count_all]
-  // -> [moving_mean, moving_var, mean, invstd]
+  // if num_inputs = 3,
+  // then [mean_all, invstd_all, count_all] -> [mean, invstd]
+  // if num_inputs = 4,
+  // then [input, mean_all, invstd_all, count_all] -> [mean,invstd]
+  // if num_inputs = 5,
+  // then [mean_all, invstd_all, moving_mean, moving_var, count_all]
+  //   -> [moving_mean, moving_var, mean, invstd]
+  // if num_inputs = 6,
+  // then [input, mean_all, invstd_all, moving_mean, moving_var, count_all]
+  //   -> [moving_mean, moving_var, mean, invstd]
   VLOG(4) << "Start to run mluOpSyncBatchNormGatherStatsWithCounts().";
-  if (parser_->getInputNum() == 4) {
+  if (parser_->getInputNum() == 3) {
+    // for case without "input" param
+    mean_all_desc = tensor_desc_[0].tensor;
+    invstd_all_desc = tensor_desc_[1].tensor;
+    count_all_desc = tensor_desc_[2].tensor;
+    mluOpTensorDescriptor_t mean_desc = tensor_desc_[3].tensor;
+    mluOpTensorDescriptor_t invstd_desc = tensor_desc_[4].tensor;
+    interface_timer_.start();
+    MLUOP_CHECK(mluOpSyncBatchNormGatherStatsWithCounts(
+        handle_, mean_all_desc, data_vector_[0].device_ptr, invstd_all_desc,
+        data_vector_[1].device_ptr, nullptr, nullptr, nullptr, nullptr,
+        momentum, eps, count_all_desc, data_vector_[2].device_ptr, mean_desc,
+        data_vector_[3].device_ptr, invstd_desc, data_vector_[4].device_ptr));
+    interface_timer_.stop();
+  } else if (parser_->getInputNum() == 4) {
     count_all_desc = tensor_desc_[3].tensor;
     mluOpTensorDescriptor_t mean_desc = tensor_desc_[4].tensor;
     mluOpTensorDescriptor_t invstd_desc = tensor_desc_[5].tensor;
@@ -63,6 +83,38 @@ void SyncBatchnormGatherStatsWithCountsExecutor::compute() {
         momentum, eps, count_all_desc, data_vector_[3].device_ptr, mean_desc,
         data_vector_[4].device_ptr, invstd_desc, data_vector_[5].device_ptr));
     interface_timer_.stop();
+  } else if (parser_->getInputNum() == 5) {
+    // for case without "input" param
+    mean_all_desc = tensor_desc_[0].tensor;
+    invstd_all_desc = tensor_desc_[1].tensor;
+    mluOpTensorDescriptor_t moving_mean_desc = tensor_desc_[2].tensor;
+    mluOpTensorDescriptor_t moving_var_desc = tensor_desc_[3].tensor;
+    count_all_desc = tensor_desc_[4].tensor;
+    if (parser_->getOutputNum() == 2) {
+      mluOpTensorDescriptor_t mean_desc = tensor_desc_[5].tensor;
+      mluOpTensorDescriptor_t invstd_desc = tensor_desc_[6].tensor;
+      interface_timer_.start();
+      MLUOP_CHECK(mluOpSyncBatchNormGatherStatsWithCounts(
+          handle_, mean_all_desc, data_vector_[0].device_ptr, invstd_all_desc,
+          data_vector_[1].device_ptr, moving_mean_desc,
+          data_vector_[2].device_ptr, moving_var_desc,
+          data_vector_[3].device_ptr, momentum, eps, count_all_desc,
+          data_vector_[4].device_ptr, mean_desc, data_vector_[5].device_ptr,
+          invstd_desc, data_vector_[6].device_ptr));
+      interface_timer_.stop();
+    } else {
+      mluOpTensorDescriptor_t mean_desc = tensor_desc_[7].tensor;
+      mluOpTensorDescriptor_t invstd_desc = tensor_desc_[8].tensor;
+      interface_timer_.start();
+      MLUOP_CHECK(mluOpSyncBatchNormGatherStatsWithCounts(
+          handle_, mean_all_desc, data_vector_[0].device_ptr, invstd_all_desc,
+          data_vector_[1].device_ptr, moving_mean_desc,
+          data_vector_[2].device_ptr, moving_var_desc,
+          data_vector_[3].device_ptr, momentum, eps, count_all_desc,
+          data_vector_[4].device_ptr, mean_desc, data_vector_[7].device_ptr,
+          invstd_desc, data_vector_[8].device_ptr));
+      interface_timer_.stop();
+    }
   } else if (parser_->getInputNum() == 6) {
     mluOpTensorDescriptor_t moving_mean_desc = tensor_desc_[3].tensor;
     mluOpTensorDescriptor_t moving_var_desc = tensor_desc_[4].tensor;
@@ -105,6 +157,16 @@ void SyncBatchnormGatherStatsWithCountsExecutor::setMiscellaneousParam() {
       data_vector_[4].alsoServeAsOutput();
       data_vector_[6].onlyServeAsInput();
       data_vector_[7].onlyServeAsInput();
+    }
+  } else if (parser_->getInputNum() == 5) {
+    if (parser_->getOutputNum() == 2) {
+      data_vector_[2].alsoServeAsVolatile();
+      data_vector_[3].alsoServeAsVolatile();
+    } else {
+      data_vector_[2].alsoServeAsOutput();
+      data_vector_[3].alsoServeAsOutput();
+      data_vector_[5].onlyServeAsInput();
+      data_vector_[6].onlyServeAsInput();
     }
   }
 }
@@ -165,16 +227,29 @@ void SyncBatchnormGatherStatsWithCountsExecutor::cpuCompute() {
   int len_count_all = 1;
   int len_mean_all = 1;
   int len_invstd_all = 1;
-  if (parser_->getInputNum() == 4) {
+  if (parser_->getInputNum() == 3) {
+    len_count_all = tensor_desc_[2].tensor->dims[0];
+  } else if (parser_->getInputNum() == 4) {
     len_count_all = tensor_desc_[3].tensor->dims[0];
+  } else if (parser_->getInputNum() == 5) {
+    len_count_all = tensor_desc_[4].tensor->dims[0];
   } else if (parser_->getInputNum() == 6) {
     len_count_all = tensor_desc_[5].tensor->dims[0];
   }
-  for (int i = 0; i < tensor_desc_[1].tensor->dim; ++i) {
-    len_mean_all *= tensor_desc_[1].tensor->dims[i];
-  }
-  for (int i = 0; i < tensor_desc_[2].tensor->dim; ++i) {
-    len_invstd_all *= tensor_desc_[2].tensor->dims[i];
+  if (parser_->getInputNum() == 3 || parser_->getInputNum() == 5) {
+    for (int i = 0; i < tensor_desc_[0].tensor->dim; ++i) {
+      len_mean_all *= tensor_desc_[0].tensor->dims[i];
+    }
+    for (int i = 0; i < tensor_desc_[1].tensor->dim; ++i) {
+      len_invstd_all *= tensor_desc_[1].tensor->dims[i];
+    }
+  } else {
+    for (int i = 0; i < tensor_desc_[1].tensor->dim; ++i) {
+      len_mean_all *= tensor_desc_[1].tensor->dims[i];
+    }
+    for (int i = 0; i < tensor_desc_[2].tensor->dim; ++i) {
+      len_invstd_all *= tensor_desc_[2].tensor->dims[i];
+    }
   }
   if (len_mean_all == 0 || len_c == 0 || len_count_all == 0 ||
       len_mean_all != len_invstd_all) {
@@ -182,11 +257,30 @@ void SyncBatchnormGatherStatsWithCountsExecutor::cpuCompute() {
   }
   int output_num = parser_->getOutputNum();
   VLOG(4) << "Start to run cpuBatchNormForwardTraining().";
-  if (parser_->getInputNum() == 4) {
+  if (parser_->getInputNum() == 3) {
+    cpuBatchNormForwardTraining(
+        cpu_fp32_input_[0], cpu_fp32_input_[1], nullptr, nullptr, momentum, eps,
+        cpu_fp32_input_[2], nullptr, nullptr, cpu_fp32_output_[0],
+        cpu_fp32_output_[1], len_mean_all, len_c, output_num);
+  } else if (parser_->getInputNum() == 4) {
     cpuBatchNormForwardTraining(
         cpu_fp32_input_[1], cpu_fp32_input_[2], nullptr, nullptr, momentum, eps,
         cpu_fp32_input_[3], nullptr, nullptr, cpu_fp32_output_[0],
         cpu_fp32_output_[1], len_mean_all, len_c, output_num);
+  } else if (parser_->getInputNum() == 5) {
+    if (parser_->getOutputNum() == 2) {
+      cpuBatchNormForwardTraining(
+          cpu_fp32_input_[0], cpu_fp32_input_[1], cpu_fp32_input_[2],
+          cpu_fp32_input_[3], momentum, eps, cpu_fp32_input_[4], nullptr,
+          nullptr, cpu_fp32_output_[0], cpu_fp32_output_[1], len_mean_all,
+          len_c, output_num);
+    } else {
+      cpuBatchNormForwardTraining(
+          cpu_fp32_input_[0], cpu_fp32_input_[1], cpu_fp32_input_[2],
+          cpu_fp32_input_[3], momentum, eps, cpu_fp32_input_[4],
+          cpu_fp32_output_[0], cpu_fp32_output_[1], cpu_fp32_output_[2],
+          cpu_fp32_output_[3], len_mean_all, len_c, output_num);
+    }
   } else if (parser_->getInputNum() == 6) {
     if (parser_->getOutputNum() == 2) {
       cpuBatchNormForwardTraining(
