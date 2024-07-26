@@ -47,12 +47,16 @@ void SyncBatchnormGatherStatsWithCountsExecutor::compute() {
   mean_all_desc = tensor_desc_[1].tensor;
   invstd_all_desc = tensor_desc_[2].tensor;
 
-  // if num_inputs = 3, then [mean_all, invstd_all, count_all] -> [mean, invstd]
-  // if num_inputs = 4, then [input, mean_all, invstd_all, count_all] -> [mean,invstd]
-  // if num_inputs = 5, then [mean_all, invstd_all, moving_mean, moving_var, count_all]
-  //                         -> [moving_mean, moving_var, mean, invstd]
-  // if num_inputs = 6, then [input, mean_all, invstd_all, moving_mean, moving_var, count_all]
-  //                         -> [moving_mean, moving_var, mean, invstd]
+  // if num_inputs = 3,
+  // then [mean_all, invstd_all, count_all] -> [mean, invstd]
+  // if num_inputs = 4,
+  // then [input, mean_all, invstd_all, count_all] -> [mean,invstd]
+  // if num_inputs = 5,
+  // then [mean_all, invstd_all, moving_mean, moving_var, count_all]
+  //   -> [moving_mean, moving_var, mean, invstd]
+  // if num_inputs = 6,
+  // then [input, mean_all, invstd_all, moving_mean, moving_var, count_all]
+  //   -> [moving_mean, moving_var, mean, invstd]
   VLOG(4) << "Start to run mluOpSyncBatchNormGatherStatsWithCounts().";
   if (parser_->getInputNum() == 3) {
     // for case without "input" param
