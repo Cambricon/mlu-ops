@@ -58,7 +58,6 @@ __mlu_func__ void dimOneCumsum(T *src0_nram, T *src1_nram, int deal_length) {
   int seg_num = (deal_length + N_ALIGN - 1) / N_ALIGN;
   T pre_sum = 0;
   __bang_transpose(src1_nram, src0_nram, N_ALIGN, seg_num);
-
   for (int j = 1; j < seg_num; j++) {
     removeDataDependence(src1_nram + j * N_ALIGN,
                          src1_nram + (j - 1) * N_ALIGN,
@@ -138,6 +137,7 @@ __mlu_func__ void offsetCompute(T *nram_src0, T *cluster_offsets,
     __bang_add_scalar(nram_src0, nram_src0, cum_offset, data_size);
   }
 }
+
 // inclusive execution
 template <typename T>
 __mlu_func__ void inclusiveScan(T* nram_src,
@@ -147,10 +147,19 @@ __mlu_func__ void inclusiveScan(T* nram_src,
                                 T cum_offset) {
   // parameter preparing
   __mlu_shared__ T core_offsets[4];
+  const int size_aligned = CEIL_ALIGN(data_size, N_ALIGN);
   T *nram_src0 = nram_src;
-  T *nram_src1 = nram_src0 + DimOneDealLength / sizeof(T);
-
-  __mluop_exp(nram_src0, nram_src0, nullptr, 0, data_size);
+  T *nram_src1 = nram_src0 + size_aligned;
+  // when datatype is not float32, we need a buffer for exp & log
+  T *add_buffer;
+  if (sizeof(T) != 4) {
+    add_buffer = nram_src1 + size_aligned;
+  }
+  if (sizeof(T) == 4) {
+    __mluop_exp(nram_src0, nram_src0, nullptr, 0, data_size);
+  } else {
+    __mluop_exp(nram_src0, nram_src0, add_buffer, 0, data_size);
+  }
   dimOneCumsum(nram_src0, nram_src1, data_size);
   if (__is_ipu()) {
     core_offsets[coreId] = nram_src0[data_size-1];
@@ -174,7 +183,11 @@ __mlu_func__ void inclusiveScan(T* nram_src,
   offsetCompute(nram_src0, cluster_offsets, cum_offset,
                 data_size, offset_type);
   // log computing
-  __mluop_log(nram_src0, nram_src0, nullptr, 0, data_size);
+  if (sizeof(T) == 4) {
+    __mluop_log(nram_src0, nram_src0, nullptr, 0, data_size);
+  } else {
+    __mluop_log(nram_src0, nram_src0, add_buffer, 0, data_size);
+  }
 }
 
 // one dimension executing kernel==========================================
@@ -184,7 +197,9 @@ dimOneKernel(const T *input,
              T *output,
              int32_t data_size) {
     // parameters preparing
-    const int32_t n_core = DimOneDealLength / sizeof(T);
+    const int32_t n_core = sizeof(T) == 4 ?
+            DimOneDealLength / sizeof(T) : DimOneDealLength / sizeof(T) / 2;
+
     const int32_t n_cluster = n_core * 4;
     const int32_t n_round = n_cluster * clusterDim;
     const int32_t rounds = (data_size + n_round - 1) / n_round;
@@ -198,7 +213,8 @@ dimOneKernel(const T *input,
     T *sram_src0 = (T *)sram_buffer;
     T *sram_src1 = (T *)(sram_buffer + ClusterCapacity);
     T *nram_src0 = (T *)nram_buffer;
-    T *nram_src1 = nram_src0 + ((MAX_NRAM_SIZE/sizeof(T)) >> 1);
+    T *nram_src1 = sizeof(T) == 4 ?
+      nram_src0 + n_core * 2 : nram_src0 + n_core * 4;
     int32_t totalId = clusterId;  // clusters' Id in entire process
     int32_t last_round_clusters
       = (last_round_length + n_cluster - 1) / n_cluster;
@@ -211,14 +227,12 @@ dimOneKernel(const T *input,
     if (coreId < length_offset) {
       n_last_core += 1;
     }
-
     // first memory copy GDRAM2NRAM
     if (rounds > 1) {
       __memcpy(nram_src0,
       input + totalId * n_cluster + coreId * n_core,
       n_core * sizeof(T), GDRAM2NRAM);
     }
-
     T *this_sram = sram_src0;
     T *next_sram = sram_src1;
     T *this_nram = nram_src0;
@@ -269,14 +283,27 @@ dimOneKernel(const T *input,
     // the last round
     if (last_round_clusters == 1) {
       if (clusterId == 0) {
-        if (rounds == 1) {
-          __memcpy(this_nram, input + totalId * n_cluster + copy_offset,
-                   n_last_core * sizeof(T), GDRAM2NRAM);
+        if (n_last_core) {
+          printf("CHECKOPOINT0\n");
+          if (rounds == 1) {
+            __memcpy(this_nram, input + totalId * n_cluster + copy_offset,
+                    n_last_core * sizeof(T), GDRAM2NRAM);
+          }
+          printf("CHECKOPOINT1\n");
+          inclusiveScan(this_nram, n_last_core, 1,
+                        output, cluster_offsets[9]);
+          __memcpy(output + totalId * n_cluster + copy_offset, this_nram,
+                  n_last_core * sizeof(T), NRAM2GDRAM);
+        } else {
+          __sync_cluster();
+          __sync_cluster();
+          __sync_cluster();
+          __sync_all();
+          __sync_all();
         }
-        inclusiveScan(this_nram, n_last_core, 1,
-                      output, cluster_offsets[9]);
-        __memcpy(output + totalId * n_cluster + copy_offset, this_nram,
-                 n_last_core * sizeof(T), NRAM2GDRAM);
+      } else {
+        __sync_all();
+        __sync_all();
       }
     } else {
       if (clusterId < last_round_clusters - 1) {
@@ -287,14 +314,22 @@ dimOneKernel(const T *input,
         __memcpy(output + totalId * n_cluster + coreId * n_core,
                  this_nram, n_core * sizeof(T), NRAM2GDRAM);
       } else if (clusterId == last_round_clusters - 1) {
-        if (rounds == 1) {
-          __memcpy(this_nram, input + totalId * n_cluster + copy_offset,
-                   n_last_core * sizeof(T), GDRAM2NRAM);
-        }
-        inclusiveScan(this_nram, n_last_core, 0,
-                      cluster_offsets, basenum);
-        __memcpy(output + totalId * n_cluster + copy_offset, this_nram,
-                 n_last_core * sizeof(T), NRAM2GDRAM);
+          if (n_last_core) {
+            if (rounds == 1) {
+              __memcpy(this_nram, input + totalId * n_cluster + copy_offset,
+                      n_last_core * sizeof(T), GDRAM2NRAM);
+            }
+            inclusiveScan(this_nram, n_last_core, 1,
+                          cluster_offsets, basenum);
+            __memcpy(output + totalId * n_cluster + copy_offset, this_nram,
+                    n_last_core * sizeof(T), NRAM2GDRAM);
+          } else {
+            __sync_cluster();
+            __sync_cluster();
+            __sync_cluster();
+            __sync_all();
+            __sync_all();
+          }
       } else {
         __sync_all();
         __sync_all();

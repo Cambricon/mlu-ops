@@ -29,7 +29,8 @@ highestDimKernel(const T *input,
                  T *output,
                  int32_t axis_size,
                  int32_t lower_size) {
-    const int32_t core_size = CoreCapacity / sizeof(T) / 2;
+    const int32_t core_size = sizeof(T) == 4 ?
+      CoreCapacity / sizeof(T) / 2 : CoreCapacity / sizeof(T) / 4;
     const int32_t total_width = lower_size;
     const int32_t total_height = axis_size;
     int32_t cores_working = total_width / (N_ALIGN / sizeof(T));
@@ -40,12 +41,16 @@ highestDimKernel(const T *input,
       total_width / cores_working : total_width / (cores_working - 1);
 
     const int32_t last_core_width = total_width % cores_working == 0 ?
-                                core_width : total_width % cores_working;
+                core_width : total_width - core_width * (cores_working - 1);
     const int32_t core_height = core_size / core_width < total_height ?
                             core_size / core_width : total_height;
 
     T *nram_src = (T *)nram_buffer;
     T *nram_offset = nram_src + core_size;
+    T *add_buffer;
+    if (sizeof(T) != 4) {
+      add_buffer = nram_offset + core_size;
+    }
 
     if (taskId < cores_working) {
       for (int i = 0; i < total_height; i += core_height) {
@@ -57,7 +62,14 @@ highestDimKernel(const T *input,
         __memcpy(nram_src, input + i * total_width + taskId * core_width,
                  deal_width * sizeof(T), GDRAM2NRAM, deal_width * sizeof(T),
                  total_width * sizeof(T), deal_height - 1);
-        __mluop_exp(nram_src, nram_src, nullptr, 0, deal_width * deal_height);
+        if (sizeof(T) == 4) {
+          __mluop_exp(nram_src, nram_src, nullptr, 0,
+                      deal_width * deal_height);
+        } else {
+          __mluop_exp(nram_src, nram_src, add_buffer, 0,
+                      deal_width * deal_height);
+        }
+
         if (i != 0) {
           __bang_add(nram_src, nram_src, nram_offset, deal_width);
         }
@@ -70,8 +82,13 @@ highestDimKernel(const T *input,
         __bang_move(nram_offset,
                     nram_src + (deal_height - 1) * deal_width,
                     deal_width * sizeof(T));
-        __mluop_log(nram_src, nram_src, nullptr, 0, deal_width * deal_height);
-
+        if (sizeof(T) == 4) {
+          __mluop_log(nram_src, nram_src, nullptr, 0,
+                      deal_width * deal_height);
+        } else {
+          __mluop_log(nram_src, nram_src, add_buffer, 0,
+                      deal_width * deal_height);
+        }
         __memcpy(output + i * total_width + taskId * core_width, nram_src,
                  deal_width * sizeof(T), NRAM2GDRAM, total_width * sizeof(T),
                  deal_width * sizeof(T), deal_height - 1);

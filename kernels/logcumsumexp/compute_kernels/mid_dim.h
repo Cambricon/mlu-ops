@@ -30,10 +30,20 @@ batchKernel(const T *source,
             int32_t width,
             int32_t height) {
     T *nram_src = (T *)nram_buffer;
+    T *add_buffer;
     int32_t batch_size = width * height;
     int32_t data_size = batch_size * batches_num;
+
+    if (sizeof(T) != 4) {
+      add_buffer = nram_src + data_size;
+    }
     __memcpy(nram_src, source, data_size * sizeof(T), GDRAM2NRAM);
-    __mluop_exp(nram_src, nram_src, nullptr, 0, data_size);
+    if (sizeof(T) == 4) {
+      __mluop_exp(nram_src, nram_src, nullptr, 0, data_size);
+    } else {
+      __mluop_exp(nram_src, nram_src, add_buffer, 0, data_size);
+    }
+
 
     for (int i = 0; i < batches_num; i++) {
         for (int j = 1; j < height; j++) {
@@ -43,7 +53,11 @@ batchKernel(const T *source,
                        width);
         }
     }
-    __mluop_log(nram_src, nram_src, nullptr, 0, data_size);
+    if (sizeof(T) == 4) {
+      __mluop_log(nram_src, nram_src, nullptr, 0, data_size);
+    } else {
+      __mluop_log(nram_src, nram_src, add_buffer, 0, data_size);
+    }
     __memcpy(output, nram_src, data_size * sizeof(T), NRAM2GDRAM);
 }
 
@@ -55,7 +69,8 @@ midDimKernel(const T *input,
              int32_t axis_size,
              int32_t lower_size,
              int32_t higher_size) {
-  const int32_t nram_size = CoreCapacity / sizeof(T);
+  const int32_t nram_size = sizeof(T) == 4 ?
+      CoreCapacity / sizeof(T) : CoreCapacity / sizeof(T) / 4;
   const int32_t batches_num = higher_size;
   const int32_t batch_size = axis_size * lower_size;
   const int32_t batches_per_core = nram_size / batch_size;

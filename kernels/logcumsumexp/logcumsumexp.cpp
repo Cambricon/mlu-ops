@@ -84,7 +84,7 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     for (int i = 0; i < input_desc->dim; i++) {
         if (input_desc->dims[i] == 0) {
             LOG(ERROR)  << "[mluOpLogcumsumexp] there is a zero element"
-                         "in input tensor's shape"
+                         "in input tensor's shape";
             return MLUOP_STATUS_BAD_PARAM;
         }
     }
@@ -130,12 +130,13 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
                      input_desc->dtype, input, output, axis_size));
     } else if (lower_size == 1) {
         // lowestDim
-        int32_t data_size = axis_size * higher_size;
-        int32_t nram_size = CoreCapacity / sizeof(input_desc->dtype);
-        int32_t nram_height = N_ALIGN / sizeof(input_desc->dtype);
-        int32_t nram_width = nram_size / nram_height;
-        int32_t parts_per_core = nram_width / axis_size;
-
+        const int32_t nram_size = sizeof(input_desc->dtype) == 4 ?
+            CoreCapacity / sizeof(input_desc->dtype) / 2 :
+            CoreCapacity / sizeof(input_desc->dtype) / 4;
+        const int32_t nram_height = N_ALIGN / sizeof(input_desc->dtype);
+        const int32_t nram_width = nram_size / nram_height;
+        const int32_t part_width = axis_size;
+        const int32_t parts_per_core = nram_width / part_width;
         if (parts_per_core == 0) {
             for (int batch = 0; batch < higher_size; batch++) {
                 CHECK_RETURN(API, LogcumsumexpDimOne(k_dim, k_type,
@@ -157,10 +158,12 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
                      input_desc->dtype, input, output, axis_size, lower_size));
     } else {
         // midDim
-        int32_t nram_size = CoreCapacity / sizeof(input_desc->dtype);
-        int32_t batches_num = higher_size;
-        int32_t batch_size = axis_size * lower_size;
-        int32_t batches_per_core = nram_size / batch_size;
+        const int32_t nram_size = sizeof(input_desc->dtype) == 4 ?
+            CoreCapacity / sizeof(input_desc->dtype) :
+            CoreCapacity / sizeof(input_desc->dtype) / 4;
+        const int32_t batches_num = higher_size;
+        const int32_t batch_size = axis_size * lower_size;
+        const int32_t batches_per_core = nram_size / batch_size;
 
         if (batches_per_core ==  0) {
             for (int batch = 0; batch < batches_num; batch) {

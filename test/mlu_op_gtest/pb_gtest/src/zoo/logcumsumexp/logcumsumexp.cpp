@@ -60,10 +60,11 @@ void LogcumsumexpExecutor::cpuCompute() {
   for (int i = dim - 1; i >= 0; i--) {
     batches *= tensor_desc_[0].tensor->dims[i];
   }
+
+  // Cumsum Computing
   for (int i = 0; i < data_num; i++) {
     cpu_fp32_input_[0][i] = exp(cpu_fp32_input_[0][i]);
   }
-  // Cumsum Computing
   for (int b = 0; b < batches; b++) {
     float* x_ptr =  cpu_fp32_input_[0] + self_dim_size * self_dim_stride * b;
     float* y_ptr =  cpu_fp32_output_[0] + self_dim_size * self_dim_stride * b;

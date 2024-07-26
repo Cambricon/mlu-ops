@@ -29,13 +29,21 @@ __mlu_func__ void smallPartScan(T *output,
                                 int32_t data_size,
                                 int32_t axis_size,
                                 int32_t parts) {
-    T *nram_src0 = (T *)nram_buffer;
-    T *nram_src1 = nram_src0 + ((MAX_NRAM_SIZE/sizeof(T)) >> 1);
     int32_t part_width = axis_size;
     int32_t part_height = N_ALIGN / sizeof(T);
     int32_t part_size = part_width * part_height;
+    T *nram_src0 = (T *)nram_buffer;
+    T *nram_src1 = nram_src0 + part_size * parts;
+    T *add_buffer;
+    if (sizeof(T) != 4) {
+      add_buffer = nram_src1 + part_size * parts;
+    }
     __memcpy(nram_src0, source, data_size * sizeof(T), GDRAM2NRAM);
-    __mluop_exp(nram_src0, nram_src0, nullptr, 0, data_size);
+    if (sizeof(T) == 4) {
+      __mluop_exp(nram_src0, nram_src0, nullptr, 0, data_size);
+    } else {
+      __mluop_exp(nram_src0, nram_src0, add_buffer, 0, data_size);
+    }
     for (int i = 0; i < parts; i++) {
         __bang_transpose(nram_src1 + part_size * i,
                          nram_src0 + part_size * i,
@@ -54,7 +62,12 @@ __mlu_func__ void smallPartScan(T *output,
                          nram_src1 + part_size * i,
                          part_width, part_height);
     }
-    __mluop_log(nram_src0, nram_src0, nullptr, 0, data_size);
+
+    if (sizeof(T) == 4) {
+      __mluop_log(nram_src0, nram_src0, nullptr, 0, data_size);
+    } else {
+      __mluop_log(nram_src0, nram_src0, add_buffer, 0, data_size);
+    }
     __memcpy(output, nram_src0, data_size * sizeof(T), NRAM2GDRAM);
 }
 
@@ -69,7 +82,8 @@ lowestDimKernel(const T *input,
     // there will be several parts on one nram every round;
     // if nram_size < part_size, call dimOneKernel for batches.
     const int32_t data_size = axis_size * higher_size;
-    const int32_t nram_size = CoreCapacity / sizeof(T) / 2;
+    const int32_t nram_size = sizeof(T) == 4 ?
+        CoreCapacity / sizeof(T) / 2 : CoreCapacity / sizeof(T) / 4;
     const int32_t nram_height = N_ALIGN / sizeof(T);
     const int32_t nram_width = nram_size / nram_height;
     const int32_t part_height = nram_height;
@@ -105,6 +119,7 @@ lowestDimKernel(const T *input,
     } else if (taskId == last_round_cores - 1) {
       T *nram_src = (T *)nram_buffer;
       __bang_write_zero(nram_src, deal_size);
+      printf("last core\n");
       smallPartScan(output + round * round_size + taskId * deal_size,
                     input + round * round_size + taskId * deal_size,
                     last_core_size, axis_size, parts_per_core);
