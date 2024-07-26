@@ -48,4 +48,4 @@ jobs:
 
       - name: run_mlu_ops_ci
         run: >
-          bash .github/ci_script/mlu-ops-ci_script.sh
+          python ci_script/invoke_jenkins.py os=ubuntu20.04 require_test=True card_type=0 pr_id=$(echo $GITHUB_REF | grep -Eo "/[0-9]*/")
