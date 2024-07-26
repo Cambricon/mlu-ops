@@ -95,6 +95,7 @@ LogcumsumexpHighestDim(const cnrtDim3_t k_dim,
   return MLUOP_STATUS_SUCCESS;
 }
 
+
 mluOpStatus_t MLUOP_WIN_API
 LogcumsumexpMidDim(const cnrtDim3_t k_dim,
                    const cnrtFunctionType_t k_type,
