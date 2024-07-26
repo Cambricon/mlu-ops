@@ -30,6 +30,23 @@
 #define MS_DEFORM_ATTN_FORWARD_HEADVECTOR 1
 
 template <typename T>
+__mlu_func__ void __mluop_floor(T *dst_ram, T* src_ram, int size) {
+// #if (__BANG_ARCH__ >= 322)
+//   __bang_floor(dst_ram, src_ram, size);  // This bang interface is for nan/inf
+//                                   // temp.
+// #else
+  if(sizeof(T) == sizeof(float)) {
+    int16 *mid = (int16 *)(dst_ram + size / 2);
+    __bang_float2int16_dn(mid, (float *)src_ram, size, 0);
+    __bang_int162float((float *)dst_ram, (int16_t*)mid, size, 0);
+  } else {
+    __bang_half2int16_dn((int16_t *)dst_ram, (half *)src_ram, size, 0);
+    __bang_int162half((half *)dst_ram, (int16_t*)dst_ram, size, 0);
+  }
+// #endif
+}
+
+template <typename T>
 __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
     const char *data_value_gdram, const char *data_spatial_shapes_gdram,
     const char *data_level_start_index_gdram,
