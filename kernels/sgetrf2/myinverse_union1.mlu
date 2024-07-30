@@ -1,6 +1,6 @@
 
 #include "sgetrf2.h"
-
+#include "sgetrf2_utils.h"
 #include "core/logging.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
@@ -36,8 +36,8 @@ __mlu_global__ void MLUKernelInverse(int batch,
     float *orignOutput = d_output;
     d_input = orignInput + batch_id * stride_input;
     d_output = orignOutput + batch_id * stride_output;
-    __nram__ float nram_buffer[MAX_NRAM_SIZE / sizeof(float)];
-    __mlu_shared__ float sram_buffer[MAX_SRAM_SIZE / sizeof(float)];
+    float *nram_buffer = NRAM_BUFFER;
+    float *sram_buffer = SRAM_BUFFER;
 
     if (id == 0)
     {
@@ -117,7 +117,7 @@ __mlu_global__ void complex_inverse_kernel(int batch, float *rd_input, float *id
 {
     int id = taskId;
     id = taskId % 4;
-    __nram__ float nram_buffer[MAX_NRAM_SIZE / 4];
+    float *nram_buffer = NRAM_BUFFER;
 
     int span = m / taskDim;
     int start = id * span;
@@ -222,7 +222,7 @@ __mlu_global__ void complex_batch_inverse_kernel(int batch, float *rd_input, flo
     int batch_id = id;
     if (batch_id >= batch)
         return;
-    __nram__ float nram_buffer[MAX_NRAM_SIZE / 4];
+    float *nram_buffer = NRAM_BUFFER;
     float *r_orign_input = rd_input;
     float *i_orign_input = id_input;
     float *r_orign_output = rd_output;

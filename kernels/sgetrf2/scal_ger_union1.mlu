@@ -1,5 +1,5 @@
 #include "sgetrf2.h"
-
+#include "sgetrf2_utils.h"
 #include "core/logging.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
@@ -56,14 +56,14 @@ __mlu_func__ void MLUSubKernelCcal_ger(
     float *d_rA, float *d_iA, int lda, int ldL1,
     int *info, int gbstep,
     int m_per_core, int m_per_core_, int len_extra, int k, int cur, int m_e,
-    __nram__ float *r_shared_y, __nram__ float *i_shared_y,
-    __nram__ float *r_temp, __nram__ float *i_temp,
-    __nram__ float *r_L1, __nram__ float *i_L1,
-    __nram__ float *r_temp_L1, __nram__ float *i_temp_L1,
-    __nram__ float *r_orig, __nram__ float *i_orig)
+    float *r_shared_y, float *i_shared_y,
+    float *r_temp, float *i_temp,
+    float *r_L1, float *i_L1,
+    float *r_temp_L1, float *i_temp_L1,
+    float *r_orig, float *i_orig)
 {
-    __nram__ float ii_temp[MAX_M_SIZE_COMPLEX + N * N];
-    __nram__ float ir_temp[MAX_M_SIZE_COMPLEX + N * N];
+    float *ii_temp = i_orig + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+    float *ir_temp = ii_temp + MAX_M_SIZE_COMPLEX + N * N;
 
     if ((*info) != 0)
         return;
@@ -155,20 +155,21 @@ __mlu_global__ void MLUKernelCcal_ger(
     }
 
     int gbj, STEP;
-    __nram__ float r_shared_y[N * N];
-    __mlu_shared__ float r_extra_vec[N * N];
-    __nram__ float r_extra_vec_nram[N * N];
-    __nram__ float r_temp[MAX_M_SIZE_COMPLEX * +N];
-    __nram__ float r_L1[MAX_NRAM_SIZE / 16 - 4 * 1024];
-    __nram__ float r_temp_L1[MAX_M_SIZE_COMPLEX + N];
-    __nram__ float r_orig[MAX_NRAM_SIZE / 16 - 4 * 1024];
-    __nram__ float i_shared_y[N * N];
-    __mlu_shared__ float i_extra_vec[N * N];
-    __nram__ float i_extra_vec_nram[N * N];
-    __nram__ float i_temp[MAX_M_SIZE_COMPLEX + N];
-    __nram__ float i_L1[MAX_NRAM_SIZE / 16 - 4 * 1024];
-    __nram__ float i_temp_L1[MAX_M_SIZE_COMPLEX + N];
-    __nram__ float i_orig[MAX_NRAM_SIZE / 16 - 4 * 1024];
+    float *r_shared_y = NRAM_BUFFER;
+    float *r_extra_vec = SRAM_BUFFER;
+    float *r_extra_vec_nram = r_shared_y + N * N;
+    float *r_temp = r_extra_vec_nram + N * N;
+    float *r_L1 = r_temp + MAX_M_SIZE_COMPLEX + N;
+    float *r_temp_L1 = r_L1 + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+    float *r_orig = r_temp_L1 + MAX_M_SIZE_COMPLEX + N;
+
+    float *i_shared_y = r_orig + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+    float *i_extra_vec = r_extra_vec + N * N;
+    float *i_extra_vec_nram = i_shared_y + N * N;
+    float *i_temp = i_extra_vec_nram + N * N;
+    float *i_L1 = i_temp + MAX_M_SIZE_COMPLEX + N;
+    float *i_temp_L1 = i_L1 + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+    float *i_orig = i_temp_L1 + MAX_M_SIZE_COMPLEX + N;
 
     float *rA = d_rA + J + J * lda;
     float *iA = d_iA + J + J * lda;
@@ -340,13 +341,13 @@ __mlu_entry__ void MLUKernelScal_ger(
     }
 
     int gbj, STEP;
-    __nram__ float shared_y[N * N];
-    __mlu_shared__ float extra_vec[N * N];
-    __nram__ float extra_vec_nram[N * N];
-    __nram__ float temp[MAX_M_SIZE + N];
-    __nram__ float L1[MAX_M_SIZE * N + N * N];
-    __nram__ float temp_L1[MAX_M_SIZE + N];
-    __nram__ float orig[MAX_M_SIZE * N + N * N];
+    float *shared_y = NRAM_BUFFER;
+    float *extra_vec = SRAM_BUFFER;
+    float *extra_vec_nram = shared_y + N * N;
+    float *temp = extra_vec_nram + N * N;
+    float *L1 = temp + (MAX_M_SIZE + N);
+    float *temp_L1 = L1 + (MAX_M_SIZE * N + N * N);
+    float *orig = temp_L1 + (MAX_M_SIZE + N);
 
     float *A = dA + J + J * lda;
 
@@ -434,9 +435,9 @@ __mlu_func__ void MLUKernelCPivot(
 
     float *r_src_nram = r_orig;
     float *i_src_nram = i_orig;
-    __mlu_shared__ float sram_buffer[TaskUnion1];
-    __mlu_shared__ int sram_buffer_gb_idx[TaskUnion1];
-    __mlu_shared__ int sram_buffer_idx[TaskUnion1];
+    float *sram_buffer = SRAM_BUFFER + (4 + 2 * N) * N + 3 * MAX_M_SIZE1 + MAX_SRAM_SIZE / 8;
+    int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
+    int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
     int max_core_pos = -1;
 
     __sramset(sram_buffer, TaskUnion1, 0);
@@ -591,9 +592,9 @@ __mlu_func__ void MLUKernelPivot(
     int *dipiv, int *dipiv2, int *info, int gbstep)
 {
     float *src_nram = orig;
-    __mlu_shared__ float sram_buffer[TaskUnion1];
-    __mlu_shared__ int sram_buffer_gb_idx[TaskUnion1];
-    __mlu_shared__ int sram_buffer_idx[TaskUnion1];
+    float *sram_buffer = SRAM_BUFFER + 3 * MAX_M_SIZE1 + (N + 2) * N + MAX_SRAM_SIZE / 8;
+    int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
+    int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
     int max_core_pos = -1;
 
     __sramset(sram_buffer, TaskUnion1, 0);
@@ -673,9 +674,9 @@ __mlu_func__ void MLUKernelPivotSwap2(
 
     float *src_nram = L1;
     float *src_nram1 = orig;
-    __mlu_shared__ float sram_buffer[TaskUnion1];
-    __mlu_shared__ int sram_buffer_gb_idx[TaskUnion1];
-    __mlu_shared__ int sram_buffer_idx[TaskUnion1];
+    float *sram_buffer = SRAM_BUFFER + 3 * MAX_M_SIZE1 + (N + 2) * N + MAX_SRAM_SIZE / 8;
+    int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
+    int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
     int max_core_pos = -1;
     int max_cluster_pos = -1;
 
@@ -813,10 +814,10 @@ __mlu_func__ void MLUKernelPivotSwap(
 
     float *src_nram = L1;
     float *src_nram1 = orig;
-    __mlu_shared__ float sram_buffer[TaskUnion1];
-    __mlu_shared__ int sram_buffer_gb_idx[TaskUnion1];
-    __mlu_shared__ int sram_buffer_idx[TaskUnion1];
-    __mlu_shared__ float sram_buffer_arr[2 * N];
+    float *sram_buffer = SRAM_BUFFER + 3 * MAX_M_SIZE1 + (N + 2) * N + MAX_SRAM_SIZE / 8;
+    int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
+    int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
+    float *sram_buffer_arr = (float *)sram_buffer_idx + TaskUnion1;
     int max_core_pos = -1;
 
     __sramset(sram_buffer, TaskUnion1, 0);
@@ -943,9 +944,9 @@ __mlu_func__ void MLUKernelCPivotSwap2(
     float *i_src_nram = i_L1;
     float *r_src_nram1 = r_orig;
     float *i_src_nram1 = i_orig;
-    __mlu_shared__ float sram_buffer[TaskUnion1];
-    __mlu_shared__ int sram_buffer_gb_idx[TaskUnion1];
-    __mlu_shared__ int sram_buffer_idx[TaskUnion1];
+    float *sram_buffer = SRAM_BUFFER + (4 + 2 * N) * N + 3 * MAX_M_SIZE1 + MAX_SRAM_SIZE / 8;
+    int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
+    int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
     int max_core_pos = -1;
     int max_cluster_pos = -1;
 
@@ -1100,11 +1101,11 @@ __mlu_func__ void MLUKernelCPivotSwap(
     float *i_src_nram = i_L1;
     float *r_src_nram1 = r_orig;
     float *i_src_nram1 = i_orig;
-    __mlu_shared__ float sram_buffer[TaskUnion1];
-    __mlu_shared__ int sram_buffer_gb_idx[TaskUnion1];
-    __mlu_shared__ int sram_buffer_idx[TaskUnion1];
-    __mlu_shared__ float r_sram_buffer_arr[3 * N];
-    __mlu_shared__ float i_sram_buffer_arr[3 * N];
+    float *sram_buffer = SRAM_BUFFER + (4 + 2 * N) * N + 3 * MAX_M_SIZE1 + MAX_SRAM_SIZE / 8;
+    int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
+    int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
+    float *r_sram_buffer_arr = (float *)sram_buffer_idx + TaskUnion1;
+    float *i_sram_buffer_arr = r_sram_buffer_arr + 3 * N;
     int max_core_pos = -1;
 
     __sramset(sram_buffer, TaskUnion1, 0);
@@ -1305,17 +1306,17 @@ __mlu_global__ void MLUKernelScal_ger_pivot(
     }
 
     int gbj, STEP;
-    __nram__ float shared_y[N * N];
-    __mlu_shared__ float extra_vec[N * N];
-    __nram__ float extra_vec_nram[N * N];
-    __nram__ float temp[MAX_M_SIZE1 + N + N * 2];
-    __nram__ float L1[MAX_NRAM_SIZE / 8 - 8 * 1024]; //(80-8)*1024*sizeof(float)
-    __nram__ float orig[MAX_NRAM_SIZE / 8 - 8 * 1024];
-    __mlu_shared__ float k_max[MAX_M_SIZE1];
-    __mlu_shared__ int k_max_idx[MAX_M_SIZE1];
-    __mlu_shared__ int k_max_gbidx[MAX_M_SIZE1];
-    __mlu_shared__ float k_max_arr[2 * N];
-    __mlu_shared__ int sram_buffer[MAX_SRAM_SIZE / 8];
+    float *shared_y = NRAM_BUFFER;
+    float *extra_vec = SRAM_BUFFER;
+    float *extra_vec_nram = shared_y + N * N;
+    float *temp = extra_vec_nram + N * N;
+    float *L1 = temp + (MAX_M_SIZE1 + N + N * 2);
+    float *orig = L1 + (MAX_NRAM_SIZE / 8 - 8 * 1024);
+    float *k_max = extra_vec + N * N;
+    int *k_max_idx = (int *)(k_max + MAX_M_SIZE1);
+    int *k_max_gbidx = k_max_idx + MAX_M_SIZE1;
+    float *k_max_arr = (float *)(k_max_gbidx + MAX_M_SIZE1);
+    int *sram_buffer = (int *)(k_max_arr + 2 * N);
 
     float *A = dA + J + J * lda;
 
@@ -1551,10 +1552,10 @@ __mlu_func__ void MLUSubKernelCcal_ger_pivot(
     float *r_L1, float *i_L1,
     float *r_orig, float *i_orig)
 {
-    __nram__ float ii_temp[MAX_M_SIZE_COMPLEX_PIVOT + N * N];
-    __nram__ float ir_temp[MAX_M_SIZE_COMPLEX_PIVOT + N * N];
-    __nram__ float r_temp_L1[MAX_M_SIZE_COMPLEX_PIVOT + N * N];
-    __nram__ float i_temp_L1[MAX_M_SIZE_COMPLEX_PIVOT + N * N];
+    float *ii_temp = i_orig + MAX_NRAM_SIZE / 16 - 4 * 1024;
+    float *ir_temp = ii_temp + MAX_M_SIZE_COMPLEX_PIVOT + N * N;
+    float *r_temp_L1 = ir_temp + MAX_M_SIZE_COMPLEX_PIVOT + N * N;
+    float *i_temp_L1 = r_temp_L1 + MAX_M_SIZE_COMPLEX_PIVOT + N * N;
 
     if (m_e <= 0)
         return;
@@ -1648,24 +1649,26 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
     }
 
     int gbj, STEP;
-    __nram__ float r_shared_y[N * N];
-    __mlu_shared__ float r_extra_vec[N * N];
-    __nram__ float r_extra_vec_nram[N * N];
-    __nram__ float r_temp[MAX_M_SIZE_COMPLEX_PIVOT + N + N * 2];
-    __nram__ float r_L1[MAX_NRAM_SIZE / 16 - 4 * 1024];
-    __nram__ float r_orig[MAX_NRAM_SIZE / 16 - 4 * 1024];
-    __nram__ float i_shared_y[N * N];
-    __mlu_shared__ float i_extra_vec[N * N];
-    __nram__ float i_extra_vec_nram[N * N];
-    __nram__ float i_temp[MAX_M_SIZE_COMPLEX_PIVOT + N + N * 2];
-    __nram__ float i_L1[MAX_NRAM_SIZE / 16 - 4 * 1024];
-    __nram__ float i_orig[MAX_NRAM_SIZE / 16 - 4 * 1024];
-    __mlu_shared__ int sram_buffer[MAX_SRAM_SIZE / 8];
-    __mlu_shared__ float k_max[MAX_M_SIZE1];
-    __mlu_shared__ int k_max_idx[MAX_M_SIZE1];
-    __mlu_shared__ int k_max_gbidx[MAX_M_SIZE1];
-    __mlu_shared__ float r_k_max_arr[2 * N];
-    __mlu_shared__ float i_k_max_arr[2 * N];
+    float *r_shared_y = NRAM_BUFFER;
+    float *r_extra_vec = SRAM_BUFFER;
+    float *r_extra_vec_nram = r_shared_y + N * N;
+    float *r_temp = r_extra_vec_nram + N * N;
+    float *r_L1 = r_temp + (MAX_M_SIZE_COMPLEX_PIVOT + N + N * 2);
+    float *r_orig = r_L1 + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+
+    float *i_shared_y = r_orig + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+    float *i_extra_vec = r_extra_vec + N * N;
+    float *i_extra_vec_nram = i_shared_y + N * N;
+    float *i_temp = i_extra_vec_nram + N * N;
+    float *i_L1 = i_temp + (MAX_M_SIZE_COMPLEX_PIVOT + N + N * 2);
+    float *i_orig = i_L1 + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+
+    int *sram_buffer = (int *)i_extra_vec + N * N;
+    float *k_max = (float *)sram_buffer + (MAX_SRAM_SIZE / 8);
+    int *k_max_idx = (int *)k_max + MAX_M_SIZE1;
+    int *k_max_gbidx = k_max_idx + MAX_M_SIZE1;
+    float *r_k_max_arr = (float *)k_max_gbidx + MAX_M_SIZE1;
+    float *i_k_max_arr = r_k_max_arr + 2 * N;
 
     if ((lda - N > 0) && (tx % TaskUnion1 == 0) && (gbstep + J > 0))
     {
@@ -1700,7 +1703,7 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
 
         int seg = CEILDIV(mp, MAX_M_SIZE_COMPLEX_PIVOT);
 
-        __mlu_shared__ int shared_seg[TaskUnion1];
+        float *shared_seg = i_k_max_arr + 2 * N;
         shared_seg[tx] = seg;
         __sync_cluster();
         seg = shared_seg[0];

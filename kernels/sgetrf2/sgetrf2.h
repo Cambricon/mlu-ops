@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include "mlu_op.h"
+#include "kernels/kernel.h"
 
 #define TaskUnion1 4
 #define TaskUnion2 8
@@ -41,7 +43,7 @@
 #define MAX_M_SIZE1 2048
 #define CEILDIV(x, y) ((x + y - 1) / y)
 #define ROUNDUP(x, y) (CEILDIV(x, y) * y)
-#include "mlu_op.h"
+
 
 mluOpStatus_t MLUOP_WIN_API KernelScal_ger(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
                                            cnrtQueue_t queue, mluOpDataType_t d_type,
@@ -141,7 +143,7 @@ mluOpStatus_t MLUOP_WIN_API transpose(
 mluOpStatus_t MLUOP_WIN_API transpose_back(
     mluOpHandle_t handle, mluOpDataType_t dtype,
     int batch, int m, int n,
-    float *output,
+    float *output, void *workspace,
     cnrtQueue_t queue);
 mluOpStatus_t MLUOP_WIN_API MyCnrtMemcpy2D(
     mluOpHandle_t handle,
@@ -157,7 +159,7 @@ int sgetrf2_native(
     int batch, int m, int n,
     float *dA, float *d_rA, float *d_iA, int ldda, int gbm, int gbn,
     int *dipiv, int *dinfo,
-    int gbstep, int mode, cnrtQueue_t queue);
+    int gbstep, int mode, void *workspace, cnrtQueue_t queue);
 
 int sgetrf_mlu(
     mluOpHandle_t handle,
@@ -165,4 +167,4 @@ int sgetrf_mlu(
     int batch, int m, int n,
     float *dA, float *d_rA, float *d_iA, int ldda,
     int *ipiv,
-    int *info, int mode);
+    int *info, int mode, void *workspace);

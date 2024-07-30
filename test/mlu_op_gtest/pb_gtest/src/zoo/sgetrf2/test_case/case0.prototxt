@@ -4,8 +4,8 @@ input {
   shape: {
     dims: 1
     dims: 1
-    dims: 65536
-    dims: 30
+    dims: 1024
+    dims: 1024
  
   }
   layout: LAYOUT_ARRAY
@@ -22,8 +22,8 @@ output {
   shape: {
     dims: 1
     dims: 1
-    dims: 65536
-    dims: 30
+    dims: 1024
+    dims: 1024
    
   }
   layout: LAYOUT_ARRAY

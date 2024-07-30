@@ -57,7 +57,6 @@ mluOpStatus_t MLUOP_WIN_API MyCnrtMemcpy2D(
     return MLUOP_STATUS_SUCCESS;
 };
 
-
 static mluOpStatus_t MLUOP_WIN_API MatrixInverse(
     mluOpHandle_t handle, mluOpDataType_t dtype,
     int batch,
@@ -207,18 +206,17 @@ mluOpStatus_t ctrsm(mluOpHandle_t handle, mluOpDataType_t dtype,
     mluOpTensorDescriptor_t matmul_a_desc, matmul_b_desc, matmul_c_desc, info_desc;
     std::string api_name = "LU";
 
-    int32_t *info;
-    CNRT_CHECK(cnrtMalloc((void **)&info, sizeof(int32_t)));
-
     float *inv_d_ra, *inv_d_ia;
-    cnrtMalloc((void **)&inv_d_ra, batch * m * m * sizeof(float));
-    cnrtMalloc((void **)&inv_d_ia, batch * m * m * sizeof(float));
-    cnrtMemset(inv_d_ra, 0, batch * m * m * sizeof(float));
-    cnrtMemset(inv_d_ia, 0, batch * m * m * sizeof(float));
+    inv_d_ra = work_space;
+    inv_d_ia = inv_d_ra + batch * m * m;
+
+    CNRT_CHECK(cnrtMemset(inv_d_ra, 0, batch * m * m * sizeof(float)));
+    CNRT_CHECK(cnrtMemset(inv_d_ia, 0, batch * m * m * sizeof(float)));
 
     float *d_rb1, *d_ib1;
-    cnrtMalloc((void **)&d_rb1, batch * m * n * sizeof(float));
-    cnrtMalloc((void **)&d_ib1, batch * m * n * sizeof(float));
+    d_rb1 = inv_d_ia + batch * m * m;
+    d_ib1 = d_rb1 + batch * m * n;
+
     MyCnrtMemcpy2D(handle, batch, m, n, d_rb, ldb, M * ldb, d_rb1, n, m * n, 1, queue);
     MyCnrtMemcpy2D(handle, batch, m, n, d_ib, ldb, M * ldb, d_ib1, n, m * n, 1, queue);
 
@@ -600,17 +598,15 @@ mluOpStatus_t MLUOP_WIN_API transpose(
 mluOpStatus_t MLUOP_WIN_API transpose_back(
     mluOpHandle_t handle, mluOpDataType_t dtype,
     int batch, int m, int n,
-    float *output,
+    float *output, void *workspace,
     cnrtQueue_t queue)
 {
     mluOpTensorDescriptor_t input_desc;
     mluOpTensorDescriptor_t output_desc;
     cnnlTransposeDescriptor_t trans_desc;
-    float *input;
-    CNRT_CHECK(cnrtMalloc((void **)&input, batch * m * n * 2 * sizeof(float)));
+    float *input = (float *)workspace;
     CNRT_CHECK(cnrtMemcpy(input, output, batch * m * n * 2 * sizeof(float), cnrtMemcpyDevToDev));
     void *transpose_workspace = NULL;
-
     int input_dim = 2;
     const int permute[2] = {1, 0};
     int src_dims[2] = {2, batch * m * n};
@@ -673,7 +669,7 @@ int sgetrf_mlu(
     int batch, int m, int n,
     float *dA, float *d_rA, float *d_iA, int ldda,
     int *ipiv,
-    int *info, int mode)
+    int *info, int mode, void *workspace)
 {
     int nb;
     int maxm, maxn, minmn, liwork;
@@ -685,28 +681,21 @@ int sgetrf_mlu(
     nb = get_sgetrf_native_nb(m, n);
     nb = 32;
 
-    float *workspace;
-    if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
-    {
-        cnrtMalloc((void **)&workspace, batch * nb * nb * 2 * sizeof(float));
-    }
-    else
-        cnrtMalloc((void **)&workspace, batch * nb * nb * sizeof(float));
-
     liwork = m + m + 1;
-    cnrtMalloc((void **)&diwork, liwork * sizeof(int));
+    diwork = (dtype == MLUOP_DTYPE_COMPLEX_FLOAT) ? (int *)workspace + 2 * (m * n + m * m) * batch + m : (int *)workspace + batch * 64 * 64 + m;
     dipivinfo = diwork;    // dipivinfo size = m
     dipiv = dipivinfo + m; // dipiv size = m
     dinfo = dipiv + m;     // dinfo size = 1
     cnrtMemsetAsync(dinfo, 0, sizeof(int), handle->queue);
-    cnrtMemcpy(dipiv, ipiv, batch * m * sizeof(float), cnrtMemcpyHostToDev);
+    if (mode == 1)
+        CNRT_CHECK(cnrtMemcpy(dipiv, ipiv, m * sizeof(int), cnrtMemcpyHostToDev));
 
     if (nb <= 1 || nb >= MIN(m, n))
     {
         if (dtype == MLUOP_DTYPE_FLOAT)
-            sgetrf2_native(handle, dtype, batch, m, n, dA, NULL, NULL, ldda, m, n, dipiv, dinfo, 0, mode, handle->queue);
+            sgetrf2_native(handle, dtype, batch, m, n, dA, NULL, NULL, ldda, m, n, dipiv, dinfo, 0, mode, workspace, handle->queue);
         else if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
-            sgetrf2_native(handle, dtype, batch, m, n, dA, d_rA(0, 0), d_iA(0, 0), ldda, m, n, dipiv, dinfo, 0, mode, handle->queue);
+            sgetrf2_native(handle, dtype, batch, m, n, dA, d_rA(0, 0), d_iA(0, 0), ldda, m, n, dipiv, dinfo, 0, mode, workspace, handle->queue);
     }
     else
     {
@@ -730,9 +719,9 @@ int sgetrf_mlu(
 
             rows = m - j;
             if (dtype == MLUOP_DTYPE_FLOAT)
-                sgetrf2_native(handle, dtype, batch, rows, nb, dA(j, j), NULL, NULL, ldda, m, n, dipiv + j, dinfo, j, mode, handle->queue);
+                sgetrf2_native(handle, dtype, batch, rows, nb, dA(j, j), NULL, NULL, ldda, m, n, dipiv + j, dinfo, j, mode, workspace, handle->queue);
             else if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
-                sgetrf2_native(handle, dtype, batch, rows, nb, dA(j, j), d_rA(j, j), d_iA(j, j), ldda, m, n, dipiv + j, dinfo, j, mode, handle->queue);
+                sgetrf2_native(handle, dtype, batch, rows, nb, dA(j, j), d_rA(j, j), d_iA(j, j), ldda, m, n, dipiv + j, dinfo, j, mode, workspace, handle->queue);
 
             cnrtQueueSync(handle->queue);
 
@@ -746,7 +735,7 @@ int sgetrf_mlu(
                           nb, n - j - nb,
                           dA(j, j), ldda,
                           dA(j, j + nb), ldda,
-                          workspace,
+                          (float *)workspace,
                           handle->queue);
 
                     gemm3(handle, dtype,
@@ -762,7 +751,7 @@ int sgetrf_mlu(
                           nb, n - j - nb,
                           d_rA(j, j), d_iA(j, j), ldda,
                           d_rA(j, j + nb), d_iA(j, j + nb), ldda,
-                          workspace, handle->queue);
+                          (float *)workspace, handle->queue);
 
                     cgemm(handle, dtype,
                           m - (j + nb), n - j - nb, nb,
@@ -782,7 +771,7 @@ int sgetrf_mlu(
                           nb, n - (j + nb),
                           dA(j, j), ldda,
                           dA(j, j + nb), ldda,
-                          workspace, handle->queue);
+                          (float *)workspace, handle->queue);
 
                     gemm3(handle, dtype,
                           m - (j + nb), n - (j + nb), nb,
@@ -797,7 +786,7 @@ int sgetrf_mlu(
                           nb, n - (j + nb),
                           d_rA(j, j), d_iA(j, j), ldda,
                           d_rA(j, j + nb), d_iA(j, j + nb), ldda,
-                          workspace, handle->queue);
+                          (float *)workspace, handle->queue);
 
                     cgemm(handle, dtype,
                           m - (j + nb), n - (j + nb), nb,
@@ -817,33 +806,32 @@ int sgetrf_mlu(
 
             if (dtype == MLUOP_DTYPE_FLOAT)
             {
-                sgetrf2_native(handle, dtype, batch, rows, jb, dA(j, j), NULL, NULL, ldda, m, n, dipiv + j, dinfo, j, mode, handle->queue);
+                sgetrf2_native(handle, dtype, batch, rows, jb, dA(j, j), NULL, NULL, ldda, m, n, dipiv + j, dinfo, j, mode, workspace, handle->queue);
 
                 trsm3(handle, dtype,
                       batch, m, n,
                       jb, n - j - jb,
                       dA(j, j), ldda,
                       dA(j, j + jb), ldda,
-                      workspace, handle->queue);
+                      (float *)workspace, handle->queue);
             }
 
             else if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
             {
-                sgetrf2_native(handle, dtype, batch, rows, jb, dA(j, j), d_rA(j, j), d_iA(j, j), ldda, m, n, dipiv + j, dinfo, j, mode, handle->queue);
+                sgetrf2_native(handle, dtype, batch, rows, jb, dA(j, j), d_rA(j, j), d_iA(j, j), ldda, m, n, dipiv + j, dinfo, j, mode, workspace, handle->queue);
 
                 ctrsm(handle, dtype,
                       batch, m, n,
                       jb, n - j - jb,
                       d_rA(j, j), d_iA(j, j), ldda,
                       d_rA(j, j + jb), d_iA(j, j + jb), ldda,
-                      workspace, handle->queue);
+                      (float *)workspace, handle->queue);
             }
         }
     }
-    cnrtMemcpy(ipiv, dipiv, batch * m * sizeof(float), cnrtMemcpyDevToHost);
+    if (mode == 1)
+        cnrtMemcpy(ipiv, dipiv, batch * m * sizeof(float), cnrtMemcpyDevToHost);
 
     cnrtQueueQuery(handle->queue);
-    cnrtFree(diwork);
-    cnrtFree(workspace);
     return *info;
 }

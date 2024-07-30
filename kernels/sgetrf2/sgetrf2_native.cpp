@@ -324,7 +324,7 @@ int sgetrf2_native(
     int batch, int m, int n,
     float *dA, float *d_rA, float *d_iA, int ldda, int gbm, int gbn,
     int *dipiv, int *dinfo,
-    int gbstep, int mode, cnrtQueue_t queue)
+    int gbstep, int mode, void *workspace, cnrtQueue_t queue)
 {
 
   int arginfo = 0;
@@ -355,17 +355,12 @@ int sgetrf2_native(
   int nb = 16;
   int min_mn = MIN(m, n);
   int gbj, j, step, ib;
-  float *workspace;
   int *dipiv2;
   if (mode == 1)
   {
-    cnrtMalloc((void **)&dipiv2, batch * m * sizeof(int));
-    cnrtMemset(dipiv2, 0, batch * m * sizeof(int));
+    dipiv2 = (dtype == MLUOP_DTYPE_COMPLEX_FLOAT) ? (int *)workspace + 2 * (gbm * gbn + gbm * gbm) * batch : (int *)workspace + batch * 64 * 64;
+    CNRT_CHECK(cnrtMemset(dipiv2, 0, m * sizeof(int)));
   }
-  if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
-    cnrtMalloc((void **)&workspace, batch * nb * nb * 2 * sizeof(float));
-  else
-    cnrtMalloc((void **)&workspace, batch * nb * nb * sizeof(float));
 
   for (j = 0; j < min_mn; j += nb)
   {
@@ -376,7 +371,7 @@ int sgetrf2_native(
       arginfo = scal_ger(handle, dtype,
                          batch, m, n, ib, j,
                          m - j, ib, j,
-                         dA, ldda, gbm * ldda, workspace,
+                         dA, ldda, gbm * ldda, (float *)workspace,
                          dipiv + j, dipiv2, dinfo, gbstep, mode, queue);
       if (mode == 1)
       {
@@ -406,7 +401,7 @@ int sgetrf2_native(
       arginfo = ccal_ger(handle, dtype,
                          batch, m, n, ib, j,
                          m - j, ib, j,
-                         d_rA, d_iA, ldda, gbm * ldda, workspace,
+                         d_rA, d_iA, ldda, gbm * ldda, (float *)workspace,
                          dipiv + j, dipiv2, dinfo, gbstep, mode, queue);
       if (mode == 1)
       {
@@ -443,7 +438,7 @@ int sgetrf2_native(
               ib, n - j - ib,
               d_rA(j, j), d_iA(j, j), ldda,
               d_rA(j, j + ib), d_iA(j, j + ib), ldda,
-              workspace, queue);
+              (float *)workspace, queue);
 
         cgemm(handle, dtype,
               m - (j + ib), n - (j + ib), ib,
@@ -459,7 +454,7 @@ int sgetrf2_native(
               batch, gbm, ldda,
               ib, n - j - ib,
               dA(j, j), ldda,
-              dA(j, j + ib), ldda, workspace, queue);
+              dA(j, j + ib), ldda, (float *)workspace, queue);
 
         gemm3(handle, dtype,
               m - (j + ib), n - (j + ib), ib,
@@ -471,6 +466,5 @@ int sgetrf2_native(
     }
   }
 
-  cnrtFree(workspace);
   return 0;
 }
