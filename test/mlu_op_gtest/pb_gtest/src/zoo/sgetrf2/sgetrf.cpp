@@ -503,7 +503,26 @@ namespace mluoptest
 
     int64_t Sgetrf2Executor::getTheoryOps()
     {
-        int64_t theory_ops = parser_->input(0)->total_count;
+        int row, col, batch = 1;
+        if (tensor_desc_[0].tensor->dim == 2)
+        {
+            row = tensor_desc_[0].tensor->dims[0];
+            col = tensor_desc_[0].tensor->dims[1];
+        }
+        else if (tensor_desc_[0].tensor->dim == 3)
+        {
+            batch = tensor_desc_[0].tensor->dims[0];
+            row = tensor_desc_[0].tensor->dims[1];
+            col = tensor_desc_[0].tensor->dims[2];
+        }
+        else if (tensor_desc_[0].tensor->dim == 4)
+        {
+            batch = tensor_desc_[0].tensor->dims[0] * tensor_desc_[0].tensor->dims[1];
+            row = tensor_desc_[0].tensor->dims[2];
+            col = tensor_desc_[0].tensor->dims[3];
+        }
+
+        int64_t theory_ops = batch * row * col * MIN(row, col);
         VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
         return theory_ops;
     }
