@@ -99,12 +99,21 @@ namespace mluoptest
     }
     void complexMultiply(const float *a, const float *b, float *result)
     {
+<<<<<<< HEAD
         result[0] = a[0] * b[0] - a[1] * b[1]; 
         result[1] = a[0] * b[1] + a[1] * b[0]; 
     }
     void complexAdd(const float *a, const float *b, float *result)
     {
         result[0] = a[0] + b[0]; 
+=======
+        result[0] = a[0] * b[0] - a[1] * b[1];
+        result[1] = a[0] * b[1] + a[1] * b[0];
+    }
+    void complexAdd(const float *a, const float *b, float *result)
+    {
+        result[0] = a[0] + b[0];
+>>>>>>> fix workspace problem and some bugs
         result[1] = a[1] + b[1];
     }
     void complexMatrixMultiply(const float *A, const float *B, float *C, int m, int k, int n)
@@ -114,8 +123,13 @@ namespace mluoptest
         {
             for (int j = 0; j < n; ++j)
             {
+<<<<<<< HEAD
                 C[(i * n + j) * 2] = 0.0f;    
                 C[(i * n + j) * 2 + 1] = 0.0f; 
+=======
+                C[(i * n + j) * 2] = 0.0f;
+                C[(i * n + j) * 2 + 1] = 0.0f;
+>>>>>>> fix workspace problem and some bugs
             }
         }
 
@@ -123,7 +137,11 @@ namespace mluoptest
         {
             for (int j = 0; j < n; ++j)
             {
+<<<<<<< HEAD
                 float sum[2] = {0.0f, 0.0f}; 
+=======
+                float sum[2] = {0.0f, 0.0f};
+>>>>>>> fix workspace problem and some bugs
                 for (int l = 0; l < k; ++l)
                 {
                     float product[2];
@@ -140,7 +158,11 @@ namespace mluoptest
 
     static void luDecomposition(float *matrix, int m, int n)
     {
+<<<<<<< HEAD
         int size = (m < n) ? m : n; 
+=======
+        int size = (m < n) ? m : n;
+>>>>>>> fix workspace problem and some bugs
         for (int k = 0; k < size; k++)
         {
             for (int i = k + 1; i < m; i++)
@@ -184,7 +206,10 @@ namespace mluoptest
                 }
             }
         }
+<<<<<<< HEAD
 
+=======
+>>>>>>> fix workspace problem and some bugs
     }
 
     static void computeLUError(float *LU, float *res, int m, int n)
@@ -204,6 +229,7 @@ namespace mluoptest
                 for (int k = 0; k <= i && k < n; k++)
                 {
                     temp += L[i * n + k] * U[k * n + j];
+<<<<<<< HEAD
 
                 }
                 LU[i * n + j] = temp;
@@ -211,6 +237,13 @@ namespace mluoptest
             }
         }
   
+=======
+                }
+                LU[i * n + j] = temp;
+            }
+        }
+
+>>>>>>> fix workspace problem and some bugs
         return;
     }
 
@@ -272,7 +305,10 @@ namespace mluoptest
         }
     }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> fix workspace problem and some bugs
     // Function to swap two rows of a matrix
     void swap_rows(float *matrix, int row1, int row2, int cols)
     {
@@ -353,10 +389,22 @@ namespace mluoptest
         int n = col;
         mluOpDataType_t dtype = tensor_x->dtype;
 
+<<<<<<< HEAD
         interface_timer_.start();
         MLUOP_CHECK(mluOpSgetrf2(handle_, tensor_x, dev_x, tensor_y, dev_y, ipiv, &info, mode));
         interface_timer_.stop();
 
+=======
+        int workspace_size = 0;
+        void *workspace = NULL;
+        MLUOP_CHECK(mluOpGetLUWorkspace(handle_, tensor_x, &workspace_size, &workspace));
+        interface_timer_.start();
+        MLUOP_CHECK(mluOpSgetrf2(handle_, tensor_x, dev_x, tensor_y, dev_y, workspace, ipiv, &info, mode));
+        interface_timer_.stop();
+
+        MLUOP_CHECK(mluOpFreeLUWorkspace(&workspace));
+
+>>>>>>> fix workspace problem and some bugs
         float *typed_dev_x = static_cast<float *>(dev_x);
         float *typed_dev_y = static_cast<float *>(dev_y);
         if (dtype == MLUOP_DTYPE_FLOAT)
@@ -369,12 +417,20 @@ namespace mluoptest
                 float *hA_raw = hA.get();
                 float *LU_ = LU.get();
                 cnrtMemcpy(hA_raw, (void *)(typed_dev_y + offset), m * n * sizeof(float), cnrtMemcpyDevToHost);
+<<<<<<< HEAD
                 computeLUError(LU_, hA_raw, m, n); 
                 cnrtMemcpy(hA2.get(), (void *)(typed_dev_x + offset), m * n * sizeof(float), cnrtMemcpyDevToHost);
                 if (mode == 1)
                 {
                     apply_row_swaps(LU_, m, n, ipiv + b * m); 
    
+=======
+                computeLUError(LU_, hA_raw, m, n);
+                cnrtMemcpy(hA2.get(), (void *)(typed_dev_x + offset), m * n * sizeof(float), cnrtMemcpyDevToHost);
+                if (mode == 1)
+                {
+                    apply_row_swaps(LU_, m, n, ipiv + b * m);
+>>>>>>> fix workspace problem and some bugs
                 }
                 cnrtMemcpy((void *)(typed_dev_y + offset), LU_, m * n * sizeof(float), cnrtMemcpyHostToDev);
             }
@@ -424,7 +480,11 @@ namespace mluoptest
 
         int m = row;
         int n = col;
+<<<<<<< HEAD
        
+=======
+
+>>>>>>> fix workspace problem and some bugs
         if (tensor_desc_[0].tensor->dtype == MLUOP_DTYPE_FLOAT)
         {
             for (int i = 0; i < count; ++i)

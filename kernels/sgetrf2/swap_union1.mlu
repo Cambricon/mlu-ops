@@ -1,5 +1,5 @@
 #include "sgetrf2.h"
-
+#include "sgetrf2_utils.h"
 #include "core/logging.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
@@ -37,9 +37,9 @@ __mlu_global__ void MLUKernelCSwap(
     }
     const int NRAM_SIZE = MAX_NRAM_SIZE >> 4;
     const int SRAM_SIZE = (MAX_SRAM_SIZE >> 2);
-    __nram__ float r_src_nram[NRAM_SIZE];
-    __nram__ float i_src_nram[NRAM_SIZE];
-    __mlu_shared__ int sram_ipiv2[SRAM_SIZE];
+    float *r_src_nram = NRAM_BUFFER;
+    float *i_src_nram = r_src_nram + NRAM_SIZE;
+    int *sram_ipiv2 = (int *)SRAM_BUFFER;
 
     float *rA = d_rA;
     float *iA = d_iA;
@@ -182,10 +182,9 @@ __mlu_entry__ void MLUKernelSwap(
         taskdim = taskDim;
         tx = taskId;
     }
-    const int NRAM_SIZE = MAX_NRAM_SIZE >> 2;
     const int SRAM_SIZE = (MAX_SRAM_SIZE >> 2);
-    __nram__ float src_nram[NRAM_SIZE];
-    __mlu_shared__ int sram_ipiv2[SRAM_SIZE];
+    float *src_nram = NRAM_BUFFER;
+    int *sram_ipiv2 = (int *)SRAM_BUFFER;
 
     float *A = dA;
     int mp = m / taskdim;
