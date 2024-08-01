@@ -61,6 +61,16 @@ mluOpStatus_t mluOpBorderAlignBackward(
   PARAM_CHECK(API, argmax_idx_desc->dim == 4);
   PARAM_CHECK(API, grad_input_desc->dim == 4);
 
+  // stride check
+  STRIDE_TENSOR_CHECK("[mluOpBorderAlignBackward]:", grad_output_desc,
+                      "grad_output_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpBorderAlignBackward]:", boxes_desc,
+                      "boxes_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpBorderAlignBackward]:", argmax_idx_desc,
+                      "argmax_idx_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpBorderAlignBackward]:", grad_input_desc,
+                      "grad_input_desc must be contiguous");
+
   const int32_t border_num = 4;
   const int32_t coord_num = 4;
   const int32_t origin_n = grad_input_desc->dims[0];
@@ -83,14 +93,13 @@ mluOpStatus_t mluOpBorderAlignBackward(
               "(4 represents the number of borders).");
   PARAM_CHECK_NE(API, grad_input_desc->dims[0], 0);
   PARAM_CHECK_NE(API, grad_input_desc->dims[3] / 4, 0,
-              "(4 represents the number of borders).");
+                 "(4 represents the number of borders).");
   PARAM_CHECK_NE(API, grad_input_desc->dims[1], 0);
   PARAM_CHECK_NE(API, grad_input_desc->dims[2], 0);
-  PARAM_CHECK(API, grad_input_desc->dims[1] * grad_input_desc->dims[2]
-                    == boxes_desc->dims[1]);
+  PARAM_CHECK(API, grad_input_desc->dims[1] * grad_input_desc->dims[2] ==
+                       boxes_desc->dims[1]);
   PARAM_CHECK(API, boxes_desc->dim == 3);
-  PARAM_CHECK(API, boxes_desc->dims[2] == border_num,
-              "(border_num = 4).");
+  PARAM_CHECK(API, boxes_desc->dims[2] == border_num, "(border_num = 4).");
   PARAM_CHECK_NE(API, boxes_desc->dims[1], 0);
   PARAM_CHECK_GT(API, pool_size, 0);
 
@@ -103,8 +112,7 @@ mluOpStatus_t mluOpBorderAlignBackward(
 
   PARAM_CHECK_EQ(API, boxes_desc->dims[0], grad_input_desc->dims[0]);
   PARAM_CHECK_EQ(API, boxes_desc->dims[1], boxes_desc->dims[1]);
-  PARAM_CHECK_EQ(API, boxes_desc->dims[2], border_num,
-                 "(border_num = 4).");
+  PARAM_CHECK_EQ(API, boxes_desc->dims[2], border_num, "(border_num = 4).");
 
   PARAM_CHECK_EQ(API, argmax_idx_desc->dims[0], grad_input_desc->dims[0]);
   PARAM_CHECK_EQ(API, argmax_idx_desc->dims[1], boxes_desc->dims[1]);
@@ -133,8 +141,7 @@ mluOpStatus_t mluOpBorderAlignBackward(
     GEN_CASE_DATA_REAL(true, "input2", boxes, boxes_desc);
     GEN_CASE_DATA_REAL(true, "input3", argmax_idx, argmax_idx_desc);
     GEN_CASE_DATA(false, "output1", grad_input, grad_input_desc, 0, 0);
-    GEN_CASE_OP_PARAM_SINGLE(0, "border_align", "pool_size",
-                             pool_size);
+    GEN_CASE_OP_PARAM_SINGLE(0, "border_align", "pool_size", pool_size);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
 

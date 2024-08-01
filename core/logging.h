@@ -28,8 +28,10 @@
 #include <string>
 #include <limits>
 #include <sstream>
-#include "core/macros.h"
+
 #include "core/cnlog.hpp"
+#include "core/macros.h"
+#include "core/util.h"
 #include "mlu_op.h"
 
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
@@ -216,9 +218,17 @@ extern bool mluop_check_large_tensor_dim_size_;
     return MLUOP_STATUS_NOT_SUPPORTED;                                     \
   }
 
-void mluOpCheck(mluOpStatus_t result, char const *const func,
-                const char *const file, int const line);
-#define MLUOP_CHECK(val) mluOpCheck((val), #val, __FILE__, __LINE__)
+#define STRIDE_TENSOR_CHECK(api, desc, reason)                            \
+  if (MLUOP_PREDICT_TRUE(desc != NULL)) {                                 \
+    if (MLUOP_PREDICT_FALSE(                                              \
+            MLUOP_PREDICT_TRUE(0 != mluOpGetTensorElementNum(desc)) &&    \
+            isStrideTensor(desc->dim, desc->dims, desc->strides))) {      \
+      LOG(ERROR) << api << " stride tensor is not supported. " << reason; \
+      return MLUOP_STATUS_NOT_SUPPORTED;                                  \
+    }                                                                     \
+  }
+
+#define MLUOP_CHECK(val) ((val), #val, __FILE__, __LINE__)
 
 #define KERNEL_CALL_CHECK(parent_kernel, sub_kernel, status, statement)        \
   do {                                                                         \
@@ -274,9 +284,11 @@ struct Voidifier {
     return vmodule_activated;                                          \
   })(lvl, __FILE__))
 
-#define VLOG(level)                      \
-  MLUOP_PREDICT_TRUE(!VLOG_IS_ON(({ static_assert \
-  (level > 0, "VLOG level should be greater than 0"); level; }))) \
+#define VLOG(level)                                                  \
+  MLUOP_PREDICT_TRUE(!VLOG_IS_ON(({                                  \
+    static_assert(level > 0, "VLOG level should be greater than 0"); \
+    level;                                                           \
+  })))                                                               \
   ? (void)0 : ::mluop::internal::Voidifier() & LOG(VLOG)
 
 // This formats a value for a failing CHECK_XX statement.  Ordinarily,

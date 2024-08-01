@@ -106,6 +106,16 @@ static mluOpStatus_t foolProof(
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
+  // check stride
+  STRIDE_TENSOR_CHECK(api_name + ":", features_desc,
+                      "features_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api_name + ":", filters_desc,
+                      "filters_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api_name + ":", indice_pairs_desc,
+                      "indice_pairs_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api_name + ":", features_out_desc,
+                      "features_out_desc must be contiguous");
+
   // large tensor
   if (mluOpGetTensorElementNum(features_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(filters_desc) >= LARGE_TENSOR_NUM ||

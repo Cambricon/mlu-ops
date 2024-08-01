@@ -111,6 +111,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardData(
   PARAM_CHECK(API, hidden >= 0);
   PARAM_CHECK(API, num_experts >= 0);
 
+  // check stride
+  STRIDE_TENSOR_CHECK(API + ":", gates_desc, "gates_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(API + ":", indices_desc,
+                      "indices_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(API + ":", locations_desc,
+                      "locations_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(API + ":", dispatch_desc,
+                      "dispatch_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(API + ":", grad_input_desc,
+                      "grad_input_desc must be contiguous");
+
   const uint64_t gates_element_num = mluOpGetTensorElementNum(gates_desc);
   const uint64_t indices_element_num = mluOpGetTensorElementNum(indices_desc);
   const uint64_t locations_element_num =

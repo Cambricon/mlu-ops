@@ -88,6 +88,15 @@ static mluOpStatus_t foolCheckNoPtr(
                   "NHWC/NCHW/HWCN/NCDHW/NDHWC/ARRAY layout.";
     return MLUOP_STATUS_BAD_PARAM;
   }
+  // check stride
+  STRIDE_TENSOR_CHECK(api + ":", output_grad_desc,
+                      "output_grad_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api + ":", filters_desc,
+                      "filters_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api + ":", indice_pairs_desc,
+                      "indice_pairs_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api + ":", input_grad_desc,
+                      "input_grad_desc must be contiguous");
 
   // get filters params
   int kd = 1, kh = 1, kw = 1, dyc = 1, dxc = 1;
@@ -521,9 +530,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
     }
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_grad_desc,
                                                  cnnl_output_desc);
-    CALL_CNNL(
-        cnnlGetAddNWorkspaceSize(cnnl_handle, cnnl_input_descs, addn_num,
-                                 cnnl_output_desc, &addn_workspace_size));
+    CALL_CNNL(cnnlGetAddNWorkspaceSize(cnnl_handle, cnnl_input_descs, addn_num,
+                                       cnnl_output_desc, &addn_workspace_size));
     for (int i = 0; i < addn_num; i++) {
       DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_descs[i]);
     }
@@ -886,9 +894,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
       }
       DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_grad_desc,
                                                    cnnl_output_desc);
-      CALL_CNNL(
-          cnnlGetAddNWorkspaceSize(cnnl_handle, cnnl_input_descs, addn_num,
-                                   cnnl_output_desc, &addn_workspace_size));
+      CALL_CNNL(cnnlGetAddNWorkspaceSize(cnnl_handle, cnnl_input_descs,
+                                         addn_num, cnnl_output_desc,
+                                         &addn_workspace_size));
 
       CALL_CNNL(cnnlAddN_v2(cnnl_handle, cnnl_input_descs, addn_array, addn_num,
                             cnnl_output_desc, input_grad, workspace_addn,

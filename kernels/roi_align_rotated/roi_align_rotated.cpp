@@ -65,6 +65,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(
   PARAM_CHECK(API, features_desc->dtype == MLUOP_DTYPE_FLOAT ||
                        features_desc->dtype == MLUOP_DTYPE_HALF);
 
+  STRIDE_TENSOR_CHECK("[mluOpRoiAlignRotatedForward]:", features_desc,
+                      "features_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiAlignRotatedForward]:", rois_desc,
+                      "rois_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiAlignRotatedForward]:", output_desc,
+                      "output_desc must be contiguous");
+
   PARAM_CHECK_EQ(API, rois_desc->dim, 2);
   PARAM_CHECK_EQ(API, output_desc->dim, 4);
   PARAM_CHECK_EQ(API, features_desc->dim, 4);
@@ -144,8 +151,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(
   VLOG(5) << "[mluOpRoiAlignRotatedForward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "].";
   CHECK_RETURN(API, KernelRoiAlignRotatedForward(
-      k_dim, k_type, handle->queue, features_desc->dtype, features, rois, batch,
-      height, width, channel, rois_nums, roiAlignRotatedParams, output));
+                        k_dim, k_type, handle->queue, features_desc->dtype,
+                        features, rois, batch, height, width, channel,
+                        rois_nums, roiAlignRotatedParams, output));
   VLOG(5) << "Kernel KernelRoiAlignRotatedForward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
@@ -172,6 +180,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedBackward(
                        (bottom_grad_desc->dtype == rois_desc->dtype));
   PARAM_CHECK(API, bottom_grad_desc->dtype == MLUOP_DTYPE_FLOAT ||
                        bottom_grad_desc->dtype == MLUOP_DTYPE_HALF);
+
+  STRIDE_TENSOR_CHECK("[mluOpRoiAlignRotatedBackward]:", top_grad_desc,
+                      "top_grad_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiAlignRotatedBackward]:", rois_desc,
+                      "rois_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiAlignRotatedBackward]:", bottom_grad_desc,
+                      "bottom_grad_desc must be contiguous");
 
   PARAM_CHECK_EQ(API, rois_desc->dim, 2);
   PARAM_CHECK_EQ(API, top_grad_desc->dim, 4);
@@ -268,8 +283,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedBackward(
   VLOG(5) << "cnnlFill_v3 end.";
 
   CHECK_RETURN(API, KernelRoiAlignRotatedBackward(
-      k_dim, k_type, handle->queue, top_grad_desc->dtype, top_grad, rois, batch,
-      height, width, channel, rois_nums, roiAlignRotatedParams, bottom_grad));
+                        k_dim, k_type, handle->queue, top_grad_desc->dtype,
+                        top_grad, rois, batch, height, width, channel,
+                        rois_nums, roiAlignRotatedParams, bottom_grad));
   VLOG(5) << "Kernel KernelRoiAlignRotatedBackward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

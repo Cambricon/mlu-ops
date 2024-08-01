@@ -146,6 +146,16 @@ static mluOpStatus_t internalGetIndicePairs(
   PARAM_CHECK_LE(interface_name, kernel_volume, 4096);
   PARAM_CHECK_LE(interface_name, out_indices_desc->dims[0], output_spaces);
 
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpGetIndicesPairs]:", indices_desc,
+                      "indices_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpGetIndicesPairs]:", indice_pairs_desc,
+                      "indice_pairs_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpGetIndicesPairs]:", out_indices_desc,
+                      "out_indices_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpGetIndicesPairs]:", indice_num_desc,
+                      "indice_num_desc must be contiguous");
+
   // large tensor
   PARAM_CHECK_LE(interface_name, indices_desc->dims[0],
                  INDICE_IN_LARGE_TENSOR_NUM);

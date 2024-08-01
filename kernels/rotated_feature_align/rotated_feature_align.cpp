@@ -73,6 +73,14 @@ static mluOpStatus_t RotatedFeatureAlignForwardPreCheck(
   PARAM_CHECK("[mluOpRotatedFeatureAlignForward]",
               output_desc->layout == MLUOP_LAYOUT_NHWC);
 
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpRotatedFeatureAlignForward]:", input_desc,
+                      "input_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRotatedFeatureAlignForward]:", bboxes_desc,
+                      "bboxes_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRotatedFeatureAlignForward]:", output_desc,
+                      "output_desc must be contiguous");
+
   for (int i = 0; i < input_desc->dim; i++) {
     if (input_desc->dims[i] != output_desc->dims[i]) {
       LOG(ERROR)
@@ -139,6 +147,14 @@ static mluOpStatus_t RotatedFeatureAlignBackwardPreCheck(
               top_output_desc->layout == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]",
               bottom_input_desc->layout == MLUOP_LAYOUT_NHWC);
+
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpRotatedFeatureAlignBackward]:", top_output_desc,
+                      "top_output_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRotatedFeatureAlignBackward]:", bboxes_desc,
+                      "bboxes_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRotatedFeatureAlignBackward]:", bottom_input_desc,
+                      "bottom_input_desc must be contiguous");
 
   for (int i = 0; i < top_output_desc->dim; i++) {
     if (top_output_desc->dims[i] != bottom_input_desc->dims[i]) {

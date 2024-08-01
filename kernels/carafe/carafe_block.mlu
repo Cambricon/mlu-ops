@@ -368,7 +368,8 @@ __mlu_global__ void MLUKernelCarafeBackward(T *input, T *mask, T *grad_output,
               (T *)nram_buf + 3 * NRAM_BLOCK / sizeof(T),
               ((T *)nram_buf + NRAM_BLOCK / sizeof(T))[mask_index], num_align);
           __bang_atomic_reduce_add((T *)base_grad_input,
-              (T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T), num_align);
+                                   (T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T),
+                                   num_align);
           __bang_mul((T *)nram_buf, (T *)nram_buf + 3 * NRAM_BLOCK / sizeof(T),
                      (T *)nram_buf, num_align);
 
@@ -411,7 +412,8 @@ __mlu_global__ void MLUKernelCarafeBackward(T *input, T *mask, T *grad_output,
               ((T *)nram_buf + NRAM_BLOCK / sizeof(T))[mask_index],
               rem_for_loop_align);
           __bang_atomic_reduce_add((T *)base_grad_input,
-              (T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T), rem_for_loop);
+                                   (T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T),
+                                   rem_for_loop);
           __bang_mul((T *)nram_buf, (T *)nram_buf + 3 * NRAM_BLOCK / sizeof(T),
                      (T *)nram_buf, rem_for_loop_align);
 

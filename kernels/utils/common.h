@@ -70,8 +70,7 @@ __mlu_func__ T __mluop_max(T a, T b) {
  * Note:
  *      The rounding mode on MLU200 is rd, on MLU300 is rn.
  ******************************************************************************/
-__mlu_func__ void __mluop_float2half(half *dst, float *src,
-                                            int src_count) {
+__mlu_func__ void __mluop_float2half(half *dst, float *src, int src_count) {
 #if __BANG_ARCH__ >= 300
   __bang_float2half_rn(dst, src, src_count);
 #else

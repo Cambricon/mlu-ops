@@ -362,7 +362,23 @@ static mluOpStatus_t mutualInformationBackwardParamCheck(
     return check_status;
   }
 
-  // 5. check tensor dtype
+  // 5. check tensor stride
+  STRIDE_TENSOR_CHECK("[mluOpMutualInformationBackward]:", px_desc,
+                      "px_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMutualInformationBackward]:", py_desc,
+                      "py_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMutualInformationBackward]:", opt_boundary_desc,
+                      "opt_boundary_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMutualInformationBackward]:", p_desc,
+                      "p_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMutualInformationBackward]:", ans_grad_desc,
+                      "ans_grad_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMutualInformationBackward]:", px_grad_desc,
+                      "px_grad_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMutualInformationBackward]:", py_grad_desc,
+                      "py_grad_desc must be contiguous");
+
+  // 6. check tensor dtype
   check_status =
       checkTensorDatatype(px_desc, py_desc, opt_boundary_desc, p_desc,
                           ans_grad_desc, px_grad_desc, py_grad_desc);
@@ -370,7 +386,7 @@ static mluOpStatus_t mutualInformationBackwardParamCheck(
     return check_status;
   }
 
-  // 6. check scale limit, for large tensor
+  // 7. check scale limit, for large tensor
   check_status = checkTensorScaleLimit(handle, px_desc, py_desc,
                                        opt_boundary_desc, p_desc);
   if (MLUOP_STATUS_SUCCESS != check_status) {
@@ -381,7 +397,7 @@ static mluOpStatus_t mutualInformationBackwardParamCheck(
   const int S = px_desc->dims[1];
   const int T = py_desc->dims[2];
 
-  // 7. check zero element.
+  // 8. check zero element.
   if (0 == B || (0 == S && 0 == T)) {
     zero_element = true;
     VLOG(5) << API_NAME << " Skip zero element tensor when px.shape[0] is zero "
@@ -389,12 +405,12 @@ static mluOpStatus_t mutualInformationBackwardParamCheck(
     return MLUOP_STATUS_SUCCESS;
   }
 
-  // 8 check workspace
+  // 9 check workspace
   if (workspace_size > 0) {
     PARAM_CHECK(API_NAME, workspace != nullptr);
   }
 
-  // 9. check tensor ptr
+  // 10. check tensor ptr
   check_status =
       checkTensorPtr(px, py, p, ans_grad, opt_boundary_desc, opt_boundary,
                      px_grad, py_grad, S, T, has_boundary);

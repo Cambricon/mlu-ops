@@ -99,6 +99,20 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
   // check scalar param
   PARAM_CHECK_GT(api, step_h, 0);
   PARAM_CHECK_GT(api, step_w, 0);
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpPriorBox]:", min_sizes_desc,
+                      "min_sizes_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPriorBox]:", aspect_ratios_desc,
+                      "aspect_ratios_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPriorBox]:", variances_desc,
+                      "variances_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPriorBox]:", max_sizes_desc,
+                      "max_sizes_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPriorBox]:", output_desc,
+                      "output_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPriorBox]:", var_desc,
+                      "var_desc must be contiguous");
+
   // check param depand
 
   for (int i = 0; i < output_desc->dim; i++) {

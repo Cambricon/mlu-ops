@@ -90,6 +90,12 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
 
   PARAM_CHECK(API, boxes_desc->dims[0] == output_desc->dims[0]);
 
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpPolyNms]:", boxes_desc,
+                      "boxes_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPolyNms]:", output_desc,
+                      "output_desc must be contiguous");
+
   int input_boxes_num = boxes_desc->dims[0];
 
   if (input_boxes_num == 0) {

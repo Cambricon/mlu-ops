@@ -116,6 +116,14 @@ static mluOpStatus_t pointsInBoxesPreCheck(
     return MLUOP_STATUS_BAD_PARAM;
   }
 
+  // stride check
+  STRIDE_TENSOR_CHECK("[mluOpPointsInBoxes]:", points_desc,
+                      "points_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPointsInBoxes]:", boxes_desc,
+                      "boxes_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPointsInBoxes]:", points_indices_desc,
+                      "points_indices_desc must be contiguous");
+
   const size_t points_element_num = mluOpGetTensorElementNum(points_desc);
   const size_t boxes_element_num = mluOpGetTensorElementNum(boxes_desc);
   TENSOR_NUM_CHECK("[mluOpPointsInBoxes]", points_element_num, LARGE_TENSOR_NUM,

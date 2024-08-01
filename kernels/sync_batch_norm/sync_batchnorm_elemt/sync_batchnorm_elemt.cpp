@@ -53,10 +53,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormElemt(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(bias_desc, cnnl_bias_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(y_desc, cnnl_y_desc);
 
-  CALL_CNNL(
-      cnnlSyncBatchNormElemt(cnnl_handle, cnnl_x_desc, x, cnnl_mean_desc, mean,
-                             cnnl_invstd_desc, invstd, cnnl_filter_desc, filter,
-                             cnnl_bias_desc, bias, cnnl_y_desc, y));
+  CALL_CNNL(cnnlSyncBatchNormElemt(
+      cnnl_handle, cnnl_x_desc, x, cnnl_mean_desc, mean, cnnl_invstd_desc,
+      invstd, cnnl_filter_desc, filter, cnnl_bias_desc, bias, cnnl_y_desc, y));
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_mean_desc);

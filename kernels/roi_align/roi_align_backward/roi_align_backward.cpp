@@ -40,10 +40,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignBackward(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, cnnl_boxes_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_image_desc,
                                                cnnl_grads_image_desc);
-  CALL_CNNL(
-      cnnlRoiAlignBackward(cnnl_handle, spatial_scale, sampling_ratio, aligned,
-                           cnnl_grads_desc, grads, cnnl_boxes_desc, boxes,
-                           cnnl_grads_image_desc, grads_image));
+  CALL_CNNL(cnnlRoiAlignBackward(
+      cnnl_handle, spatial_scale, sampling_ratio, aligned, cnnl_grads_desc,
+      grads, cnnl_boxes_desc, boxes, cnnl_grads_image_desc, grads_image));
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_image_desc);
@@ -85,10 +84,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignBackward_v2(
     CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_y_desc, cnnl_argmax_y_desc);
   }
   CALL_CNNL(cnnlRoiAlignBackward_v2(
-                        cnnl_handle, cnnl_grads_desc, grads, cnnl_boxes_desc,
-                        boxes, cnnl_argmax_x_desc, argmax_x, cnnl_argmax_y_desc,
-                        argmax_y, spatial_scale, sampling_ratio, aligned,
-                        pool_mode, cnnl_grads_image_desc, grads_image));
+      cnnl_handle, cnnl_grads_desc, grads, cnnl_boxes_desc, boxes,
+      cnnl_argmax_x_desc, argmax_x, cnnl_argmax_y_desc, argmax_y, spatial_scale,
+      sampling_ratio, aligned, pool_mode, cnnl_grads_image_desc, grads_image));
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_image_desc);

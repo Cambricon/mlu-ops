@@ -29,18 +29,11 @@
 
 __nram__ uint32_t nram_counter[ONCE_COMPUTE_NUM];
 
-__mlu_func__ void gen_random_u32(vv_uint32 *key0,
-                                 vv_uint32 *key1,
-                                 uint32_t *nram_counter0,
-                                 uint32_t *nram_counter1,
-                                 uint32_t *nram_counter2,
-                                 uint32_t *nram_counter3,
-                                 uint32_t &offset_low,
-                                 uint32_t &offset_high,
-                                 int32_t thread_begin,
-                                 int32_t &thread_acc,
-                                 int32_t thread_cur_core,
-                                 vv_uint32 index) {
+__mlu_func__ void gen_random_u32(
+    vv_uint32 *key0, vv_uint32 *key1, uint32_t *nram_counter0,
+    uint32_t *nram_counter1, uint32_t *nram_counter2, uint32_t *nram_counter3,
+    uint32_t &offset_low, uint32_t &offset_high, int32_t thread_begin,
+    int32_t &thread_acc, int32_t thread_cur_core, vv_uint32 index) {
   const uint32_t kPhiloxM4xA = 0xD2511F53;
   const uint32_t kPhiloxM4xB = 0xCD9E8D57;
   vv_uint32 cx, cy, cz, cw, h0, h1, l0, l1;
@@ -147,11 +140,8 @@ __mlu_func__ void gen_random_u32(vv_uint32 *key0,
 }
 
 template <typename RANGE_TYPE>
-__mlu_func__ void cvtUniform(uint32_t *output,
-                             int32_t num,
-                             RANGE_TYPE max,
-                             RANGE_TYPE min,
-                             bool is_int) {
+__mlu_func__ void cvtUniform(uint32_t *output, int32_t num, RANGE_TYPE max,
+                             RANGE_TYPE min, bool is_int) {
   RANGE_TYPE range = max - min;
   if (is_int && std::is_same<RANGE_TYPE, int32_t>::value) {
     __bang_rem((uint32_t *)output, (uint32_t *)output, (uint32_t)range, num);
@@ -194,17 +184,11 @@ __mlu_func__ void cvtUniform(uint32_t *output,
  * Note: The space size of \p output is \p num * sizeof(float).
  ******************************************************************************/
 template <typename DST_TYPE, typename RANGE_TYPE>
-__mlu_func__ void genUniform(uint32_t key0_begin,
-                             uint32_t key1_begin,
-                             DST_TYPE *output,
-                             int num,
-                             uint32_t &offset_low,
-                             uint32_t &offset_high,
-                             RANGE_TYPE max,
-                             RANGE_TYPE min,
-                             int32_t thread_begin,
-                             int32_t &thread_acc,
-                             int32_t thread_cur_core,
+__mlu_func__ void genUniform(uint32_t key0_begin, uint32_t key1_begin,
+                             DST_TYPE *output, int num, uint32_t &offset_low,
+                             uint32_t &offset_high, RANGE_TYPE max,
+                             RANGE_TYPE min, int32_t thread_begin,
+                             int32_t &thread_acc, int32_t thread_cur_core,
                              bool is_int) {
   if (num > 0) {
     // counter nram contribute

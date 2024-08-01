@@ -58,17 +58,17 @@ static mluOpStatus_t paramcheck(
 
   // check tensor shape
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-      points_desc->dims[0] == pooled_features_desc->dims[0]);
+              points_desc->dims[0] == pooled_features_desc->dims[0]);
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-      point_features_desc->dims[0] == pooled_features_desc->dims[0]);
+              point_features_desc->dims[0] == pooled_features_desc->dims[0]);
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-      boxes3d_desc->dims[0] == pooled_features_desc->dims[0]);
+              boxes3d_desc->dims[0] == pooled_features_desc->dims[0]);
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-      pooled_empty_flag_desc->dims[0] == pooled_features_desc->dims[0]);
+              pooled_empty_flag_desc->dims[0] == pooled_features_desc->dims[0]);
   PARAM_CHECK("[mluOpRoiPointPool3d]",
               pooled_features_desc->dims[1] == boxes3d_desc->dims[1]);
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-                pooled_empty_flag_desc->dims[1] == boxes3d_desc->dims[1]);
+              pooled_empty_flag_desc->dims[1] == boxes3d_desc->dims[1]);
   PARAM_CHECK("[mluOpRoiPointPool3d]",
               points_desc->dims[1] == point_features_desc->dims[1]);
   PARAM_CHECK("[mluOpRoiPointPool3d]", point_features_desc->dims[2] + 3 ==
@@ -82,6 +82,18 @@ static mluOpStatus_t paramcheck(
                  point_features_desc->dims[2]);
   PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", sampled_pts_num,
                  pooled_features_desc->dims[2]);
+
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpRoiPointPool3d]:", points_desc,
+                      "points_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiPointPool3d]:", point_features_desc,
+                      "point_features_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiPointPool3d]:", boxes3d_desc,
+                      "boxes3d_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiPointPool3d]:", pooled_features_desc,
+                      "pooled_features_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiPointPool3d]:", pooled_empty_flag_desc,
+                      "pooled_empty_flag_desc must be contiguous");
 
   // check tensor datatype
   PARAM_CHECK("[mluOpRoiPointPool3d]",
@@ -321,8 +333,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
   point_features_dims[2] = point_features_desc->dims[1];
   CHECK_RETURN("[mluOpGetRoiPointPool3d]",
                mluOpSetTensorDescriptor(
-                      output_transpose_desc, MLUOP_LAYOUT_ARRAY,
-                      point_features_desc->dtype, dims, point_features_dims));
+                   output_transpose_desc, MLUOP_LAYOUT_ARRAY,
+                   point_features_desc->dtype, dims, point_features_dims));
   CALL_CNNL(
       cnnlSetTransposeDescriptor(trans_desc, dims, point_features_permute));
   {

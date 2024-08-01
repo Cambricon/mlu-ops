@@ -85,6 +85,14 @@ static mluOpStatus_t activeRotatedFilterForwardParamCheck(
   PARAM_CHECK(api_name, (output_desc->dims[1] ==
                          input_desc->dims[1] * input_desc->dims[2]));
 
+  // check stride
+  STRIDE_TENSOR_CHECK(api_name + ":", input_desc,
+                      "input_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api_name + ":", indices_desc,
+                      "indices_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api_name + ":", output_desc,
+                      "output_desc must be contiguous");
+
   // check tensor datatype, support float16 and float32
   PARAM_CHECK_V2(api_name,
                  (input_desc->dtype == MLUOP_DTYPE_HALF) ||

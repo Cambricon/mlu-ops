@@ -89,6 +89,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }
+  // check stride
+  if (mluop::strideCaseWithNotConsistentDense(2, x_desc, y_desc)) {
+    LOG(ERROR) << op_name_forward
+               << ": stride case with not consistent dense is not supported.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
 
   if (zero_element == true) {
     return MLUOP_STATUS_SUCCESS;
@@ -132,6 +138,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
                          dx_desc, diff_x, support_type, 2, zero_element, false);
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
+  }
+
+  // check stride
+  if (mluop::strideCaseWithNotConsistentDense(3, y_desc, dy_desc, dx_desc)) {
+    LOG(ERROR) << op_name_backward
+               << " stride case with not consistent dense is not supported.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {

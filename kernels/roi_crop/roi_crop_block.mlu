@@ -331,28 +331,25 @@ __mlu_global__ void MLUKernelRoiCropBackward(
         __bang_mul_scalar(nram_output, nram_ping, i_tl_x_weight * i_tl_y_weight,
                           c_limit);
         __bang_atomic_reduce_add(grad_input + gi_tl_offset + c_offset,
-                          nram_output, c_slice);
+                                 nram_output, c_slice);
       }
       if (topRightIsIn) {
         __bang_mul_scalar(nram_output + c_limit, nram_ping,
                           (1 - i_tl_x_weight) * i_tl_y_weight, c_limit);
-        __bang_atomic_reduce_add(
-            grad_input + gi_tr_offset + c_offset,
-            nram_output + c_limit, c_slice);
+        __bang_atomic_reduce_add(grad_input + gi_tr_offset + c_offset,
+                                 nram_output + c_limit, c_slice);
       }
       if (bottomLeftIsIn) {
         __bang_mul_scalar(nram_output + 2 * c_limit, nram_ping,
                           i_tl_x_weight * (1 - i_tl_y_weight), c_limit);
-        __bang_atomic_reduce_add(
-            grad_input + gi_bl_offset + c_offset,
-            nram_output + 2 * c_limit, c_slice);
+        __bang_atomic_reduce_add(grad_input + gi_bl_offset + c_offset,
+                                 nram_output + 2 * c_limit, c_slice);
       }
       if (bottomRightIsIn) {
         __bang_mul_scalar(nram_output + 3 * c_limit, nram_ping,
                           (1 - i_tl_x_weight) * (1 - i_tl_y_weight), c_limit);
-        __bang_atomic_reduce_add(
-            grad_input + gi_br_offset + c_offset,
-            nram_output + 3 * c_limit, c_slice);
+        __bang_atomic_reduce_add(grad_input + gi_br_offset + c_offset,
+                                 nram_output + 3 * c_limit, c_slice);
       }
       c_rem -= c_slice;
       c_offset += c_slice;

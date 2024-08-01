@@ -182,6 +182,22 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
   PARAM_CHECK("[mluOpAdamW]", velocity != nullptr);
   PARAM_CHECK("[mluOpAdamW]", grad != nullptr);
 
+  // stride check
+  if (param_desc != nullptr) {
+    STRIDE_TENSOR_CHECK("[mluOpAdamW]:", param_desc,
+                        "param_desc must be contiguous");
+  }
+  if (paramh_desc != nullptr) {
+    STRIDE_TENSOR_CHECK("[mluOpAdamW]:", paramh_desc,
+                        "paramh_desc must be contiguous");
+  }
+  STRIDE_TENSOR_CHECK("[mluOpAdamW]:", momentum_desc,
+                      "momentum_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpAdamW]:", velocity_desc,
+                      "velocity_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpAdamW]:", grad_desc,
+                      "grad_desc must be contiguous");
+
   // generate adam prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("adamw", "ADAMW");
@@ -246,17 +262,16 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
       return MLUOP_STATUS_ARCH_MISMATCH;
     }
     case CNRT_FUNC_TYPE_UNION1: {
-      VLOG(5) << "Launch Kernel KernelApplyAdamW<<<Union"
-              << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
-              << k_dim.z << ">>>";
+      VLOG(5) << "Launch Kernel KernelApplyAdamW<<<Union" << k_type / CORE_DIM
+              << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
       CHECK_RETURN(
           "[mluOpAdamW]",
-          KernelApplyAdamW(
-              k_dim, k_type, handle->queue, (void *)param, (void *)param_h,
-              (void *)grad, (void *)momentum, (void *)velocity, lr, beta1,
-              beta2, bias1, bias2, epsilon, adamw_desc->weight_decay,
-              adamw_desc->grad_scale, adamw_desc->use_nesterov, size,
-              k_data_type));
+          KernelApplyAdamW(k_dim, k_type, handle->queue, (void *)param,
+                           (void *)param_h, (void *)grad, (void *)momentum,
+                           (void *)velocity, lr, beta1, beta2, bias1, bias2,
+                           epsilon, adamw_desc->weight_decay,
+                           adamw_desc->grad_scale, adamw_desc->use_nesterov,
+                           size, k_data_type));
     }
   }
   GEN_CASE_END();

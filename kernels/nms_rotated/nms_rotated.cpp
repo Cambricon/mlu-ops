@@ -87,6 +87,14 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   PARAM_CHECK_EQ("[mluOpNmsRotated]", scores_desc->dim, 1);
   PARAM_CHECK_EQ("[mluOpNmsRotated]", output_desc->dim, 1);
 
+  // stride check
+  STRIDE_TENSOR_CHECK("[mluOpNmsRotated]:", boxes_desc,
+                      "boxes_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpNmsRotated]:", scores_desc,
+                      "scores_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpNmsRotated]:", output_desc,
+                      "output_desc must be contiguous");
+
   PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->dims[0] == scores_desc->dims[0]);
   PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->dims[0] == output_desc->dims[0]);
   if (boxes_desc->dims[1] != SINGLE_BOX_DIM &&

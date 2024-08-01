@@ -90,6 +90,15 @@ mluOpStatus_t VoxelPoolingForwardParamCheck(
   PARAM_CHECK(op_name, num_voxel_x > 0);
   PARAM_CHECK(op_name, num_voxel_y > 0);
   PARAM_CHECK(op_name, num_voxel_z > 0);
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpVoxelPoolingForward]:", geom_xyz_desc,
+                      "geom_xyz_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpVoxelPoolingForward]:", input_features_desc,
+                      "input_features_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpVoxelPoolingForward]:", output_features_desc,
+                      "output_features_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpVoxelPoolingForward]:", pos_memo_desc,
+                      "pos_memo_desc must be contiguous");
   // check large tensor
   if ((mluOpGetTensorElementNum(geom_xyz_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(input_features_desc) >= LARGE_TENSOR_NUM) ||

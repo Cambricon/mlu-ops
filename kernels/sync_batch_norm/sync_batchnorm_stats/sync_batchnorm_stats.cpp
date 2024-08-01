@@ -31,8 +31,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetSyncBatchNormStatsWorkspaceSize(
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, cnnl_x_desc);
 
-  CALL_CNNL(cnnlGetSyncBatchNormStatsWorkspaceSize(
-                cnnl_handle, cnnl_x_desc, workspace_size));
+  CALL_CNNL(cnnlGetSyncBatchNormStatsWorkspaceSize(cnnl_handle, cnnl_x_desc,
+                                                   workspace_size));
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
   DESTROY_CNNL_HANDLE(cnnl_handle);
@@ -56,9 +56,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormStats(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, cnnl_mean_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, cnnl_invstd_desc);
 
-  CALL_CNNL(
-      cnnlSyncBatchNormStats(cnnl_handle, cnnl_x_desc, x, eps, cnnl_mean_desc,
-                             mean, cnnl_invstd_desc, invstd));
+  CALL_CNNL(cnnlSyncBatchNormStats(cnnl_handle, cnnl_x_desc, x, eps,
+                                   cnnl_mean_desc, mean, cnnl_invstd_desc,
+                                   invstd));
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_mean_desc);
@@ -88,9 +88,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormStats_v2(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, cnnl_mean_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, cnnl_invstd_desc);
 
-  CALL_CNNL(cnnlSyncBatchNormStats_v2(
-                cnnl_handle, cnnl_x_desc, x, workspace, workspace_size,
-                eps, cnnl_mean_desc, mean, cnnl_invstd_desc, invstd));
+  CALL_CNNL(cnnlSyncBatchNormStats_v2(cnnl_handle, cnnl_x_desc, x, workspace,
+                                      workspace_size, eps, cnnl_mean_desc, mean,
+                                      cnnl_invstd_desc, invstd));
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_mean_desc);

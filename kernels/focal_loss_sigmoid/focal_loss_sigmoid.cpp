@@ -189,10 +189,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
   }
   if (weight_desc != NULL && mluOpGetTensorElementNum(weight_desc) != 0) {
     PARAM_CHECK("[mluOpFocalLossSigmoidForward]", weight != NULL);
+    STRIDE_TENSOR_CHECK("[mluOpFocalLossSigmoidForward]:", weight_desc,
+                        "weight_desc must be contiguous");
   }
   PARAM_CHECK("[mluOpFocalLossSigmoidForward]", input != NULL);
   PARAM_CHECK("[mluOpFocalLossSigmoidForward]", target != NULL);
   PARAM_CHECK("[mluOpFocalLossSigmoidForward]", output != NULL);
+
+  STRIDE_TENSOR_CHECK("[mluOpFocalLossSigmoidForward]:", input_desc,
+                      "input_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpFocalLossSigmoidForward]:", target_desc,
+                      "target_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpFocalLossSigmoidForward]:", output_desc,
+                      "output_desc must be contiguous");
 
   // generate case prototxt.
   const int32_t N = static_cast<int32_t>(input_desc->dims[0]);
@@ -347,6 +356,18 @@ static mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
                << "input_desc->dims[0] is " << input_desc->dims[0] << ", "
                << "target_desc->dims[0] is " << target_desc->dims[0] << ".";
     return MLUOP_STATUS_BAD_PARAM;
+  }
+
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpFocalLossSigmoidBackward]:", input_desc,
+                      "input_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpFocalLossSigmoidBackward]:", target_desc,
+                      "target_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpFocalLossSigmoidBackward]:", output_desc,
+                      "output_desc must be contiguous");
+  if (weight_desc != NULL) {
+    STRIDE_TENSOR_CHECK("[mluOpFocalLossSigmoidBackward]:", weight_desc,
+                        "weight_desc must be contiguous");
   }
 
   // check data type

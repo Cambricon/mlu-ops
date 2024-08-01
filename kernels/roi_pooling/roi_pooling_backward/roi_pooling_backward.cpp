@@ -46,11 +46,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPoolingBackward(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_image_desc,
                                                cnnl_grads_image_desc);
 
-  CALL_CNNL(
-      cnnlRoiPoolingBackward(cnnl_handle, cnnlPoolingMode_t(pooling_mode),
-                             cnnl_grads_desc, grads, cnnl_rois_desc, rois,
-                             cnnl_argmax_desc, argmax, spatial_scale,
-                             cnnl_grads_image_desc, grads_image));
+  CALL_CNNL(cnnlRoiPoolingBackward(cnnl_handle, cnnlPoolingMode_t(pooling_mode),
+                                   cnnl_grads_desc, grads, cnnl_rois_desc, rois,
+                                   cnnl_argmax_desc, argmax, spatial_scale,
+                                   cnnl_grads_image_desc, grads_image));
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_rois_desc);

@@ -47,10 +47,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDCNBackwardWeightWorkspaceSize(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_filter_desc,
                                                _grad_filter_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_bias_desc, _grad_bias_desc);
-  CALL_CNNL(
-      cnnlGetDCNBackwardWeightWorkspaceSize(
-          _handle, dcn_desc, _input_desc, _offset_desc, _mask_desc,
-          _grad_output_desc, _grad_filter_desc, _grad_bias_desc, size));
+  CALL_CNNL(cnnlGetDCNBackwardWeightWorkspaceSize(
+      _handle, dcn_desc, _input_desc, _offset_desc, _mask_desc,
+      _grad_output_desc, _grad_filter_desc, _grad_bias_desc, size));
   DESTROY_CNNL_TENSOR_DESCRIPTOR(_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(_offset_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(_mask_desc);
@@ -84,12 +83,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpDCNBackwardWeight(
                                                cnnl_grad_filter_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_bias_desc,
                                                cnnl_grad_bias_desc);
-  CALL_CNNL(
-      cnnlDCNBackwardWeight(cnnl_handle, dcn_desc, cnnl_input_desc, input,
-                            cnnl_offset_desc, offset, cnnl_mask_desc, mask,
-                            cnnl_grad_output_desc, grad_output, workspace,
-                            workspace_size, cnnl_grad_filter_desc, grad_filter,
-                            cnnl_grad_bias_desc, grad_bias));
+  CALL_CNNL(cnnlDCNBackwardWeight(
+      cnnl_handle, dcn_desc, cnnl_input_desc, input, cnnl_offset_desc, offset,
+      cnnl_mask_desc, mask, cnnl_grad_output_desc, grad_output, workspace,
+      workspace_size, cnnl_grad_filter_desc, grad_filter, cnnl_grad_bias_desc,
+      grad_bias));
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_offset_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_mask_desc);

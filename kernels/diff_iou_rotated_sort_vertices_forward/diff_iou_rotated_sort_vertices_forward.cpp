@@ -71,6 +71,14 @@ static mluOpStatus_t diffIouRotatedSortVerticesForwardParamCheck(
   PARAM_CHECK(op_name, num_valid_desc->dim == 2);
   PARAM_CHECK(op_name, idx_desc->dim == 3);
 
+  // check stride
+  STRIDE_TENSOR_CHECK(op_name + ":", vertices_desc,
+                      "vertices_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(op_name + ":", mask_desc, "mask_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(op_name + ":", num_valid_desc,
+                      "num_valid_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(op_name + ":", idx_desc, "idx_desc must be contiguous");
+
   // check data type
   // check tensor datatype, support float32
   PARAM_CHECK_V2(op_name, (vertices_desc->dtype == MLUOP_DTYPE_FLOAT),

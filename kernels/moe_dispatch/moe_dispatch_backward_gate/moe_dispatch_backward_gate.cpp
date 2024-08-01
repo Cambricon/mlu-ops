@@ -136,6 +136,18 @@ static mluOpStatus_t moeDispatchBackwardGateParamCheck(
   PARAM_CHECK(op_name, (hidden == input_desc->dims[1]));
   PARAM_CHECK(op_name, (hidden == dispatch_desc->dims[1]));
 
+  // check stride
+  STRIDE_TENSOR_CHECK(op_name + ":", indices_desc,
+                      "indices_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(op_name + ":", locations_desc,
+                      "locations_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(op_name + ":", input_desc,
+                      "input_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(op_name + ":", dispatch_desc,
+                      "dispatch_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(op_name + ":", grad_gates_desc,
+                      "grad_gates_desc must be contiguous");
+
   const size_t indices_element_num = mluOpGetTensorElementNum(indices_desc);
   const size_t locations_element_num = mluOpGetTensorElementNum(locations_desc);
   const size_t input_element_num = mluOpGetTensorElementNum(input_desc);

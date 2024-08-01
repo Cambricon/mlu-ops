@@ -146,6 +146,16 @@ static mluOpStatus_t threeNNParamCheck(
   const size_t dist2_element_num = mluOpGetTensorElementNum(dist2_desc);
   const size_t idx_element_num = mluOpGetTensorElementNum(idx_desc);
 
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpThreeNNForward]:", unknown_desc,
+                      "unknown_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpThreeNNForward]:", known_desc,
+                      "known_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpThreeNNForward]:", dist2_desc,
+                      "dist2_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpThreeNNForward]:", idx_desc,
+                      "idx_desc must be contiguous");
+
   // check large tensor
   TENSOR_NUM_CHECK("[mluOpThreeNNForward]", unknown_element_num,
                    LARGE_TENSOR_NUM, "");
@@ -238,16 +248,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
                mluOpCreateTensorDescriptor(&known_desc_tmp));
   CHECK_RETURN(
       "[mluOpThreeNNForward]",
-      mluOpSetTensorDescriptor(known_desc_tmp, MLUOP_LAYOUT_ARRAY,
-                               input_dtype, known_dim, known_tmp_dims));
+      mluOpSetTensorDescriptor(known_desc_tmp, MLUOP_LAYOUT_ARRAY, input_dtype,
+                               known_dim, known_tmp_dims));
   CHECK_RETURN(
       "[mluOpThreeNNForward]",
-      transposeTensor(handle, known_desc, known, known_permute,
-                      known_desc_tmp, known_workspace, transpose_workspace,
+      transposeTensor(handle, known_desc, known, known_permute, known_desc_tmp,
+                      known_workspace, transpose_workspace,
                       workspace_size - known_desc->total_tensor_size));
-  CHECK_RETURN(
-      "[mluOpThreeNNForward]",
-      mluOpDestroyTensorDescriptor(known_desc_tmp));
+  CHECK_RETURN("[mluOpThreeNNForward]",
+               mluOpDestroyTensorDescriptor(known_desc_tmp));
 
   VLOG(5) << "[mluOpThreeNNForward] cnnlTranspose_v2 feature end.";
   VLOG(5) << "Launch Kernel KernelThreeNNForward<<<Union" << k_type / CORE_DIM
