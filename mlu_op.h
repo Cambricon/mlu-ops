@@ -14382,7 +14382,9 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  *   and then call the ::mluOpSetFFTReserveArea to bond the reservespace area to the descriptor.
  *
  * @par Note
- * - None.
+ * - Parameter provides this information instead. Note that the size of each dimension of the transform should be less
+ * than or equal to the inembed and onembed values for the corresponding dimension, that is  n[i] <= inembed[i], n[i] <=
+ * onembed}[i], where i in {0, ..., rank - 1}.".
  *
  * @par Example.
  * - None.
