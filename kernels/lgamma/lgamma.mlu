@@ -34,187 +34,335 @@ const float log_e_2 = 0.69314718055994530941723212145818; // ln(x) = log(x) * lo
 // dst = a*sel + !sel*b
 // a can overlap with dst
 // float 1: [0 01111111 00000000000000000000000] >> 29 -> int 1
-#define __bang_mux2(dst, a, b, sel, sz) __bang_srl((unsigned int*)sel, (unsigned int*)sel, 29, sz); \
-                                        __bang_mul_scalar((int*)sel, (int*)sel, -1, sz); \
-                                        __bang_band((char*)dst, (char*)a,   (char*)sel, sz*sizeof(float)); \
-                                        __bang_bnot((char*)sel, (char*)sel, sz*sizeof(float)); \
-                                        __bang_band((char*)sel, (char*)b,   (char*)sel, sz*sizeof(float)); \
-                                        __bang_add(dst, dst, sel, sz)
+__mlu_func__ void __bang_mux2(float *dst, float *a, float *b, float *sel, uint32_t sz) {
+  __bang_srl((uint32_t*)sel, (uint32_t*)sel, 29, sz);
+  __bang_mul_scalar((int32_t*)sel, (int32_t*)sel, -1, sz);
+  __bang_band((char*)dst, (char*)a,   (char*)sel, sz*sizeof(float));
+  __bang_bnot((char*)sel, (char*)sel, sz*sizeof(float));
+  __bang_band((char*)sel, (char*)b,   (char*)sel, sz*sizeof(float)); 
+  __bang_add(dst, dst, sel, sz);
+}
 
-#define __bang_isinfinite(dst, src, sz) __bang_band_scalar(dst, src, (float)inf_float_value, sz); \
-                                      __bang_eq_scalar(dst, dst, (float)inf_float_value, sz)
+// half 1: [0 01111 0000000000] >> 13 -> int 1
+__mlu_func__ void __bang_mux2(half *dst, half *a, half *b, half *sel, uint32_t sz) {
+  __bang_srl((uint16_t*)sel, (uint16_t*)sel, 13, sz);
+  __bang_mul_scalar((int16_t*)sel, (int16_t*)sel, -1, sz);
+  __bang_band((char*)dst, (char*)a,   (char*)sel, sz*sizeof(half));
+  __bang_bnot((char*)sel, (char*)sel, sz*sizeof(half));
+  __bang_band((char*)sel, (char*)b,   (char*)sel, sz*sizeof(half)); 
+  __bang_add(dst, dst, sel, sz);
+}
 
-#define __bang_isinf(dst, src, sz) __bang_band_scalar(dst, src, (float)nan_float_mask, sz); \
-                                   __bang_eq_scalar(dst, dst, (float)inf_float_value, sz)
+__mlu_func__ void __bang_isfinite(float *dst, float *src, uint32_t sz) {
+  __bang_band_scalar(dst, src, (float)inf_float_value, sz);
+  __bang_ne_scalar(dst, dst, (float)inf_float_value, sz);
+}
 
-#define __bang_loghp(dst, src, sz) __bang_log(dst, src, sz); \
-                                   __bang_mul_scalar(dst, dst, log_e_2, sz);
+__mlu_func__ void __bang_isfinite(half *dst, half *src, uint32_t sz) {
+  __bang_band_scalar(dst, src, (half)inf_half_value, sz);
+  __bang_ne_scalar(dst, dst, (half)inf_half_value, sz);
+}
 
-__nram__ float* aux_array[AUX_N];
-const int arr_size = FLOOR_ALIGN(LGAMMA_NRAM_USED / sizeof(float) / AUX_N, UNARY_ALIGN_NUM);
+__mlu_func__ void __bang_isinf(float *dst, float *src, uint32_t sz) {
+  __bang_band_scalar(dst, src, (float)nan_float_mask, sz);
+  __bang_eq_scalar(dst, dst, (float)inf_float_value, sz);
+}
 
-/**
- * spouge's algorithm
- * z < 0:
- * fac_z = abs(z) - floor(abs(z))
- * lgamma(z) = log(pi) - abs(log(sin(pi * fac_z)) - lgamma(1 - z), here (1-z) > 0, goto z > 0:
- * 
- * z > 0:
- * accm = coeffs[0];
- * for (size_t k = 1; k < numCoeff; k++) {
- *   accm += coeffs[k] / (z + k);
- * }
- * 
- * lgamma(z+1) = (z + 0.5) * log(z + numCoeff) - (z + numCoeff) + log(accm) 
- * x = z+1 -> z = x - 1, lgamma(x) = (z + 0.5) * log(z + numCoeff) - (z + numCoeff) + log(accm) 
- */
+__mlu_func__ void __bang_isinf(half *dst, half *src, uint32_t sz) {
+  __bang_band_scalar(dst, src, (half)nan_half_mask, sz);
+  __bang_eq_scalar(dst, dst, (half)inf_half_value, sz);
+}
+
+__mlu_func__ void __bang_loghp(float *dst, float *src, uint32_t sz) {
+  __bang_log(dst, src, sz);
+  __bang_mul_scalar(dst, dst, log_e_2, sz);
+}
+
 
 template<typename T>
-__mlu_func__ void calc_lgamma(T *buf_in, T *buf_out, int deal_num) {
-  // __asm__ volatile("readperf.begin;\n\t");
+__mlu_func__ void calc_lgamma(T *buf_in, float *buf0, float *buf2, float *buf3, float *buf4, int num_deal) {
   static const int numCoeff = 4;
   static const float log_pi = 1.144730;
-  static const float coeffs[numCoeff] = {2.50663, 34.7892, -20.8994, 1.35914,};
+  static const float coeff[numCoeff] = {2.50663, 34.7892, -20.8994, 1.35914, };
+  // static const float coeff[numCoeff] = {2.50663, 2901.42, -5929.17, 4148.27, -1164.76, 117.413, -2.78659, 0.00377539, };
 
-  if (sizeof(half) == sizeof(T)) {
-    __bang_half2float((float*)buf_in, (half *)buf_in, deal_num);
+  float *buf1 = nullptr;
+  if (sizeof(float) == sizeof(T)) {
+    buf1 = (float *)buf_in;
+  } else if (sizeof(half) == sizeof(T)) {
+    buf1 = buf0;
+    __bang_half2float(buf1, (half *)buf_in, num_deal);
+    buf0 = (float *)buf_in;
   }
-  float *input_x =  (float *)buf_in;
-  // __bang_printf("%d input_x(%f)\n", taskId, input_x[0]);
-  
-  // 将所有 buffer 清零
-  __bang_write_zero(input1, 9*arr_size);
-  
-  // mask 存放 x > 0 的位置
-  __bang_lt_scalar(mask, input_x, 0, arr_size);
 
-  // 选出比 0 大的放 input2
-  __bang_maxequal(input2, input_x, temp1, arr_size);
-  // 选出比 0 小的放 input1
-  __bang_minequal(input1, input_x, temp1, arr_size);
+    /**
+     * bool need_to_reflect = (input < 0.5); 
+     */
+    __bang_lt_scalar(buf4, buf1, 0.5, num_deal);
 
-  // if x < 0, x = x - 1 
-  __bang_sub_scalar(input1, input1, 1, arr_size);
-  // x > 0 的位置与 mask 相乘, 消除掉 -1
-  __bang_mul(input1, input1, mask, arr_size);
-  // input_x x > 0 部分 x - 0, 小于 0 部分 0 - (x - 1)
-  // 即得到 x 与 1 - x 都在 input_x 中
-  __bang_sub(input_x, input2, input1, arr_size);
-  // __bang_printf("%d reflect_x %f\n", taskId, input_x[0]);
+    /**
+     * float reflect_x = need_reflect ? -input : input - 1;
+     */
+    // using buf0 -> reflect_x
+    __bang_mul_scalar(buf0, buf1, -1, num_deal);
+    __bang_add_scalar(buf2, buf1, -1, num_deal);
+    __bang_mux2(buf0, buf0, buf2, buf4, num_deal);
 
-  // z = x - 1 -> input_x
-  __bang_sub_scalar(input_x, input_x, 1, arr_size);
-  // __bang_printf("%d z (%f)\n", taskId, input_x[0]);
+    /**
+      float accm = coeffs[0];
+      int numCoeff = coeffs.size();   // aka a
+      for (size_t k = 1; k < numCoeff; k++) {
+        accm += coeffs[k] / (reflect_x + k);
+      }
+     */
+    // do loop flatten, using buf2 -> sum
+    __bang_add_scalar(buf3, buf0, 1, num_deal);
+    __bang_recip(buf3, buf3, num_deal);
+    __bang_fusion(FUSION_FMA, buf2, buf3, coeff[1], coeff[0], num_deal);
 
-  // accm += coeffs[k] / (x + k) for k = 1 to 4
-  // 展开循环, 将 x + k 分别直接复制为 deal_num 份, 方便向量计算
-  __bang_add_scalar(input1, input_x, 1, arr_size);
-  __bang_add_scalar(input2, input_x, 2, arr_size);
-  __bang_add_scalar(input3, input_x, 3, arr_size);
-  // __bang_printf("%d x+1 %f\n", taskId, input1[0]);
-  // __bang_printf("%d x+2 %f\n", taskId, input2[0]);
-  // __bang_printf("%d x+3 %f\n", taskId, input3[0]);
+    __bang_add_scalar(buf3, buf0, 2, num_deal);
+    __bang_recip(buf3, buf3, num_deal);
+    __bang_fusion(FUSION_FMA, buf2, buf3, coeff[2], buf2, num_deal, num_deal);
 
-  // 计算 1 / (z + k) for k = 1 to 4
-  __bang_recip(input1, input1, arr_size*3);
-  // __sync();
-  // __bang_printf("%d 1/(x+1) %f\n", taskId, input1[0]);
-  // __bang_printf("%d 1/(x+2) %f\n", taskId, input2[0]);
-  // __bang_printf("%d 1/(x+3) %f\n", taskId, input3[0]);
+    __bang_add_scalar(buf3, buf0, 3, num_deal);
+    __bang_recip(buf3, buf3, num_deal);
+    __bang_fusion(FUSION_FMA, buf2, buf3, coeff[3], buf2, num_deal, num_deal);
 
-  // 展开循环, 将 coeffs[k] 分别直接复制为 deal_num 份, 方便向量计算
-  // FMA?
-  __bang_write_value(temp1, arr_size, coeffs[1]);
-  __bang_write_value(temp2, arr_size, coeffs[2]);
-  __bang_write_value(temp3, arr_size, coeffs[3]);
-  __bang_write_value(temp4, arr_size, coeffs[0]);
-  __bang_mul(temp1, input1, temp1, arr_size*3);
-  // __sync();
-  // __bang_printf("%d coeff1/(x+1) %f\n", taskId, temp1[0]);
-  // __bang_printf("%d coeff2/(x+2) %f\n", taskId, temp2[0]);
-  // __bang_printf("%d coeff3/(x+3) %f\n", taskId, temp3[0]);
+    // __bang_add_scalar(buf3, buf0, 4, num_deal);
+    // __bang_recip(buf3, buf3, num_deal);
+    // __bang_fusion(FUSION_FMA, buf2, buf3, coeff[4], buf2, num_deal, num_deal);
 
-  // accm -> input3
-  // sumpool input CHW [1, 4, deal_num], kernel HW [4, 1] -> output CHW [1, deal_num]
-  __bang_sumpool(input3, temp1, 1, 4, arr_size, 4, 1, 1, 1);
-  // __sync();
-  // __bang_printf("%d sumpool accm = %f\n",taskId, input3[0]);
+    // __bang_add_scalar(buf3, buf0, 5, num_deal);
+    // __bang_recip(buf3, buf3, num_deal);
+    // __bang_fusion(FUSION_FMA, buf2, buf3, coeff[5], buf2, num_deal, num_deal);
 
-  // z + 0.5 -> input1
-  __bang_add_scalar(input1, input_x, 0.5, arr_size);
+    // __bang_add_scalar(buf3, buf0, 6, num_deal);
+    // __bang_recip(buf3, buf3, num_deal);
+    // __bang_fusion(FUSION_FMA, buf2, buf3, coeff[6], buf2, num_deal, num_deal);
 
-  // z + numCoeff -> input2
-  __bang_add_scalar(input2, input_x, numCoeff, arr_size);
+    // __bang_add_scalar(buf3, buf0, 7, num_deal);
+    // __bang_recip(buf3, buf3, num_deal);
+    // __bang_fusion(FUSION_FMA, buf2, buf3, coeff[7], buf2, num_deal, num_deal);
 
-  // abs(input_x) - floor(abs(input_x))
-  // convert values of abs_frac_input > 0.5 to (1 - frac_input) to improve precision if nessesary
-  __bang_abs(temp1, input_x, arr_size);
-  __bang_floor(temp2, input_x, arr_size);
-  __bang_sub(temp1, temp1, temp2, arr_size);
+    /**
+     * float lgamma_x = (reflect_x+0.5)*log(reflect_x+numCoeff) - (reflect_x+numCoeff) + log(accm);
+     */
+    // using buf0 -> lgamma_x
+    __bang_add_scalar(buf3, buf0, numCoeff, num_deal);
+    __bang_add_scalar(buf0, buf0, 0.5, num_deal);
+    __bang_loghp(buf2, buf2, num_deal);
+    __bang_sub(buf2, buf2, buf3, num_deal);
+    __bang_loghp(buf3, buf3, num_deal);
+    __bang_fusion(FUSION_FMA, buf0, buf3, buf0, buf2, num_deal, num_deal);
 
-  // sin(abs(pi*input_x)) = sin(pi * (abs(input_x) - floor(abs(input_x)))) for higher precision
-  __bang_mul_scalar(temp1, temp1, M_PI, arr_size);
-  __bang_sin(input4, temp1, arr_size);
+    /**
+     * float abs_input = fabs(input);
+     * float abs_frac_input = abs_input - floorf(abs_input);
+    */
+    // using buf4 -> abs_frac_input
+    __bang_abs(buf2, buf1, num_deal);
+    __bang_floor(buf3, buf2, num_deal);
+    __bang_sub(buf4, buf2, buf3, num_deal);
 
-  // input2: z+num_coeff, input3: accm,   input4: sin(pi*input_x), temp1
-  // log(z+numCoeff)      log(accm)       log(sin(pi*input_x))
-  __bang_loghp(input2, input2, 3*arr_size);
+    /**
+     * float reduced_frac_input = (abs_frac_input > 0.5) ? 1 - abs_frac_input : abs_frac_input;
+    */
+    // using buf3 -> reduced_frac_input
+    __bang_gt_scalar(buf2, buf4, 0.5, num_deal);
+    __bang_fusion(FUSION_FMA, buf3, buf4, -1, 1, num_deal);
+    __bang_mux2(buf3, buf3, buf4, buf2, num_deal);
 
-  // -sin(abs(pi*input_x)) -> temp1
-  __bang_mul_scalar(temp1, input4, -1, arr_size);
+    /**
+     * float reflection_denom = log(sinf(M_PI * reduced_frac_input));
+    */
+    // using buf2 -> reflection_denom
+    __bang_mul_scalar(buf2, buf3, M_PI, num_deal);
+    __bang_sin(buf2, buf2, num_deal);
+    __bang_loghp(buf2, buf2, num_deal);
+    
+    /**
+     * float reflection = std::isfinite(reflection_denom) ? log_pi - reflection_denom - lgamma_x : -reflection_denom;
+    */
+    // using buf3 -> reflection
+    __bang_write_zero(buf4, num_deal);
+    __bang_sub(buf2, buf4, buf2, num_deal);
+    __bang_isfinite(buf4, buf2, num_deal);
+    __bang_sub(buf3, buf2, buf0, num_deal);
+    __bang_add_scalar(buf3, buf3, log_pi, num_deal);
+    __bang_mux2(buf3, buf3, buf2, buf4, num_deal);
 
-  // (z+0.5)*log(z+numCoeff) -> input2
-  __bang_mul(input2, input2, input1, arr_size);
 
-  // lgamma(x) = (z+0.5)*log(z+numCoeff) - (z+numCoeff) + log(accm)
-  // -(z+numCoeff) -> input1
-  __bang_add_scalar(input1, input_x, numCoeff, arr_size);
-  __bang_mul_scalar(input1, input1, -1, arr_size);
-  // __bang_printf("%d -(z+numCoeff) = %f\n", taskId, input1[0]);
-  
-  //将 input1: -(z+num_coeff), input2: (z+0.5)*log(z+numCoeff), input3: log(accm) 累加
-  // sumpool input CHW [1, 3, deal_num], kernel HW [3, 1] -> output CHW [1, deal_num]
-  __bang_sumpool(input1, input1, 1, 3, arr_size, 3, 1, 1, 1);
-  // __bang_printf("%d (z+0.5)*log(z+numCoeff) = %f\n", taskId, input2[0]);
-  // __bang_printf("%d log(accm) = %f\n", taskId, input3[0]);
-  // __bang_printf("%d sumpool lgamma(x) = %f\n", taskId, input1[0]);
+    /**
+     * float result = need_to_reflect ? reflection : lgamma_x;
+    */
+    // using buf2 -> result
+    __bang_lt_scalar(buf4, buf1, 0.5, num_deal);
+    __bang_mux2(buf2, buf3, buf0, buf4, num_deal);
 
-  // x > 0 ? lgamma(x) : 0 -> input2 
-  __bang_mul(input2, input1, mask, arr_size);
-  // x < 0 ? -lgamma(1-x) : 0 -> input3
-  __bang_mul_scalar(input3, input1, -1, arr_size);
-  __bang_eq_scalar(temp4, mask, 0, arr_size);
-  __bang_mul(input3, input1, temp4, arr_size);
-  // 然后得到 lgamma(x) 与 -lgamma(1-x) 都在 input4 中
-  __bang_add(input4, input2, input3, arr_size);
+    /**
+     * return isinf(input) ? INFINITY : result;
+    */ 
+    __bang_isinf(buf0, buf1, num_deal);
+    __bang_write_value(buf3, num_deal, (float)(inf_float_value));
+    __bang_mux2(buf4, buf3, buf2, buf0, num_deal);
 
-  // temp1: log(sin(pi*input_x)), temp2: log(pi)
-  // mask * [log(sin(pi*input4)) log(pi)], x > 0 部分不需要加
-  __bang_write_value(temp2, arr_size, log_pi);
-  __bang_cycle_and(temp1, temp1, mask, 2*arr_size, arr_size);
-
-  // if x < 0, lgamma(x) = log(pi) - log(sin(abs(pi * fac_z)) + lgamma(1-x)
-  // sumpool input CHW [1, 3, deal_num], kernel HW [3, 1] -> output CHW [1, deal_num]
-  __bang_sumpool(input_x, input4, 1, 3, arr_size, 3, 1, 1, 1);
-  // __bang_printf("%d sumpool x < 0, lgamma(x) = %f\n", taskId, input_x[0]);
-
-  // aoid computing -inf - inf, which is nan. if temp1: log(sin(pi*input_x)) is +-inf, then lgamma(1-x) is -+inf
-  __bang_isinfinite(temp4, temp1, arr_size);
-  __bang_and(temp4, temp4, mask, arr_size);
-  __bang_mux2(temp3, temp1, input_x, temp4, arr_size);
-  // __bang_printf("%d __bang_isinfinite lgamma(x) = %f\n", taskId, input3[0]);
-
-  // if input x is +-inf, return +-inf
-  __bang_isinf(temp4, input_x, arr_size);
-  __bang_write_value(temp2, arr_size, (float)(inf_float_value));
-  __bang_mux2((float*)buf_out, temp2, temp3, temp4, arr_size);
-
-  if (sizeof(half) == sizeof(T)) {
-    __mluop_float2half((half *)buf_out, (float*)buf_out, deal_num);
-  }
-  // __asm__ volatile("readperf.end;\n\t");
-  // __bang_printf("%d result(%f) = %f\n", taskId, input_x[0], buf_out[0]);
+    if (sizeof(half) == sizeof(T)) {
+      __mluop_float2half((half *)buf4, buf4, num_deal);
+    }
 }
+
+// __mlu_func__ void calc_lgamma(half *buf1, half *buf0, half *buf2, half *buf3, half *buf4, half * int num_deal) {
+//   static const half log_pi = 1.144730;
+//   static const half log_sqrt_two_pi = 0.918939;
+//   static const half kLanczosGamma = 7; 
+//   static const half kBaseLanczosCoeff = 0.99999999999980993227684700473478;
+//   static const half log_lanczos_gamma_plus_one_half = 2.014903;
+    
+//     /**
+//      * bool need_to_reflect = (input < 0.5); 
+//      */
+//     __bang_lt_scalar(buf4, buf1, 0.5, num_deal);
+
+//     /**
+//      * float input_after_reflect = need_to_reflect ? -input : input - 1;  // aka z
+//      */
+//     // using buf0 -> input_after_reflect
+//     __bang_mul_scalar(buf0, buf1, -1, num_deal);
+//     __bang_add_scalar(buf2, buf1, -1, num_deal);
+//     __bang_mux2(buf0, buf0, buf2, buf4, num_deal);
+
+//     /**
+//      * float sum = kBaseLanczosCoeff;  // aka x
+//      * for (int i = 0, end = 8; i < end; ++i) {
+//      *   float lanczos_coefficient = kLanczosCoefficients[i];
+//      *   sum += lanczos_coefficient / (input_after_reflect + i + 1);
+//      * }
+//      */
+//     // do loop flatten, using buf2 -> sum
+//     __bang_write_value(buf2, num_deal, (half)kBaseLanczosCoeff);
+//     __bang_write_value(buf4, num_deal, (half)676.520368121885098844);
+//     __bang_add_scalar(buf3, buf0, 1, num_deal);
+//     __mluop_div(buf3, buf4, buf3,  0, num_deal);    
+//     __bang_add(buf2, buf2, buf3, num_deal);
+//     __bang_write_value(buf4, num_deal, (half)-1259.139216722402807136);
+//     __bang_add_scalar(buf3, buf0, 2, num_deal);
+//     __mluop_div(buf3, buf4, buf3,  0, num_deal);    
+//     __bang_add(buf2, buf2, buf3, num_deal);
+//     __bang_write_value(buf4, num_deal, (half)771.323428777653134603);
+//     __bang_add_scalar(buf3, buf0, 3, num_deal);
+//     __mluop_div(buf3, buf4, buf3,  0, num_deal);    
+//     __bang_add(buf2, buf2, buf3, num_deal);
+//     __bang_write_value(buf4, num_deal, (half)-176.615029162140587005);
+//     __bang_add_scalar(buf3, buf0, 4, num_deal);
+//     __mluop_div(buf3, buf4, buf3,  0, num_deal);    
+//     __bang_add(buf2, buf2, buf3, num_deal);
+//     __bang_write_value(buf4, num_deal, (half)12.507343278686905208);
+//     __bang_add_scalar(buf3, buf0, 5, num_deal);
+//     __mluop_div(buf3, buf4, buf3,  0, num_deal);    
+//     __bang_add(buf2, buf2, buf3, num_deal);
+//     __bang_write_value(buf4, num_deal, (half)-0.138571095265720118);
+//     __bang_add_scalar(buf3, buf0, 6, num_deal);
+//     __mluop_div(buf3, buf4, buf3,  0, num_deal);    
+//     __bang_add(buf2, buf2, buf3, num_deal);
+//     __bang_write_value(buf4, num_deal, (half)0.000009984369578020);
+//     __bang_add_scalar(buf3, buf0, 7, num_deal);
+//     __mluop_div(buf3, buf4, buf3,  0, num_deal);    
+//     __bang_add(buf2, buf2, buf3, num_deal);
+//     __bang_write_value(buf4, num_deal, (half)0.000000150563273515);
+//     __bang_add_scalar(buf3, buf0, 8, num_deal);
+//     __mluop_div(buf3, buf4, buf3,  0, num_deal);    
+//     __bang_add(buf2, buf2, buf3, num_deal);
+
+//     /**
+//      * float gamma_plus_onehalf_plus_z = kLanczosGamma + 0.5 + input_after_reflect;  // aka t
+//      */
+//     // using nram_addition -> gamma_plus_onehalf_plus_z
+//     __bang_add_scalar( buf0, kLanczosGamma+0.5, num_deal);
+
+//     /** 
+//      * float log_t = log_lanczos_gamma_plus_one_half + log1pf(input_after_reflect / (kLanczosGamma + 0.5));
+//      */
+//     // using buf0 -> log_t
+//     __bang_write_value(buf4, num_deal, (half)(kLanczosGamma+0.5));
+//     __bang_active_reciphp(buf4, buf4, num_deal);
+//     __bang_mul(buf0, buf0, buf4, num_deal);
+//     __bang_add_scalar(buf0, buf0, 1, num_deal);
+//     __bang_half2float((float *)buf3, buf0, num_deal);
+//     __bang_loghp((float *)buf3, (float *)buf3, num_deal);
+//     __mluop_float2half(buf3, (float *)buf3, num_deal);
+//     __bang_add_scalar(buf0, buf3, log_lanczos_gamma_plus_one_half, num_deal);
+
+//     /**
+//      * float log_y = log_sqrt_two_pi + (input_after_reflect + 0.5 - gamma_plus_onehalf_plus_z / log_t) * log_t + log(sum);
+//      *  ---->
+//      *        log_y = log_sqrt_two_pi + (gamma_plus_onehalf_plus_z - kLanczosGamma) * log_t - gamma_plus_onehalf_plus_z + log(sum)
+//     */
+//     // using buf0 -> log_y
+//     __bang_half2float((float *)buf3, buf2, num_deal);
+//     __bang_loghp((float *)buf3, (float *)buf3, num_deal);
+//     __mluop_float2half(buf2, (float *)buf3, num_deal);
+//     __bang_sub_scalar(buf4,  kLanczosGamma, num_deal);
+//     __bang_mul(buf0, buf0, buf4, num_deal);
+//     __bang_add_scalar(buf0, buf0, log_sqrt_two_pi, num_deal);
+//     __bang_sub(buf0, buf0,  num_deal);
+//     __bang_add(buf0, buf0, buf2, num_deal);
+
+//     /**
+//      * float abs_input = fabs(input);
+//      * float abs_frac_input = abs_input - floorf(abs_input);
+//     */
+//     // using buf4 -> abs_frac_input
+//     __bang_abs(buf2, buf1, num_deal);
+//     __bang_half2float((float *)buf3, buf2, num_deal);
+//     __bang_floor((float *)buf3, (float *)buf3, num_deal);
+//     __mluop_float2half(buf3, (float *)buf3, num_deal);
+//     __bang_sub(buf4, buf2, buf3, num_deal);
+
+//     /**
+//      * float reduced_frac_input = (abs_frac_input > 0.5) ? 1 - abs_frac_input : abs_frac_input;
+//     */
+//     // using buf3 -> reduced_frac_input
+//     __bang_gt_scalar(buf2, buf4, 0.5, num_deal);
+//     __bang_mul_scalar(buf3, buf4, -1, num_deal);
+//     __bang_add_scalar(buf3, buf3, 1, num_deal);
+//     __bang_mux2(buf3, buf3, buf4, buf2, num_deal);
+
+//     /**
+//      * float reflection_denom = log(sinf(M_PI * reduced_frac_input));
+//     */
+//     // using buf2 -> reflection_denom
+//     __bang_mul_scalar(buf2, buf3, M_PI, num_deal);
+//     __bang_half2float((float *)buf3, buf2, num_deal);
+//     __bang_sin((float *)buf3, (float *)buf3, num_deal);
+//     __bang_loghp((float *)buf3, (float *)buf3, num_deal);
+//     __mluop_float2half(buf2, (float *)buf3, num_deal);
+    
+//     /**
+//      * float reflection = std::isfinite(reflection_denom) ? log_pi - reflection_denom - log_y : -reflection_denom;
+//     */
+//     // using buf3 -> reflection
+//     __bang_write_zero(buf4, num_deal);
+//     __bang_sub(buf2, buf4, buf2, num_deal);
+//     __bang_isfinite(buf4, buf2, num_deal);
+//     __bang_sub(buf3, buf2, buf0, num_deal);
+//     __bang_add_scalar(buf3, buf3, log_pi, num_deal);
+//     __bang_mux2(buf3, buf3, buf2, buf4, num_deal);
+
+
+//     /**
+//      * float result = need_to_reflect ? reflection : log_y;
+//     */
+//     // using buf2 -> result
+//     __bang_lt_scalar(buf4, buf1, 0.5, num_deal);
+//     __bang_mux2(buf2, buf3, buf0, buf4, num_deal);
+
+//     /**
+//      * return isinf(input) ? INFINITY : result;
+//     */ 
+//     __bang_isinf(buf0, buf1, num_deal);
+//     __bang_write_value(buf3, num_deal, (half)(inf_half_value));
+//     __bang_mux2(buf4, buf3, buf2, buf0, num_deal);
+// }
 
 // buffer <0 1 2 3 .. 12>
 // -------------------------------------------------------------------------------------------
@@ -243,9 +391,20 @@ __mlu_global__ void MLUBlockKernelLgamma(T *x, T *y, int total) { // FIXME: now 
     y += (core_n + 1) * rem_n + core_n * (taskId - rem_n);
   }
 
+  float *aux_array[AUX_N];
+  // T *nram_addition = nullptr;
+  int arr_size;
+  
+  // if (sizeof(float) == sizeof(T)) {
+    arr_size = FLOOR_ALIGN(LGAMMA_NRAM_USED / sizeof(float) / AUX_N, UNARY_ALIGN_NUM);
+  // } else if (sizeof(half) == sizeof(T)) {
+  //   arr_size = FLOOR_ALIGN(LGAMMA_NRAM_USED / sizeof(T) / (AUX_N+1), UNARY_ALIGN_NUM);
+  //   nram_addition = (T *)nram_buffer + (AUX_N * arr_size);
+  // }
+
   int pos = 0;
   for (size_t i = 0; i < AUX_N; i++) {
-    aux_array[i] = (float*)nram_buffer + pos;
+    aux_array[i] = (float *)nram_buffer + pos;
     pos += arr_size;
     // __bang_printf("aux_array[%d] = 0x%x\n", i, (long)aux_array[i]);
   }
@@ -267,7 +426,8 @@ __mlu_global__ void MLUBlockKernelLgamma(T *x, T *y, int total) { // FIXME: now 
                    GDRAM2NRAM);
 
     // compute
-    calc_lgamma((T*)input_x1, (T*)out_y1, arr_size);
+    calc_lgamma((T *)aux_array[0],aux_array[2], aux_array[3], aux_array[4],
+                aux_array[5],  arr_size);
     __sync();
   }
 
@@ -282,8 +442,8 @@ __mlu_global__ void MLUBlockKernelLgamma(T *x, T *y, int total) { // FIXME: now 
                    arr_size*sizeof(T), GDRAM2NRAM);
     
     // compute
-    calc_lgamma((T*)((i % 2) ? input_x1 : input_x2), (T*)((i % 2) ? out_y1 : out_y2), 
-                arr_size);
+    calc_lgamma((T *)aux_array[(i % 2) ? 0 : 1],aux_array[2], aux_array[3],
+                aux_array[4], aux_array[(i % 2) ? 5 : 6],  arr_size);
 
     __sync();
   }
@@ -301,8 +461,9 @@ __mlu_global__ void MLUBlockKernelLgamma(T *x, T *y, int total) { // FIXME: now 
   }
 
   if (repeat > 0) {
-    calc_lgamma((T*)(((repeat-1) % 2) ? input_x2 : input_x1), (T*)(((repeat-1) % 2) ? out_y2 : out_y1), 
-                arr_size);
+    calc_lgamma((T *)aux_array[((repeat-1) % 2) ? 1 : 0],aux_array[2], 
+                aux_array[3],aux_array[4], 
+                aux_array[((repeat-1) % 2) ? 6 : 5],  arr_size);
   }
   __sync();
 
@@ -314,7 +475,10 @@ __mlu_global__ void MLUBlockKernelLgamma(T *x, T *y, int total) { // FIXME: now 
 
   // if rem > 0, compute & store last (core_n % arr_size) element
   if (rem > 0) {
-    calc_lgamma((T*)((repeat % 2) ? input_x2 : input_x1), (T*)((repeat % 2) ? out_y2 : out_y1), rem);
+    calc_lgamma((T *)aux_array[(repeat % 2) ? 1 : 0],aux_array[2], 
+                aux_array[3],aux_array[4], 
+                aux_array[(repeat % 2) ? 6 : 5],  rem);
+
     __sync();
 
     // CC repeat+2
