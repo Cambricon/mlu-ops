@@ -27,16 +27,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
     return MLUOP_STATUS_SUCCESS;
   }
 
-#if 0
-// FIXME
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("sqrt");
+    GEN_CASE_START("lgamma", "Lgamma");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "x", x, x_desc, 100, 0.1);
     GEN_CASE_DATA(true, "y", y, y_desc, 0, 0);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
-#endif
 
   // policy select
   cnrtDim3_t k_dim;
@@ -55,7 +52,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
   CHECK_RETURN("[mluOpLgamma] ",
                KernelLgamma(k_dim, k_type, handle->queue,
                                        x_desc->dtype, x, y, element_num));
-  // GEN_CASE_END();
+  GEN_CASE_END();
 
   return MLUOP_STATUS_SUCCESS;
 }    
