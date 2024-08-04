@@ -32,15 +32,32 @@
 #include "core/type.h"
 #include "kernels/unary_op/unary_op_host.h"
 
+#define op_name "[mluOpLog]"
+
+// base_factor is the scaling factor applying on loge() to get log2() or
+// log10().
+static float getBaseFactor(mluOpHandle_t handle, const mluOpLogBase_t base) {
+  float base_factor = 1.0;
+  if (base == mluOpLogBase_t::MLUOP_LOG_E) {
+    base_factor = log(2);
+  } else if (base == mluOpLogBase_t::MLUOP_LOG_2) {
+    base_factor = 1.0;
+  } else if (base == mluOpLogBase_t::MLUOP_LOG_10) {
+    base_factor = log10(2);
+  }
+  return base_factor;
+}
+
 mluOpStatus_t MLUOP_WIN_API
 mluOpLog(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
          const mluOpLogBase_t base, const mluOpTensorDescriptor_t x_desc,
          const void *x, const mluOpTensorDescriptor_t y_desc, void *y) {
-  mluOpDataType_t support_type[2] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT};
   bool zero_element = false;
-  mluOpStatus_t param_check =
-      unaryOpParamCheck("[mluOpLog]", handle, x_desc, x, y_desc, y,
-                        support_type, 2, zero_element);
+  mluOpStatus_t param_check = MLUOP_STATUS_SUCCESS;
+  mluOpDataType_t support_type[2] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT};
+  param_check = unaryOpParamCheck(op_name, handle, x_desc, x, y_desc, y,
+                                  support_type, 2, zero_element);
+
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }
@@ -58,33 +75,25 @@ mluOpLog(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
 
   cnrtFunctionType_t k_type;
   cnrtDim3_t k_dim;
-  unaryOpPolicyFunc(handle, x_desc, &k_dim, &k_type);
+  unaryOpPolicyFunc(handle, &k_dim, &k_type, x_desc);
   VLOG(5) << "[mluOp] Launch [" << k_type << ", " << k_dim.x << ", " << k_dim.y
           << ", " << k_dim.z << "]";
 
-  float coef = 1.0;
-  if (base == mluOpLogBase_t::MLUOP_LOG_E) {
-    coef = 1.0;
-  } else if (base == mluOpLogBase_t::MLUOP_LOG_2) {
-    // log2(x) = loge(x) * log2(e)
-    coef = log2(exp(1));
-  } else if (base == mluOpLogBase_t::MLUOP_LOG_10) {
-    // log10(x) = loge(x) * log10(e)
-    coef = log10(exp(1));
+  if (base != mluOpLogBase_t::MLUOP_LOG_E &&
+      base != mluOpLogBase_t::MLUOP_LOG_2 &&
+      base != mluOpLogBase_t::MLUOP_LOG_10) {
+    LOG(ERROR) << "[mluOpLog] The value of base only supports e, 2 or 10"
+               << ". But now the base is " << base << ".";
+    return MLUOP_STATUS_BAD_PARAM;
   }
 
-  int element_num = mluOpGetTensorElementNum(x_desc);
-  if (handle->arch == MLUOP_MLU270) {
-    VLOG(5) << "kernel Kernel5StagePipelineLog.";
-    CHECK_RETURN("[mluOpLog] ", (Kernel5StagePipelineLog(
-                                    k_dim, k_type, handle->queue, x_desc->dtype,
-                                    prefer, x, y, element_num, coef)));
-  } else {
-    VLOG(5) << "kernel Kernel3StagePipelineLog.";
-    CHECK_RETURN("[mluOpLog] ", (Kernel3StagePipelineLog(
-                                    k_dim, k_type, handle->queue, x_desc->dtype,
-                                    prefer, x, y, element_num, coef)));
-  }
+  float coef = getBaseFactor(handle, base);
+
+  size_t element_num = mluOpGetTensorElementNum(x_desc);
+  VLOG(5) << "kernel Kernel3StagePipelineLog.";
+  CHECK_RETURN("[mluOpLog] ", (Kernel3StagePipelineLog(
+                                  k_dim, k_type, handle->queue, x_desc->dtype,
+                                  prefer, x, y, element_num, coef)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

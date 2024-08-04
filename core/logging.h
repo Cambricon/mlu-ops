@@ -275,7 +275,8 @@ struct Voidifier {
   })(lvl, __FILE__))
 
 #define VLOG(level)                      \
-  MLUOP_PREDICT_TRUE(!VLOG_IS_ON(level)) \
+  MLUOP_PREDICT_TRUE(!VLOG_IS_ON(({ static_assert \
+  (level > 0, "VLOG level should be greater than 0"); level; }))) \
   ? (void)0 : ::mluop::internal::Voidifier() & LOG(VLOG)
 
 // This formats a value for a failing CHECK_XX statement.  Ordinarily,

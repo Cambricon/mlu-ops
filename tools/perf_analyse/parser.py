@@ -61,7 +61,7 @@ class Parser:
 
     def preprocess(self, df):
         # protoName and mlu_platform are used to merge database
-        df['protoName'] = df['file_path'].apply(lambda x: x.split("/")[-1])
+        df['protoName'] = df['file_path']
         df['mlu_platform'] = [
             i.split('[')[0] for i in df['mlu_platform'].to_list()
         ]

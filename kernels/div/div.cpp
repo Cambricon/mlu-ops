@@ -32,7 +32,7 @@
 
 // threshold of bytes to be processed by each core
 // according to the actual measurement results
-#define THRESHOLD_SIZE (3 * 1024)
+#define ALIGN_SIZE 128
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
@@ -42,9 +42,9 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
   mluOpDataType_t support_type[2] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT};
   int number_of_supported_types = 2;
   bool zero_element = false;
-  mluOpStatus_t param_check =
-      binaryOpParamCheck("mluOpDiv", handle, x_desc, x, y_desc, y, z_desc, z,
-                         support_type, number_of_supported_types, zero_element);
+  mluOpStatus_t param_check = binaryOpParamCheck(
+      "mluOpDiv", handle, x_desc, x, y_desc, y, z_desc, z, support_type,
+      number_of_supported_types, zero_element, true);
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }
@@ -63,13 +63,20 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
-  binaryOpPolicyFunc(handle, x_desc, THRESHOLD_SIZE, &k_dim, &k_type);
-
-  int element_num = mluOpGetTensorElementNum(x_desc);
-  VLOG(5) << "kernel Kernel3StagePipelineDiv.";
-  CHECK_RETURN("mluOpDiv", Kernel3StagePipelineDiv(k_dim, k_type, handle->queue,
-                                                   x_desc->dtype, prefer, x, y,
-                                                   z, element_num));
+  binaryOpPolicyFunc(handle, ALIGN_SIZE, &k_dim, &k_type, x_desc);
+  size_t element_num = mluOpGetTensorElementNum(x_desc);
+  VLOG(5) << "kernel Kernel5StagePipelineDiv.";
+  if (handle->arch == MLUOP_MLU370) {
+    CHECK_RETURN("mluOpDiv",
+                 Kernel3StagePipelineDiv(k_dim, k_type, handle->queue,
+                                         x_desc->dtype, prefer, (void *)x,
+                                         (void *)y, (void *)z, element_num));
+  } else {
+    CHECK_RETURN("mluOpDiv",
+                 Kernel5StagePipelineDiv(k_dim, k_type, handle->queue,
+                                         x_desc->dtype, prefer, (void *)x,
+                                         (void *)y, (void *)z, element_num));
+  }
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

@@ -53,7 +53,7 @@ void SqrtBackwardExecutor::cpuCompute() {
   auto count2 = parser_->getInputDataCount(1);
   assert(count1 == count2);
 
-  for (int i = 0; i < count1; ++i) {
+  for (size_t i = 0; i < count1; ++i) {
     cpu_fp32_output_[0][i] =
         0.5 * cpu_fp32_input_[1][i] * (1.0 / cpu_fp32_input_[0][i]);
   }

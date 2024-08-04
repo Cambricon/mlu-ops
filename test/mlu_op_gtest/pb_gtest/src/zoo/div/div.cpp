@@ -70,7 +70,7 @@ void DivExecutor::cpuCompute() {
                      std::vector<int>(c_desc->dims, c_desc->dims + c_desc->dim),
                      cpu_fp32_input_[1], b_broadcast);
 
-  for (int i = 0; i < count3; ++i) {
+  for (size_t i = 0; i < count3; ++i) {
     cpu_fp32_output_[0][i] = a_broadcast[i] / b_broadcast[i];
   }
   VLOG(4) << "Div cpu compute done";

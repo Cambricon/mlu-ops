@@ -285,8 +285,7 @@ __mlu_func__ void psRoiAvgPoolBackwardCompute(
     for (int h = hstart; h < hend; h++) {
       for (int w = wstart; w < wend; w++) {
         int bottom_offset = bottom_add + (h * width + w) * channels + c;
-        __bang_atomic_add(atomic_buffer, bottom_grad + bottom_offset, diff_val,
-                          1);
+        __bang_atomic_reduce_add(bottom_grad + bottom_offset, diff_val, 1);
       }
     }
   }

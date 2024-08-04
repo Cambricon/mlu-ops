@@ -28,11 +28,11 @@
 mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineLog(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
-    const void *x, void *y, int num, float coef);
+    const void *x, void *y, size_t num, float coef);
 
 mluOpStatus_t MLUOP_WIN_API Kernel5StagePipelineLog(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
-    const void *x, void *y, int num, float coef);
+    const void *x, void *y, size_t num, float coef);
 
 #endif  // KERNELS_LOG_LOG_H

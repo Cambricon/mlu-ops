@@ -66,7 +66,7 @@
       ```sh
       mlu-ops$ ./build.sh            # 编译多架构的版本，libmluops.so 体积较大，cncc使用多arch的cnfatbin封装
       mlu-ops$ ./build.sh  --mlu370  # 编译 MLU370 板卡专用版本，cncc使用选项--bang-mlu-arch=mtp_372
-      mlu-ops$ ./build.sh  --mlu370 --filter="ads;div"  # mlu370 下编译 abs 算子和 div 算子
+      mlu-ops$ ./build.sh  --mlu370 --filter="abs;div"  # mlu370 下编译 abs 算子和 div 算子
       ```
 
 - kernel_depends.toml

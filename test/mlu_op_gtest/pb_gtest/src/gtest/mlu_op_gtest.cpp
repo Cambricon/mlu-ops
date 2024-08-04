@@ -629,6 +629,21 @@ static std::ostringstream print_log(const mluoptest::EvaluateResult &eva,
     out << "[MLU Hardware Time by layer]: " << eva.mlu.hardware_time_layer
         << " (us)\n";
   }
+  // print perf test result
+  if (std::getenv("MLUOP_GTEST_PERF_BASELINE") != NULL &&
+      std::string(std::getenv("MLUOP_GTEST_PERF_BASELINE")).
+      compare("ON") == 0) {
+    out << "[Baseline MLU Hardware Time       ]: "
+        << eva.mlu.baseline_mlu_hw_time << " (us)\n"
+        << "[This Time MLU Hardware Time      ]: "
+        << eva.mlu.thistime_mlu_hw_time << " (us)\n"
+        << "[MLU Hardware Time Promotion      ]: "
+        << eva.mlu.baseline_mlu_hw_time - eva.mlu.thistime_mlu_hw_time
+        << " (us)\n"
+        << "[MLU Hardware Time Promotion Ratio]: "
+        << (eva.mlu.baseline_mlu_hw_time - eva.mlu.thistime_mlu_hw_time) /
+            eva.mlu.baseline_mlu_hw_time * 100 << " (%)\n";
+  }
   out << "[GPU Hardware Time      ]: " << eva.gpu.hardware_time << " (us)\n"
       << "[GPU IO Efficiency      ]: " << eva.gpu.io_efficiency << "\n"
       << "[GPU Compute Efficiency ]: " << eva.gpu.compute_efficiency << "\n"
@@ -744,6 +759,25 @@ void TestSuite::recordXml(mluoptest::EvaluateResult &er) {
   std::ostringstream mce_oss;
   mce_oss << std::setprecision(10) << er.mlu.compute_efficiency;
   this->RecordProperty("compute_efficiency_mlu", mce_oss.str());
+
+  // print perf test result
+  std::ostringstream mbht_oss;
+  mbht_oss << std::setprecision(10) << er.mlu.baseline_mlu_hw_time;
+  this->RecordProperty("baseline_mlu_hw_time_mlu", mbht_oss.str());
+
+  std::ostringstream mtht_oss;
+  mtht_oss << std::setprecision(10) << er.mlu.thistime_mlu_hw_time;
+  this->RecordProperty("thistime_mlu_hw_time_mlu", mtht_oss.str());
+
+  std::ostringstream mhtp_oss;
+  mhtp_oss << std::setprecision(10)
+           << er.mlu.baseline_mlu_hw_time - er.mlu.thistime_mlu_hw_time;
+  this->RecordProperty("hardware_time_promotion_mlu", mhtp_oss.str());
+
+  std::ostringstream mhtpr_oss;
+  mhtpr_oss << std::setprecision(10) << (er.mlu.baseline_mlu_hw_time -
+    er.mlu.thistime_mlu_hw_time) / er.mlu.baseline_mlu_hw_time * 100;
+  this->RecordProperty("hardware_time_promotion_ratio_mlu", mhtpr_oss.str());
 
   std::ostringstream gws_oss;
   gws_oss << std::setprecision(10) << er.gpu.workspace_size;

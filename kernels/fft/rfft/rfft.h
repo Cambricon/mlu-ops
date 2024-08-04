@@ -36,4 +36,11 @@ mluOpStatus_t execRFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
                          const void *input, const float scale_factor,
                          void *workspace, void *output);
 
+mluOpStatus_t execFFTr2c1d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
+                           const float scale_factor);
+
+mluOpStatus_t execRFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
+                         const void *input, const float scale_factor,
+                         void *workspace, void *output);
+
 #endif  // KERNELS_FFT_RFFT_RFFT_H_

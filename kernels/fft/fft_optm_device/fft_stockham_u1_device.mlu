@@ -25,6 +25,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 #include "kernels/fft/fft.h"
+#include "kernels/fft/fft_optm_device/fft_nram_wram_allocate.h"
 
 // direction: 1 means IFFT, used to distinguish FFT and IFFT.
 #define FFT_INVERSE 1
@@ -32,8 +33,6 @@
 // Two split dimemsion(batch && L) trversal orders can be selected via
 // "L_FIRST". By default "L" is preferred, then "batch".
 #define L_FIRST 1
-
-__nram__ char nram_buffer[MAX_NRAM_SIZE + REM_FOR_STACK - 32 * 1024];
 
 // Generate w vector.
 template <typename DT>

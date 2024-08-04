@@ -418,26 +418,22 @@ __mlu_global__ void roiAlignRotatedBackward(
             continue;
           } else {
             __bang_mul_scalar(nram_output, nram_ping, w1 * zero_sign, c_limit);
-            __bang_atomic_add(
-                (T *)nram_output,
+            __bang_atomic_reduce_add(
                 bottom_grad_dram + batch_idx * height * width * channel +
                     y_low * width * channel + x_low * channel + c_offset,
                 (T *)nram_output, c_slice);
             __bang_mul_scalar(nram_output, nram_ping, w2 * zero_sign, c_limit);
-            __bang_atomic_add(
-                (T *)nram_output,
+            __bang_atomic_reduce_add(
                 bottom_grad_dram + batch_idx * height * width * channel +
                     y_low * width * channel + x_high * channel + c_offset,
                 (T *)nram_output, c_slice);
             __bang_mul_scalar(nram_output, nram_ping, w3 * zero_sign, c_limit);
-            __bang_atomic_add(
-                (T *)nram_output,
+            __bang_atomic_reduce_add(
                 bottom_grad_dram + batch_idx * height * width * channel +
                     y_high * width * channel + x_low * channel + c_offset,
                 (T *)nram_output, c_slice);
             __bang_mul_scalar(nram_output, nram_ping, w4 * zero_sign, c_limit);
-            __bang_atomic_add(
-                (T *)nram_output,
+            __bang_atomic_reduce_add(
                 bottom_grad_dram + batch_idx * height * width * channel +
                     y_high * width * channel + x_high * channel + c_offset,
                 (T *)nram_output, c_slice);
