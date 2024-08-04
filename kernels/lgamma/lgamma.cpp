@@ -41,7 +41,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
   // policy select
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
-  unaryOpPolicyFunc(handle, x_desc, &k_dim, &k_type);
+  unaryOpPolicyFunc(handle, &k_dim, &k_type, x_desc);
   VLOG(5) << "[mluOpLgamma] launch kernel policyFUnc[" << k_dim.x << ", "
           << k_dim.y << ", " << k_dim.z << "]";
 
