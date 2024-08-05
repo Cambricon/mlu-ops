@@ -32,6 +32,9 @@ void mluOpCheck(mluOpStatus_t result, char const *const func,
     std::string error = "\"" + std::string(mluOpGetErrorString(result)) +
                         " in " + std::string(func) + "\"";
     LOG(ERROR) << error;
+    // TODO(liuduanhui): Remove error throwing in c library in future.
+    //                   MLUOP_CHECK should not be used in host side code.
+    //                   And now it is only used in gtest code.
     throw std::runtime_error(error);
   }
 }
