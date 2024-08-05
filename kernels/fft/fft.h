@@ -309,7 +309,8 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
 
 // Factors the given FFT plan into two steps based on the size, factoring
 // buffer, row-major flag, and FFT type.
-mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
+                                             mluOpFFTPlan_t fft_plan,
                                              const int _n, int *facbuf,
                                              const int is_row_major,
                                              const int fft_type);
