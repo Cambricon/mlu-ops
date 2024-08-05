@@ -41,8 +41,10 @@ void GenerateProposalsV2Executor::paramCheck() {
 void GenerateProposalsV2Executor::workspaceMalloc() {
   size_t workspace_size = 0;
   auto tensor_scores = parser_->getMetaTensor("input1").tensor;
-  mluOpGetGenerateProposalsV2WorkspaceSize(handle_, tensor_scores,
-                                           &workspace_size);
+  int pre_nms_top_n =
+      parser_->getProtoNode()->generate_proposals_v2_param().pre_nms_top_n();
+  mluOpGetGenerateProposalsV2WorkspaceSize_v2(handle_, tensor_scores,
+                                              pre_nms_top_n, &workspace_size);
 
   VLOG(4) << "Malloc workspace space.";
   void *temp = mlu_runtime_.allocate(workspace_size);
