@@ -218,7 +218,7 @@ mluOpStatus_t binaryOpParamCheck(
                      "output tensor num is too large. ");
 
     if (mluop::strideCaseWithNotConsistentDense(3, input1_desc, input2_desc,
-                                         output_desc)) {
+                                                output_desc)) {
       uint64_t num_input1_with_stride = shapeStrideCount(input1_desc);
       uint64_t num_input2_with_stride = shapeStrideCount(input2_desc);
       uint64_t num_output_with_stride = shapeStrideCount(output_desc);

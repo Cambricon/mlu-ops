@@ -288,14 +288,26 @@ static mluOpStatus_t mutualInformationForwardParamCheck(
     return check_status;
   }
 
-  // 5. check tensor dtype
+  // 5. check tensor stride
+  STRIDE_TENSOR_CHECK("[mluOpMutualInformationForward]:", px_desc,
+                      "px_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMutualInformationForward]:", py_desc,
+                      "py_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMutualInformationForward]:", opt_boundary_desc,
+                      "opt_boundary_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMutualInformationForward]:", p_desc,
+                      "p_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMutualInformationForward]:", ans_desc,
+                      "ans_desc must be contiguous");
+
+  // 6. check tensor dtype
   check_status = checkTensorDatatype(px_desc, py_desc, opt_boundary_desc,
                                      p_desc, ans_desc);
   if (MLUOP_STATUS_SUCCESS != check_status) {
     return check_status;
   }
 
-  // 6. check scale limit, for large tensor
+  // 7. check scale limit, for large tensor
   check_status = checkTensorScaleLimit(handle, px_desc, py_desc,
                                        opt_boundary_desc, p_desc);
   if (MLUOP_STATUS_SUCCESS != check_status) {
@@ -306,7 +318,7 @@ static mluOpStatus_t mutualInformationForwardParamCheck(
   const int S = px_desc->dims[1];
   const int T = py_desc->dims[2];
 
-  // 7. check zero element.
+  // 8. check zero element.
   if (0 == B) {
     zero_element = true;
     VLOG(5) << API_NAME
@@ -314,12 +326,12 @@ static mluOpStatus_t mutualInformationForwardParamCheck(
     return MLUOP_STATUS_SUCCESS;
   }
 
-  // 8 check workspace
+  // 9. check workspace
   if (workspace_size > 0) {
     PARAM_CHECK(API_NAME, workspace != nullptr);
   }
 
-  // 9. check tensor ptr
+  // 10. check tensor ptr
   check_status = checkTensorPtr(px, py, p, ans, opt_boundary_desc, opt_boundary,
                                 S, T, has_boundary);
   if (MLUOP_STATUS_SUCCESS != check_status) {

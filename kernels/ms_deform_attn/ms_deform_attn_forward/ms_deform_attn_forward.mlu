@@ -120,19 +120,32 @@ static mluOpStatus_t paramcheck(
               data_value_desc->dims[3] == data_col_desc->dims[3]);
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
               data_spatial_shapes_desc->dims[0] ==
-                data_level_start_index_desc->dims[0]);
-  PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_spatial_shapes_desc->dims[0] ==
-                data_sampling_loc_desc->dims[3]);
-  PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_spatial_shapes_desc->dims[0] ==
-                data_attn_weight_desc->dims[3]);
+                  data_level_start_index_desc->dims[0]);
+  PARAM_CHECK(
+      "[mluOpMsDeformAttnForward]",
+      data_spatial_shapes_desc->dims[0] == data_sampling_loc_desc->dims[3]);
+  PARAM_CHECK("[mluOpMsDeformAttnForward]", data_spatial_shapes_desc->dims[0] ==
+                                                data_attn_weight_desc->dims[3]);
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
               data_sampling_loc_desc->dims[1] == data_col_desc->dims[1]);
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
               data_attn_weight_desc->dims[1] == data_col_desc->dims[1]);
   PARAM_CHECK("[mluOpMsDeformAttnForward]", data_sampling_loc_desc->dims[4] ==
                                                 data_attn_weight_desc->dims[4]);
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnForward]:", data_value_desc,
+                      "data_value_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnForward]:", data_spatial_shapes_desc,
+                      "data_spatial_shapes_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(
+      "[mluOpMsDeformAttnForward]:", data_level_start_index_desc,
+      "data_level_start_index_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnForward]:", data_sampling_loc_desc,
+                      "data_sampling_loc_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnForward]:", data_attn_weight_desc,
+                      "data_attn_weight_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnForward]:", data_col_desc,
+                      "data_col_desc must be contiguous");
   // check tensor datatype
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
               data_value_desc->dtype == MLUOP_DTYPE_FLOAT);

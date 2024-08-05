@@ -130,6 +130,26 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
   PARAM_CHECK(API, grad_sampling_loc_desc->dim == 6);
   PARAM_CHECK(API, grad_attn_weight_desc->dim == 5);
 
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", value_desc,
+                      "value_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", spatial_shapes_desc,
+                      "spatial_shapes_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", level_start_index_desc,
+                      "level_start_index_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", sampling_loc_desc,
+                      "sampling_loc_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", attn_weight_desc,
+                      "attn_weight_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", grad_output_desc,
+                      "grad_output_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", grad_value_desc,
+                      "grad_value_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", grad_sampling_loc_desc,
+                      "grad_sampling_loc_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", grad_attn_weight_desc,
+                      "grad_attn_weight_desc must be contiguous");
+
   // check datatype
   PARAM_CHECK(API, value_desc->dtype == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK(API, spatial_shapes_desc->dtype == MLUOP_DTYPE_INT32);

@@ -104,6 +104,18 @@ static mluOpStatus_t MoeDispatchForwardParamCheck(
   PARAM_CHECK(op_name, (hidden == input_desc->dims[1]));
   PARAM_CHECK(op_name, (hidden == dispatch_desc->dims[1]));
 
+  // check stride
+  STRIDE_TENSOR_CHECK(op_name + ":", gates_desc,
+                      "gates_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(op_name + ":", indices_desc,
+                      "indices_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(op_name + ":", locations_desc,
+                      "locations_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(op_name + ":", input_desc,
+                      "input_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(op_name + ":", dispatch_desc,
+                      "dispatch_desc must be contiguous");
+
   // check correlation of parameters
   PARAM_CHECK_V2(op_name, samples <= (num_experts * capacity),
                  "The samples must be less than or equal to the "

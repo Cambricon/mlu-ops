@@ -82,6 +82,15 @@ static mluOpStatus_t psRoiPoolForwardParamCheck(
   PARAM_CHECK(api, output_desc->dims[3] >= 1);
   PARAM_CHECK(api, spatial_scale > 0);
   PARAM_CHECK(api, rois_desc->dims[1] == 5);
+  // stride check
+  STRIDE_TENSOR_CHECK("[mluOpPsRoiPoolForward]:", input_desc,
+                      "input_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPsRoiPoolForward]:", rois_desc,
+                      "rois_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPsRoiPoolForward]:", output_desc,
+                      "output_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPsRoiPoolForward]:", mapping_channel_desc,
+                      "mapping_channel_desc must be contiguous");
   // roi_num check
   PARAM_CHECK(api, output_desc->dims[0] == rois_desc->dims[0]);
   PARAM_CHECK(api, input_desc->dims[3] == output_desc->dims[1] *
@@ -170,6 +179,15 @@ static mluOpStatus_t psRoiPoolBackwardParamCheck(
   PARAM_CHECK(api, top_grad_desc->dims[3] >= 1);
   PARAM_CHECK(api, spatial_scale > 0);
   PARAM_CHECK(api, rois_desc->dims[1] == 5);
+  // stride check
+  STRIDE_TENSOR_CHECK("[mluOpPsRoiPoolBackward]:", top_grad_desc,
+                      "top_grad_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPsRoiPoolBackward]:", rois_desc,
+                      "rois_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPsRoiPoolBackward]:", mapping_channel_desc,
+                      "mapping_channel_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpPsRoiPoolBackward]:", bottom_grad_desc,
+                      "bottom_grad_desc must be contiguous");
   // roi_num check
   PARAM_CHECK(api, top_grad_desc->dims[0] == rois_desc->dims[0]);
   PARAM_CHECK(api, bottom_grad_desc->dims[3] ==
@@ -253,9 +271,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
   VLOG(5) << api << " Launch [" << k_type << ", " << k_dim.x << ", " << k_dim.y
           << ", " << k_dim.z << "].";
   CHECK_RETURN(api, (KernelPsRoiPoolForward(
-      k_dim, k_type, handle->queue, input, rois, output, mapping_channel,
-      batch_size, height, width, channels, pooled_height, pooled_width,
-      output_dim, group_size, rois_sum, rois_offset, spatial_scale)));
+                        k_dim, k_type, handle->queue, input, rois, output,
+                        mapping_channel, batch_size, height, width, channels,
+                        pooled_height, pooled_width, output_dim, group_size,
+                        rois_sum, rois_offset, spatial_scale)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }
@@ -341,9 +360,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
   }
 
   CHECK_RETURN(api, (KernelPsRoiPoolBackward(
-      k_dim, k_type, handle->queue, top_grad, mapping_channel, rois,
-      bottom_grad, batch_size, height, width, channels, pooled_height,
-      pooled_width, output_dim, rois_sum, rois_offset, spatial_scale)));
+                        k_dim, k_type, handle->queue, top_grad, mapping_channel,
+                        rois, bottom_grad, batch_size, height, width, channels,
+                        pooled_height, pooled_width, output_dim, rois_sum,
+                        rois_offset, spatial_scale)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

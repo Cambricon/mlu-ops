@@ -68,6 +68,13 @@ mluOpStatus_t RoiCropForwardParamCheck(
   // check shape and layout
   PARAM_CHECK(op_name, input_desc->layout == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK(op_name, output_desc->layout == MLUOP_LAYOUT_NHWC);
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpRoiCropForward]:", input_desc,
+                      "input_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiCropForward]:", grid_desc,
+                      "grid_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiCropForward]:", output_desc,
+                      "output_desc must be contiguous");
 
   for (int i = 0; i < output_desc->dim - 1; ++i) {
     if (output_desc->dims[i] != grid_desc->dims[i]) {
@@ -128,6 +135,14 @@ mluOpStatus_t RoiCropBackwardParamCheck(
   // check shape and layout
   PARAM_CHECK(op_name, grad_output_desc->layout == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK(op_name, grad_input_desc->layout == MLUOP_LAYOUT_NHWC);
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpRoiCropBackward]:", grad_output_desc,
+                      "grad_output_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiCropBackward]:", grid_desc,
+                      "grid_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiCropBackward]:", grad_input_desc,
+                      "grad_input_desc must be contiguous");
+
   for (int i = 0; i < grad_output_desc->dim - 1; ++i) {
     if (grad_output_desc->dims[i] != grid_desc->dims[i]) {
       LOG(ERROR) << op_name << " Check failed: grad_output_desc->dims[" << i

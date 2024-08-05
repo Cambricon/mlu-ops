@@ -203,7 +203,10 @@ mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
                   "same as the h_feature * w_feature.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-
+  // check stride
+  const std::string api_ = api + ":";
+  STRIDE_TENSOR_CHECK(api_, input_desc, "input_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api_, output_desc, "output_desc must be contiguous");
   // check large tensor
   if ((mluOpGetTensorElementNum(input_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(output_desc) >= LARGE_TENSOR_NUM)) {

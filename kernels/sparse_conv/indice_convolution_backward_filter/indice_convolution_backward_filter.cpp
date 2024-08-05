@@ -184,6 +184,16 @@ static mluOpStatus_t baseParamCheck(
   PARAM_CHECK(api_name, indice_num != nullptr);
   PARAM_CHECK(api_name, inverse == 0);
 
+  // check stride
+  STRIDE_TENSOR_CHECK(api_name + ":", features_desc,
+                      "features_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api_name + ":", output_grad_desc,
+                      "output_grad_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api_name + ":", indice_pairs_desc,
+                      "indice_pairs_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api_name + ":", filters_grad_desc,
+                      "filters_grad_desc must be contiguous");
+
   // check mlu platform
   if (handle->arch < 372) {
     LOG(ERROR) << api_name << " Only mlu300 and above devices are supported."

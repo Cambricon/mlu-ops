@@ -100,6 +100,22 @@ mluOpStatus_t voxelizationParamCheck(
     // check params
     PARAM_CHECK_EQ("[mluOpVoxelization]", NDim, 3);
 
+    // check stride
+    STRIDE_TENSOR_CHECK("[mluOpVoxelization]:", points_desc,
+                        "points_desc must be contiguous");
+    STRIDE_TENSOR_CHECK("[mluOpVoxelization]:", voxel_size_desc,
+                        "voxel_size_desc must be contiguous");
+    STRIDE_TENSOR_CHECK("[mluOpVoxelization]:", coors_range_desc,
+                        "coors_range_desc must be contiguous");
+    STRIDE_TENSOR_CHECK("[mluOpVoxelization]:", voxels_desc,
+                        "voxels_desc must be contiguous");
+    STRIDE_TENSOR_CHECK("[mluOpVoxelization]:", coors_desc,
+                        "coors_desc must be contiguous");
+    STRIDE_TENSOR_CHECK("[mluOpVoxelization]:", num_points_per_voxel_desc,
+                        "num_points_per_voxel_desc must be contiguous");
+    STRIDE_TENSOR_CHECK("[mluOpVoxelization]:", voxel_num_desc,
+                        "voxel_num_desc must be contiguous");
+
     // check tensor datatype
     PARAM_CHECK("[mluOpVoxelization]", points_desc->dtype == MLUOP_DTYPE_FLOAT);
     PARAM_CHECK("[mluOpVoxelization]",

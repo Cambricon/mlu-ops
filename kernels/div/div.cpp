@@ -29,6 +29,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/binary_op/binary_op_host.h"
+#include "kernels/tensor_stride_process/tensor_stride_process_host.h"
 
 // threshold of bytes to be processed by each core
 // according to the actual measurement results
@@ -48,6 +49,13 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }
+  // check stride
+  if (mluop::strideCaseWithNotConsistentDense(3, x_desc, y_desc, z_desc)) {
+    LOG(ERROR) << "[mluOpDiv]: stride case with not consistent dense is not "
+                  "supported.";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+
   if (zero_element == true) {
     return MLUOP_STATUS_SUCCESS;
   }

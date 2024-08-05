@@ -336,6 +336,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
   PARAM_CHECK_NE(API, scores_desc->dims[2], 0);
   PARAM_CHECK_NE(API, scores_desc->dims[3], 0);
 
+  // check stride
+  STRIDE_TENSOR_CHECK(API + ":", scores_desc, "scores_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(API + ":", bbox_deltas_desc,
+                      "bbox_deltas_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(API + ":", im_shape_desc,
+                      "im_shape_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(API + ":", anchors_desc,
+                      "anchors_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(API + ":", variances_desc,
+                      "variances_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(API + ":", rpn_rois_desc,
+                      "rpn_rois_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(API + ":", rpn_roi_probs_desc,
+                      "rpn_roi_probs_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(API + ":", rpn_rois_num_desc,
+                      "rpn_rois_num_desc must be contiguous");
+
   if (n == 0) {
     VLOG(5) << API << " skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;

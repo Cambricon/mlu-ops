@@ -162,6 +162,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
     return param_check;
   }
 
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpYoloBox]:", x_desc, "x_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpYoloBox]:", img_size_desc,
+                      "img_size_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpYoloBox]:", anchors_desc,
+                      "anchors_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpYoloBox]:", boxes_desc,
+                      "boxes_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpYoloBox]:", scores_desc,
+                      "scores_desc must be contiguous");
+
   // check zero element
   if (zero_element == true) {
     VLOG(5) << "[mluOpYoloBox] Input skip zero element tensor.";

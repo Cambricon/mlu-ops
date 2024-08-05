@@ -42,9 +42,9 @@
 
 /****************************************************************************
  * GDRAM2SRAM: io pipeline
- * SRAM2NRAM ：mo pipeline 
- * In Cambricon hardware, The io, compute, and move pipeline have their own 
- * instruction queues and can be launched in parallel, 
+ * SRAM2NRAM ：mo pipeline
+ * In Cambricon hardware, The io, compute, and move pipeline have their own
+ * instruction queues and can be launched in parallel,
  * so the time of io, compute and move can cover each other.
  * The five pipleine is:
  * GDRAM2SRAM: io load data form gdram
@@ -52,7 +52,7 @@
  * Compute : compute pipleine
  * NRAM2SRAM : mv store data to sram
  * SRAM2GDRAM ： io store data to gdram
-*/ 
+ */
 
 #if __BANG_ARCH__ != 520  // TODO(sram): tp_520
 #define BINARY_OP_KERNEL_5PIPELINE(Op, Prefer)                                 \

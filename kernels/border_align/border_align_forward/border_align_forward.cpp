@@ -58,6 +58,16 @@ mluOpStatus_t mluOpBorderAlignForward(
   PARAM_CHECK(API, output_desc->dim == 4);
   PARAM_CHECK(API, argmax_idx_desc->dim == 4);
 
+  // stride check
+  STRIDE_TENSOR_CHECK("[mluOpBorderAlignForward]:", input_desc,
+                      "input_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpBorderAlignForward]:", boxes_desc,
+                      "boxes_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpBorderAlignForward]:", output_desc,
+                      "output_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpBorderAlignForward]:", argmax_idx_desc,
+                      "argmax_idx_desc must be contiguous");
+
   const int32_t border_num = 4;
   const int32_t coord_num = 4;
   const int32_t origin_n = input_desc->dims[0];
@@ -87,9 +97,9 @@ mluOpStatus_t mluOpBorderAlignForward(
   PARAM_CHECK(API, boxes_desc->dim == 3);
   PARAM_CHECK(API, boxes_desc->dims[2] == 4);
 
-  PARAM_CHECK(API, input_desc->dims[0]== boxes_desc->dims[0]);
-  PARAM_CHECK(API, input_desc->dims[1] * input_desc->dims[2]
-                    == boxes_desc->dims[1]);
+  PARAM_CHECK(API, input_desc->dims[0] == boxes_desc->dims[0]);
+  PARAM_CHECK(API,
+              input_desc->dims[1] * input_desc->dims[2] == boxes_desc->dims[1]);
   PARAM_CHECK_EQ(API, output_desc->dims[0], input_desc->dims[0]);
   PARAM_CHECK_EQ(API, output_desc->dims[1], boxes_desc->dims[1]);
   PARAM_CHECK_EQ(API, output_desc->dims[2], 4);

@@ -160,7 +160,7 @@
                      rem * sizeof(DType_out), NRAM2GDRAM);                    \
       pvUnlock();                                                             \
     }                                                                         \
-}
+  }
 
 // Divide tasks in host
 #define BINARY_OP_KERNEL_3PIPELINE_V2_DECLARE(Op, Prefer)               \

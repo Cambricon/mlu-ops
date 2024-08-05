@@ -317,6 +317,15 @@ mluOpStatus_t threeInterpolateForwardParamCheck(
                   "equal to indices_desc->dims[1].";
     return MLUOP_STATUS_BAD_PARAM;
   }
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpThreeInterpolateForward]:", features_desc,
+                      "features_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpThreeInterpolateForward]:", indices_desc,
+                      "indices_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpThreeInterpolateForward]:", weights_desc,
+                      "weights_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpThreeInterpolateForward]:", output_desc,
+                      "output_desc must be contiguous");
   // check large tensor
   if ((mluOpGetTensorElementNum(features_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM) ||
@@ -410,6 +419,15 @@ mluOpStatus_t threeInterpolateBackwardParamCheck(
                   "equal to indices_desc->dims[1].";
     return MLUOP_STATUS_BAD_PARAM;
   }
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpThreeInterpolateBackward]:", grad_output_desc,
+                      "grad_output_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpThreeInterpolateBackward]:", indices_desc,
+                      "indices_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpThreeInterpolateBackward]:", weights_desc,
+                      "weights_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpThreeInterpolateBackward]:", grad_features_desc,
+                      "grad_features_desc must be contiguous");
   // check large tensor
   if ((mluOpGetTensorElementNum(grad_output_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM) ||

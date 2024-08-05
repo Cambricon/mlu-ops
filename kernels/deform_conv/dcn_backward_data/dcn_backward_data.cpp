@@ -62,12 +62,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDCNBakcwardDataWorkspaceSize(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_mask_desc,
                                                cnnl_grad_mask_desc);
 
-  CALL_CNNL(
-      cnnlGetDCNBakcwardDataWorkspaceSize(
-          cnnl_handle, dcn_desc, cnnl_input_desc, cnnl_offset_desc,
-          cnnl_mask_desc, cnnl_filter_desc, cnnl_grad_output_desc,
-          cnnl_grad_input_desc, cnnl_grad_offset_desc, cnnl_grad_mask_desc,
-          workspace_size));
+  CALL_CNNL(cnnlGetDCNBakcwardDataWorkspaceSize(
+      cnnl_handle, dcn_desc, cnnl_input_desc, cnnl_offset_desc, cnnl_mask_desc,
+      cnnl_filter_desc, cnnl_grad_output_desc, cnnl_grad_input_desc,
+      cnnl_grad_offset_desc, cnnl_grad_mask_desc, workspace_size));
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_offset_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_mask_desc);
@@ -109,13 +107,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpDCNBackwardData(
                                                cnnl_grad_offset_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grad_mask_desc,
                                                cnnl_grad_mask_desc);
-  CALL_CNNL(
-      cnnlDCNBackwardData(
-          cnnl_handle, dcn_desc, cnnl_input_desc, input, cnnl_offset_desc,
-          offset, cnnl_mask_desc, mask, cnnl_filter_desc, filter,
-          cnnl_grad_output_desc, grad_output, workspace, workspace_size,
-          cnnl_grad_input_desc, grad_input, cnnl_grad_offset_desc, grad_offset,
-          cnnl_grad_mask_desc, grad_mask));
+  CALL_CNNL(cnnlDCNBackwardData(
+      cnnl_handle, dcn_desc, cnnl_input_desc, input, cnnl_offset_desc, offset,
+      cnnl_mask_desc, mask, cnnl_filter_desc, filter, cnnl_grad_output_desc,
+      grad_output, workspace, workspace_size, cnnl_grad_input_desc, grad_input,
+      cnnl_grad_offset_desc, grad_offset, cnnl_grad_mask_desc, grad_mask));
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_offset_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_mask_desc);

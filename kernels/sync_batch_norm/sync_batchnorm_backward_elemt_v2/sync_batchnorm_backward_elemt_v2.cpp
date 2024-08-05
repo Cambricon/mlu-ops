@@ -63,12 +63,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormBackwardElemtV2(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(diffcnnl_x_desc,
                                                cnnl_diffcnnl_x_desc);
 
-  CALL_CNNL(
-      cnnlSyncBatchNormBackwardElemtV2(
-          cnnl_handle, cnnl_diff_y_desc, diff_y, cnnl_x_desc, x, cnnl_mean_desc,
-          mean, cnnl_invstd_desc, invstd, cnnl_filter_desc, filter,
-          cnnl_sum_dy_desc, sum_dy, cnnl_sum_dy_xmu_desc, sum_dy_xmu,
-          cnnl_count_desc, count, cnnl_diffcnnl_x_desc, diff_x));
+  CALL_CNNL(cnnlSyncBatchNormBackwardElemtV2(
+      cnnl_handle, cnnl_diff_y_desc, diff_y, cnnl_x_desc, x, cnnl_mean_desc,
+      mean, cnnl_invstd_desc, invstd, cnnl_filter_desc, filter,
+      cnnl_sum_dy_desc, sum_dy, cnnl_sum_dy_xmu_desc, sum_dy_xmu,
+      cnnl_count_desc, count, cnnl_diffcnnl_x_desc, diff_x));
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_diff_y_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);

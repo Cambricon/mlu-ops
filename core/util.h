@@ -20,39 +20,15 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef KERNELS_DCN_COMMON_DCN_COMMON_H
-#define KERNELS_DCN_COMMON_DCN_COMMON_H
-#include <limits.h>
-#include <math.h>
-#include <vector>
 
-#include "kernels/utils/cnnl_helper.h"
+#ifndef CORE_UTIL_H_
+#define CORE_UTIL_H_
 
-#define DCN_API "mluOpDCN"
+#include "mlu_op.h"
 
-mluOpStatus_t MLUOP_WIN_API
-mluOpCreateDCNDescriptor(mluOpDCNDescriptor_t *dcn_desc) {
-  PARAM_CHECK(DCN_API, dcn_desc != NULL);
-  CALL_CNNL(cnnlCreateDCNDescriptor(dcn_desc));
-  return MLUOP_STATUS_SUCCESS;
-}
+void mluOpCheck(mluOpStatus_t result, char const *const func,
+                const char *const file, int const line);
 
-mluOpStatus_t MLUOP_WIN_API
-mluOpDestroyDCNDescriptor(mluOpDCNDescriptor_t dcn_desc) {
-  PARAM_CHECK(DCN_API, dcn_desc != NULL);
-  CALL_CNNL(cnnlDestroyDCNDescriptor(dcn_desc));
-  return MLUOP_STATUS_SUCCESS;
-}
+bool isStrideTensor(const int dim, const int64_t *dims, const int64_t *strides);
 
-mluOpStatus_t MLUOP_WIN_API mluOpSetDCNDescriptor(
-    mluOpDCNDescriptor_t dcn_desc, int dimNb, const int pad[],
-    const int stride[], const int dilation[], int deformable_group,
-    int conv_group, int im2col_step, const mluOpDataType_t compute_type) {
-  PARAM_CHECK(DCN_API, dcn_desc != NULL);
-  CALL_CNNL(cnnlSetDCNDescriptor(dcn_desc, dimNb, pad, stride, dilation,
-                                 deformable_group, conv_group, im2col_step,
-                                 cnnlDataType_t(compute_type)));
-  return MLUOP_STATUS_SUCCESS;
-}
-
-#endif  // KERNELS_DCN_COMMON_DCN_COMMON_H
+#endif  // CORE_UTIL_H_

@@ -134,6 +134,10 @@ static mluOpStatus_t TinShiftPreCheck(
                << " and shifts batch size is " << shifts_desc->dims[0] << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
+  const std::string api_ = "[mluOpTinShift " + direction + "]:";
+  STRIDE_TENSOR_CHECK(api_, input_desc, "input_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api_, shifts_desc, "shifts_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(api_, output_desc, "output_desc must be contiguous");
   if (shifts_desc->dtype != MLUOP_DTYPE_INT32) {
     LOG(ERROR)
         << "[mluOpTinShift " + direction + "] "

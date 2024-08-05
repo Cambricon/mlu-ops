@@ -172,6 +172,15 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
+
+  // stride check
+  STRIDE_TENSOR_CHECK("[mluOpBoxIouRotated]:", box1_desc,
+                      "box1_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpBoxIouRotated]:", box2_desc,
+                      "box2_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpBoxIouRotated]:", ious_desc,
+                      "ious_desc must be contiguous");
+
   // 0-element check, after dim and shape check
   if (box1_desc->dims[0] * box2_desc->dims[0] == 0) {
     VLOG(5) << "[mluOpBoxIouRotated] Skip zero element boxes.";

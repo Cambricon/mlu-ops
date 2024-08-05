@@ -41,9 +41,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetRoiAlignForwardDescriptor_v2(
     const int pooled_width, const int sampling_ratio, const float spatial_scale,
     const int pool_mode, const bool aligned) {
   PARAM_CHECK("[mluOpRoiAlignForward_v2]", desc != NULL);
-  CALL_CNNL(cnnlSetRoiAlignDescriptor_v2(
-                desc, pooled_height, pooled_width, sampling_ratio,
-                spatial_scale, pool_mode, aligned));
+  CALL_CNNL(cnnlSetRoiAlignDescriptor_v2(desc, pooled_height, pooled_width,
+                                         sampling_ratio, spatial_scale,
+                                         pool_mode, aligned));
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -72,11 +72,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignForward_v2(
   cnnlTensorDescriptor_t cnnl_argmax_y_desc = NULL;
   CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_x_desc, cnnl_argmax_x_desc);
   CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(argmax_y_desc, cnnl_argmax_y_desc);
-  CALL_CNNL(
-      cnnlRoiAlign_v2(cnnl_handle, roialign_desc, cnnl_input_desc, input,
-                      cnnl_boxes_desc, boxes, cnnl_output_desc, output,
-                      cnnl_argmax_x_desc, argmax_x, cnnl_argmax_y_desc,
-                      argmax_y));
+  CALL_CNNL(cnnlRoiAlign_v2(cnnl_handle, roialign_desc, cnnl_input_desc, input,
+                            cnnl_boxes_desc, boxes, cnnl_output_desc, output,
+                            cnnl_argmax_x_desc, argmax_x, cnnl_argmax_y_desc,
+                            argmax_y));
 
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);

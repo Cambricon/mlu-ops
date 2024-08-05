@@ -229,7 +229,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
   PARAM_CHECK(API, out_x > 0);
   PARAM_CHECK(API, out_y > 0);
   PARAM_CHECK(API, out_z > 0);
-
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpRoiAwarePool3dForward]:", rois_desc,
+                      "rois_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiAwarePool3dForward]:", pts_desc,
+                      "pts_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiAwarePool3dForward]:", pts_feature_desc,
+                      "pts_feature_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiAwarePool3dForward]:", argmax_desc,
+                      "argmax_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiAwarePool3dForward]:", pts_idx_of_voxels_desc,
+                      "pts_idx_of_voxels_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiAwarePool3dForward]:", pooled_features_desc,
+                      "pooled_features_desc must be contiguous");
   /* boxes_num or channels is the y- or z-dimension in mmcv(cuda),
      Maximum y- or z-dimension of a grid of thread blocks
      should be less than 65536 in cuda. */
@@ -377,7 +389,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
                mluOpCreateTensorDescriptor(&pts_desc_tmp));
   CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
                mluOpSetTensorDescriptor(pts_desc_tmp, MLUOP_LAYOUT_ARRAY,
-                                       data_dtype, pts_dim, pts_tmp_dims));
+                                        data_dtype, pts_dim, pts_tmp_dims));
 
   auto ret = transposeTensor(handle, pts_desc, pts, pts_permute, pts_desc_tmp,
                              pts_workspace, transpose_workspace);
@@ -401,8 +413,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
                mluOpCreateTensorDescriptor(&pts_feature_desc_tmp));
   CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
                mluOpSetTensorDescriptor(pts_feature_desc_tmp,
-                  MLUOP_LAYOUT_ARRAY, data_dtype, pts_feature_dim,
-                                       pts_feature_tmp_dims));
+                                        MLUOP_LAYOUT_ARRAY, data_dtype,
+                                        pts_feature_dim, pts_feature_tmp_dims));
 
   ret = transposeTensor(handle, pts_feature_desc, pts_feature,
                         pts_feature_permute, pts_feature_desc_tmp,
@@ -569,6 +581,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dBackward(
   PARAM_CHECK(API, out_x > 0);
   PARAM_CHECK(API, out_y > 0);
   PARAM_CHECK(API, out_z > 0);
+
+  // check stride
+  STRIDE_TENSOR_CHECK("[mluOpRoiAwarePool3dBackward]:", pts_idx_of_voxels_desc,
+                      "pts_idx_of_voxels_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiAwarePool3dBackward]:", argmax_desc,
+                      "argmax_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiAwarePool3dBackward]:", grad_out_desc,
+                      "grad_out_desc must be contiguous");
+  STRIDE_TENSOR_CHECK("[mluOpRoiAwarePool3dBackward]:", grad_in_desc,
+                      "grad_in_desc must be contiguous");
 
   /* boxes_num or channels is the y- or z-dimension in mmcv(cuda),
      Maximum y- or z-dimension of a grid of thread blocks
