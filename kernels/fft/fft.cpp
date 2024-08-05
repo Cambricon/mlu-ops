@@ -838,7 +838,6 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
   while (n > 1) {
     if (is_row_major) {
       if (max_nram_size >= 480 * 1024) {
-        printf("max_nram_size: %d\n", max_nram_size);
         switch (_n) {
           case (200):
             r = 200;
