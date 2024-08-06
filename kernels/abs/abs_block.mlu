@@ -78,14 +78,14 @@ template <typename T1, typename T2>
 __mlu_func__ void computeAbsHalfBfloat16(char *nram_output, char *nram_input,
                                          char *auxiliary_a, char *auxiliary_b,
                                          size_t deal_num, size_t actual_num) {
-  // __bang_abs((T2 *)nram_output, (T1 *)nram_input, deal_num);
+  __bang_abs((T2 *)nram_output, (T1 *)nram_input, deal_num);
 }
 
 template <typename T1, typename T2>
 __mlu_func__ void computeAbsFloat(char *nram_output, char *nram_input,
                                   char *auxiliary_a, char *auxiliary_b,
                                   size_t deal_num, size_t actual_num) {
-  // __bang_abs((T2 *)nram_output, (T1 *)nram_input, deal_num);
+  __bang_abs((T2 *)nram_output, (T1 *)nram_input, deal_num);
 }
 
 template <typename T1, typename T2>
