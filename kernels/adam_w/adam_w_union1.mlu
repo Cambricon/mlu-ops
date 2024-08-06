@@ -73,8 +73,8 @@ __mlu_func__ void computeAdamW(bfloat16_t *nbuf_paramh, bfloat16_t *nbuf_grad,
   __bang_sqrt(temp_2, temp_2, deal_num);
   __bang_add_scalar(temp_2, temp_2, epsilon, deal_num);
   __bang_div(temp_1, temp_1, temp_2, deal_num);
-  __bang_sub(nbuf_param + offset, nbuf_param + offset, temp_1, deal_num);
-  __bang_float2bfloat16_rn(nbuf_paramh + offset, nbuf_param + offset, deal_num);
+  // __bang_sub(nbuf_param + offset, nbuf_param + offset, temp_1, deal_num);
+  // __bang_float2bfloat16_rn(nbuf_paramh + offset, nbuf_param + offset, deal_num);
 #endif
 }
 
