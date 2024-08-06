@@ -54,17 +54,13 @@ static mluOpStatus_t mluOpAbsParamCheck(mluOpHandle_t handle,
   // check data type
   mluOpStatus_t param_check;
   if (handle->arch >= MLUOP_MLU590) {
-    mluOpDataType_t support_type[5] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_BFLOAT16,
-                                       MLUOP_DTYPE_FLOAT, MLUOP_DTYPE_INT32,
-                                       MLUOP_DTYPE_COMPLEX_FLOAT};
-    if (!isAbsSupportType(x_desc->dtype, support_type, 5)) {
+    mluOpDataType_t support_type[1] = {MLUOP_DTYPE_HALF};
+    if (!isAbsSupportType(x_desc->dtype, support_type, 1)) {
       LOG(ERROR) << op_name << ":x_desc's data type is not supported.";
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {
-    mluOpDataType_t support_type[4] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT,
-                                       MLUOP_DTYPE_INT32,
-                                       MLUOP_DTYPE_COMPLEX_FLOAT};
+    mluOpDataType_t support_type[1] = {MLUOP_DTYPE_HALF};
     if (!isAbsSupportType(x_desc->dtype, support_type, 4)) {
       LOG(ERROR) << op_name << ":x_desc's data type is not supported.";
       return MLUOP_STATUS_BAD_PARAM;
