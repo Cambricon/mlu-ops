@@ -2,11 +2,11 @@ op_name: "lgamma"
 input {
   id: "input"
   shape: {
-    dims: 273600
-    dims: 4
+    dims: 18
+    dims: 4800
   }
   layout: LAYOUT_ARRAY
-  dtype: DTYPE_FLOAT
+  dtype: DTYPE_HALF
   random_data: {
     seed: 23
     upper_bound: 8000
@@ -17,11 +17,11 @@ input {
 output {
   id: "output"
   shape: {
-    dims: 273600
-    dims: 4
+    dims: 18
+    dims: 4800
   }
   layout: LAYOUT_ARRAY
-  dtype: DTYPE_FLOAT
+  dtype: DTYPE_HALF
 }
 test_param: {
   error_func: DIFF1

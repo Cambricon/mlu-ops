@@ -27,7 +27,7 @@
 namespace mluoptest {
 
 class LgammaExecutor : public Executor {
-public:
+ public:
   LgammaExecutor() {}
   ~LgammaExecutor() {}
 
@@ -37,7 +37,6 @@ public:
   int64_t getTheoryOps() override;
 };
 
-} // namespace mluoptest
-
+}  // namespace mluoptest
 
 #endif  // TEST_MLU_OP_GTEST_SRC_ZOO_LGAMMA_LGAMMA_H_

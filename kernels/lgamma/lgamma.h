@@ -24,9 +24,16 @@
 #define KERNEL_LGAMMA_LGAMMA_H
 
 #include "mlu_op.h"
+#include "kernels/tensor_stride_process/tensor_stride_process_host.h"
 
-mluOpStatus_t MLUOP_WIN_API
-KernelLgamma(cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue, mluOpDataType_t d_type,
-            const void *x, void *y, const int num);
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineLgamma(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const void *x, void *y, const int num);
+
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineWithStrideLgamma(
+    const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+    const cnrtQueue_t queue, const mluOpDataType_t d_type, const void *x,
+    mluop::TensorShape x_shape, void *y, mluop::TensorShape y_shape,
+    size_t element_num);
 
 #endif

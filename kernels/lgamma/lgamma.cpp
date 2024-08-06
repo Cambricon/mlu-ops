@@ -30,12 +30,11 @@
 #include "core/type.h"
 #include "kernels/unary_op/unary_op_host.h"
 
-
 mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
-                                      const mluOpTensorDescriptor_t x_desc,
-                                      const void *x,
-                                      const mluOpTensorDescriptor_t y_desc,
-                                      void *y) {
+                                        const mluOpTensorDescriptor_t x_desc,
+                                        const void *x,
+                                        const mluOpTensorDescriptor_t y_desc,
+                                        void *y) {
   // param check
   mluOpDataType_t support_type[2] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT};
   bool zero_element = false;
@@ -70,11 +69,28 @@ mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
-  VLOG(5) << "kernel KernelLgamma.";
-  CHECK_RETURN("[mluOpLgamma] ",
-               KernelLgamma(k_dim, k_type, handle->queue,
-                                       x_desc->dtype, x, y, element_num));
+  bool if_stride_kernel = false;
+  if (mluop::strideCaseWithNotConsistentDense(2, x_desc, y_desc)) {
+    if_stride_kernel = true;
+  }
+  if (if_stride_kernel) {
+    VLOG(5) << "kernel Kernel3StagePipelineWithStrideLgamma";
+    PARAM_CHECK("[mluOpLgamma]", x_desc->dim <= MLUOP_DIM_MAX);
+    mluop::TensorShape x_shape;
+    mluop::TensorShape y_shape;
+    mluop::getTensorShape(x_desc, &x_shape);
+    mluop::getTensorShape(y_desc, &y_shape);
+    CHECK_RETURN("[mluOpLgamma]",
+                 Kernel3StagePipelineWithStrideLgamma(
+                     k_dim, k_type, handle->queue, x_desc->dtype, x, x_shape, y,
+                     y_shape, element_num));
+  } else {
+    VLOG(5) << "kernel Kernel3StagePipelineLgamma.";
+    CHECK_RETURN("[mluOpLgamma]",
+                 Kernel3StagePipelineLgamma(k_dim, k_type, handle->queue,
+                                            x_desc->dtype, x, y, element_num));
+  }
   GEN_CASE_END();
 
   return MLUOP_STATUS_SUCCESS;
-}    
+}
