@@ -39,7 +39,6 @@ __mlu_func__ void auxFunc3AbsFloat(size_t &output_input_gap,
                                    size_t &ping_pong_gap,
                                    size_t &auxiliary_a_gap,
                                    size_t &auxiliary_b_gap,
-                                   int i,
                                    size_t &span_num_deal, size_t &align_num) {
   align_num = NFU_ALIGN_SIZE / sizeof(T1);
   // need 2 pingpong sapce,
@@ -79,14 +78,14 @@ template <typename T1, typename T2>
 __mlu_func__ void computeAbsHalfBfloat16(char *nram_output, char *nram_input,
                                          char *auxiliary_a, char *auxiliary_b,
                                          size_t deal_num, size_t actual_num) {
-  __bang_abs((T2 *)nram_output, (T1 *)nram_input, deal_num);
+  // __bang_abs((T2 *)nram_output, (T1 *)nram_input, deal_num);
 }
 
 template <typename T1, typename T2>
 __mlu_func__ void computeAbsFloat(char *nram_output, char *nram_input,
                                   char *auxiliary_a, char *auxiliary_b,
                                   size_t deal_num, size_t actual_num) {
-  __bang_abs((T2 *)nram_output, (T1 *)nram_input, deal_num);
+  // __bang_abs((T2 *)nram_output, (T1 *)nram_input, deal_num);
 }
 
 template <typename T1, typename T2>
