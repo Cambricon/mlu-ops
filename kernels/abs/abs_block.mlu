@@ -39,6 +39,7 @@ __mlu_func__ void auxFunc3AbsFloat(size_t &output_input_gap,
                                    size_t &ping_pong_gap,
                                    size_t &auxiliary_a_gap,
                                    size_t &auxiliary_b_gap,
+                                   int i,
                                    size_t &span_num_deal, size_t &align_num) {
   align_num = NFU_ALIGN_SIZE / sizeof(T1);
   // need 2 pingpong sapce,
