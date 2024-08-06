@@ -39,7 +39,6 @@ __mlu_func__ void auxFunc3AbsFloat(size_t &output_input_gap,
                                    size_t &ping_pong_gap,
                                    size_t &auxiliary_a_gap,
                                    size_t &auxiliary_b_gap,
-                                   int i,
                                    size_t &span_num_deal, size_t &align_num) {
   align_num = NFU_ALIGN_SIZE / sizeof(T1);
   // need 2 pingpong sapce,
@@ -54,7 +53,7 @@ template <typename T1, typename T2>
 __mlu_func__ void auxFunc3AbsHalfBfloat16(
     size_t &output_input_gap, size_t &ping_pong_gap, size_t &auxiliary_a_gap,
     size_t &auxiliary_b_gap, size_t &span_num_deal, size_t &align_num) {
-  align_num = NFU_ALIGN_SIZE / sizeof(T);
+  align_num = NFU_ALIGN_SIZE / sizeof(T1);
   // need 2 pingpong sapce,
   span_num_deal = PAD_DOWN(UNARY_NRAM_SIZE / sizeof(T1) / 2, align_num);
   ping_pong_gap = span_num_deal * sizeof(T1) * 2;
@@ -95,7 +94,7 @@ __mlu_func__ void computeAbsComplexFloat(char *nram_output, char *nram_input,
                                          size_t deal_num, size_t actual_num) {
   T2 *aux_a = (T2 *)nram_input + 2 * deal_num;
   T2 *aux_b = (T2 *)nram_input + 3 * deal_num;
-  bang_write_value((T2 *)auxiliary_a, deal_num * sizeof(T2), (int8_t)0xAA);
+  __bang_write_value((T2 *)auxiliary_a, deal_num * sizeof(T2), (int8_t)0xAA);
   __bang_write_value((T2 *)auxiliary_b, deal_num * sizeof(T2), (int8_t)0x55);
   // select [real,real,real...] and [imaginary,imaginary,imaginary...]
   __bang_filter_bitindex((T2 *)aux_a, (T2 *)nram_input, auxiliary_a,
