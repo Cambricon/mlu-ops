@@ -837,7 +837,7 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
   int max_nram_size = handle->nram_size + REM_FOR_STACK - 32 * 1024;
   while (n > 1) {
     if (is_row_major) {
-      if (max_nram_size >= 480 * 1024) {
+      if (max_nram_size >= 753664) {
         switch (_n) {
           case (200):
             r = 200;
@@ -2377,38 +2377,41 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
 
   // fft length check
   for (auto i = 0; i < fft_plan->rank - 1; i++) {  // except the last dim
-    PARAM_CHECK_EQ(
-        make_plan_api, n[i], fft_plan->inembed[i],
-        ": the signal lengths of fft and input mismatch in dimention ", i, ".");
-    PARAM_CHECK_EQ(
-        make_plan_api, n[i], fft_plan->onembed[i],
-        ": the signal lengths of fft and output mismatch in dimension ", i,
-        ".");
+    PARAM_CHECK_GE(make_plan_api, fft_plan->inembed[i], n[i],
+                   ": n[i] must not be greater than inembed[i] ", i, ".");
+    PARAM_CHECK_GE(make_plan_api, fft_plan->onembed[i], n[i],
+                   ": n[i] must not be greater than onembed[i] ", i, ".");
   }
   switch (fft_plan->fft_type) {
     // r2c
     case CNFFT_HALF2COMPLEX_HALF:
     case CNFFT_FLOAT2COMPLEX_FLOAT: {
-      PARAM_CHECK_EQ(make_plan_api, fft_plan->n[rank - 1] / 2 + 1,
+      PARAM_CHECK_LE(make_plan_api, fft_plan->n[rank - 1] / 2 + 1,
                      fft_plan->onembed[rank - 1],
-                     ": the signal lengths of fft and output last dimention "
-                     "mismatch in R2C.");
+                     ": n[i] must not be greater than onembed[i] ");
+      PARAM_CHECK_LE(make_plan_api, fft_plan->n[rank - 1],
+                     fft_plan->inembed[rank - 1],
+                     ": n[i] must not be greater than inembed[i] ");
     }; break;
     // c2c
     case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
     case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
-      PARAM_CHECK_EQ(make_plan_api, fft_plan->n[rank - 1],
+      PARAM_CHECK_LE(make_plan_api, fft_plan->n[rank - 1],
                      fft_plan->onembed[rank - 1],
-                     ": the signal lengths of fft and output last dimention "
-                     "mismatch in C2C.");
+                     ": n[i] must not be greater than onembed[i] ");
+      PARAM_CHECK_LE(make_plan_api, fft_plan->n[rank - 1],
+                     fft_plan->inembed[rank - 1],
+                     ": n[i] must not be greater than inembed[i] ");
     }; break;
     // c2r
     case CNFFT_COMPLEX_HALF2HALF:
     case CNFFT_COMPLEX_FLOAT2FLOAT: {
-      PARAM_CHECK_EQ(make_plan_api, fft_plan->n[rank - 1],
+      PARAM_CHECK_LE(make_plan_api, fft_plan->n[rank - 1],
                      fft_plan->onembed[rank - 1],
-                     ": the signal lengths of fft and output last dimention "
-                     "mismatch in C2R.");
+                     ": n[i] must not be greater than onembed[i] ");
+      PARAM_CHECK_LE(make_plan_api, fft_plan->n[rank - 1] / 2 + 1,
+                     fft_plan->inembed[rank - 1],
+                     ": n[i] must not be greater than inembed[i] ");
     }; break;
     default: {
       LOG(ERROR) << make_plan_api << ": invalid fft type.";
