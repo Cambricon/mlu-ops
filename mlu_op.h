@@ -14435,6 +14435,128 @@ mluOpExecFFT(mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
+/*!
+ * @brief Computes the LU decomposition of a matrix using the input tensor descriptor \p input_desc and writes the result to the output tensor descriptor \p output_desc.
+ * @param[in] handle
+ *   Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ *   queues in the deformable convolution backward data operation. For detailed information,
+ *   see ::mluOpHandle_t.
+ * @param[in] x_desc
+ *   The descriptor of the input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ *   Pointer to the MLU memory that stores the input tensor.
+ * @param[in] y_desc
+ *   The descriptor of the output tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[out] y
+ *   Pointer to the MLU memory that stores the output tensor.
+ * @param[in, out] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the
+ * ::mluOpSgetrf2.
+ * @param[in, out] ipiv
+ * INTEGER array, dimension (m);
+ * The pivot indices; row i of the matrix was interchanged with row IPIV(i)
+ * @param[out] info
+ *     -     = 0:  successful exit
+ *     -     < 0:  if INFO = -i, the i-th argument had an illegal value
+ *                 or another error occured, such as memory allocation failed.
+ *     -     > 0:  if INFO = i, U(i,i) is exactly zero. The factorization
+ *                 has been completed, but the factor U is exactly
+ *                 singular, and division by zero will occur if it is used
+ *                 to solve a system of equations.
+ * @param[in] mode
+ *   option to perform operation with pivoting/no pivoting versions 
+ */
+  mluOpStatus_t MLUOP_WIN_API
+  mluOpSgetrf2(mluOpHandle_t handle,
+              const mluOpTensorDescriptor_t x_desc,
+              void *x,
+              const mluOpTensorDescriptor_t y_desc,
+              void *y,
+              void* workspace,
+              int *ipiv,
+              int *info,
+              int mode);
+/*!
+ * @brief Calculates the size of the workspace required for the LU decomposition and initializes a workspace pointer. 
+ * This function must be called before performing LU decomposition using mluOpCholesky.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ * queues in the deformable convolution backward data operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] input_desc
+ * The descriptor for the input tensor for which the LU decomposition will be performed.
+ * @param[out] workspace_size
+ * Pointer to a variable where the size of the required workspace will be stored.
+ * @param[out] workspace
+ * Double pointer to a float, used to allocate memory for the workspace. This pointer will be set to point to the allocated workspace.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS if the workspace size is successfully calculated and the workspace is successfully allocated,
+ * - ::MLUOP_STATUS_EXECUTION_FAILED if there are issues during the calculation or memory allocation.
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+  mluOpStatus_t MLUOP_WIN_API mluOpGetLUWorkspace(mluOpHandle_t handle,
+                                      const mluOpTensorDescriptor_t input_desc,
+                                      int *workspace_size,
+                                      void **workspace);
+/*!
+ * @brief Frees the memory allocated for the LU decomposition workspace.
+ * This function should be called to release the workspace memory used by the Cholesky operations after they are no longer needed.
+ *
+ * @param[in,out] workspace
+ * Double pointer to the workspace memory that was allocated by mluOpGetLUWorkspace or another allocation function. 
+ * After calling this function, the pointer will be set to NULL to prevent accidental reuse.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS if the workspace is successfully freed,
+ * - ::MLUOP_STATUS_EXECUTION_FAILED if there is an error during the free operation, such as if the pointer is NULL.
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+  mluOpStatus_t MLUOP_WIN_API mluOpFreeLUWorkspace(void **workspace);
+
 #if defined(__cplusplus)
 }
 #endif
