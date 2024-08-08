@@ -1739,8 +1739,8 @@ static mluOpStatus_t makeFFT2dContiguousOutput(mluOpHandle_t handle,
 
     // set up tensor desc
     const int out_dim_num = 3;
-    int64_t dims[out_dim_num] = {fft_plan->batch, fft_plan->onembed[0],
-                                 fft_plan->onembed[1]};
+    int64_t dims[out_dim_num] = {fft_plan->batch, fft_plan->n[0],
+                                 fft_plan->n[1]};
     int64_t strides[out_dim_num] = {fft_plan->odist,
                                     fft_plan->ostride * fft_plan->onembed[1],
                                     fft_plan->ostride};
@@ -1912,8 +1912,37 @@ mluOpStatus_t execFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
     status = execFFTc2c1d(handle, fft_plan, scale_factor, direction);
+
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
+    if (scale_factor != 1.0) {
+      const float beta = 0.0;
+      mluOpTensorDescriptor_t c_desc = nullptr;
+      status = mluOpCreateTensorDescriptor(&c_desc);
+      const int out_dim_num = 2;
+      int64_t dims[out_dim_num] = {fft_plan->batch, fft_plan->n[0]};
+      status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY,
+                                           fft_plan->output_dtype, 2, dims);
+      status = mluOpSetTensorDescriptorOnchipDataType(
+          c_desc, fft_plan->execution_dtype);
+
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_output_desc);
+
+      DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
+                                        cnnl_handle);  // convert to cnnl_handle
+      // DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(fft_plan->output_desc,
+      // cnnl_output_desc);
+
+      CALL_CNNL(cnnlTransform_v2(cnnl_handle, CNNL_POINTER_MODE_HOST,
+                                 &scale_factor, cnnl_output_desc,
+                                 fft_plan->mlu_addrs.output, &beta,
+                                 cnnl_output_desc, fft_plan->mlu_addrs.output));
+      // CALL_CNNL(cnnlTransform(cnnl_handle, &scale_factor, cnnl_output_desc,
+      // fft_plan->mlu_addrs.output, &beta, fft_plan->mlu_addrs.output));
+      DESTROY_CNNL_HANDLE(cnnl_handle);
+      DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    }
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
     status = makeFFT1dContiguousOutput(handle, fft_plan, output);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   }
