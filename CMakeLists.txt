@@ -47,7 +47,7 @@ endif()
 if(${MLUOP_BUILD_BANG_MEMCHECK} MATCHES "ON")
   message("-- BANG memcheck enabled")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -mllvm -enable-mlisa-sanitizer")
-  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Xbang-cnas -O0") # XXX to reduce cnas compilation time
+  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Xbang-cnas -O1") # XXX to reduce cnas compilation time
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -g") # to show file line number
 endif()
 
