@@ -1926,10 +1926,10 @@ mluOpStatus_t execFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
       status = mluOpSetTensorDescriptorOnchipDataType(
           c_desc, fft_plan->execution_dtype);
 
-      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_output_desc);
-
       DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
                                         cnnl_handle);  // convert to cnnl_handle
+
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_output_desc);
       // DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(fft_plan->output_desc,
       // cnnl_output_desc);
 
@@ -1939,8 +1939,8 @@ mluOpStatus_t execFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
                                  cnnl_output_desc, fft_plan->mlu_addrs.output));
       // CALL_CNNL(cnnlTransform(cnnl_handle, &scale_factor, cnnl_output_desc,
       // fft_plan->mlu_addrs.output, &beta, fft_plan->mlu_addrs.output));
-      DESTROY_CNNL_HANDLE(cnnl_handle);
       DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+      DESTROY_CNNL_HANDLE(cnnl_handle);
     }
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
     status = makeFFT1dContiguousOutput(handle, fft_plan, output);
