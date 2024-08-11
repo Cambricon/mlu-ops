@@ -1460,6 +1460,32 @@ mluOpStatus_t execIRFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
 
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
+    if (scale_factor != 1.0) {
+      const float alpha = scale_factor;
+      const float beta = 0.0;
+      mluOpTensorDescriptor_t c_desc = nullptr;
+      status = mluOpCreateTensorDescriptor(&c_desc);
+      const int out_dim_num = 2;
+      int64_t dims[out_dim_num] = {fft_plan->batch, fft_plan->n[0]};
+      status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY,
+                                           fft_plan->output_dtype, 2, dims);
+      status = mluOpSetTensorDescriptorOnchipDataType(
+          c_desc, fft_plan->execution_dtype);
+
+      DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
+                                        cnnl_handle);  // convert to cnnl_handle
+
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_output_desc);
+
+      CALL_CNNL(cnnlTransform_v2(cnnl_handle, CNNL_POINTER_MODE_HOST, &alpha,
+                                 cnnl_output_desc, fft_plan->mlu_addrs.output,
+                                 &beta, cnnl_output_desc,
+                                 fft_plan->mlu_addrs.output));
+      DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+      DESTROY_CNNL_HANDLE(cnnl_handle);
+    }
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
     status = makeIRFFT1dContiguousOutput(handle, fft_plan, output);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   }
@@ -1861,6 +1887,34 @@ mluOpStatus_t execIRFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
     fft_plan->mlu_addrs.output =
         (void *)((uint64_t)(fft_plan->mlu_addrs.output) -
                  fft_plan->batch * odist);
+
+    if (scale_factor != 1.0) {
+      const float alpha[2] = {scale_factor, 0.0};
+      const float beta[2] = {0.0, 0.0};
+      mluOpTensorDescriptor_t c_desc = nullptr;
+      status = mluOpCreateTensorDescriptor(&c_desc);
+      const int out_dim_num = 3;
+      int64_t dims[out_dim_num] = {fft_plan->batch, fft_plan->n[0],
+                                   fft_plan->n[1]};
+      status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY,
+                                           fft_plan->output_dtype, 3, dims);
+      status = mluOpSetTensorDescriptorOnchipDataType(
+          c_desc, fft_plan->execution_dtype);
+
+      DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
+                                        cnnl_handle);  // convert to cnnl_handle
+
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_output_desc);
+
+      CALL_CNNL(cnnlTransform_v2(cnnl_handle, CNNL_POINTER_MODE_HOST, &alpha,
+                                 cnnl_output_desc, fft_plan->mlu_addrs.output,
+                                 &beta, cnnl_output_desc,
+                                 fft_plan->mlu_addrs.output));
+      DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+      DESTROY_CNNL_HANDLE(cnnl_handle);
+    }
+    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
     status = makeIRFFT2dContiguousOutput(handle, fft_plan, output,
                                          fft_plan->mlu_addrs.output);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
