@@ -770,7 +770,8 @@ static mluOpStatus_t makeIRFFT1dContiguousInput(mluOpHandle_t handle,
   std::string api = "[mluOpExecFFT]";
   VLOG(5) << "into makeIRFFT1dContiguousInput";
   auto status = MLUOP_STATUS_SUCCESS;
-  if (!fft_plan->is_input_contiguous) {
+  if (!fft_plan->is_input_contiguous ||
+      (!fft_plan->prime && fft_plan->inembed[0] > fft_plan->n[0] / 2 + 1)) {
     VLOG(5) << "launch mluOpContiguous for irfft1d input";
     mluOpTensorDescriptor_t input_desc;
     status = mluOpCreateTensorDescriptor(&input_desc);
