@@ -1,3 +1,26 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
 #include "cholesky.h"
 // calculates the required workspace size for performing the Cholesky
 // decomposition on a given matrix or batch of matrices.
@@ -17,10 +40,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetCholeskyWorkspace(
   PARAM_CHECK("mluOpCholesky",
               dtype == MLUOP_DTYPE_FLOAT || dtype == MLUOP_DTYPE_COMPLEX_FLOAT);
 
-  unsigned long type_size;
+  uint64_t type_size;
   MLUOP_CHECK(mluOpGetSizeOfDataType(dtype, &type_size));
-  long int size_a = 0, lda = 0, size_c = 0, ldc = 0;
-  long int batch_size = 1;
+  int64_t size_a = 0, lda = 0, size_c = 0, ldc = 0;
+  int64_t batch_size = 1;
   int dim = input_desc->dim;
   if (dim == 2) {
     size_a = input_desc->dims[0];
@@ -68,7 +91,7 @@ calculate_body(mluOpHandle_t handle, int batch_size,
   int dim = input_desc->dim;
   bool is_row_major = (input_desc->strides)[dim - 1] == 1;
 
-  unsigned long type_size;
+  uint64_t type_size;
   MLUOP_CHECK(mluOpGetSizeOfDataType(dtype, &type_size));
   int size_a = 0, lda = 0, size_c = 0, ldc = 0;
   if (dim == 2) {
@@ -101,7 +124,7 @@ calculate_body(mluOpHandle_t handle, int batch_size,
     } else {
       CNRT_CHECK(
           cnrtMemcpy(d_output, d_input,
-                     type_size * size_a * lda * ((unsigned long)batch_size),
+                     type_size * size_a * lda * ((uint64_t)batch_size),
                      CNRT_MEM_TRANS_DIR_DEV2DEV));
     }
   } else {
@@ -157,7 +180,7 @@ calculate_body(mluOpHandle_t handle, int batch_size,
       cnrtQueueSync(queue);
       CNRT_CHECK(
           cnrtMemcpy(d_output, workspace,
-                     type_size * size_a * lda * ((unsigned long)batch_size),
+                     type_size * size_a * lda * ((uint64_t)batch_size),
                      CNRT_MEM_TRANS_DIR_DEV2DEV));
     }
   } else {
@@ -229,12 +252,12 @@ calculate_body(mluOpHandle_t handle, int batch_size,
         CNRT_CHECK(cnrtMemcpy(
             d_output + type_size / 4 * size_a * lda * 16,
             workspace + type_size / 4 * size_a * lda * 16,
-            type_size * size_a * lda * ((unsigned long)batch_size - 16),
+            type_size * size_a * lda * ((uint64_t)batch_size - 16),
             CNRT_MEM_TRANS_DIR_DEV2DEV));
       } else {
         CNRT_CHECK(
             cnrtMemcpy(d_output, workspace,
-                       type_size * size_a * lda * ((unsigned long)batch_size),
+                       type_size * size_a * lda * ((uint64_t)batch_size),
                        CNRT_MEM_TRANS_DIR_DEV2DEV));
       }
     }
@@ -251,7 +274,7 @@ calculate_body(mluOpHandle_t handle, int batch_size,
 // matrices are either float or complex float types and performs the
 // decomposition either on the upper or lower triangular part of the matrix,
 // based on the 'upper' boolean flag.
-mluOpStatus_t MLUOP_WIN_API mluOpStatus_t MLUOP_WIN_API
+mluOpStatus_t MLUOP_WIN_API
 mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
               float* d_input, const mluOpTensorDescriptor_t output_desc,
               float* d_output, bool upper, float* workspace) {
@@ -298,14 +321,14 @@ mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     ldc = output_desc->dims[2];
   }
 
-  unsigned long type_size;
+  uint64_t type_size;
   MLUOP_CHECK(mluOpGetSizeOfDataType(dtype, &type_size));
   if (type_size == 8 && batch_size > 16 && size_a > 2000) {
     int stride = 2 * size_a * lda;
     calculate_body(handle, 16, input_desc, d_input, output_desc, d_output,
                    upper, workspace);
     cnrtQueueSync(queue);
-    calculate_body(handle, ((unsigned long)batch_size) - 16, input_desc,
+    calculate_body(handle, ((uint64_t)batch_size) - 16, input_desc,
                    d_input + 16 * stride, output_desc, d_output + 16 * stride,
                    upper, workspace);
   } else {
