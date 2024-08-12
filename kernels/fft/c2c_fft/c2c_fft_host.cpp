@@ -1133,7 +1133,9 @@ static mluOpStatus_t makeFFT1dContiguousInput(mluOpHandle_t handle,
     }
 
   } else {
-    if (!fft_plan->is_input_contiguous && !fft_plan->is_batch_contiguous) {
+    if (!(fft_plan->is_input_contiguous &&
+          fft_plan->inembed[0] <= fft_plan->n[0]) &&
+        !fft_plan->is_batch_contiguous) {
       VLOG(5) << "launch mluOpContiguous for fft1d input";
       mluOpTensorDescriptor_t input_desc;
       status = mluOpCreateTensorDescriptor(&input_desc);
