@@ -35,7 +35,7 @@ class CholeskyExecutor : public Executor {
   bool upper_ = false;
   int ldda_ = 0;
   int n_ = 0;
-  long int batch_size_ = 1;
+  int64_t batch_size_ = 1;
 
  public:
   CholeskyExecutor() {}
