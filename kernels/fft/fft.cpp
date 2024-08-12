@@ -2566,7 +2566,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
     // c2c
     case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
     case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
-      fft_plan->prime = fft_plan->n[rank - 1] != fft_plan->inembed[rank - 1];
+      fft_plan->prime = fft_plan->n[rank - 1] > fft_plan->inembed[rank - 1];
     }; break;
     // c2r
     case CNFFT_COMPLEX_HALF2HALF:
