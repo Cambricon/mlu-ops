@@ -53,7 +53,7 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
     int xyz_dim = xyz_params.get_dim_nb();
     std::vector<int> xyz_dim_size = xyz_params.get_dim_size();
     std::vector<int> xyz_stride_size = xyz_params.get_dim_stride();
-    if (xyz_stride_size.empty()){
+    if (xyz_stride_size.empty()) {
       MLUOP_CHECK(mluOpSetTensorDescriptor(xyz_desc_, xyz_layout, xyz_dtype,
                                           xyz_dim, xyz_dim_size.data()));
     } else {
@@ -74,7 +74,7 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
     int new_xyz_dim = new_xyz_params.get_dim_nb();
     std::vector<int> new_xyz_dim_size = new_xyz_params.get_dim_size();
     std::vector<int> new_xyz_stride_size = new_xyz_params.get_dim_stride();
-    if (new_xyz_stride_size.empty()){
+    if (new_xyz_stride_size.empty()) {
       MLUOP_CHECK(mluOpSetTensorDescriptor(new_xyz_desc_, new_xyz_layout,
                                           new_xyz_dtype, new_xyz_dim,
                                           new_xyz_dim_size.data()));
@@ -102,7 +102,7 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
     int idx_dim = idx_params.get_dim_nb();
     std::vector<int> idx_dim_size = idx_params.get_dim_size();
     std::vector<int> idx_stride_size = idx_params.get_dim_stride();
-    if (idx_stride_size.empty()){
+    if (idx_stride_size.empty()) {
       MLUOP_CHECK(mluOpSetTensorDescriptor(idx_desc_, idx_layout, idx_dtype,
                                           idx_dim, idx_dim_size.data()));
     } else {

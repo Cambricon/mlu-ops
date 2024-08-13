@@ -49,14 +49,14 @@ class active_rotated_filter_forward_general
       std::vector<int> input_dims = input_desc.get_dim_size();
       std::vector<int> input_stride = input_desc.get_dim_stride();
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_desc_));
-      if (input_stride.empty()){
+      if (input_stride.empty()) {
         MLUOP_CHECK(mluOpSetTensorDescriptor(input_desc_, input_layout,
-                                            input_dtype, input_doutput_nb,
-                                            input_dims.data()));
+                                             input_dtype, input_doutput_nb,
+                                             input_dims.data()));
       } else {
-        MLUOP_CHECK(mluOpSetTensorDescriptorEx(input_desc_, input_layout,
-                                            input_dtype, input_doutput_nb,
-                                            input_dims.data(),input_stride.data()));
+        MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+            input_desc_, input_layout, input_dtype, input_doutput_nb,
+            input_dims.data(), input_stride.data()));
       }
       int input_elenum = mluOpGetTensorElementNum(input_desc_);
       if (input_elenum > 0) {
@@ -72,14 +72,14 @@ class active_rotated_filter_forward_general
       std::vector<int> indices_dims = indices_desc.get_dim_size();
       std::vector<int> indices_stride = indices_desc.get_dim_stride();
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&indices_desc_));
-      if (indices_stride.empty()){
+      if (indices_stride.empty()) {
         MLUOP_CHECK(mluOpSetTensorDescriptor(indices_desc_, indices_layout,
-                                            indices_dtype, indices_doutput_nb,
-                                            indices_dims.data()));
+                                             indices_dtype, indices_doutput_nb,
+                                             indices_dims.data()));
       } else {
-        MLUOP_CHECK(mluOpSetTensorDescriptorEx(indices_desc_, indices_layout,
-                                            indices_dtype, indices_doutput_nb,
-                                            indices_dims.data(),indices_stride.data()));
+        MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+            indices_desc_, indices_layout, indices_dtype, indices_doutput_nb,
+            indices_dims.data(), indices_stride.data()));
       }
       int indices_elenum = mluOpGetTensorElementNum(indices_desc_);
       if (indices_elenum > 0) {
@@ -95,14 +95,14 @@ class active_rotated_filter_forward_general
       std::vector<int> featuret_dims = output_desc.get_dim_size();
       std::vector<int> featuret_stride = output_desc.get_dim_stride();
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
-      if (featuret_stride.empty()){
+      if (featuret_stride.empty()) {
         MLUOP_CHECK(mluOpSetTensorDescriptor(output_desc_, output_layout,
-                                            output_dtype, output_doutput_nb,
-                                            featuret_dims.data()));
+                                             output_dtype, output_doutput_nb,
+                                             featuret_dims.data()));
       } else {
-        MLUOP_CHECK(mluOpSetTensorDescriptorEx(output_desc_, output_layout,
-                                            output_dtype, output_doutput_nb,
-                                            featuret_dims.data(),featuret_stride.data()));
+        MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+            output_desc_, output_layout, output_dtype, output_doutput_nb,
+            featuret_dims.data(), featuret_stride.data()));
       }
       int output_elenum = mluOpGetTensorElementNum(output_desc_);
       if (output_elenum > 0) {
@@ -471,43 +471,40 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    input_unsupport_stride,
-    active_rotated_filter_forward_general,
+    input_unsupport_stride, active_rotated_filter_forward_general,
     testing::Combine(
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY,MLUOP_DTYPE_FLOAT,
-                                         5,std::vector<int>({1, 2, 8, 3, 3}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         5, std::vector<int>({1, 2, 8, 3, 3}),
                                          std::vector<int>({1, 1, 2, 16, 64})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY,MLUOP_DTYPE_INT32,
-                                         4,std::vector<int>({8, 3, 3, 4})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY,MLUOP_DTYPE_FLOAT,
-                                         4,std::vector<int>({4, 16, 3, 3})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({8, 3, 3, 4})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({4, 16, 3, 3})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
 INSTANTIATE_TEST_CASE_P(
-    indice_unsupport_stride,
-    active_rotated_filter_forward_general,
+    indice_unsupport_stride, active_rotated_filter_forward_general,
     testing::Combine(
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY,MLUOP_DTYPE_FLOAT,
-                                         5,std::vector<int>({1, 2, 8, 3, 3})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY,MLUOP_DTYPE_INT32,
-                                         4,std::vector<int>({8, 3, 3, 4}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         5, std::vector<int>({1, 2, 8, 3, 3})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({8, 3, 3, 4}),
                                          std::vector<int>({1, 10, 30, 100})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY,MLUOP_DTYPE_FLOAT,
-                                         4,std::vector<int>({4, 16, 3, 3})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({4, 16, 3, 3})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
 INSTANTIATE_TEST_CASE_P(
-    output_unsupport_stride,
-    active_rotated_filter_forward_general,
+    output_unsupport_stride, active_rotated_filter_forward_general,
     testing::Combine(
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY,MLUOP_DTYPE_FLOAT,
-                                         5,std::vector<int>({1, 2, 8, 3, 3})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY,MLUOP_DTYPE_INT32,
-                                         4,std::vector<int>({8, 3, 3, 4})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY,MLUOP_DTYPE_FLOAT,
-                                         4,std::vector<int>({4, 16, 3, 3}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         5, std::vector<int>({1, 2, 8, 3, 3})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({8, 3, 3, 4})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({4, 16, 3, 3}),
                                          std::vector<int>({1, 5, 80, 250})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
