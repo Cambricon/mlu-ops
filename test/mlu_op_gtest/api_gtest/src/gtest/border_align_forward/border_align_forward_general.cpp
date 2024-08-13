@@ -49,11 +49,17 @@ class border_align_forward_general
       mluOpDataType_t input_dtype = input_desc.get_dtype();
       int input_dim_nb = input_desc.get_dim_nb();
       std::vector<int> input_dims = input_desc.get_dim_size();
-
+      std::vector<int> input_stride = input_desc.get_dim_stride();
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_desc_));
-      MLUOP_CHECK(mluOpSetTensorDescriptor(input_desc_, input_layout,
-                                           input_dtype, input_dim_nb,
-                                           input_dims.data()));
+      if (input_stride.empty()) {
+        MLUOP_CHECK(mluOpSetTensorDescriptor(input_desc_, input_layout,
+                                             input_dtype, input_dim_nb,
+                                             input_dims.data()));
+      } else {
+        MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+            input_desc_, input_layout, input_dtype, input_dim_nb,
+            input_dims.data(), input_stride.data()));
+      }
       int input_elenum = mluOpGetTensorElementNum(input_desc_);
       if (input_elenum > 0) {
         VLOG(4) << "malloc input_";
@@ -67,10 +73,17 @@ class border_align_forward_general
       mluOpDataType_t boxes_dtype = boxes_desc.get_dtype();
       int boxes_dim_nb = boxes_desc.get_dim_nb();
       std::vector<int> boxes_dims = boxes_desc.get_dim_size();
+      std::vector<int> boxes_stride = boxes_desc.get_dim_stride();
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&boxes_desc_));
-      MLUOP_CHECK(mluOpSetTensorDescriptor(boxes_desc_, boxes_layout,
-                                           boxes_dtype, boxes_dim_nb,
-                                           boxes_dims.data()));
+      if (boxes_stride.empty()) {
+        MLUOP_CHECK(mluOpSetTensorDescriptor(boxes_desc_, boxes_layout,
+                                             boxes_dtype, boxes_dim_nb,
+                                             boxes_dims.data()));
+      } else {
+        MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+            boxes_desc_, boxes_layout, boxes_dtype, boxes_dim_nb,
+            boxes_dims.data(), boxes_stride.data()));
+      }
       int boxes_elenum = mluOpGetTensorElementNum(boxes_desc_);
       if (boxes_elenum > 0) {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
@@ -83,10 +96,17 @@ class border_align_forward_general
       mluOpDataType_t output_dtype = output_desc.get_dtype();
       int output_dim_nb = output_desc.get_dim_nb();
       std::vector<int> output_dims = output_desc.get_dim_size();
+      std::vector<int> output_stride = output_desc.get_dim_stride();
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
-      MLUOP_CHECK(mluOpSetTensorDescriptor(output_desc_, output_layout,
-                                           output_dtype, output_dim_nb,
-                                           output_dims.data()));
+      if (output_stride.empty()) {
+        MLUOP_CHECK(mluOpSetTensorDescriptor(output_desc_, output_layout,
+                                             output_dtype, output_dim_nb,
+                                             output_dims.data()));
+      } else {
+        MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+            output_desc_, output_layout, output_dtype, output_dim_nb,
+            output_dims.data(), output_stride.data()));
+      }
       int output_elenum = mluOpGetTensorElementNum(output_desc_);
       if (output_elenum > 0) {
         GTEST_CHECK(CNRT_RET_SUCCESS ==
@@ -99,10 +119,18 @@ class border_align_forward_general
       mluOpDataType_t argmax_idx_dtype = argmax_idx_desc.get_dtype();
       int argmax_idx_dim_nb = argmax_idx_desc.get_dim_nb();
       std::vector<int> argmax_idx_dims = argmax_idx_desc.get_dim_size();
+      std::vector<int> argmax_idx_stride = argmax_idx_desc.get_dim_stride();
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&argmax_idx_desc_));
-      MLUOP_CHECK(mluOpSetTensorDescriptor(argmax_idx_desc_, argmax_idx_layout,
-                                           argmax_idx_dtype, argmax_idx_dim_nb,
-                                           argmax_idx_dims.data()));
+      if (argmax_idx_stride.empty()) {
+        MLUOP_CHECK(mluOpSetTensorDescriptor(
+            argmax_idx_desc_, argmax_idx_layout, argmax_idx_dtype,
+            argmax_idx_dim_nb, argmax_idx_dims.data()));
+      } else {
+        MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+            argmax_idx_desc_, argmax_idx_layout, argmax_idx_dtype,
+            argmax_idx_dim_nb, argmax_idx_dims.data(),
+            argmax_idx_stride.data()));
+      }
       int argmax_idx_elenum = mluOpGetTensorElementNum(argmax_idx_desc_);
       if (argmax_idx_elenum > 0) {
         GTEST_CHECK(
@@ -395,4 +423,64 @@ INSTANTIATE_TEST_CASE_P(
                                          4, std::vector<int>({2, 100, 4, 5})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    input_unsupport_stride, border_align_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 10, 10, 20}),
+                                         std::vector<int>({1, 2, 20, 300})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         3, std::vector<int>({2, 100, 4})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 100, 4, 5})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({2, 100, 4, 5})}),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+
+INSTANTIATE_TEST_CASE_P(
+    boxex_unsupport_stride, border_align_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 10, 10, 20})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         3, std::vector<int>({2, 100, 4}),
+                                         std::vector<int>({1, 2, 300})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 100, 4, 5})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({2, 100, 4, 5})}),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+
+INSTANTIATE_TEST_CASE_P(
+    output_unsupport_stride, border_align_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 10, 10, 20})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         3, std::vector<int>({2, 100, 4})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 100, 4, 5}),
+                                         std::vector<int>({1, 2, 200, 1000})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({2, 100, 4, 5})}),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+
+INSTANTIATE_TEST_CASE_P(
+    argmax_idx_unsupport_stride, border_align_forward_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 10, 10, 20})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         3, std::vector<int>({2, 100, 4})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_FLOAT,
+                                         4, std::vector<int>({2, 100, 4, 5})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_INT32,
+                                         4, std::vector<int>({2, 100, 4, 5}),
+                                         std::vector<int>({1, 2, 200, 1000})}),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 }  // namespace mluopapitest

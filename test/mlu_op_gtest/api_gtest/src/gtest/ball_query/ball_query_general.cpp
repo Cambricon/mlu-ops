@@ -52,8 +52,15 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
     mluOpDataType_t xyz_dtype = xyz_params.get_dtype();
     int xyz_dim = xyz_params.get_dim_nb();
     std::vector<int> xyz_dim_size = xyz_params.get_dim_size();
-    MLUOP_CHECK(mluOpSetTensorDescriptor(xyz_desc_, xyz_layout, xyz_dtype,
-                                         xyz_dim, xyz_dim_size.data()));
+    std::vector<int> xyz_stride_size = xyz_params.get_dim_stride();
+    if (xyz_stride_size.empty()) {
+      MLUOP_CHECK(mluOpSetTensorDescriptor(xyz_desc_, xyz_layout, xyz_dtype,
+                                          xyz_dim, xyz_dim_size.data()));
+    } else {
+      MLUOP_CHECK(mluOpSetTensorDescriptorEx(xyz_desc_, xyz_layout, xyz_dtype,
+                                          xyz_dim, xyz_dim_size.data(),
+                                          xyz_stride_size.data()));
+    }
     uint64_t xyz_ele_num = mluOpGetTensorElementNum(xyz_desc_);
     uint64_t xyz_bytes = mluOpDataTypeBytes(xyz_dtype) * xyz_ele_num;
     if (xyz_bytes > 0) {
@@ -66,9 +73,17 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
     mluOpDataType_t new_xyz_dtype = new_xyz_params.get_dtype();
     int new_xyz_dim = new_xyz_params.get_dim_nb();
     std::vector<int> new_xyz_dim_size = new_xyz_params.get_dim_size();
-    MLUOP_CHECK(mluOpSetTensorDescriptor(new_xyz_desc_, new_xyz_layout,
-                                         new_xyz_dtype, new_xyz_dim,
-                                         new_xyz_dim_size.data()));
+    std::vector<int> new_xyz_stride_size = new_xyz_params.get_dim_stride();
+    if (new_xyz_stride_size.empty()) {
+      MLUOP_CHECK(mluOpSetTensorDescriptor(new_xyz_desc_, new_xyz_layout,
+                                          new_xyz_dtype, new_xyz_dim,
+                                          new_xyz_dim_size.data()));
+    } else {
+      MLUOP_CHECK(mluOpSetTensorDescriptorEx(new_xyz_desc_, new_xyz_layout,
+                                          new_xyz_dtype, new_xyz_dim,
+                                          new_xyz_dim_size.data(),
+                                          new_xyz_stride_size.data()));
+    }
     uint64_t new_xyz_ele_num = mluOpGetTensorElementNum(new_xyz_desc_);
     uint64_t new_xyz_bytes =
         mluOpDataTypeBytes(new_xyz_dtype) * new_xyz_ele_num;
@@ -86,8 +101,15 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
     mluOpDataType_t idx_dtype = idx_params.get_dtype();
     int idx_dim = idx_params.get_dim_nb();
     std::vector<int> idx_dim_size = idx_params.get_dim_size();
-    MLUOP_CHECK(mluOpSetTensorDescriptor(idx_desc_, idx_layout, idx_dtype,
-                                         idx_dim, idx_dim_size.data()));
+    std::vector<int> idx_stride_size = idx_params.get_dim_stride();
+    if (idx_stride_size.empty()) {
+      MLUOP_CHECK(mluOpSetTensorDescriptor(idx_desc_, idx_layout, idx_dtype,
+                                          idx_dim, idx_dim_size.data()));
+    } else {
+      MLUOP_CHECK(mluOpSetTensorDescriptorEx(idx_desc_, idx_layout, idx_dtype,
+                                          idx_dim, idx_dim_size.data(),
+                                          idx_stride_size.data()));
+    }
     uint64_t idx_ele_num = mluOpGetTensorElementNum(idx_desc_);
     uint64_t idx_bytes = mluOpDataTypeBytes(idx_dtype) * idx_ele_num;
     if (idx_bytes > 0) {
@@ -355,4 +377,45 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(PublicParam{MLUOP_UNKNOWN_DEVICE,
                                     MLUOP_STATUS_BAD_PARAM})));
 
+INSTANTIATE_TEST_CASE_P(
+    xyz_unsupport_stride, ball_query_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         3, std::vector<int>({2, 16, 3}),
+                                         std::vector<int>({1, 2, 34}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         3, std::vector<int>({2, 4, 3}))),
+        testing::Values(0), testing::Values(0.2), testing::Values(32),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({2, 4, 32}))),
+        testing::Values(PublicParam{MLUOP_UNKNOWN_DEVICE,
+                                    MLUOP_STATUS_NOT_SUPPORTED})));
+
+INSTANTIATE_TEST_CASE_P(
+    new_xyd_unsupport_stride, ball_query_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         3, std::vector<int>({2, 16, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         3, std::vector<int>({2, 4, 3}),
+                                         std::vector<int>({1, 2, 10}))),
+        testing::Values(0), testing::Values(0.2), testing::Values(32),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({2, 4, 32}))),
+        testing::Values(PublicParam{MLUOP_UNKNOWN_DEVICE,
+                                    MLUOP_STATUS_NOT_SUPPORTED})));
+
+INSTANTIATE_TEST_CASE_P(
+    idx_unsupport_stride, ball_query_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         3, std::vector<int>({2, 16, 3}))),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         3, std::vector<int>({2, 4, 3}))),
+        testing::Values(0), testing::Values(0.2), testing::Values(32),
+        testing::Values(MLUOpTensorParam(MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
+                                         3, std::vector<int>({2, 4, 32}),
+                                         std::vector<int>({1, 2, 10}))),
+        testing::Values(PublicParam{MLUOP_UNKNOWN_DEVICE,
+                                    MLUOP_STATUS_NOT_SUPPORTED})));
 }  // namespace mluopapitest
