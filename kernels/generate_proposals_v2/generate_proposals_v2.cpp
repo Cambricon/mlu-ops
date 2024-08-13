@@ -54,7 +54,7 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
     *k_type = CNRT_FUNC_TYPE_BLOCK;
   } else {
     *k_type = CNRT_FUNC_TYPE_UNION1;
-    k_dim->x = handle->core_num_per_cluster;
+    k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   }
   return;
 }
@@ -226,8 +226,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetGenerateProposalsV2WorkspaceSize_v2(
     // handle->core_num_per_cluster * data_size: workspace be used to store per
     // core proposals_num.
     *size = topk_workspace_size_align + 2 * nhwa_size_align +
-            10 * hwa * data_size +
-            handle->core_num_per_cluster * handle->cluster_num * data_size;
+            10 * hwa * data_size + handle->core_num_per_cluster * 3 * data_size;
   } else {
     // 4 * hwa: workspace be used store proposals_box/scores
     // 8 * hwa: workspace be used store decode boxes/scores

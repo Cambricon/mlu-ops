@@ -120,14 +120,14 @@ void GenerateProposalsV2Executor::compute() {
   auto rpn_rois_batch_size_ptr = parser_->getMetaTensor("output4").dev_ptr;
 
   VLOG(4) << "[mluOpGenerateProposalsV2] call "
-             "mluOpGetGenerateProposalsV2WorkspaceSize()";
+             "mluOpGetGenerateProposalsV2WorkspaceSize_v2()";
   size_t workspace_size = 0;
   MLUOP_CHECK(mluOpGetGenerateProposalsV2WorkspaceSize_v2(
       handle_, tensor_scores, pre_nms_top_n, &workspace_size));
   interface_timer_.start();
 
   VLOG(4) << "[mluOpGenerateProposalsV2] call "
-             "mluOpGetGenerateProposalsV2WorkspaceSize()";
+             "mluOpGetGenerateProposalsV2WorkspaceSize_v2()";
 
   MLUOP_CHECK(mluOpGenerateProposalsV2(
       handle_, pre_nms_top_n, post_nms_top_n, nms_thresh, min_size, eta,
