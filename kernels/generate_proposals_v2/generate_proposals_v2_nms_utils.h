@@ -330,8 +330,9 @@ __mlu_func__ void nonMaximumSuppress(
   int core_num = 0;
   int nram_save_count = 0;
 
-  limit = (MAX_NRAM_SIZE - NFU_ALIGN_SIZE - nram_save_limit_count * 5) /
-          memory_block;
+  limit =
+      (MAX_NRAM_SIZE - NFU_ALIGN_SIZE - nram_save_limit_count * sizeof(T) * 5) /
+      memory_block;
   getComputeParams(scores_num, limit, memory_block, sizeof(T), &max_seg_num,
                    &repeat, &remain_num, &core_num, &core_offset);
   // init nram ptr

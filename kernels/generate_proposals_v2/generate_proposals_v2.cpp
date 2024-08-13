@@ -474,8 +474,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
         PAD_UP(topk_workspace_size, GDRAM_ALIGN_SIZE);
     size_t data_size = 0;
     mluOpGetSizeOfDataType(scores_desc->dtype, &data_size);
-    const size_t indices_size = PAD_UP(n * hwa * data_size, GDRAM_ALIGN_SIZE);
-    // const size_t indices_size = n * max_k * data_size;
+
+    const size_t indices_size = PAD_UP(n * max_k * data_size, GDRAM_ALIGN_SIZE);
     void *sorted_score = (void *)((char *)workspace + tok_workspace_align_size);
     void *sorted_index = (void *)((char *)sorted_score + indices_size);
 
