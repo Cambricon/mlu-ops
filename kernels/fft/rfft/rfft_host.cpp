@@ -1052,7 +1052,10 @@ static mluOpStatus_t makeRFFT2dContiguousInput(mluOpHandle_t handle,
   std::string api = "[mluOpExecFFT]";
   VLOG(5) << "into makeIRFFT2dContiguousInput";
   auto status = MLUOP_STATUS_SUCCESS;
-  if (!fft_plan->is_input_contiguous &&
+  if ((!fft_plan->is_input_contiguous ||
+       (fft_plan->inembed[0] > fft_plan->n[0] ||
+        fft_plan->inembed[1] > fft_plan->n[1]) &&
+           !fft_plan->prime) &&
       fft_plan->fft_strategy != CNFFT_FUNC_MANY_DIST1_2D) {
     VLOG(5) << "launch mluOpContiguous for rfft2d input";
     mluOpTensorDescriptor_t input_desc;
@@ -1178,9 +1181,8 @@ mluOpStatus_t execRFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
 
     cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
     cnrtDim3_t k_dim;
-    k_dim.x = handle->core_num_per_cluster *
-              mluop::runtime::getClusterLimitCapability(handle);
-    k_dim.y = 1;
+    k_dim.x = handle->core_num_per_cluster;
+    k_dim.y = mluop::runtime::getClusterLimitCapability(handle);
     k_dim.z = 1;
 
     status = execFFTr2c1d(handle, fft_plan, scale_factor);

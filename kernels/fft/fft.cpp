@@ -2375,47 +2375,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
   VLOG(5) << "execution data type: "
           << mluOpGetNameOfDataType(fft_plan->execution_dtype);
 
-  // fft length check
-  for (auto i = 0; i < fft_plan->rank - 1; i++) {  // except the last dim
-    PARAM_CHECK_EQ(
-        make_plan_api, n[i], fft_plan->inembed[i],
-        ": the signal lengths of fft and input mismatch in dimention ", i, ".");
-    PARAM_CHECK_EQ(
-        make_plan_api, n[i], fft_plan->onembed[i],
-        ": the signal lengths of fft and output mismatch in dimension ", i,
-        ".");
-  }
-  switch (fft_plan->fft_type) {
-    // r2c
-    case CNFFT_HALF2COMPLEX_HALF:
-    case CNFFT_FLOAT2COMPLEX_FLOAT: {
-      PARAM_CHECK_EQ(make_plan_api, fft_plan->n[rank - 1] / 2 + 1,
-                     fft_plan->onembed[rank - 1],
-                     ": the signal lengths of fft and output last dimention "
-                     "mismatch in R2C.");
-    }; break;
-    // c2c
-    case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
-    case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
-      PARAM_CHECK_EQ(make_plan_api, fft_plan->n[rank - 1],
-                     fft_plan->onembed[rank - 1],
-                     ": the signal lengths of fft and output last dimention "
-                     "mismatch in C2C.");
-    }; break;
-    // c2r
-    case CNFFT_COMPLEX_HALF2HALF:
-    case CNFFT_COMPLEX_FLOAT2FLOAT: {
-      PARAM_CHECK_EQ(make_plan_api, fft_plan->n[rank - 1],
-                     fft_plan->onembed[rank - 1],
-                     ": the signal lengths of fft and output last dimention "
-                     "mismatch in C2R.");
-    }; break;
-    default: {
-      LOG(ERROR) << make_plan_api << ": invalid fft type.";
-      return MLUOP_STATUS_BAD_PARAM;
-    }
-  }
-
   mluOpDataType_t execution_dtype = fft_plan->execution_dtype;
   switch (fft_plan->fft_type) {
     // half
@@ -2561,18 +2520,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
     // r2c
     case CNFFT_HALF2COMPLEX_HALF:
     case CNFFT_FLOAT2COMPLEX_FLOAT: {
-      fft_plan->prime = fft_plan->n[rank - 1] > fft_plan->inembed[rank - 1];
+      fft_plan->prime = fft_plan->prime ||
+                        fft_plan->n[rank - 1] > fft_plan->inembed[rank - 1];
     }; break;
     // c2c
     case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
     case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
-      fft_plan->prime = fft_plan->n[rank - 1] > fft_plan->inembed[rank - 1];
+      fft_plan->prime = fft_plan->prime ||
+                        fft_plan->n[rank - 1] > fft_plan->inembed[rank - 1];
     }; break;
     // c2r
     case CNFFT_COMPLEX_HALF2HALF:
     case CNFFT_COMPLEX_FLOAT2FLOAT: {
-      fft_plan->prime =
-          (fft_plan->n[rank - 1] / 2 + 1) > fft_plan->inembed[rank - 1];
+      fft_plan->prime = fft_plan->prime || (fft_plan->n[rank - 1] / 2 + 1) >
+                                               fft_plan->inembed[rank - 1];
     }; break;
     default: {
       LOG(ERROR) << make_plan_api << ": invalid fft type.";
