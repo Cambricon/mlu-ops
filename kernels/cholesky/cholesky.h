@@ -43,6 +43,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
+#include "kernels/debug.h"
 #include "kernels/utils/cnnl_helper.h"
 
 #define CNB (16)
