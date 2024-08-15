@@ -116,10 +116,11 @@ A=LL^T
 | :---------: | :------------: | :--: | :------------------: | :---------: | :---------------: |
 |   handle    |                | 句柄 |                      |      /      |        无         |
 | input_desc  |   矩阵描述符   | 输入 |float、complex float                      |             |                   |
-|   d_input   |    输入矩阵    | 输入 |  | [batch,N,N]/[N,N] | batch<=32,N<=3000 |
+|   d_input   |    输入矩阵    | 输入 |  | [batch,N,N]/[N,N] | 所占空间不超过7GB |
 | output_desc | 输出矩阵描述符 | 输入 | float、complex float |             |                   |
-|  d_output   |    输出矩阵    | 输出 |                      | [batch,N,N] /[N,N]|                   |
+|  d_output   |    输出矩阵    | 输出 |                      | [batch,N,N]/[N,N]|     所占空间不超过7GB              |
 |    upper    | 上三角/下三角  | 输入 |         bool         |             |                   |
+|    workspace    | 用于矩阵分解的额外空间  | 输入 |         void*       |             |                   |
 
 ### 2.4 算子限制
 
@@ -449,15 +450,26 @@ complex类型多batch性能测试：
 * 输入输出矩阵的维度为2或者3
 * 输入输出矩阵维度数相等
 * 输入输出矩阵的后两个维度数目相同
+* 输入/输出矩阵所占空间不得超过7GB
 
 
 
 ## 4 算子接口设计
 
-接口为：
+计算接口为：
 
 ```c++
-void mluOpCholesky(mluOpHandle_t handle,const mluOpTensorDescriptor_t input_desc,float* d_input, const mluOpTensorDescriptor_t output_desc, float* d_output,bool upper)
+mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
+              float* d_input, const mluOpTensorDescriptor_t output_desc,
+              float* d_output, bool upper, void* workspace)
+```
+
+获取额外空间大小接口为：
+
+```c++
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetCholeskyWorkspaceSize(mluOpTensorDescriptor_t input_desc, size_t *size);
+
 ```
 
 变量含义为上文所述。
