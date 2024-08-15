@@ -1640,14 +1640,53 @@ mluOpAllocateC2C1D(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   size_t buffer_size = batch * in_c_dtype_size * nfft;
 
   workspace_size = buffer_size * 2;
-  workspace_size +=
-      (fft_plan->is_input_contiguous || fft_plan->is_batch_contiguous)
-          ? 0
-          : buffer_size;
-  workspace_size +=
-      (fft_plan->is_output_contiguous || fft_plan->is_batch_contiguous)
-          ? 0
-          : buffer_size;
+  workspace_size += ((fft_plan->is_input_contiguous &&
+                      fft_plan->n[0] <= fft_plan->inembed[0]) ||
+                     fft_plan->is_batch_contiguous)
+                        ? 0
+                        : buffer_size;
+  workspace_size += ((fft_plan->is_output_contiguous &&
+                      fft_plan->n[0] <= fft_plan->onembed[0]) ||
+                     fft_plan->is_batch_contiguous)
+                        ? 0
+                        : buffer_size;
+
+  size_t twiddles_size = in_c_dtype_size * nfft * 2;
+  reservespace_size = sizeof(int) * (FFT_MAXFACTORS)            /* factors */
+                      + twiddles_size * 2 + DFT_TABLE_SIZE * 2; /* twiddles */
+
+  fft_plan->workspace_size = workspace_size;
+  fft_plan->reservespace_size = reservespace_size;
+
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpAllocateR2C1D(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
+                   mluOpTensorDescriptor_t input_desc,
+                   mluOpTensorDescriptor_t output_desc, const int nfft) {
+  const std::string make_plan_api = "[mluOpAllocateC2C1D]";
+  size_t workspace_size = 0;
+  size_t reservespace_size = 0;
+
+  mluOpDataType_t in_c_dtype = fft_plan->input_dtype;
+  size_t in_c_dtype_size = mluOpDataTypeBytes(in_c_dtype);
+
+  int batch = fft_plan->batch;
+
+  size_t buffer_size = batch * in_c_dtype_size * nfft * 2;
+
+  workspace_size = buffer_size * 2;
+  workspace_size += ((fft_plan->is_input_contiguous &&
+                      fft_plan->n[0] <= fft_plan->inembed[0]) ||
+                     fft_plan->is_batch_contiguous)
+                        ? 0
+                        : buffer_size;
+  workspace_size += ((fft_plan->is_output_contiguous &&
+                      fft_plan->n[0] / 2 + 1 <= fft_plan->onembed[0]) ||
+                     fft_plan->is_batch_contiguous)
+                        ? 0
+                        : buffer_size;
 
   size_t twiddles_size = in_c_dtype_size * nfft * 2;
   reservespace_size = sizeof(int) * (FFT_MAXFACTORS)            /* factors */
@@ -1715,8 +1754,14 @@ mluOpAllocateC2R1D(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   size_t buffer_size = batch * in_c_dtype_size * nfft;
 
   workspace_size = buffer_size * 2;
-  workspace_size += (fft_plan->is_input_contiguous) ? 0 : buffer_size;
-  workspace_size += (fft_plan->is_output_contiguous) ? 0 : buffer_size;
+  workspace_size += (fft_plan->is_input_contiguous &&
+                     fft_plan->n[0] / 2 + 1 <= fft_plan->inembed[0])
+                        ? 0
+                        : buffer_size;
+  workspace_size +=
+      (fft_plan->is_output_contiguous && fft_plan->n[0] <= fft_plan->onembed[0])
+          ? 0
+          : buffer_size;
 
   size_t twiddles_size = in_c_dtype_size * nfft * 2;
   reservespace_size = sizeof(int) * (FFT_MAXFACTORS)            /* factors */
@@ -2009,7 +2054,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanR2C1D(
     mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
     mluOpTensorDescriptor_t input_desc, mluOpTensorDescriptor_t output_desc,
     const int rank, const int *n) {
-  mluOpAllocateC2C1D(handle, fft_plan, input_desc, output_desc, n[0]);
+  mluOpAllocateR2C1D(handle, fft_plan, input_desc, output_desc, n[0]);
   fftTwoStepFactor(handle, fft_plan, n[0], fft_plan->factors, 1,
                    fft_plan->fft_type);
 
@@ -2551,6 +2596,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       fft_plan->fft_type == CNFFT_COMPLEX_HALF2COMPLEX_HALF || n[0] == 1) {
     fft_plan->prime = 1;
   }
+  fft_plan->prime = fft_plan->prime || (n[0] <= 2 && rank == 1);
   /*
    * decision part
    */
