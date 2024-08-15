@@ -14621,7 +14621,7 @@ mluOpCholesky(mluOpHandle_t handle,
  */
 
 mluOpStatus_t MLUOP_WIN_API
-mluOpGetCholeskyWorkspace(mluOpTensorDescriptor_t input_desc, size_t *size);
+mluOpGetCholeskyWorkspaceSize(mluOpTensorDescriptor_t input_desc, size_t *size);
 
 #if defined(__cplusplus)
 }

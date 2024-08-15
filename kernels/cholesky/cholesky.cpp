@@ -24,7 +24,7 @@
 #include "cholesky.h"
 // calculates the required workspace size for performing the Cholesky
 // decomposition on a given matrix or batch of matrices.
-mluOpStatus_t MLUOP_WIN_API mluOpGetCholeskyWorkspace(
+mluOpStatus_t MLUOP_WIN_API mluOpGetCholeskyWorkspaceSize(
     mluOpTensorDescriptor_t input_desc, size_t* size) {
   PARAM_CHECK("mluOpCholesky", input_desc != NULL);
 
