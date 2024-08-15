@@ -251,7 +251,8 @@ __mlu_func__ void scoreUpdate(
 #endif
     // 2. select the box
     __bang_mul_scalar(inter_x2, inter_x2, nms_thresh, actual_num_align);
-    __bang_le(inter_y1, inter_x1, inter_x2, actual_num_align);
+    __bang_gt(inter_y1, inter_x1, inter_x2, actual_num_align);
+    __bang_not(inter_y1, inter_y1, actual_num_align);
     __bang_gt(inter_y2, inter_x1, inter_x2, actual_num_align);
     __bang_mul(inter_y1, scores, inter_y1, actual_num_align);
     __bang_mul_scalar(inter_y2, inter_y2, FLOAT_MIN_GPV2, actual_num_align);
@@ -373,6 +374,7 @@ __mlu_func__ void nonMaximumSuppress(
       findClusterMaxBox((T *)sram_buffer, max_box, inter_x1, input_scores_ptr);
       calMaxArea(max_box, pixel_offset, &max_area);
       global_max_index = ((int *)(max_box + 5))[0];
+      input_scores_ptr[global_max_index] = FLOAT_MIN_GPV2;
     }
     /******by now, we get: max_score|max_index|max_box|max_area******/
     storeResult(max_box, nram_save, output_boxes_ptr, output_scores_ptr, nms_id,

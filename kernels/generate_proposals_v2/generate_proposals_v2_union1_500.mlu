@@ -54,8 +54,7 @@ __mlu_func__ void filterBoxes(T *proposals_score_nram, T *proposals_box_nram,
     // w = w + offset, h = h + offset
     __bang_add_scalar(wh, wh, offset, deal_num * 2);
   }
-  // cx = box[0] + 0.5 * w, cy = box[1] + 0.5 * h
-  __bang_fusion(FUSION_FMA, cx, wh, (T)0.5, xymin, 2 * deal_num, 2 * deal_num);
+
   float real_min_size = min_size > 1.0 ? min_size : 1.0;
   // mask_tmp1 = w >= min_size ? 1 : 0;
   __bang_ge_scalar(mask_tmp1, wh, real_min_size, deal_num * 2);
@@ -63,6 +62,9 @@ __mlu_func__ void filterBoxes(T *proposals_score_nram, T *proposals_box_nram,
   __bang_and(mask_tmp2, mask_tmp1, mask_tmp2, deal_num);
 
   if (pixel_offset) {
+    // cx = box[0] + 0.5 * w, cy = box[1] + 0.5 * h
+    __bang_fusion(FUSION_FMA, cx, wh, (T)0.5, xymin, 2 * deal_num,
+                  2 * deal_num);
     T im_h = im_shape[0];
     T im_w = im_shape[1];
     // mask_tmp1 = cx <= im_w ? 1 : 0;  mask_tmp2 = cy <= im_h ? 1 : 0;
