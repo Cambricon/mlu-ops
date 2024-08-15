@@ -299,10 +299,9 @@ void mlu_transfer_data(float* dst, float* src, uint64_t data_size,
 }
 
 void CholeskyExecutor::prepareComputeParam() {
-  printf("start prepare compute parameter.\n");
+  VLOG(0) << "start prepare compute parameter." << std::endl;
   int long_int_size = sizeof(int64_t);
   int int_size = sizeof(int);
-  printf("int64_t size:%d, int size:%d\n", long_int_size, int_size);
   auto input_desc_ = (tensor_desc_[0].tensor);
   auto output_desc_ = (tensor_desc_[1].tensor);
   auto dev_a = (float*)(data_vector_[0].host_ptr);
@@ -320,34 +319,32 @@ void CholeskyExecutor::prepareComputeParam() {
     int dim = input_desc_->dim;
     stride_ = (input_desc_->strides)[dim - 1];
     ldda_ = input_desc_->dims[1];
-    printf("n:%d,lda:%d,stride:%d,upper:%d,trans:%d\n", n_, ldda_, stride_,
-           upper_, trans_);
+    VLOG(0) << "n:" << n_ << ", lda:" << ldda_ << ", stride:" << stride_
+            << ", upper:" << upper_<< ",trans:" << trans_ << std::endl;
     int size = input_desc_->dims[0];
-    printf("size:%d, dim:%d, \n", size, dim);
-    printf("strides:\n");
+    VLOG(0) << "size:" << size << ", dim:" << dim << std::endl;
+    VLOG(0) << "strides:" << std::endl;
     for (int i = 0; i < dim; i++) {
-      printf("%ld ", (input_desc_->strides)[i]);
+      VLOG(0) << (input_desc_->strides)[i] << " ";
     }
-    printf("\n");
-    printf("data vector length : %ld\n", data_vector_.size());
+    VLOG(0) << "data vector length : " << data_vector_.size() << std::endl;
   } else if (dim_size == 3) {
     batch_size_ = input_shape.dims(0);
     n_ = input_shape.dims(1);
     int dim = input_desc_->dim;
     stride_ = (input_desc_->strides)[dim - 1];
     ldda_ = input_desc_->dims[2];
-    printf("batch_size:%ld,n:%d,lda:%d,stride:%d,upper:%d,trans:%d\n",
-           batch_size_, n_, ldda_, stride_, upper_, trans_);
+    VLOG(0) << "batch_size:" << batch_size_ << ", n:" << n_ << ", lda:"
+            << ldda_ << ", stride:" << stride_ << ", upper"<< upper_
+            << ",trans:" << trans_<< std::endl;
 
     int size = input_desc_->dims[1];
-
-    printf("size:%d, dim:%d, \n", size, dim);
-    printf("strides:\n");
+    VLOG(0) << "size:" << size << ", dim:" << dim << std::endl;
+    VLOG(0) << "strides:" << std::endl;
     for (int i = 0; i < dim; i++) {
-      printf("%ld ", (input_desc_->strides)[i]);
+      VLOG(0) << (input_desc_->strides)[i] << " ";
     }
-    printf("\n");
-    printf("data vector length : %ld\n", data_vector_.size());
+    VLOG(0) << "data vector length : " << data_vector_.size() << std::endl;
   }
   uint64_t total_size = batch_size_ * n_ * ldda_ * type_size_;
 
@@ -376,10 +373,6 @@ void CholeskyExecutor::prepareComputeParam() {
     }
   }
 
-  //   printf("matrix A:\n");
-  //   print_matrix(batch_size_,dev_a,ldda_,trans_,n_,ldda_,type_);
-  //   printf("matrix C:\n");
-  //   print_matrix(batch_size_,dev_c,ldda_,trans_,n_,ldda_,type_);
   mlu_transfer_data(dev_d, dev_a, total_size, CNRT_MEM_TRANS_DIR_HOST2DEV);
 
   if (parser_->device() == CPU) {
@@ -405,8 +398,7 @@ void CholeskyExecutor::compute() {
   mlu_transfer_data(h_output, d_intput, total_size,
                     CNRT_MEM_TRANS_DIR_DEV2HOST);
 
-  //   printf("mlu before cholesky result:\n");
-  //   print_matrix(batch_size_,h_output,ldda_,trans_,n_,ldda_,type_);
+
   interface_timer_.start();
   void* workspace = nullptr;
   size_t size = 0;
@@ -453,8 +445,7 @@ void CholeskyExecutor::compute() {
                       CNRT_MEM_TRANS_DIR_HOST2DEV);
   }
 
-  //   printf("mlu after cholesky result:\n");
-  //     print_matrix(batch_size_,h_output,ldda_,trans_,n_,ldda_,type_);
+
 
   return;
 }
@@ -574,8 +565,7 @@ void CholeskyExecutor::cpuCompute() {
   auto h_output = (float*)(data_vector_[1].host_ptr);
   auto h_input = (float*)(data_vector_[0].host_ptr);
 
-  // printf("cpu before cholesky result:\n");
-  // print_matrix(batch_size_,cpu_c,ldda_,trans_,n_,ldda_,type_);
+
 
   if (result_mul) {
     for (int i = 0; i < batch_size_; i++) {
@@ -600,15 +590,7 @@ void CholeskyExecutor::cpuCompute() {
     fill_zero(h_output, upper_, batch_size_, n_, ldda_, type_, false);
   }
 
-  // print_matrix(batch_size_,h_input,ldda_,trans_,n_,ldda_,type_);
-  // printf("cpu cholesky result:\n");
-  // print_matrix(batch_size_,cpu_c,ldda_,trans_,n_,ldda_,type_);
 
-  // printf("mlu cholesky result:\n");
-  // print_matrix(batch_size_,h_output,ldda_,trans_,n_,ldda_,type_);
-
-  // printf("mlu after cholesky result1:\n");
-  // print_matrix(batch_size_,h_output,ldda_,trans_,n_,ldda_,type_);
 
   return;
 }

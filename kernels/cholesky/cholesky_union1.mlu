@@ -175,12 +175,7 @@ static __mlu_func__ void spotf2_sminout_fixsize_device(int m, float* A,
       }
     }
 
-    if (factor < 0) {
-      if (id == 0) {
-        printf("factor:%.3f\n", factor);
-        printf("iter:%d\n", iter);
-      }
-    }
+
     factor = diag[iter * POTF_NB + iter];
     if (factor <= 0) {
         MLULOG("The input matrix is not positive definite.\n");
@@ -996,7 +991,7 @@ mluOpStatus_t sgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k,
                                           &workspace_size);
 
   if (workspace_size > 0) {
-    printf("sgemm workspace size:%zu\n", workspace_size);
+    VLOG(0) << "sgemm workspace size:" << workspace_size;
   }
 
   CALL_CNNL(cnnlStrideBatchMatMul_v2(
@@ -1375,9 +1370,6 @@ mluOpStatus_t transpose(int batch, int m, int n, float* d_input,
   CALL_CNNL(cnnlGetTransposeWorkspaceSize(cnnl_handle, cnnl_in_desc,
                                           cnnl_trans_desc, &size));
 
-  if (size > 0ul) {
-    printf("transpose2 need size: %zu\n", size);
-  }
 
   CALL_CNNL(cnnlTranspose_v2(cnnl_handle, cnnl_trans_desc, cnnl_in_desc,
                              d_input, cnnl_out_desc, d_output, workspace,

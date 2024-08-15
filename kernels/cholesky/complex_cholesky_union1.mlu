@@ -288,9 +288,6 @@ __mlu_func__ void small_cminout_batch(int m, int width, float* r_dst,
   float a1, a2, b1, b2;
 
   for (int iter = 0; iter < width; iter++) {
-    if (r_diag[iter * width + iter] < 0) {
-      printf("iter:%d,taskId:%d\n", iter, taskId);
-    }
     factor = r_diag[iter * width + iter];
     if (factor <= 0) {
         MLULOG("The input matrix is not positive definite.\n");
