@@ -1,3 +1,27 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
+
 #include "cholesky.h"
 #include <cmath>
 
@@ -158,6 +182,9 @@ static __mlu_func__ void spotf2_sminout_fixsize_device(int m, float* A,
       }
     }
     factor = diag[iter * POTF_NB + iter];
+    if (factor <= 0) {
+        MLULOG("The input matrix is not positive definite.\n");
+    }
     factor = std::sqrt(factor);
     factor = (1.0 / factor);
     for (int i = 0; i < span; i++) {
@@ -244,7 +271,11 @@ static __mlu_func__ void spotf2_sminout_anysize_device(int m, float* A,
   int span = remain > POTF_NB ? POTF_NB : remain;
   int iter_num = m > POTF_NB ? POTF_NB : m;
   for (int iter = 0; iter < iter_num; iter++) {
-    factor = sqrt(A[iter * lda + iter]);
+    factor = A[iter * lda + iter];
+    if (factor <= 0) {
+      MLULOG("The input matrix is not positive definite.\n");
+    }
+    factor = sqrt(factor);
     factor = 1.0 / factor;
     __sync_cluster();
     for (int i = 0; i < span; i++) {
@@ -399,7 +430,11 @@ __mlu_func__ void small_sminout_batch(int m, int width, float* dst,
   float* diag = dst;
 
   for (int iter = 0; iter < width; iter++) {
-    factor = sqrt(diag[iter * width + iter]);
+    factor = diag[iter * width + iter];
+    if (factor <= 0) {
+        MLULOG("The input matrix is not positive definite.\n");
+    }
+    factor = sqrt(factor);
     factor = 1.0 / factor;
     for (int i = 0; i < m; i++) {
       dst[i * width + iter] *= factor;
@@ -926,7 +961,6 @@ mluOpStatus_t sgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k,
 
   CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_a_desc));
   CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_b_desc));
-  ;
   CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_c_desc));
 
   int32_t matmul_a_shape[2] = {batch, stride_a};
