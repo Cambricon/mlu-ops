@@ -14550,16 +14550,24 @@ mluOpLgamma(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
  *
  * @par Data Type
- * - float32
+ * - The supported combinations of data types are shown below:
+ *   - float(\b d_input) - float(\b d_output)
  *
  * @par Data Layout
- * - None.
+ * - The data layout of d_input should be \p MLUOP_LAYOUT_ARRAY.
+ * - The data layout of d_output should be \p MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
- * - None.
+ * - The dimension of input/output tensor must be 2 or 3.
+ * - The shape of output should be equal to input shape.
+ * - When the dimension of tensor is 2, the shape[0] and shape[1] should be equal.
+ * - When the dimension of tensor is 3, the shape[1] and shape[2] should be equal.
+ * - Considering the size of the GDRAM, the space occupied by the input matrix should not exceed 7GB.
+ *   For example, when the batch size is 32, the shape[1] of the tensor cannot exceed 7,662(32*7662*4<7GB).
  *
  * @par API Dependency
- * - None.
+ * - Before calling this function, you need to call the ::mluOpGetCholeskyWorkspaceSize
+ *   function to get workspace size.
  *
  * @par Note
  * - None.
@@ -14589,26 +14597,25 @@ mluOpCholesky(mluOpHandle_t handle,
  * The descriptor for the input tensor for which the Cholesky decomposition will be performed.
  * @param[out] size
  * Pointer to a size_t variable where the size of the required workspace will be stored.
- * @param[out] workspace
- * Double pointer to a float, used to allocate memory for the workspace. This pointer will be set to point to the
- * allocated workspace.
  *
  * @par Return
- * - ::MLUOP_STATUS_SUCCESS if the workspace size is successfully calculated and the workspace is successfully
- * allocated,
- * - ::MLUOP_STATUS_EXECUTION_FAILED if there are issues during the calculation or memory allocation.
+ * - ::MLUOP_STATUS_SUCCESS if the workspace size is successfully calculated.
+ * - ::MLUOP_STATUS_EXECUTION_FAILED if there are issues during the calculation allocation.
  *
  * @par Data Type
- * - None.
+ * - The supported combinations of data types are shown below:
+ *   - size_t(\b size)
  *
  * @par Data Layout
  * - None.
  *
  * @par Scale Limitation
- * - None.
+ * - The dimension of input tensor must be 2 or 3.
+ * - When the dimension of tensor is 2, the shape[0] and shape[1] should be equal.
+ * - When the dimension of tensor is 3, the shape[1] and shape[2] should be equal.
  *
  * @par API Dependency
- * - None.
+ * - The allocated extra workspace should be passed to ::mluOpCholesky to perform the Cholesky operation.
  *
  * @par Note
  * - None.
