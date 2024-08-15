@@ -1169,7 +1169,8 @@ static mluOpStatus_t makeFFT2dContiguousInput(mluOpHandle_t handle,
   std::string api = "[mluOpExecFFT]";
   VLOG(5) << "into makeFFT2dContiguousInput";
   auto status = MLUOP_STATUS_SUCCESS;
-  if (!fft_plan->is_input_contiguous) {
+  if (!fft_plan->is_input_contiguous || fft_plan->inembed[0] > fft_plan->n[0] ||
+      fft_plan->inembed[1] > fft_plan->n[1]) {
     VLOG(5) << "launch mluOpContiguous for fft2d input";
     mluOpTensorDescriptor_t input_desc;
     status = mluOpCreateTensorDescriptor(&input_desc);
@@ -1568,9 +1569,8 @@ static mluOpStatus_t computeFFT1dMatmulResult(mluOpHandle_t handle,
 static mluOpStatus_t policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                                 cnrtFunctionType_t *k_type) {
   *k_type = CNRT_FUNC_TYPE_UNION1;
-  k_dim->x = handle->core_num_per_cluster *
-             mluop::runtime::getClusterLimitCapability(handle);
-  k_dim->y = 1;
+  k_dim->x = handle->core_num_per_cluster;
+  k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
   k_dim->z = 1;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -1960,8 +1960,7 @@ mluOpStatus_t execFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
   configureFFT2dWorkspaceAddrs(handle, fft_plan, (void *)input, workspace,
                                output);
 
-  if (!fft_plan->is_input_contiguous &&
-      fft_plan->fft_strategy != CNFFT_FUNC_MANY_DIST1_2D) {
+  if (fft_plan->fft_strategy != CNFFT_FUNC_MANY_DIST1_2D) {
     status = makeFFT2dContiguousInput(handle, fft_plan, input,
                                       fft_plan->mlu_addrs.input);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
