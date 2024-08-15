@@ -25,7 +25,7 @@
 // calculates the required workspace size for performing the Cholesky
 // decomposition on a given matrix or batch of matrices.
 mluOpStatus_t MLUOP_WIN_API mluOpGetCholeskyWorkspace(
-    mluOpTensorDescriptor_t input_desc, size_t* size, float** workspace) {
+    mluOpTensorDescriptor_t input_desc, size_t* size) {
   PARAM_CHECK("mluOpCholesky", input_desc != NULL);
 
   PARAM_CHECK("mluOpCholesky", input_desc->dim == 2 || input_desc->dim == 3);
@@ -58,21 +58,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetCholeskyWorkspace(
     *size = size_a * size_a * sizeof(float) * 2 * batch_size * 3;
   }
   printf("workspace size:%ul\n", (int)(*size));
-  if (*size > 0) {
-    CHECK_RETURN("mluOpCholesky", workspace_malloc(*size, workspace));
-  }
-  return MLUOP_STATUS_SUCCESS;
-}
-
-// releases the allocated workspace memory used for Cholesky decomposition
-// calculations. It ensures that the workspace pointer is not only valid but
-// also points to allocated memory before attempting to free it.
-mluOpStatus_t MLUOP_WIN_API mluOpFreeCholeskyWorkspace(float** workspace) {
-  PARAM_CHECK("mluOpCholesky", workspace != NULL);
-  if (*workspace != NULL) {
-    CHECK_RETURN("mluOpCholesky", workspace_free(workspace));
-    *workspace = NULL;
-  }
+  // if (*size > 0) {
+  //   CHECK_RETURN("mluOpCholesky", workspace_malloc(*size, workspace));
+  // }
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -277,7 +265,7 @@ calculate_body(mluOpHandle_t handle, int batch_size,
 mluOpStatus_t MLUOP_WIN_API
 mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
               float* d_input, const mluOpTensorDescriptor_t output_desc,
-              float* d_output, bool upper, float* workspace) {
+              float* d_output, bool upper, void* workspace) {
   PARAM_CHECK("mluOpCholesky", handle != NULL);
   PARAM_CHECK("mluOpCholesky", input_desc != NULL);
   PARAM_CHECK("mluOpCholesky", d_input != NULL);
@@ -321,19 +309,22 @@ mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     ldc = output_desc->dims[2];
   }
 
-  uint64_t type_size;
+  uint64_t type_size, total_size;
+  uint64_t size_limit = 1024*1024*1024*((uint64_t)7);
   MLUOP_CHECK(mluOpGetSizeOfDataType(dtype, &type_size));
+  total_size = type_size * size_a * lda * ((uint64_t)batch_size);
+  PARAM_CHECK("mluOpCholesky", total_size < size_limit);
   if (type_size == 8 && batch_size > 16 && size_a > 2000) {
     int stride = 2 * size_a * lda;
     calculate_body(handle, 16, input_desc, d_input, output_desc, d_output,
-                   upper, workspace);
+                   upper, (float*)workspace);
     cnrtQueueSync(queue);
     calculate_body(handle, ((uint64_t)batch_size) - 16, input_desc,
                    d_input + 16 * stride, output_desc, d_output + 16 * stride,
-                   upper, workspace);
+                   upper, (float*)workspace);
   } else {
     calculate_body(handle, batch_size, input_desc, d_input, output_desc,
-                   d_output, upper, workspace);
+                   d_output, upper, (float*)workspace);
   }
 
   return MLUOP_STATUS_SUCCESS;

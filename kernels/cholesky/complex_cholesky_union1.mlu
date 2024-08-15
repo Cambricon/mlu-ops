@@ -581,12 +581,6 @@ mluOpStatus_t workspace_malloc(size_t size, float** workspace) {
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t workspace_free(float** workspace) {
-  CNRT_CHECK(cnrtFree((void*)(*workspace)));
-
-  return MLUOP_STATUS_SUCCESS;
-}
-
 __mlu_global__ void complex_inverse_kernel(int batch, float* rd_input,
                                            float* id_input, int ld_input,
                                            int stride_input, float* rd_output,

@@ -408,14 +408,21 @@ void CholeskyExecutor::compute() {
   //   printf("mlu before cholesky result:\n");
   //   print_matrix(batch_size_,h_output,ldda_,trans_,n_,ldda_,type_);
   interface_timer_.start();
-  float* workspace = nullptr;
+  void* workspace = nullptr;
   size_t size = 0;
-  MLUOP_CHECK(mluOpGetCholeskyWorkspace(input_desc_, &size, &workspace));
+  MLUOP_CHECK(mluOpGetCholeskyWorkspace(input_desc_, &size));
+
+  if (size > 0) {
+    workspace = mlu_runtime_.allocate(size);
+  }
+
 
   MLUOP_CHECK(mluOpCholesky(handle_, input_desc_, d_intput, output_desc_,
                             d_output, upper_, workspace));
 
-  MLUOP_CHECK(mluOpFreeCholeskyWorkspace(&workspace));
+  mlu_runtime_.deallocate(workspace);
+
+  // MLUOP_CHECK(mluOpFreeCholeskyWorkspace(&((float*)workspace)));
 
   interface_timer_.stop();
 

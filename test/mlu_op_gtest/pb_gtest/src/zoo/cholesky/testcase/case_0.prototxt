@@ -3,8 +3,8 @@ input {
   id: "input"
   shape: {
     dims: 2
-    dims: 8
-    dims: 8
+    dims: 1000
+    dims: 1000
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
@@ -19,8 +19,8 @@ output {
   id: "output"
   shape: {
     dims: 2
-    dims: 8
-    dims: 8
+    dims: 1000
+    dims: 1000
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
