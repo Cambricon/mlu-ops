@@ -231,6 +231,32 @@ prepare_cntoolkit () {
               done
               popd > /dev/null
           done
+      elif [ ${ID} == "anolis" ]; then
+          for (( i =0; i < ${n}; i++))
+          do
+              PACKAGE_DIST="Anolis"
+              PACKAGE_DIST_VER=${VERSION_ID}
+              PACKAGE_PATH=${PACKAGE_SERVER}"/"${arr_branch[$i]}"/"${arr_modules[$i]}"/"${PACKAGE_OS}"/"${PACKAGE_ARCH}"/"${PACKAGE_DIST}"/"${PACKAGE_DIST_VER}"/"${arr_vers[$i]}"/"
+              REAL_PATH=`echo ${PACKAGE_PATH} | awk -F '//' '{print $2}'`
+              prog_log_info "${arr_modules[$i]} url: ${REAL_PATH}"
+              wget -A rpm -m -p -E -k -K -np -q --reject-regex 'static' ${PACKAGE_PATH}
+
+              pushd ${PACKAGE_EXTRACT_DIR} > /dev/null
+              for filename in ../${REAL_PATH}*.rpm; do
+                prog_log_info "extract ${filename}"
+                rpm2cpio $filename | cpio -u -di
+                if [ ${arr_modules[$i]} == "cntoolkit" ]; then
+                  pure_ver=`echo ${arr_vers[$i]} | cut -d '-' -f 1`
+                  for pkg in ${sub_pkg_to_extract[@]}
+                  do
+                    local fname=$(ls -1 ./var/cntoolkit-${pure_ver}/${pkg}* | grep -E "${pkg}[^[:alnum:]][0-9].*")
+                    prog_log_info "extract ${fname}"
+                    rpm2cpio ${fname} | cpio -u -di
+                  done
+                fi
+              done
+              popd > /dev/null
+          done
       elif [ ${ID} == "kylin" ]; then
           for (( i =0; i < ${n}; i++))
           do
