@@ -410,7 +410,7 @@ void CholeskyExecutor::compute() {
   interface_timer_.start();
   void* workspace = nullptr;
   size_t size = 0;
-  MLUOP_CHECK(mluOpGetCholeskyWorkspace(input_desc_, &size));
+  MLUOP_CHECK(mluOpGetCholeskyWorkspaceSize(input_desc_, &size));
 
   if (size > 0) {
     workspace = mlu_runtime_.allocate(size);
