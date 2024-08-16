@@ -14,6 +14,8 @@ set(MLUOP_BUILD_SPECIFIC_OP ${MLUOP_BUILD_SPECIFIC_OP})
 message("-- MLUOP_BUILD_SPECIFIC_OP=${MLUOP_BUILD_SPECIFIC_OP}")
 set(MLUOP_MLU_ARCH_LIST ${MLUOP_MLU_ARCH_LIST})
 message("-- MLUOP_MLU_ARCH_LIST=${MLUOP_MLU_ARCH_LIST}")
+set(MLUOP_BUILD_PERF ${MLUOP_BUILD_PERF})
+message("-- MLUOP_BUILD_PERF=${MLUOP_BUILD_PERF}")
 
 ################################################################################
 # Environment and BANG Setup
@@ -30,6 +32,15 @@ if(${MLUOP_BUILD_COVERAGE_TEST} MATCHES "ON")
   set(CNRT_DUMP_PGO 1)
   set(CNRT_PGO_OUTPUT_DIR=output)
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -fprofile-instr-generate -fcoverage-mapping -D COVERAGE")
+endif()
+
+################################################################################
+# Add readperf
+################################################################################
+if(MLUOP_BUILD_PERF)
+  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -fbang-instrument-kernels")
+  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -DMLUOP_BANG_PERF")
+  add_compile_definitions(MLUOP_BANG_PERF)
 endif()
 
 ################################################################################

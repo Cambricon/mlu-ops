@@ -16,6 +16,7 @@ PROG_NAME=$(basename $0)  # current script filename, DO NOT EDIT
 export MLUOP_MLU_ARCH_LIST="${MLUOP_MLU_ARCH_LIST}"
 export BUILD_MODE=${BUILD_MODE:-release} # release/debug
 export MLUOP_BUILD_COVERAGE_TEST=${MLUOP_BUILD_COVERAGE_TEST:-OFF} # ON/OFF coverage mode
+export MLUOP_BUILD_PERF=${MLUOP_BUILD_PERF:-OFF} #ON/OFF perf mode
 export MLUOP_BUILD_ASAN_CHECK=${MLUOP_BUILD_ASAN_CHECK:-OFF} # ON/OFF Address Sanitizer (ASan)
 export MLUOP_BUILD_BANG_MEMCHECK=${MLUOP_BUILD_BANG_MEMCHECK:-OFF} # ON/OFF bang memcheck
 export MLUOP_BUILD_PREPARE=${MLUOP_BUILD_PREPARE:-ON}
@@ -35,8 +36,9 @@ short_args=(
   c   # coverage
   h   # help
   d   # debug
-  t:   # release
+  t:  # release
   j:  # jobs
+  p   # perf
 )
 # setup long options, follow alphabetical order
 long_args=(
@@ -50,6 +52,7 @@ long_args=(
   mlu370 # mlu arch
   mlu590
   no_prepare
+  perf
   prepare
   disable-gtest
   enable-static
@@ -123,6 +126,7 @@ usage () {
     echo "    --filter=*                  Build specified OP only (string with ';' separated)"
     echo "    -j N, --jobs=N              Build for N parallel jobs."
     echo "    --no_prepare                Skip dependency download."
+    echo "    -p, --perf                  Build mlu kernel with readperf"
     echo "    --prepare                   Dependency download only."
     echo "    -t                          Build to release."
     echo
@@ -350,6 +354,10 @@ if [ $# != 0 ]; then
         export MLUOP_BUILD_PREPARE="OFF"
         prog_log_note "Skip dependency download."
         ;;
+      -p | --perf)
+        shift
+        export MLUOP_BUILD_PERF="ON"
+        ;;
       --prepare)
         shift
         export MLUOP_BUILD_PREPARE_ONLY="ON"
@@ -457,6 +465,7 @@ pushd ${BUILD_PATH} > /dev/null
   ${CMAKE}  ../ -DCMAKE_BUILD_TYPE="${BUILD_MODE}" \
                 -DNEUWARE_HOME="${NEUWARE_HOME}" \
                 -DMLUOP_BUILD_COVERAGE_TEST="${MLUOP_BUILD_COVERAGE_TEST}" \
+                -DMLUOP_BUILD_PERF="${MLUOP_BUILD_PERF}" \
                 -DBUILD_VERSION="${BUILD_VERSION}" \
                 -DMAJOR_VERSION="${MAJOR_VERSION}" \
                 -DMLUOP_BUILD_ASAN_CHECK="${MLUOP_BUILD_ASAN_CHECK}" \
