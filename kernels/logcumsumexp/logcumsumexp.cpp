@@ -69,6 +69,7 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     cnrtFunctionType_t k_type;
     cnrtDim3_t k_dim;
 
+    PARAM_CHECK(API, handle != NULL);
     PARAM_CHECK(API, input_desc != NULL);
     PARAM_CHECK(API, output_desc != NULL);
     PARAM_CHECK(API, input_desc->dtype == MLUOP_DTYPE_FLOAT ||
@@ -79,13 +80,12 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     PARAM_CHECK(API, input_desc->layout == MLUOP_LAYOUT_ARRAY);
     PARAM_CHECK(API, output_desc->layout == MLUOP_LAYOUT_ARRAY);
     PARAM_CHECK(API, input_desc->dim == output_desc->dim);
-    PARAM_CHECK(API, handle != NULL);
 
     for (int i = 0; i < input_desc->dim; i++) {
         if (input_desc->dims[i] == 0) {
             LOG(ERROR)  << "[mluOpLogcumsumexp] there is a zero element"
                          "in input tensor's shape";
-            return MLUOP_STATUS_BAD_PARAM;
+            return MLUOP_STATUS_SUCCESS;
         }
     }
 
