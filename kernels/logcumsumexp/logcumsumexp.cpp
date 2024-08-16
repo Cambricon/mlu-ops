@@ -89,6 +89,7 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
         }
     }
 
+
     PARAM_CHECK(API, input != NULL);
     PARAM_CHECK(API, output != NULL);
 
