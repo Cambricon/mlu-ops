@@ -56,150 +56,285 @@ LU分解共分为两个过程，分别代表了在不同层次和分块尺寸上
 
 ​	该内核一次性开启处理一个nb大小的列条块所需要的矩阵并将数据加载到对应的NRAM上，然后循环调用子内核进行运算。
 
-- 处理逻辑：
+- 算法逻辑：
 
 ​	首先将整个矩阵加载到NRAM上（如果NRAM空间不够大则分多次装入），在实际的调优过程中发现2D拷贝对性能的影响非常大，为了减少2D拷贝的开销，适应矩阵运算单元BANGC的接口（不能跨地址访存），先将整个矩阵加载到NRAM后进行一次转置，然后进行运算，整个列条块计算完毕后再进行一次转置。此外，每个core在计算时需要依赖当前矩阵的第一行元素，所以每个core额外的把依赖的矩阵当做自己需要处理的部分，用计算换core之间的通信开销。
 
+- MLUKernelScal_ger实数非主元底层分解算法详解
+
+- - 多任务类型：
+
+  - - 当batch数量大于1时，使用1个cluster对应1个batch;
+
+  - - 当batch数量等于1时，使用实际的cluster数量（默认为8个）对应1个batch;
+
+    - ```c
+       if (batch > 1)
+          {
+              id = taskId;
+              batch_id = id / 4;
+              if (batch_id >= batch)
+                  return;
+              tx = taskId % 4;
+              dA += batch_id * stride_a;
+              taskdim = TaskUnion1;
+          }
+          else
+          {
+              id = taskId;
+              batch_id = 0;
+              taskdim = taskDim;
+              tx = taskId;
+          }
+      ```
+
+  - 变量与数据的对应
+
+  - - ```c
+      __nram__ float shared_y[N * N];//存储每次分解时的第一行元素
+      __nram__ float extra_vec[N * N];//存储额外行
+      __nram__ float temp[MAX_M_SIZE * +N];//存储当前主元下方的一列元素
+      __nram__ float temp_L1[MAX_M_SIZE + N];//存储当前主元下方的一列元素（经过计算更新后）
+      __nram__ float L1[MAX_M_SIZE * N + N * N];//存储当前主元右下方的尾部矩阵（已转置）
+      __nram__ float orig[MAX_M_SIZE * N + N * N];//每个core包含额外行和工作行的整个矩阵（未转置）
+      ```
+
+    - ![img](25.png)
+
+  - 任务切分
+
+  - - 额外行的数量最大不超过n(列数)，并保存到extra_vec变量中；
+
+    - 当输入的m不超过MAX_M_SIZE(每个core能分配的最大NRAM对应的M) * taskdim(多任务类型)时，将m按taskdim进行等分，余出的部分平均分给前m_个core;
+
+    - 当输入的m大于MAX_M_SIZE(每个core能分配的最大NRAM对应的M) * taskdim(多任务类型)时，将m分多轮迭代；
+
+    - m_last_seg为了处理最后一个seg中，m_不为0的情况（前m__个core和后面的core工作行数量不一致)
+
+    - ```c
+      const int C_MAX_M_SIZE = MAX_M_SIZE * taskdim;
+      const int seg = CEILDIV(m, C_MAX_M_SIZE);
+      // n个额外行
+      __memcpy(extra_vec, A, n * sizeof(float), GDRAM2NRAM, n * sizeof(float), lda * sizeof(float), n - 1);
+      for (int k = 0; k < seg; k++)
+      {
+          int remain_m = m - k * C_MAX_M_SIZE;
+          int mp = remain_m < C_MAX_M_SIZE ? remain_m : C_MAX_M_SIZE;
+          int m_per_core = mp / taskdim;
+          int m_per_core_ = m_per_core;
+          int m_ = mp % taskdim;
+          if (tx <= m_ - 1)//余出的m_平均分给前m_个core
+          {
+              m_per_core++;
+              m_per_core_++;
+          }
+          int m_last_seg = tx > m_ - 1 ? m_ : 0;//特殊处理最后一个seg
+          int len_extra = 0;
+          int offset = tx * m_per_core_ + k * lda * C_MAX_M_SIZE;
+          len_extra = offset <= n ? offset + m_last_seg : n;
+          if (len_extra - 1 >= 0)
+              __memcpy(orig, extra_vec, n * sizeof(float), NRAM2NRAM, n * sizeof(float), n * sizeof(float), len_extra - 1);
+          if (m_per_core - 1 >= 0)
+              __memcpy(orig + len_extra * n, A + tx * lda * m_per_core_ + m_last_seg * lda + k * lda * C_MAX_M_SIZE, n * sizeof(float), GDRAM2NRAM, n * sizeof(float), lda * sizeof(float), m_per_core - 1);
+          ......
+      }
+      ```
+
+  - 循环部分
+
+  - - cur表示当前进行到的位置，当满足((tx + k * taskdim + m_last_seg) == (cur)时，每个core开始处理自己的工作行，然后m_per_core--，在此之前都是在处理额外行；
+
+  - - ```c
+      for (STEP = 0; STEP < ib; STEP++)
+      {
+          gbj = J + STEP;
+          if (gbj < M_size)
+          {
+              if (m_per_core_ == 0)
+                  return;
+      
+              int cur = STEP / m_per_core_;
+      
+              MLUSubKernelScal_ger(m - gbj, ib - STEP, STEP, taskdim, batch,
+                                   A, lda, ld_L1,
+                                   info, gbstep,
+                                   m_per_core, m_per_core_, len_extra, k, cur, m_last_seg,
+                                   shared_y,
+                                   temp,
+                                   L1,
+                                   temp_L1,
+                                   orig);
+      
+              if (((tx + k * taskdim + m_last_seg) == (cur)) && (m_per_core > 0))
+                  m_per_core--;
+              else if (len_extra > 0)
+                  len_extra--;
+              if (m_per_core == 0)
+                  break;
+          }
+      }
+      ```
+
+      
+
+完整代码：
+
 ```c
 __mlu_entry__ void MLUKernelScal_ger(
-    int M_size, int N_size, int ib, int J,
+    int batch, int M_size, int N_size, int ib, int J,
     int m, int n, int step,
-    float *dA, int lda,
+    float *dA, int lda, int stride_a,
     int *info, int gbstep)
 {
-    int tx = taskIdX;
+    // printf("%d KB used\n", ((MAX_M_SIZE * N + N * N) * 2 + N * N * 2 + (MAX_M_SIZE + N) * 2) * 4);
+    int id, batch_id, tx, taskdim;
+    if (batch > 1)
+    {
+        id = taskId;
+        batch_id = id / 4;
+        if (batch_id >= batch)
+            return;
+        tx = taskId % 4;
+        dA += batch_id * stride_a;
+        taskdim = TaskUnion1;
+    }
+    else
+    {
+        id = taskId;
+        batch_id = 0;
+        taskdim = taskDim;
+        tx = taskId;
+    }
     int gbj, STEP;
     __nram__ float shared_y[N * N];
     __nram__ float extra_vec[N * N];
-    __nram__ float temp[MAX_M_SIZE  / TaskUnion4];
-    __nram__ float L1[MAX_M_SIZE * N  / TaskUnion4];
-    __nram__ float temp_L1[MAX_M_SIZE  / TaskUnion4];
-    __nram__ float tail[MAX_M_SIZE  / TaskUnion4];
-    __nram__ float orig[MAX_M_SIZE * N / TaskUnion4];
-    const int seg = CEILDIV(m, MAX_M_SIZE);
-    int mm_per_core_ = 0;
-    __memcpy(extra_vec, A, n * sizeof(float), GDRAM2NRAM, n * sizeof(float), lda * sizeof(float), n - 1);
-    for (int k = 0; k < seg; k++)
+    __nram__ float temp[MAX_M_SIZE * +N];
+    __nram__ float L1[MAX_M_SIZE * N + N * N];
+    __nram__ float temp_L1[MAX_M_SIZE + N];
+    __nram__ float orig[MAX_M_SIZE * N + N * N];
+
+    float *A = dA + J + J * lda;
+
+    if (1)
     {
-        int remain_m = m - k * MAX_M_SIZE;
-        int mp = remain_m < MAX_M_SIZE ? remain_m : MAX_M_SIZE;
-        int m_per_core = mp / taskDim;
-        int m_per_core_ = m_per_core;
-        int m_ = mp - m_per_core * (taskDim - 1);
-        if (tx == taskDim - 1)
+        const int C_MAX_M_SIZE = MAX_M_SIZE * taskdim;
+        const int seg = CEILDIV(m, C_MAX_M_SIZE);
+        // n个额外行
+        __memcpy(extra_vec, A, n * sizeof(float), GDRAM2NRAM, n * sizeof(float), lda * sizeof(float), n - 1);
+
+        for (int k = 0; k < seg; k++)
         {
-            m_per_core = m_;
-        }
-
-        int offset = tx * m_per_core_ + k * lda * MAX_M_SIZE;
-        int len_extra = 0;
-
-        if (!(m_per_core_ == 0 && tx != taskDim - 1))
-        {
-            if (offset <= n)
+            int remain_m = m - k * C_MAX_M_SIZE;
+            int mp = remain_m < C_MAX_M_SIZE ? remain_m : C_MAX_M_SIZE;
+            int m_per_core = mp / taskdim;
+            int m_per_core_ = m_per_core;
+            int m_ = mp % taskdim;
+            if (tx <= m_ - 1)
             {
-                len_extra = offset;
+                m_per_core++;
+                m_per_core_++;
             }
-            else
-            {
-                len_extra = n;
-            }
-            len_extra = len_extra < 0 ? 0 : len_extra;
-
-            if (len_extra > 0)
+            int m_last_seg = tx > m_ - 1 ? m_ : 0;
+            int len_extra = 0;
+            int offset = tx * m_per_core_ + k * lda * C_MAX_M_SIZE;
+            len_extra = offset <= n ? offset + m_last_seg : n;
+            if (len_extra - 1 >= 0)
                 __memcpy(orig, extra_vec, n * sizeof(float), NRAM2NRAM, n * sizeof(float), n * sizeof(float), len_extra - 1);
-            __memcpy(orig + len_extra * n, A + tx * lda * m_per_core_ + k * lda * MAX_M_SIZE, n * sizeof(float), GDRAM2NRAM, n * sizeof(float), lda * sizeof(float), m_per_core - 1);
-        }
+            if (m_per_core - 1 >= 0)
+                __memcpy(orig + len_extra * n, A + tx * lda * m_per_core_ + m_last_seg * lda + k * lda * C_MAX_M_SIZE, n * sizeof(float), GDRAM2NRAM, n * sizeof(float), lda * sizeof(float), m_per_core - 1);
 
-        int m_e = m_per_core + len_extra;
-        int ld_L1 = m_e;
-        int mm_per_core = m_per_core;
+            int m_e = m_per_core + len_extra;   // 转置后L1的主矩阵维度
+            int ld_L1 = m_e;                    // 转置后L1的主矩阵维度
+            const int mm_per_core = m_per_core; // 保留额外行和工作行的常量副本
+            const int llen_extra = len_extra;
 
-        int llen_extra = len_extra;
+            // 将原数组转置
+            if (m_e > 0)
+                __bang_transpose(L1, orig, m_e, n);
 
-        if (mm_per_core_ == 0)
-        {
-            if (k == 0)
-                mm_per_core_ = m_per_core;
-        }
-
-        if (m_e > 0)
-            __bang_transpose(L1, orig, m_e, n);
-        for (STEP = 0; STEP < ib; STEP++)
-        {
-            gbj = J + STEP;
-            if (gbj < M_size)
+            for (STEP = 0; STEP < ib; STEP++)
             {
-                if (m_per_core_ == 0 && m_per_core == 0)
-                    return;
+                gbj = J + STEP;
+                if (gbj < M_size)
+                {
+                    if (m_per_core_ == 0)
+                        return;
+                   
+                    int cur = STEP / m_per_core_;
 
-                int cur = (m_per_core_ == 0) ? (taskDim - 1 + STEP / mm_per_core_ * taskDim) : STEP / m_per_core_;
+                    MLUSubKernelScal_ger(m - gbj, ib - STEP, STEP, taskdim, batch,
+                                         A, lda, ld_L1,
+                                         info, gbstep,
+                                         m_per_core, m_per_core_, len_extra, k, cur, m_last_seg,
+                                         shared_y,
+                                         temp,
+                                         L1,
+                                         temp_L1,
+                                         orig);
 
-                MLUSubKernelScal_ger(m - gbj, ib - STEP, STEP,
-                                     A, lda, ld_L1,
-                                     info, gbstep,
-                                     m_per_core, m_per_core_, len_extra, k, cur,
-                                     shared_y,
-                                     temp,
-                                     L1,
-                                     temp_L1,
-                                     tail,
-                                     orig);
-
-                if ((tx + k * taskDim) == cur && m_per_core > 0)
-                    m_per_core--;
-                else if (len_extra > 0)
-                    len_extra--;
-                if (m_per_core == 0)
-                    break;
+                    if (((tx + k * taskdim + m_last_seg) == (cur)) && (m_per_core > 0))
+                        m_per_core--;
+                    else if (len_extra > 0)
+                        len_extra--;
+                    if (m_per_core == 0)
+                        break;
+                }
+            }
+            // 转置回
+            if (m_e > 0)
+                __bang_transpose(orig, L1, n, m_e);
+           
+            if (mm_per_core - 1 >= 0)
+            {
+                __memcpy(A + tx * lda * m_per_core_ + m_last_seg * lda + k * lda * C_MAX_M_SIZE, orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM, lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
             }
         }
-        if (m_e > 0)
-            __bang_transpose(orig, L1, n, m_e);
-        if (mm_per_core - 1 >= 0)
-        {
-            __memcpy(A + tx * lda * m_per_core_ + k * lda * MAX_M_SIZE, orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM, lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
-        }
-        return
+        return;
     }
+}
 ```
 
 
 
-- MLUSubkernelScal_ger:
+- MLUSubkernelScal_ger算法逻辑:
 
-​	该内核主要是计算当前主元下方的元素并对右侧的子矩阵进行更新，参照计算原理处的说明。
+​	该内核主要是计算当前主元下方的元素并对右侧的子矩阵进行更新，算法原理参照计算原理处的说明。
+
+- - ①__bang_mul_scalar对应第一列元素的除法运算过程；
+  - ②__bang_cycle_mul对应①的一列矩阵和shared_y的每一个元素进行循环向量乘的过程；
+  - ③__bang_sub对应尾部矩阵L1和②后的矩阵进行减法运算；
+  - of表示对变量位置的偏移
 
 ```c
 __mlu_func__ void MLUSubKernelScal_ger(
-    int m, int n, int step,
+    int m, int n, int step, int taskdim, int batch,
     float *dA, int lda, int ldL1,
     int *info, int gbstep,
-    int m_per_core, int m_per_core_, int len_extra, int k, int cur,
-    __nram__ float *shared_y,
+    int m_per_core, int m_per_core_, int len_extra, int k, int cur, int m_last_seg,
+    __nram__ float *shared_y,//存储每次计算时的第一行元素
     __nram__ float *temp,
-    __nram__ float *L1,
+    __nram__ float *L1,//存储
     __nram__ float *temp_L1,
-    __nram__ float *tail,
     __nram__ float *orig)
 {
-    int tx = taskIdX;
+    int tx = batch > 1 ? taskId % 4 : taskId;
+    // printf("SubKernelScal_ger tx %d\n", tx);
 
     // checkinfo to avoid computation of the singular matrix
     if ((*info) != 0)
         return;
     if (m_per_core <= 0)
         return;
-
     int ld_orig = n + step;
 
+    // printf("tx step m_per_core m_per_core_ len_extra %d %d %d %d %d\n", tx, step, m_per_core, m_per_core_, len_extra);
     if (step == 0)
         __memcpy(shared_y, orig, n * sizeof(float), NRAM2NRAM, n * sizeof(float), lda * sizeof(float), 0);
     else
     {
         orig = orig + step + step * ld_orig;
         L1 = L1 + step + step * ldL1;
-        
+
         __memcpy(shared_y, L1, 1 * sizeof(float), NRAM2NRAM, 1 * sizeof(float), ldL1 * sizeof(float), n - 1);
     }
 
@@ -211,20 +346,15 @@ __mlu_func__ void MLUSubKernelScal_ger(
 
     int offset_L1 = 0;
 
-    if (tx == 0 || (tx == taskDim - 1 && m_per_core_ == 0)) 
+    if (((tx + k * taskdim + m_last_seg) == cur) && (m_per_core == 1))
     {
-        if (step == 0 && k == 0)
-        {
-            m_per_core--;
-            offset_L1++; 
-        }
+        return;
     }
-    if (k > 0)
+
+    if ((step == 0) && (k == 0) && (tx == 0))//特殊处理该情况，表示当前行不需要处理，直接处理下一行
     {
-        if (((tx + k * taskDim) == cur) && (m_per_core == 1))
-        {
-            return;
-        }
+        m_per_core--;
+        offset_L1++; // 指向shared_y的第二个元素
     }
 
     float reg;
@@ -248,25 +378,186 @@ __mlu_func__ void MLUSubKernelScal_ger(
         if (m_per_core - 1 >= 0)
         {
             if ((m_per_core + len_extra - of) > 0)
-                __memcpy(L1 + offset_L1 + of, temp_L1 + offset_L1, (m_per_core + len_extra - of) * sizeof(float), NRAM2NRAM, ldL1 * sizeof(float), sizeof(float), 0); 
+                __memcpy(L1 + offset_L1 + of, temp_L1 + offset_L1, (m_per_core + len_extra - of) * sizeof(float), NRAM2NRAM, ldL1 * sizeof(float), sizeof(float), 0); // 写回第一列
         }
     }
-
 }
 ```
 
+- MLUKernelScal_ger_pivot实数选主元底层分解算法详解
 
-
+  * 在非主元分解算法的基础上增加了选主元的步骤(PivotSwap)，根据m的尺寸选取选主元的内核，MLUKernelPivotSwap采用Union1任务类型，核间通信时用SRAM暂存中间值并进行主元的选取；MLUKernelPivotSwap2采用Union8任务类型，核间通信时用GDRAM暂存中间值并进行主元的选取；
+  * 关键代码如下：
+  
+  ```c++
+  for (STEP = 0; STEP < ib; STEP++)
+  {
+      gbj = J + STEP;
+      if (gbj < M_size)
+      {
+          if (m > MAX_M_SIZE1 * TaskUnion1)
+          {
+              MLUKernelPivotSwap2(m - gbj, ib - STEP, STEP,
+                                  batch, M_size, N_size,
+                                  A, lda, stride_a, workspace,
+                                  L1, ld_L1, orig, n, len_extra, m_e,
+                                  max_arr, max_arr_vec, max_idx, max_gbidx, shared_y,
+                                  tx, taskdim, batch_id,
+                                  m_per_core, mp_,
+                                  dipiv, dipiv2, info, gbstep);
+          }
+  
+          else
+          {
+  
+              MLUKernelPivotSwap(m - gbj, ib - STEP, STEP,
+                                 batch, M_size, N_size,
+                                 A, lda, stride_a, workspace,
+                                 L1, ld_L1, orig, n, len_extra, m_e,
+                                 max_arr, max_arr_vec, max_idx, shared_y,
+                                 tx, taskdim, batch_id,
+                                 m_per_core, mp_,
+                                 dipiv, dipiv2, info, gbstep);
+          }
+  
+          MLUSubKernelScal_ger_pivot(m - gbj, ib - STEP, STEP, taskdim, batch,
+                                     A, lda, ld_L1,
+                                     info, gbstep,
+                                     m_per_core, m_per_core_, len_extra, k, m_e,
+                                     shared_y,
+                                     temp,
+                                     L1,
+                                     orig);
+  
+          m_e--;
+      }
+  }
+  ```
+  
+  * 受限于片上空间的大小，当输入矩阵的规模非常大时，需要牺牲部分性能并交换分块和按列循环计算的顺序，适应算法的通用性，具体代码如下：
+  
+  ```
+  if (m > MAX_M_SIZE1 * TaskUnion8)
+  {
+  
+      int mp = m / taskdim;
+      const int mp_ = mp;
+      mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
+  
+      int seg = CEILDIV(mp, MAX_M_SIZE1);
+  
+      __mlu_shared__ int shared_seg[TaskUnion1];
+      shared_seg[tx] = seg;
+      __sync_cluster();
+  
+      seg = shared_seg[0];
+      int m_e;
+      for (STEP = 0; STEP < ib; STEP++)
+      {
+          gbj = J + STEP;
+          for (int k = 0; k < seg; k++)
+          {
+              int remain_m = mp - k * MAX_M_SIZE1;
+              int m_per_core = remain_m < MAX_M_SIZE1 ? remain_m : MAX_M_SIZE1;
+              m_per_core = ((tx == taskdim - 1) && (k == seg - 1)) ? remain_m : m_per_core;
+              const int m_per_core_ = m_per_core;
+  
+              int offset = tx * mp_ + k * MAX_M_SIZE1;
+              int len_extra = offset <= n ? offset : n;
+  
+              if (m_per_core - 1 >= 0)
+                  __memcpy(orig, A + STEP + tx * lda * mp_ + k * lda * MAX_M_SIZE1, 1 * sizeof(float), GDRAM2NRAM, 1 * sizeof(float), lda * sizeof(float), m_per_core - 1);
+  
+              m_e = m_per_core + len_extra;
+              m_e = (k > 0) ? m_per_core - STEP : m_e - STEP;
+              if (gbj < M_size)
+              {
+                  MLUKernelPivot(m - gbj, ib - STEP, STEP,
+                                 batch, M_size, N_size, k,
+                                 A, lda, stride_a,
+                                 orig, 1, len_extra, m_e,
+                                 k_max, k_max_idx, k_max_gbidx,
+                                 tx, taskdim, batch_id,
+                                 mp, mp_, m_per_core, m_per_core_,
+                                 dipiv, dipiv2, info, gbstep);
+              }
+          }
+  
+          MLUKernelKSwap(m - gbj, ib - STEP, STEP,
+                         batch, M_size, N_size,
+                         A, lda, stride_a,
+                         orig, 1, m_e,
+                         k_max, k_max_idx, k_max_gbidx, k_max_arr,
+                         tx, taskdim, batch_id,
+                         mp, mp_,
+                         dipiv, dipiv2, info, gbstep);
+  
+          __memcpy(shared_y, A + STEP + STEP * lda, (ib - STEP) * sizeof(float), GDRAM2NRAM);
+          for (int k = 0; k < seg; k++)
+          {
+              int remain_m = mp - k * MAX_M_SIZE1;
+              int m_per_core = remain_m < MAX_M_SIZE1 ? remain_m : MAX_M_SIZE1;
+              m_per_core = ((tx == taskdim - 1) && (k == seg - 1)) ? remain_m : m_per_core;
+  
+              const int m_per_core_ = m_per_core;
+  
+              int len_extra = 0;
+              int offset = tx * mp_ + k * MAX_M_SIZE1;
+              len_extra = offset <= n ? offset : n;
+  
+              if ((len_extra - 1 >= 0 && k == 0))
+                  __memcpy(orig, extra_vec_nram, n * sizeof(float), NRAM2NRAM, n * sizeof(float), n * sizeof(float), len_extra - 1);
+              if (m_per_core - 1 >= 0)
+                  __memcpy(orig + len_extra * n, A + tx * lda * mp_ + k * lda * MAX_M_SIZE1, n * sizeof(float), GDRAM2NRAM, n * sizeof(float), lda * sizeof(float), m_per_core - 1);
+  
+              m_e = m_per_core + len_extra;
+              const int m_e1 = m_e;
+              int ld_L1 = m_e;
+              const int mm_per_core = m_per_core;
+              const int llen_extra = len_extra;
+  
+              if (m_e > 0)
+                  __bang_transpose(L1, orig, m_e, n);
+  
+              m_e = (k > 0) ? m_per_core - STEP : m_e - STEP;
+  
+              if (gbj < M_size)
+              {
+  
+                  MLUSubKernelScal_ger_pivot(m - gbj, ib - STEP, STEP, taskdim, batch,
+                                             A, lda, ld_L1,
+                                             info, gbstep,
+                                             m_per_core, m_per_core_, len_extra, k, m_e,
+                                             shared_y,
+                                             temp,
+                                             L1,
+                                             orig);
+              }
+  
+              if (m_e1 > 0)
+                  __bang_transpose(orig, L1, n, m_e1);
+  
+              if (mm_per_core - 1 >= 0)
+              {
+                  __memcpy(A + tx * lda * mp_ + k * lda * MAX_M_SIZE1, orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM, lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+              }
+          }
+      }
+  }
+  ```
+  
+  
+  
 - 性能优化设计
 
   - 资源分配
 
     | 表项  | 分配策略                                                     |
     | ----- | ------------------------------------------------------------ |
-    | NRAM  | 将输入矩阵加载到NRAM上，如果NRAM空间不足，则分块装入，然后再进行一次转置 |
-    | WRAM  | 未使用                                                       |
-    | SRAM  | 未使用                                                       |
-    | GDRAM | 输入矩阵和输出矩阵                                           |
+    | NRAM  | 将输入矩阵加载到NRAM上，如果NRAM空间不足，则分块装入，然后再进行一次转置； |
+    | WRAM  | 未使用；                                                     |
+    | SRAM  | 暂存置换矩阵；行交换时的缓冲；                               |
+    | GDRAM | 输入矩阵和输出矩阵；行交换时的缓冲；                         |
 
   - 流水设计
 
@@ -296,9 +587,9 @@ __mlu_func__ void MLUSubKernelScal_ger(
 | 是否需要支持原位                                             | 是                  |
 | 是否需要支持stride机制                                       | 是                  |
 | 是否需要支持广播                                             | 否                  |
-| 0元素检查是否直接返回                                        | 否                  |
+| 0元素检查是否直接返回                                        | 是                  |
 | 其他特殊需求                                                 | 无                  |
-| 本次开发优先支持的规模/模式                                  |                     |
+| 本次开发优先支持的规模/模式                                  | 典型规模            |
 
 ### 4.2.LU分解算子功能和应用场景描述
 
@@ -306,20 +597,37 @@ LU 分解的功能是将原始矩阵 A 分解为两个矩阵 L 和 U，满足 A 
 
 ### 4.3.算子输入输出参数要求
 
-| 参数        | 语义               | 类型      | 支持类型             | 物理布局 | 规模限制         |
-| ----------- | ------------------ | --------- | -------------------- | -------- | ---------------- |
-| handle      |                    | 句柄      |                      |          |                  |
-| Input_desc  | 矩阵描述符         | 输入      |                      |          |                  |
-| Input       | 输入矩阵           | 输入/输出 | float、complex float | array    | shape[batch,M,N] |
-| output_desc | 矩阵描述符         | 输入      |                      |          |                  |
-| output      | 输入矩阵           | 输入/输出 | float、complex float | array    | shape[batch,M,N] |
-| mode        | 模式pivot/no pivot | 输入      | bool                 |          |                  |
+| 参数        | 语义               | 类型      | 支持类型             | 物理布局         | 规模限制          |
+| ----------- | ------------------ | --------- | -------------------- | ---------------- | ----------------- |
+| handle      |                    | 句柄      |                      |                  |                   |
+| Input_desc  | 矩阵描述符         | 输入      |                      |                  |                   |
+| Input       | 输入矩阵           | 输入/输出 | float、complex float | shape[batch,M,N] | 所占空间不超过7GB |
+| output_desc | 矩阵描述符         | 输入      |                      |                  |                   |
+| output      | 输入矩阵           | 输入/输出 | float、complex float | shape[batch,M,N] | 所占空间不超过7GB |
+| mode        | 模式pivot/no pivot | 输入      | int                  |                  |                   |
 
-### 4.4. **算子接口设计**
+### 4.4. 算子限制
+
+| 限制类型     | 详细说明                                       |
+| ------------ | ---------------------------------------------- |
+| 数据类型限制 | 输入输出矩阵的类型必须是float32或者complex类型 |
+| 布局限制     | 输入输出矩阵均为array                          |
+| 规模限制     | 算子输入矩阵不得超过GDRAM大小                  |
+| 功能限制     | 无                                             |
+| 数据范围限制 | mode表示是否选主元，非零为选主元模式           |
+| 原位限制     | 仅支持原位                                     |
+| stride限制   | 不支持stride机制                               |
+| 广播限制     | 不支持广播                                     |
+
+### 4.5. 验收标准
+
+一方面输出结果的动态阈值 diff1， diff2， diff3_2 精度验收通过，另一方面使用输出结果反解回的矩阵和原始输入矩阵 A 的动态阈值 diff1， diff2， diff3_2 精度验收通过。
+
+### 4.6. **算子接口设计**
 
 mluOpStatus_t mluOp_WIN_API mluOpLUFactorization(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc, void *input,const mluOpTensorDescriptor_t output_desc, void *output,const bool mode);
 
-### 4.5.测试用例设计
+### 4.7. 测试用例设计
 
 在单batch下的测试用例规模如表格：
 
@@ -329,7 +637,7 @@ mluOpStatus_t mluOp_WIN_API mluOpLUFactorization(mluOpHandle_t handle, const mlu
 | [m,n] | [65536,3000] | [65536,30]  | [1,1024] | [15200,15] | [1024,1024] |
 | [m,n] | [3200,3000]  | [8000,3000] |          |            |             |
 
-### 4.6.算子参数检查
+### 4.8. 算子参数检查
 
 1.handle为空检查；
 
