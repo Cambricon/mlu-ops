@@ -1,4 +1,25 @@
-
+/*************************************************************************
+ * Copyright (C) [2022] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
 #include "sgetrf2.h"
 #include "sgetrf2_utils.h"
 #include "core/logging.h"
@@ -10,348 +31,326 @@
 #define CEILDIV(x, y) ((x + y - 1) / y)
 #define ROUNDUP(x, y) (CEILDIV(x, y) * y)
 
-__mlu_global__ void MLUKernelInverse(int batch,
-                                     float *d_input, int ld_input, int stride_input,
-                                     float *d_output, int ld_output, int stride_output,
-                                     int m)
-{
-    int id, batch_id, taskdim;
-    if (batch > 1)
-    {
-        id = taskId;
-        batch_id = id / 4;
-        if (batch_id >= batch)
-            return;
-        id = taskId % 4;
-        taskdim = TaskUnion1;
-    }
-    else
-    {
-        id = taskId % 4;
-        batch_id = 0;
-        taskdim = taskDim;
-    }
-
-    float *orignInput = d_input;
-    float *orignOutput = d_output;
-    d_input = orignInput + batch_id * stride_input;
-    d_output = orignOutput + batch_id * stride_output;
-    float *nram_buffer = NRAM_BUFFER;
-    float *sram_buffer = SRAM_BUFFER;
-
-    if (id == 0)
-    {
-        __sramset(sram_buffer, m * m, 0);
-        __sramset(sram_buffer, 1, 1.f, m, 0); // dst，elem_count，value，stride,segnum
-        for (int i = 1; i < m; i++)
-        {
-            __sramset(sram_buffer + i * m + i, 1, 1.f, m, 0);
-            __memcpy(sram_buffer + i * m, d_input + i * ld_input, i * sizeof(float), GDRAM2SRAM, m * sizeof(float), ld_input * sizeof(float), 0);
-        }
-    }
-    __sync_cluster();
-
-    int span = m / taskDim;
-    int start = id * span;
-    if (id == 3)
-    {
-        span = m - 3 * span;
-    }
-    float *nram_offset = (float *)nram_buffer + id * 3 * m * m;
-    float *nram_src1 = nram_offset;
-    float *nram_src2 = nram_src1 + m * m;
-    float *mul_result = nram_src2 + m;
-    float *nram_dst = nram_src2 + m * m;
-    float *diag_start = ((float *)sram_buffer) + m * start + start;
-    int height = m - start;
-
-    __memset_nram(nram_offset, 3 * m * m, (float)ZERO);
-
-    float result = 0.0;
-    for (int i = 0; i < span; i++)
-    {
-        int off = i * m + i;
-        result = diag_start[off];
-        result = 1.0 / result;
-        nram_src1[i * height + i] = result;
-        nram_dst[i * span + i] = result;
-        diag_start[off] = result;
-    }
-    __sync_cluster();
-
-    for (int i = 1; i < height; i++)
-    {
-        __memcpy(nram_src2, diag_start + i * m, i * sizeof(float), SRAM2NRAM);
-        int num = std::min(i, span);
-        float diag_element = diag_start[i * m + i];
-        for (int j = 0; j < num; j++)
-        {
-            float temp = 0.0;
-
-            __bang_mul(mul_result, nram_src2, nram_src1 + j * height, i);
-            for (int k = 0; k < i; k++)
-            {
-                temp += mul_result[k];
-            }
-            temp = temp * -1.0 * diag_element;
-            nram_dst[i * span + j] = temp;
-            nram_src1[j * height + i] = temp;
-        }
-        __sync();
-    }
-
-    __sync_cluster();
-
-    if (span > 0)
-        __memcpy(diag_start, nram_dst, span * sizeof(float), NRAM2SRAM, m * sizeof(float), span * sizeof(float), height - 1);
-
-    __sync_cluster();
-
-    if (id == 0)
-    {
-        __memcpy(d_output, sram_buffer, m * sizeof(float), SRAM2GDRAM, ld_output * sizeof(float), m * sizeof(float), m - 1);
-    }
-}
-
-__mlu_global__ void complex_inverse_kernel(int batch, float *rd_input, float *id_input, int ld_input, int stride_input, float *rd_output, float *id_output, int ld_output, int stride_output, int m)
-{
-    int id = taskId;
+__mlu_global__ void MLUKernelInverse(int batch, float *d_input, int ld_input,
+                                     int stride_input, float *d_output,
+                                     int ld_output, int stride_output, int m) {
+  int id, batch_id, taskdim;
+  if (batch > 1) {
+    id = taskId;
+    batch_id = id / 4;
+    if (batch_id >= batch) return;
     id = taskId % 4;
-    float *nram_buffer = NRAM_BUFFER;
+    taskdim = TaskUnion1;
+  } else {
+    id = taskId % 4;
+    batch_id = 0;
+    taskdim = taskDim;
+  }
 
-    int span = m / taskDim;
-    int start = id * span;
-    if (id == 3)
-    {
-        span = m - 3 * span;
+  float *orignInput = d_input;
+  float *orignOutput = d_output;
+  d_input = orignInput + batch_id * stride_input;
+  d_output = orignOutput + batch_id * stride_output;
+  float *nram_buffer = NRAM_BUFFER;
+  float *sram_buffer = SRAM_BUFFER;
+
+  if (id == 0) {
+    __sramset(sram_buffer, m * m, 0);
+    __sramset(sram_buffer, 1, 1.f, m,
+              0);  // dst，elem_count，value，stride,segnum
+    for (int i = 1; i < m; i++) {
+      __sramset(sram_buffer + i * m + i, 1, 1.f, m, 0);
+      __memcpy(sram_buffer + i * m, d_input + i * ld_input, i * sizeof(float),
+               GDRAM2SRAM, m * sizeof(float), ld_input * sizeof(float), 0);
     }
-    float *nram_offset = (float *)nram_buffer;
-    float *rdiag_start = (float *)nram_offset;
-    float *idiag_start = rdiag_start + m * m;
-    float *r_nram_src1 = idiag_start + m * m;
-    float *i_nram_src1 = r_nram_src1 + m * m;
-    float *r_nram_src2 = i_nram_src1 + m * m;
-    float *i_nram_src2 = r_nram_src2 + m * m;
-    float *r_mul_result = i_nram_src2 + m;
-    float *i_mul_result = r_mul_result + m;
-    float *r_nram_dst = i_mul_result + m * m;
-    float *i_nram_dst = r_nram_dst + m * m;
+  }
+  __sync_cluster();
 
-    int height = m - start;
+  int span = m / taskDim;
+  int start = id * span;
+  if (id == 3) {
+    span = m - 3 * span;
+  }
+  float *nram_offset = (float *)nram_buffer + id * 3 * m * m;
+  float *nram_src1 = nram_offset;
+  float *nram_src2 = nram_src1 + m * m;
+  float *mul_result = nram_src2 + m;
+  float *nram_dst = nram_src2 + m * m;
+  float *diag_start = ((float *)sram_buffer) + m * start + start;
+  int height = m - start;
 
-    __memset_nram(nram_offset, 4 * m * m * 2 + 2, (float)ZERO);
+  __memset_nram(nram_offset, 3 * m * m, (float)ZERO);
 
-    if (span > 0)
-    {
-        __memcpy(rdiag_start, rd_input + ld_input * start + start, height * sizeof(float), LDRAM2NRAM, m * sizeof(float), ld_input * sizeof(float), height - 1);
-        __memcpy(idiag_start, id_input + ld_input * start + start, height * sizeof(float), LDRAM2NRAM, m * sizeof(float), ld_input * sizeof(float), height - 1);
+  float result = 0.0;
+  for (int i = 0; i < span; i++) {
+    int off = i * m + i;
+    result = diag_start[off];
+    result = 1.0 / result;
+    nram_src1[i * height + i] = result;
+    nram_dst[i * span + i] = result;
+    diag_start[off] = result;
+  }
+  __sync_cluster();
 
-        __nramset(rdiag_start, 1, 1.f, m, 0);
-        __nramset(idiag_start, 1, 0.f, m, 0);
-        __nramset(rdiag_start + 1, m - 1, 0.f, m, 0);
-        __nramset(idiag_start + 1, m - 1, 0.f, m, 0);
-        for (int i = 1; i < m - 1; i++)
-        {
-            __nramset(rdiag_start + i * m + i, 1, 1.f, m, 0);
-            __nramset(idiag_start + i * m + i, 1, 0.f, m, 0);
-            __nramset(rdiag_start + i * m + i + 1, m - i - 1, 0.f, m, 0);
-            __nramset(idiag_start + i * m + i + 1, m - i - 1, 0.f, m, 0);
-        }
-        __nramset(rdiag_start + (m - 1) * m + m - 1, 1, 1.f, m, 0);
-        __nramset(idiag_start + (m - 1) * m + m - 1, 1, 0.f, m, 0);
-    }
+  for (int i = 1; i < height; i++) {
+    __memcpy(nram_src2, diag_start + i * m, i * sizeof(float), SRAM2NRAM);
+    int num = std::min(i, span);
+    float diag_element = diag_start[i * m + i];
+    for (int j = 0; j < num; j++) {
+      float temp = 0.0;
 
-    float result = 0.0;
-    for (int i = 0; i < height; i++)
-    {
-        int off = i * m + i;
-        result = rdiag_start[off];
-        result = 1.0 / result;
-        r_nram_src1[i * height + i] = result;
-        r_nram_dst[i * span + i] = result;
-        rdiag_start[off] = result;
-    }
-
-    for (int i = 1; i < height; i++)
-    {
-        __memcpy(r_nram_src2, rdiag_start + i * m, i * sizeof(float), NRAM2NRAM);
-        __memcpy(i_nram_src2, idiag_start + i * m, i * sizeof(float), NRAM2NRAM);
-        int num = std::min(i, span);
-        float diag_element = rdiag_start[i * m + i];
-        for (int j = 0; j < num; j++)
-        {
-            float r_temp = 0.0;
-            float i_temp = 0.0;
-
-            __bang_mul(r_mul_result, r_nram_src2, r_nram_src1 + j * height, i);
-            __bang_mul(i_mul_result, r_nram_src2, i_nram_src1 + j * height, i);
-            for (int k = 0; k < i; k++)
-            {
-                r_temp += r_mul_result[k];
-                i_temp += i_mul_result[k];
-            }
-
-            __bang_mul(r_mul_result, i_nram_src2, i_nram_src1 + j * height, i);
-            __bang_mul(i_mul_result, i_nram_src2, r_nram_src1 + j * height, i);
-            for (int k = 0; k < i; k++)
-            {
-                r_temp -= r_mul_result[k];
-                i_temp += i_mul_result[k];
-            }
-            r_temp = r_temp * -1.0 * diag_element;
-            i_temp = i_temp * -1.0 * diag_element;
-            r_nram_dst[i * span + j] = r_temp;
-            i_nram_dst[i * span + j] = i_temp;
-            r_nram_src1[j * height + i] = r_temp;
-            i_nram_src1[j * height + i] = i_temp;
-        }
-        __sync();
-    }
-
-    __sync();
-
-    if (span > 0)
-    {
-        __memcpy(rd_output + ld_output * start + start, r_nram_dst, span * sizeof(float), NRAM2LDRAM, ld_output * sizeof(float), span * sizeof(float), height - 1);
-        __memcpy(id_output + ld_output * start + start, i_nram_dst, span * sizeof(float), NRAM2LDRAM, ld_output * sizeof(float), span * sizeof(float), height - 1);
-    }
-}
-__mlu_global__ void complex_batch_inverse_kernel(int batch, float *rd_input, float *id_input, int ld_input, int stride_input, float *rd_output, float *id_output, int ld_output, int stride_output, int m)
-{
-    int id = taskId;
-    int batch_id = id;
-    if (batch_id >= batch)
-        return;
-    float *nram_buffer = NRAM_BUFFER;
-    float *r_orign_input = rd_input;
-    float *i_orign_input = id_input;
-    float *r_orign_output = rd_output;
-    float *i_orign_output = id_output;
-    rd_input = r_orign_input + batch_id * stride_input;
-    id_input = i_orign_input + batch_id * stride_input;
-    rd_output = r_orign_output + batch_id * stride_output;
-    id_output = i_orign_output + batch_id * stride_output;
-
-    float *nram_offset = (float *)nram_buffer;
-    float *r_nram_src0 = nram_offset;
-    float *i_nram_src0 = r_nram_src0 + m * m;
-    float *r_nram_src1 = i_nram_src0 + m * m;
-    float *i_nram_src1 = r_nram_src1 + m * m;
-    float *r_nram_src2 = i_nram_src1 + m * m;
-    float *i_nram_src2 = r_nram_src2 + m;
-    float *r_mul_result = i_nram_src2 + m;
-    float *i_mul_result = r_mul_result + m;
-    float *r_nram_dst = i_mul_result + m;
-    float *i_nram_dst = r_nram_dst + m * m;
-    float *r_diag_start = r_nram_dst;
-    float *i_diag_start = i_nram_dst;
-    int height = m, span = m;
-
-    __memset_nram(nram_offset, 10 * m * m, (float)ZERO);
-    __memcpy(r_nram_dst, rd_input, m * sizeof(float), GDRAM2NRAM, m * sizeof(float), ld_input * sizeof(float), m - 1);
-    __memcpy(i_nram_dst, id_input, m * sizeof(float), GDRAM2NRAM, m * sizeof(float), ld_input * sizeof(float), m - 1);
-
-    __nramset(r_nram_dst, 1, 1.f, m, 0);
-    __nramset(i_nram_dst, 1, 0.f, m, 0);
-    __nramset(r_nram_dst + 1, m - 1, 0.f, m, 0);
-    __nramset(i_nram_dst + 1, m - 1, 0.f, m, 0);
-    for (int i = 1; i < m - 1; i++)
-    {
-        __nramset(r_nram_dst + i * m + i, 1, 1.f, m, 0);
-        __nramset(i_nram_dst + i * m + i, 1, 0.f, m, 0);
-        __nramset(r_nram_dst + i * m + i + 1, m - i - 1, 0.f, m, 0);
-        __nramset(i_nram_dst + i * m + i + 1, m - i - 1, 0.f, m, 0);
-    }
-    __nramset(r_nram_dst + (m - 1) * m + m - 1, 1, 1.f, m, 0);
-    __nramset(i_nram_dst + (m - 1) * m + m - 1, 1, 0.f, m, 0);
-
-    float result = 0.0;
-    for (int i = 0; i < m; i++)
-    {
-        int off = i * m + i;
-        result = r_nram_dst[off];
-        result = 1.0 / result;
-        r_nram_src1[i * height + i] = result;
-        r_nram_dst[i * span + i] = result;
-        r_diag_start[off] = result;
-    }
-
-    for (int i = 1; i < height; i++)
-    {
-        __memcpy(r_nram_src2, r_diag_start + i * m, i * sizeof(float), NRAM2NRAM);
-        __memcpy(i_nram_src2, i_diag_start + i * m, i * sizeof(float), NRAM2NRAM);
-        int num = std::min(i, span);
-        float diag_element = r_diag_start[i * m + i];
-        for (int j = 0; j < num; j++)
-        {
-            float r_temp = 0.0;
-            float i_temp = 0.0;
-            __bang_mul(r_mul_result, r_nram_src2, r_nram_src1 + j * height, i);
-            __bang_mul(i_mul_result, r_nram_src2, i_nram_src1 + j * height, i);
-            for (int k = 0; k < i; k++)
-            {
-                r_temp += r_mul_result[k];
-                i_temp += i_mul_result[k];
-            }
-            __bang_mul(r_mul_result, i_nram_src2, i_nram_src1 + j * height, i);
-            __bang_mul(i_mul_result, i_nram_src2, r_nram_src1 + j * height, i);
-            for (int k = 0; k < i; k++)
-            {
-                r_temp -= r_mul_result[k];
-                i_temp += i_mul_result[k];
-            }
-            r_temp = r_temp * -1.0 * diag_element;
-            i_temp = i_temp * -1.0 * diag_element;
-            r_nram_dst[i * span + j] = r_temp;
-            i_nram_dst[i * span + j] = i_temp;
-            r_nram_src1[j * height + i] = r_temp;
-            i_nram_src1[j * height + i] = i_temp;
-        }
-        __sync();
+      __bang_mul(mul_result, nram_src2, nram_src1 + j * height, i);
+      for (int k = 0; k < i; k++) {
+        temp += mul_result[k];
+      }
+      temp = temp * -1.0 * diag_element;
+      nram_dst[i * span + j] = temp;
+      nram_src1[j * height + i] = temp;
     }
     __sync();
+  }
 
-    __memcpy(rd_output, r_nram_dst, m * sizeof(float), NRAM2GDRAM, ld_output * sizeof(float), m * sizeof(float), m - 1);
-    __memcpy(id_output, i_nram_dst, m * sizeof(float), NRAM2GDRAM, ld_output * sizeof(float), m * sizeof(float), m - 1);
+  __sync_cluster();
+
+  if (span > 0)
+    __memcpy(diag_start, nram_dst, span * sizeof(float), NRAM2SRAM,
+             m * sizeof(float), span * sizeof(float), height - 1);
+
+  __sync_cluster();
+
+  if (id == 0) {
+    __memcpy(d_output, sram_buffer, m * sizeof(float), SRAM2GDRAM,
+             ld_output * sizeof(float), m * sizeof(float), m - 1);
+  }
 }
-mluOpStatus_t MLUOP_WIN_API KernelInverse(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
-                                          cnrtQueue_t queue, mluOpDataType_t dtype,
-                                          int batch,
-                                          float *d_input, int ld_input, int stride_input,
-                                          float *d_output, int ld_output, int stride_output,
-                                          int m)
-{
-    KERNEL_CHECK(
-        MLUKernelInverse<<<k_dim, k_type, queue>>>(batch,
-                                                   d_input, ld_input, stride_input,
-                                                   d_output, ld_output, stride_output,
-                                                   m));
 
-    return MLUOP_STATUS_SUCCESS;
+__mlu_global__ void complex_inverse_kernel(int batch, float *rd_input,
+                                           float *id_input, int ld_input,
+                                           int stride_input, float *rd_output,
+                                           float *id_output, int ld_output,
+                                           int stride_output, int m) {
+  int id = taskId;
+  id = taskId % 4;
+  float *nram_buffer = NRAM_BUFFER;
+
+  int span = m / taskDim;
+  int start = id * span;
+  if (id == 3) {
+    span = m - 3 * span;
+  }
+  float *nram_offset = (float *)nram_buffer;
+  float *rdiag_start = (float *)nram_offset;
+  float *idiag_start = rdiag_start + m * m;
+  float *r_nram_src1 = idiag_start + m * m;
+  float *i_nram_src1 = r_nram_src1 + m * m;
+  float *r_nram_src2 = i_nram_src1 + m * m;
+  float *i_nram_src2 = r_nram_src2 + m * m;
+  float *r_mul_result = i_nram_src2 + m;
+  float *i_mul_result = r_mul_result + m;
+  float *r_nram_dst = i_mul_result + m * m;
+  float *i_nram_dst = r_nram_dst + m * m;
+
+  int height = m - start;
+
+  __memset_nram(nram_offset, 4 * m * m * 2 + 2, (float)ZERO);
+
+  if (span > 0) {
+    __memcpy(rdiag_start, rd_input + ld_input * start + start,
+             height * sizeof(float), LDRAM2NRAM, m * sizeof(float),
+             ld_input * sizeof(float), height - 1);
+    __memcpy(idiag_start, id_input + ld_input * start + start,
+             height * sizeof(float), LDRAM2NRAM, m * sizeof(float),
+             ld_input * sizeof(float), height - 1);
+
+    __nramset(rdiag_start, 1, 1.f, m, 0);
+    __nramset(idiag_start, 1, 0.f, m, 0);
+    __nramset(rdiag_start + 1, m - 1, 0.f, m, 0);
+    __nramset(idiag_start + 1, m - 1, 0.f, m, 0);
+    for (int i = 1; i < m - 1; i++) {
+      __nramset(rdiag_start + i * m + i, 1, 1.f, m, 0);
+      __nramset(idiag_start + i * m + i, 1, 0.f, m, 0);
+      __nramset(rdiag_start + i * m + i + 1, m - i - 1, 0.f, m, 0);
+      __nramset(idiag_start + i * m + i + 1, m - i - 1, 0.f, m, 0);
+    }
+    __nramset(rdiag_start + (m - 1) * m + m - 1, 1, 1.f, m, 0);
+    __nramset(idiag_start + (m - 1) * m + m - 1, 1, 0.f, m, 0);
+  }
+
+  float result = 0.0;
+  for (int i = 0; i < height; i++) {
+    int off = i * m + i;
+    result = rdiag_start[off];
+    result = 1.0 / result;
+    r_nram_src1[i * height + i] = result;
+    r_nram_dst[i * span + i] = result;
+    rdiag_start[off] = result;
+  }
+
+  for (int i = 1; i < height; i++) {
+    __memcpy(r_nram_src2, rdiag_start + i * m, i * sizeof(float), NRAM2NRAM);
+    __memcpy(i_nram_src2, idiag_start + i * m, i * sizeof(float), NRAM2NRAM);
+    int num = std::min(i, span);
+    float diag_element = rdiag_start[i * m + i];
+    for (int j = 0; j < num; j++) {
+      float r_temp = 0.0;
+      float i_temp = 0.0;
+
+      __bang_mul(r_mul_result, r_nram_src2, r_nram_src1 + j * height, i);
+      __bang_mul(i_mul_result, r_nram_src2, i_nram_src1 + j * height, i);
+      for (int k = 0; k < i; k++) {
+        r_temp += r_mul_result[k];
+        i_temp += i_mul_result[k];
+      }
+
+      __bang_mul(r_mul_result, i_nram_src2, i_nram_src1 + j * height, i);
+      __bang_mul(i_mul_result, i_nram_src2, r_nram_src1 + j * height, i);
+      for (int k = 0; k < i; k++) {
+        r_temp -= r_mul_result[k];
+        i_temp += i_mul_result[k];
+      }
+      r_temp = r_temp * -1.0 * diag_element;
+      i_temp = i_temp * -1.0 * diag_element;
+      r_nram_dst[i * span + j] = r_temp;
+      i_nram_dst[i * span + j] = i_temp;
+      r_nram_src1[j * height + i] = r_temp;
+      i_nram_src1[j * height + i] = i_temp;
+    }
+    __sync();
+  }
+
+  __sync();
+
+  if (span > 0) {
+    __memcpy(rd_output + ld_output * start + start, r_nram_dst,
+             span * sizeof(float), NRAM2LDRAM, ld_output * sizeof(float),
+             span * sizeof(float), height - 1);
+    __memcpy(id_output + ld_output * start + start, i_nram_dst,
+             span * sizeof(float), NRAM2LDRAM, ld_output * sizeof(float),
+             span * sizeof(float), height - 1);
+  }
 }
-mluOpStatus_t MLUOP_WIN_API KernelComplexInverse(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
-                                                 cnrtQueue_t queue, mluOpDataType_t dtype,
-                                                 int batch,
-                                                 float *rd_input, float *id_input, int ld_input, int stride_input,
-                                                 float *rd_output, float *id_output, int ld_output, int stride_output,
-                                                 int m)
-{
-    if (batch == 1)
-    {
-        KERNEL_CHECK(
-            complex_inverse_kernel<<<k_dim, k_type, queue>>>(batch,
-                                                             rd_input, id_input, ld_input, stride_input,
-                                                             rd_output, id_output, ld_output, stride_output,
-                                                             m));
-    }
-    else
-    {
-        KERNEL_CHECK(
-            complex_batch_inverse_kernel<<<k_dim, k_type, queue>>>(batch,
-                                                                   rd_input, id_input, ld_input, stride_input,
-                                                                   rd_output, id_output, ld_output, stride_output,
-                                                                   m));
-    }
+__mlu_global__ void complex_batch_inverse_kernel(
+    int batch, float *rd_input, float *id_input, int ld_input, int stride_input,
+    float *rd_output, float *id_output, int ld_output, int stride_output,
+    int m) {
+  int id = taskId;
+  int batch_id = id;
+  if (batch_id >= batch) return;
+  float *nram_buffer = NRAM_BUFFER;
+  float *r_orign_input = rd_input;
+  float *i_orign_input = id_input;
+  float *r_orign_output = rd_output;
+  float *i_orign_output = id_output;
+  rd_input = r_orign_input + batch_id * stride_input;
+  id_input = i_orign_input + batch_id * stride_input;
+  rd_output = r_orign_output + batch_id * stride_output;
+  id_output = i_orign_output + batch_id * stride_output;
 
-    return MLUOP_STATUS_SUCCESS;
+  float *nram_offset = (float *)nram_buffer;
+  float *r_nram_src0 = nram_offset;
+  float *i_nram_src0 = r_nram_src0 + m * m;
+  float *r_nram_src1 = i_nram_src0 + m * m;
+  float *i_nram_src1 = r_nram_src1 + m * m;
+  float *r_nram_src2 = i_nram_src1 + m * m;
+  float *i_nram_src2 = r_nram_src2 + m;
+  float *r_mul_result = i_nram_src2 + m;
+  float *i_mul_result = r_mul_result + m;
+  float *r_nram_dst = i_mul_result + m;
+  float *i_nram_dst = r_nram_dst + m * m;
+  float *r_diag_start = r_nram_dst;
+  float *i_diag_start = i_nram_dst;
+  int height = m, span = m;
+
+  __memset_nram(nram_offset, 10 * m * m, (float)ZERO);
+  __memcpy(r_nram_dst, rd_input, m * sizeof(float), GDRAM2NRAM,
+           m * sizeof(float), ld_input * sizeof(float), m - 1);
+  __memcpy(i_nram_dst, id_input, m * sizeof(float), GDRAM2NRAM,
+           m * sizeof(float), ld_input * sizeof(float), m - 1);
+
+  __nramset(r_nram_dst, 1, 1.f, m, 0);
+  __nramset(i_nram_dst, 1, 0.f, m, 0);
+  __nramset(r_nram_dst + 1, m - 1, 0.f, m, 0);
+  __nramset(i_nram_dst + 1, m - 1, 0.f, m, 0);
+  for (int i = 1; i < m - 1; i++) {
+    __nramset(r_nram_dst + i * m + i, 1, 1.f, m, 0);
+    __nramset(i_nram_dst + i * m + i, 1, 0.f, m, 0);
+    __nramset(r_nram_dst + i * m + i + 1, m - i - 1, 0.f, m, 0);
+    __nramset(i_nram_dst + i * m + i + 1, m - i - 1, 0.f, m, 0);
+  }
+  __nramset(r_nram_dst + (m - 1) * m + m - 1, 1, 1.f, m, 0);
+  __nramset(i_nram_dst + (m - 1) * m + m - 1, 1, 0.f, m, 0);
+
+  float result = 0.0;
+  for (int i = 0; i < m; i++) {
+    int off = i * m + i;
+    result = r_nram_dst[off];
+    result = 1.0 / result;
+    r_nram_src1[i * height + i] = result;
+    r_nram_dst[i * span + i] = result;
+    r_diag_start[off] = result;
+  }
+
+  for (int i = 1; i < height; i++) {
+    __memcpy(r_nram_src2, r_diag_start + i * m, i * sizeof(float), NRAM2NRAM);
+    __memcpy(i_nram_src2, i_diag_start + i * m, i * sizeof(float), NRAM2NRAM);
+    int num = std::min(i, span);
+    float diag_element = r_diag_start[i * m + i];
+    for (int j = 0; j < num; j++) {
+      float r_temp = 0.0;
+      float i_temp = 0.0;
+      __bang_mul(r_mul_result, r_nram_src2, r_nram_src1 + j * height, i);
+      __bang_mul(i_mul_result, r_nram_src2, i_nram_src1 + j * height, i);
+      for (int k = 0; k < i; k++) {
+        r_temp += r_mul_result[k];
+        i_temp += i_mul_result[k];
+      }
+      __bang_mul(r_mul_result, i_nram_src2, i_nram_src1 + j * height, i);
+      __bang_mul(i_mul_result, i_nram_src2, r_nram_src1 + j * height, i);
+      for (int k = 0; k < i; k++) {
+        r_temp -= r_mul_result[k];
+        i_temp += i_mul_result[k];
+      }
+      r_temp = r_temp * -1.0 * diag_element;
+      i_temp = i_temp * -1.0 * diag_element;
+      r_nram_dst[i * span + j] = r_temp;
+      i_nram_dst[i * span + j] = i_temp;
+      r_nram_src1[j * height + i] = r_temp;
+      i_nram_src1[j * height + i] = i_temp;
+    }
+    __sync();
+  }
+  __sync();
+
+  __memcpy(rd_output, r_nram_dst, m * sizeof(float), NRAM2GDRAM,
+           ld_output * sizeof(float), m * sizeof(float), m - 1);
+  __memcpy(id_output, i_nram_dst, m * sizeof(float), NRAM2GDRAM,
+           ld_output * sizeof(float), m * sizeof(float), m - 1);
+}
+mluOpStatus_t MLUOP_WIN_API
+KernelInverse(cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+              mluOpDataType_t dtype, int batch, float *d_input, int ld_input,
+              int stride_input, float *d_output, int ld_output,
+              int stride_output, int m) {
+  KERNEL_CHECK(MLUKernelInverse<<<k_dim, k_type, queue>>>(
+      batch, d_input, ld_input, stride_input, d_output, ld_output,
+      stride_output, m));
+
+  return MLUOP_STATUS_SUCCESS;
+}
+mluOpStatus_t MLUOP_WIN_API KernelComplexInverse(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t dtype, int batch, float *rd_input, float *id_input,
+    int ld_input, int stride_input, float *rd_output, float *id_output,
+    int ld_output, int stride_output, int m) {
+  if (batch == 1) {
+    KERNEL_CHECK(complex_inverse_kernel<<<k_dim, k_type, queue>>>(
+        batch, rd_input, id_input, ld_input, stride_input, rd_output, id_output,
+        ld_output, stride_output, m));
+  } else {
+    KERNEL_CHECK(complex_batch_inverse_kernel<<<k_dim, k_type, queue>>>(
+        batch, rd_input, id_input, ld_input, stride_input, rd_output, id_output,
+        ld_output, stride_output, m));
+  }
+
+  return MLUOP_STATUS_SUCCESS;
 }
