@@ -302,7 +302,8 @@ kernelFFTStockham(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
 
 // Sets the maximum parallel number for the FFT plan, factoring in the given
 // buffer, stage, large radix, and row-major flag.
-mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle, 
+		                              mluOpFFTPlan_t fft_plan,
                                               int *facbuf, int stage,
                                               const int large_radix,
                                               const int is_row_major);
@@ -391,14 +392,16 @@ mluOpStatus_t MLUOP_WIN_API kernelC2CFFTDFTMatrix(
 
 // Searches for a large radix in the FFT plan, updating large radix and
 // factoring buffer based on the stage ID, size, and row-major flag.
-mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpHandle_t handle,
+                                             mluOpFFTPlan_t fft_plan,
                                              int &large_radix, int *facbuf,
                                              int large_stage_id, int _n,
                                              const int is_row_major);
 
 // Calculates the lower bound of the parallel number for the FFT plan, factoring
 // in the stage, buffer, and row-major flag, updating parallel_num_lb.
-mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpHandle_t handle,
+                                                   mluOpFFTPlan_t fft_plan,
                                                    int *facbuf, int stage,
                                                    int &parallel_num_lb,
                                                    const int is_row_major);

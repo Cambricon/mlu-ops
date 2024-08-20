@@ -974,8 +974,8 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
               r = n;
             } else {
               int *cur_facbuf = &facbuf[small_factors_offset];
-              searchLargeRadix(fft_plan, r, cur_facbuf, stage_num + 1, n,
-                               is_row_major);
+              searchLargeRadix(handle, fft_plan, r, cur_facbuf,
+			       stage_num + 1, n, is_row_major);
             }
             break;
         }
@@ -986,8 +986,8 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
               r = n;
             } else {
               int *cur_facbuf = &facbuf[small_factors_offset];
-              searchLargeRadix(fft_plan, r, cur_facbuf, stage_num + 1, n,
-                               is_row_major);
+              searchLargeRadix(handle, fft_plan, r, cur_facbuf,
+			       stage_num + 1, n, is_row_major);
             }
             break;
         }
@@ -1066,7 +1066,8 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
         fftFactor(r, facbuf, small_factors_offset, factor_type, large_count);
     INTERNAL_CHECK("[fftTwoStepFactor]", status == MLUOP_STATUS_SUCCESS);
     status =
-        setMaxParallelNum(fft_plan, cur_facbuf, stage_num, r, is_row_major);
+        setMaxParallelNum(handle, fft_plan, cur_facbuf, stage_num, r,
+                          is_row_major);
     INTERNAL_CHECK("[fftTwoStepFactor]", status == MLUOP_STATUS_SUCCESS);
 
     out_stride *= r;
@@ -1086,7 +1087,7 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
   return status;
 }
 
-mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
                                              int &large_radix, int *facbuf,
                                              const int large_stage_id,
                                              const int _n,
@@ -1120,7 +1121,7 @@ mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpFFTPlan_t fft_plan,
         facbuf[1] = large_radix * small_radix;
         int parallel_num_lb = 0;
 
-        calParallelNumLowBound(fft_plan, facbuf, large_stage_id,
+        calParallelNumLowBound(handle, fft_plan, facbuf, large_stage_id,
                                parallel_num_lb, is_row_major);
         if (parallel_num_lb > 0) {
           out_stride *= small_radix;
@@ -1145,12 +1146,13 @@ mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpFFTPlan_t fft_plan,
 }
 
 // low bound
-mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpHandle_t handle,
+                                                   mluOpFFTPlan_t fft_plan,
                                                    int *facbuf, const int stage,
                                                    int &parallel_num_lb,
                                                    const int is_row_major) {
   const size_t nram_space_size =
-      (MAX_NRAM_SIZE + REM_FOR_STACK - 32 * 1024 - FFT_MAXFACTORS * 4);
+      (handle->nram_size + REM_FOR_STACK - 32 * 1024 - FFT_MAXFACTORS * 4);
   size_t workspace_size = 0;
   size_t reservespace_size = 0;
   const int max_radix = 64;
@@ -1340,14 +1342,15 @@ mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpFFTPlan_t fft_plan,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle,
+                                              mluOpFFTPlan_t fft_plan,
                                               int *facbuf, const int stage,
                                               const int large_radix,
                                               const int is_row_major) {
   const std::string make_plan_api = "[setMaxParallelNum]";
 
   const size_t nram_space_size =
-      (MAX_NRAM_SIZE + REM_FOR_STACK - 32 * 1024 - FFT_MAXFACTORS * 4);
+      (handle->nram_size + REM_FOR_STACK - 32 * 1024 - FFT_MAXFACTORS * 4);
   size_t workspace_size = 0;
   size_t reservespace_size = 0;
   const int max_radix = 64;
@@ -1431,7 +1434,7 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
           align_M = radix;
           align_K = K_num * ((radix + K_num - 1) / K_num);
           align_N = para_num;
-
+ 
           space_need_matmul_tmp = 0;
           space_need_matmul_tmp += (align_N * align_K * 2 * TYPE_SIZE);
           space_need_matmul_tmp += (align_N * align_K * 2 * TYPE_SIZE);
@@ -1614,11 +1617,11 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
       }
     }; break;
   }
-
+  // max_parallel_num = 2;
   if (max_parallel_num <= 0) {
     status = MLUOP_STATUS_ALLOC_FAILED;
   } else {
-    facbuf[3] = max_parallel_num;
+    facbuf[3] = max_parallel_num;  ///////////////////////////////////////
     status = MLUOP_STATUS_SUCCESS;
   }
   return status;
