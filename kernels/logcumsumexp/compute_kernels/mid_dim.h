@@ -22,6 +22,8 @@
  *******************************************************************************/
 #pragma once
 
+#include <type_traits>
+
 template <typename T>
 __mlu_func__ void
 batchKernel(const T *source,
@@ -34,11 +36,11 @@ batchKernel(const T *source,
     int32_t batch_size = width * height;
     int32_t data_size = batch_size * batches_num;
 
-    if (sizeof(T) != 4) {
+    if (std::is_same<T, half>::value) {
       add_buffer = nram_src + data_size;
     }
     __memcpy(nram_src, source, data_size * sizeof(T), GDRAM2NRAM);
-    if (sizeof(T) == 4) {
+    if (std::is_same<T, float>::value) {
       __mluop_exp(nram_src, nram_src, nullptr, 0, data_size);
     } else {
       __mluop_exp(nram_src, nram_src, add_buffer, 0, data_size);
@@ -53,7 +55,7 @@ batchKernel(const T *source,
                        width);
         }
     }
-    if (sizeof(T) == 4) {
+    if (std::is_same<T, float>::value) {
       __mluop_log(nram_src, nram_src, nullptr, 0, data_size);
     } else {
       __mluop_log(nram_src, nram_src, add_buffer, 0, data_size);

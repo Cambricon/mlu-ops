@@ -76,13 +76,13 @@ LogcumsumexpLowestDim(const cnrtDim3_t k_dim,
 }
 mluOpStatus_t MLUOP_WIN_API
 LogcumsumexpHighestDim(const cnrtDim3_t k_dim,
-                      const cnrtFunctionType_t k_type,
-                      const cnrtQueue_t queue,
-                      mluOpDataType_t data_type,
-                      const void *input,
-                      void *output,
-                      const int32_t axis_size,
-                      const int32_t lower_size) {
+                       const cnrtFunctionType_t k_type,
+                       const cnrtQueue_t queue,
+                       mluOpDataType_t data_type,
+                       const void *input,
+                       void *output,
+                       const int32_t axis_size,
+                       const int32_t lower_size) {
   if (data_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
     // float32
     KERNEL_CHECK(highestDimKernel<<<k_dim, k_type, queue>>>

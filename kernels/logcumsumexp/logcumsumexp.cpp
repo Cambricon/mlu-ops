@@ -52,7 +52,7 @@ static void policyFunc(mluOpHandle_t &handle,
         *k_type = CNRT_FUNC_TYPE_UNION1;
     }
 
-    k_dim->x = clusters_num * 4;
+    k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
     k_dim->y = 1;
     k_dim->z = 1;
 }
@@ -83,8 +83,9 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
 
     for (int i = 0; i < input_desc->dim; i++) {
         if (input_desc->dims[i] == 0) {
-            LOG(ERROR)  << "[mluOpLogcumsumexp] there is a zero element"
-                         "in input tensor's shape";
+            LOG(ERROR)  << API
+                        << " there is a zero element"
+                        << "in input tensor's shape";
             return MLUOP_STATUS_SUCCESS;
         }
     }
@@ -96,13 +97,19 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
     if (dim < (-1) * input_desc->dim) {
         LOG(ERROR) << API
                 << " this negative dim is invalid. Received dim=["
-                << dim << "]";
+                << dim << "],"
+                << " 'dim' in range of "
+                << (-1) * input_desc->dim << " to " << input_desc->dim - 1
+                << " is accepted";
         return MLUOP_STATUS_BAD_PARAM;
     }
     if (dim >= input_desc->dim) {
         LOG(ERROR) << API
                 << " dim beyonds the dimension of tensor. Received dim=["
-                << dim << "]";
+                << dim << "],"
+                << " 'dim' in range of "
+                << (-1) * input_desc->dim << " to " << input_desc->dim - 1
+                << " is accepted";
         return MLUOP_STATUS_BAD_PARAM;
     }
 

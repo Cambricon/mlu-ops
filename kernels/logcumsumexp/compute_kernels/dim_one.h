@@ -22,6 +22,8 @@
  *******************************************************************************/
 #pragma once
 
+#include <type_traits>
+
 #define N_ALIGN 128
 #define CoreCapacity MAX_NRAM_SIZE / 81920 * 81920
     // memory length of input per core
@@ -152,10 +154,10 @@ __mlu_func__ void inclusiveScan(T* nram_src,
   T *nram_src1 = nram_src0 + size_aligned;
   // when datatype is not float32, we need a buffer for exp & log
   T *add_buffer;
-  if (sizeof(T) != 4) {
+  if (std::is_same<T, half>::value) {
     add_buffer = nram_src1 + size_aligned;
   }
-  if (sizeof(T) == 4) {
+  if (std::is_same<T, float>::value) {
     __mluop_exp(nram_src0, nram_src0, nullptr, 0, data_size);
   } else {
     __mluop_exp(nram_src0, nram_src0, add_buffer, 0, data_size);
@@ -183,7 +185,7 @@ __mlu_func__ void inclusiveScan(T* nram_src,
   offsetCompute(nram_src0, cluster_offsets, cum_offset,
                 data_size, offset_type);
   // log computing
-  if (sizeof(T) == 4) {
+  if (std::is_same<T, float>::value) {
     __mluop_log(nram_src0, nram_src0, nullptr, 0, data_size);
   } else {
     __mluop_log(nram_src0, nram_src0, add_buffer, 0, data_size);
@@ -269,10 +271,8 @@ dimOneKernel(const T *input,
       __memcpy(this_sram + n_core * coreId, this_nram,
                n_core * sizeof(T), NRAM2SRAM);
       __sync_cluster();
-      if (__is_mpu()) {
         __memcpy_async(output + totalId * n_cluster, this_sram,
                  n_cluster * sizeof(T), SRAM2GDRAM);
-      }
       round++;
     }
 
@@ -284,12 +284,10 @@ dimOneKernel(const T *input,
     if (last_round_clusters == 1) {
       if (clusterId == 0) {
         if (n_last_core) {
-          printf("CHECKOPOINT0\n");
           if (rounds == 1) {
             __memcpy(this_nram, input + totalId * n_cluster + copy_offset,
                     n_last_core * sizeof(T), GDRAM2NRAM);
           }
-          printf("CHECKOPOINT1\n");
           inclusiveScan(this_nram, n_last_core, 1,
                         output, cluster_offsets[9]);
           __memcpy(output + totalId * n_cluster + copy_offset, this_nram,

@@ -14373,6 +14373,27 @@ mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
 * the same size as input, where each element output[i] is the logarithm 
 * of the sum of the exponentials of the first i elements of input.
 *
+* @param[in] handle
+* Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
+* in the logcumsumexp execution. For detailed information, see ::mluOpHandle_t.
+*
+* @param[in] dim
+* The target dimension to execute logcumsumexp
+*
+* @param[in] input_desc
+* The descriptor of input signals. For detailed information,
+* see ::mluOpTensorDescriptor_t.
+*
+* @param[in] input
+* Pointer to the MLU memory that stores the input tensor.
+*
+* @param[in] output_desc
+* The descriptor of input signals. For detailed information,
+* see ::mluOpTensorDescriptor_t.
+*
+* @param[in] output
+* Pointer to the MLU memory that stores the input tensor.
+*
 * @par Return
 * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED, MLUOP_STATUS_BAD_PARAM
 *

@@ -22,6 +22,8 @@
  *******************************************************************************/
 #pragma once
 
+#include <type_traits>
+
 // highest dimension executing kernel=========================================
 template <typename T>
 __mlu_global__ void
@@ -48,7 +50,7 @@ highestDimKernel(const T *input,
     T *nram_src = (T *)nram_buffer;
     T *nram_offset = nram_src + core_size;
     T *add_buffer;
-    if (sizeof(T) != 4) {
+    if (std::is_same<T, half>::value) {
       add_buffer = nram_offset + core_size;
     }
 
@@ -62,7 +64,7 @@ highestDimKernel(const T *input,
         __memcpy(nram_src, input + i * total_width + taskId * core_width,
                  deal_width * sizeof(T), GDRAM2NRAM, deal_width * sizeof(T),
                  total_width * sizeof(T), deal_height - 1);
-        if (sizeof(T) == 4) {
+        if (std::is_same<T, float>::value) {
           __mluop_exp(nram_src, nram_src, nullptr, 0,
                       deal_width * deal_height);
         } else {
@@ -82,7 +84,7 @@ highestDimKernel(const T *input,
         __bang_move(nram_offset,
                     nram_src + (deal_height - 1) * deal_width,
                     deal_width * sizeof(T));
-        if (sizeof(T) == 4) {
+        if (std::is_same<T, float>::value) {
           __mluop_log(nram_src, nram_src, nullptr, 0,
                       deal_width * deal_height);
         } else {

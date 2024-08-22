@@ -22,6 +22,8 @@
  *******************************************************************************/
 #pragma once
 
+#include <type_traits>
+
 // LCSE execution for small part
 template <typename T>
 __mlu_func__ void smallPartScan(T *output,
@@ -35,11 +37,11 @@ __mlu_func__ void smallPartScan(T *output,
     T *nram_src0 = (T *)nram_buffer;
     T *nram_src1 = nram_src0 + part_size * parts;
     T *add_buffer;
-    if (sizeof(T) != 4) {
+    if (std::is_same<T, half>::value) {
       add_buffer = nram_src1 + part_size * parts;
     }
     __memcpy(nram_src0, source, data_size * sizeof(T), GDRAM2NRAM);
-    if (sizeof(T) == 4) {
+    if (std::is_same<T, float>::value) {
       __mluop_exp(nram_src0, nram_src0, nullptr, 0, data_size);
     } else {
       __mluop_exp(nram_src0, nram_src0, add_buffer, 0, data_size);
@@ -63,7 +65,7 @@ __mlu_func__ void smallPartScan(T *output,
                          part_width, part_height);
     }
 
-    if (sizeof(T) == 4) {
+    if (std::is_same<T, float>::value) {
       __mluop_log(nram_src0, nram_src0, nullptr, 0, data_size);
     } else {
       __mluop_log(nram_src0, nram_src0, add_buffer, 0, data_size);
@@ -119,7 +121,6 @@ lowestDimKernel(const T *input,
     } else if (taskId == last_round_cores - 1) {
       T *nram_src = (T *)nram_buffer;
       __bang_write_zero(nram_src, deal_size);
-      printf("last core\n");
       smallPartScan(output + round * round_size + taskId * deal_size,
                     input + round * round_size + taskId * deal_size,
                     last_core_size, axis_size, parts_per_core);
