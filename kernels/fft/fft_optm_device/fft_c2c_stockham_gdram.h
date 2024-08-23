@@ -133,7 +133,6 @@ __mlu_func__ void computeMutiStageOnchip(DT *input, DT *output, int *factors,
   DT *odd_extra_buffer;
   {
     odd_extra_buffer = buffer + batch * (nfft << 1);
-
     if (_stage_count != 1) FFT_SWAP_PTR(buffer, output);
     small_factors = factors + small_factors_offset;
     int tw_offset = factors[small_factors_offset + 1];
@@ -199,7 +198,7 @@ __mlu_func__ void computeMutiStageOnchip(DT *input, DT *output, int *factors,
     int small_twiddles_size = factors[small_factors_offset + 2];
     const DT *small_twiddles = _twiddles + tw_offset * 2;
     if (repeat_num > 0 || taskId < remain_num) {
-      computeLargeButterflyLaststageBatchPingpong(
+      computeLargeButterflyLaststageBatchPingpong<DT>(
           output, buffer, radix, (DT *)twiddles, small_twiddles,
           small_twiddles_size, sram_dftmtx, section_num, butterfly_num,
           in_stride, (void *)nram_buf, small_factors, nfft, t_start, t_end,

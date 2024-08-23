@@ -974,8 +974,8 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
               r = n;
             } else {
               int *cur_facbuf = &facbuf[small_factors_offset];
-              searchLargeRadix(handle, fft_plan, r, cur_facbuf,
-			       stage_num + 1, n, is_row_major);
+              searchLargeRadix(handle, fft_plan, r, cur_facbuf, stage_num + 1,
+                               n, is_row_major);
             }
             break;
         }
@@ -986,8 +986,8 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
               r = n;
             } else {
               int *cur_facbuf = &facbuf[small_factors_offset];
-              searchLargeRadix(handle, fft_plan, r, cur_facbuf,
-			       stage_num + 1, n, is_row_major);
+              searchLargeRadix(handle, fft_plan, r, cur_facbuf, stage_num + 1,
+                               n, is_row_major);
             }
             break;
         }
@@ -1065,9 +1065,8 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
     status =
         fftFactor(r, facbuf, small_factors_offset, factor_type, large_count);
     INTERNAL_CHECK("[fftTwoStepFactor]", status == MLUOP_STATUS_SUCCESS);
-    status =
-        setMaxParallelNum(handle, fft_plan, cur_facbuf, stage_num, r,
-                          is_row_major);
+    status = setMaxParallelNum(handle, fft_plan, cur_facbuf, stage_num, r,
+                               is_row_major);
     INTERNAL_CHECK("[fftTwoStepFactor]", status == MLUOP_STATUS_SUCCESS);
 
     out_stride *= r;
@@ -1087,7 +1086,8 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
   return status;
 }
 
-mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpHandle_t handle,
+                                             mluOpFFTPlan_t fft_plan,
                                              int &large_radix, int *facbuf,
                                              const int large_stage_id,
                                              const int _n,
@@ -1160,9 +1160,9 @@ mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpHandle_t handle,
   parallel_num_lb = 0;
   size_t nram_space_need = 0;
   size_t nram_space_need_tw = 0;
-  size_t nram_space_need_dftmtx = (stage == 1)
-                                      ? max_radix * max_radix * 2 * 2
-                                      : max_radix * max_radix * 2;  // complex
+  size_t nram_space_need_dftmtx =
+      (stage == 1) ? max_radix * max_radix * 2 * 2 * 4
+                   : max_radix * max_radix * 2 * 4;  // complex
   // int nram_space_need_dftmtx_align = 0;
   size_t space_need_matmul = 0;
   size_t space_need_matmul_tmp = 0;
@@ -1181,6 +1181,8 @@ mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpHandle_t handle,
 
   switch (fft_plan->fft_type) {
     // r2c
+    case CNFFT_COMPLEX_HALF2HALF:
+    case CNFFT_COMPLEX_FLOAT2FLOAT:
     case CNFFT_HALF2COMPLEX_HALF:
     case CNFFT_FLOAT2COMPLEX_FLOAT: {
       TYPE_SIZE = 4;
@@ -1217,7 +1219,7 @@ mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpHandle_t handle,
 
       space_need_matmul = 0;
       if (stage != 1) {
-        space_need_matmul = _n * 4 * TYPE_SIZE;
+        space_need_matmul = _n * 6 * TYPE_SIZE;
       }
       for (int small_stage_id = 1; small_stage_id <= small_stage_num;
            small_stage_id++) {
@@ -1259,8 +1261,6 @@ mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpHandle_t handle,
               : nram_space_remain / (nram_space_need + space_need_matmul);
     }; break;
 
-    case CNFFT_COMPLEX_HALF2HALF:
-    case CNFFT_COMPLEX_FLOAT2FLOAT:
     case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
     case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
       TYPE_SIZE = 4;
@@ -1295,7 +1295,7 @@ mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpHandle_t handle,
 
       space_need_matmul = 0;
       if (stage != 1) {
-        space_need_matmul = _n * 4 * TYPE_SIZE;
+        space_need_matmul = _n * 6 * TYPE_SIZE;
       }
       for (int small_stage_id = 1; small_stage_id <= small_stage_num;
            small_stage_id++) {
@@ -1359,8 +1359,8 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle,
   size_t nram_space_need = 0;
   int nram_space_need_tw = 0;
   int nram_space_need_dftmtx = (stage == 1)
-                                   ? max_radix * max_radix * 2 * 2
-                                   : max_radix * max_radix * 2;  // complex
+                                   ? max_radix * max_radix * 2 * 2 * 4
+                                   : max_radix * max_radix * 2 * 4;  // complex
   size_t space_need_matmul = 0;
   size_t space_need_matmul_tmp = 0;
   int small_stage_num = facbuf[0];
@@ -1377,6 +1377,8 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle,
   // space(large_radix) * para_num > space(para_num * large_radix)
   switch (fft_plan->fft_type) {
     // r2c
+    case CNFFT_COMPLEX_HALF2HALF:
+    case CNFFT_COMPLEX_FLOAT2FLOAT:
     case CNFFT_HALF2COMPLEX_HALF:
     case CNFFT_FLOAT2COMPLEX_FLOAT: {
       TYPE_SIZE = 4;
@@ -1413,7 +1415,7 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle,
 
       space_need_matmul = 0;
       if (stage != 1) {
-        space_need_matmul = large_radix * 4 * TYPE_SIZE;
+        space_need_matmul = large_radix * 6 * TYPE_SIZE;
       }
       for (int small_stage_id = 1; small_stage_id <= small_stage_num;
            small_stage_id++) {
@@ -1434,7 +1436,7 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle,
           align_M = radix;
           align_K = K_num * ((radix + K_num - 1) / K_num);
           align_N = para_num;
- 
+
           space_need_matmul_tmp = 0;
           space_need_matmul_tmp += (align_N * align_K * 2 * TYPE_SIZE);
           space_need_matmul_tmp += (align_N * align_K * 2 * TYPE_SIZE);
@@ -1456,6 +1458,9 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle,
       while (1) {
         space_need_matmul = 0;
 
+        if (stage != 1) {
+          space_need_matmul = large_radix * 6 * TYPE_SIZE * max_parallel_num;
+        }
         for (int small_stage_id = 1; small_stage_id <= small_stage_num;
              small_stage_id++) {
           radix = facbuf[small_stage_id * 4 + 0];
@@ -1496,8 +1501,6 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle,
         }
       }
     }; break;
-    case CNFFT_COMPLEX_HALF2HALF:
-    case CNFFT_COMPLEX_FLOAT2FLOAT:
     case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
     case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
       TYPE_SIZE = 4;
@@ -1533,7 +1536,9 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle,
 
       space_need_matmul = 0;
       if (stage != 1) {
-        space_need_matmul = large_radix * 4 * TYPE_SIZE;
+        // space_need_matmul = large_radix * 4 * TYPE_SIZE;
+        space_need_matmul =
+            large_radix * 4 * TYPE_SIZE + large_radix * 2 * TYPE_SIZE;
       }
       for (int small_stage_id = 1; small_stage_id <= small_stage_num;
            small_stage_id++) {
@@ -1576,6 +1581,10 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle,
       while (1) {
         space_need_matmul = 0;
 
+        if (stage != 1) {
+          // space_need_matmul = large_radix * 4 * TYPE_SIZE;
+          space_need_matmul = large_radix * 6 * TYPE_SIZE * max_parallel_num;
+        }
         for (int small_stage_id = 1; small_stage_id <= small_stage_num;
              small_stage_id++) {
           radix = facbuf[small_stage_id * 4 + 0];

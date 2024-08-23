@@ -60,7 +60,7 @@ __mlu_func__ void computeLargeButterflyFirststageBatchPingpong(
   nram_buf_offset += large_radix * max_para_ldst_num * 2;
 
   DT *_nram_tw = (DT *)nram_buf + nram_buf_offset;
-  nram_buf_offset += small_twiddles_size;
+  nram_buf_offset += small_twiddles_size / 4;
 
   int ld_dft_radix[2] = {-1, -1};
   const int max_radix = 64;
@@ -732,7 +732,7 @@ __mlu_func__ void computeLargeButterflyOtherstagesBatchPingpong(
   nram_buf_offset += large_radix * max_para_ldst_num * 2;  // complex
 
   DT *_nram_tw = (DT *)nram_buf + nram_buf_offset;
-  nram_buf_offset += small_twiddles_size;  // complex
+  nram_buf_offset += small_twiddles_size / 4;  // complex
 
   int ld_dft_radix = -1;
   const int max_radix = 64;
@@ -755,6 +755,8 @@ __mlu_func__ void computeLargeButterflyOtherstagesBatchPingpong(
       (DT *)nram_buf + nram_buf_offset,
       (DT *)nram_buf + nram_buf_offset + large_radix * ((int)last_stage) +
           large_radix * (1 - (int)last_stage) * max_para_ldst_num};
+
+  nram_buf_offset += large_radix * max_para_ldst_num * 2;  // complex
 
   if (small_twiddles_size) {
     if (load_once_twiddles) {
@@ -1107,7 +1109,7 @@ __mlu_func__ void computeLargeButterflyLaststageBatchPingpong(
     const int large_butterfly_num, const int large_in_stride, void *nram_buf,
     const int *small_factors, const int nfft, const int t_start,
     const int t_end, const int dir, const int load_once_twiddles) {
-  computeLargeButterflyOtherstagesBatchPingpong(
+  computeLargeButterflyOtherstagesBatchPingpong<DT>(
       output, input, large_radix, cur_large_twiddles, small_twiddles,
       small_twiddles_size, dft_matrix, large_section_num, large_butterfly_num,
       large_in_stride, nram_buf, small_factors, nfft, t_start, t_end, dir, 1,
