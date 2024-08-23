@@ -302,8 +302,8 @@ kernelFFTStockham(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
 
 // Sets the maximum parallel number for the FFT plan, factoring in the given
 // buffer, stage, large radix, and row-major flag.
-mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle, 
-		                              mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle,
+                                              mluOpFFTPlan_t fft_plan,
                                               int *facbuf, int stage,
                                               const int large_radix,
                                               const int is_row_major);
