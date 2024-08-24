@@ -110,10 +110,9 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                    transpose(batch_size, size_a, size_a, d_input, d_output,
                              handle, dtype, workspace));
     } else {
-      CNRT_CHECK(
-          cnrtMemcpy(d_output, d_input,
-                     type_size * size_a * lda * ((uint64_t)batch_size),
-                     CNRT_MEM_TRANS_DIR_DEV2DEV));
+      CNRT_CHECK(cnrtMemcpy(d_output, d_input,
+                            type_size * size_a * lda * ((uint64_t)batch_size),
+                            CNRT_MEM_TRANS_DIR_DEV2DEV));
     }
   } else {
     CHECK_RETURN("mluOpCholesky",
@@ -166,10 +165,9 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                    transpose(batch_size, size_a, size_a, d_output, workspace,
                              handle, dtype, workspace));
       cnrtQueueSync(queue);
-      CNRT_CHECK(
-          cnrtMemcpy(d_output, workspace,
-                     type_size * size_a * lda * ((uint64_t)batch_size),
-                     CNRT_MEM_TRANS_DIR_DEV2DEV));
+      CNRT_CHECK(cnrtMemcpy(d_output, workspace,
+                            type_size * size_a * lda * ((uint64_t)batch_size),
+                            CNRT_MEM_TRANS_DIR_DEV2DEV));
     }
   } else {
     recnb = CREC_NB;
@@ -237,16 +235,15 @@ calculate_body(mluOpHandle_t handle, int batch_size,
         CNRT_CHECK(cnrtMemcpy(d_output, workspace,
                               type_size * size_a * lda * 16,
                               CNRT_MEM_TRANS_DIR_DEV2DEV));
-        CNRT_CHECK(cnrtMemcpy(
-            d_output + type_size / 4 * size_a * lda * 16,
-            workspace + type_size / 4 * size_a * lda * 16,
-            type_size * size_a * lda * ((uint64_t)batch_size - 16),
-            CNRT_MEM_TRANS_DIR_DEV2DEV));
-      } else {
         CNRT_CHECK(
-            cnrtMemcpy(d_output, workspace,
-                       type_size * size_a * lda * ((uint64_t)batch_size),
+            cnrtMemcpy(d_output + type_size / 4 * size_a * lda * 16,
+                       workspace + type_size / 4 * size_a * lda * 16,
+                       type_size * size_a * lda * ((uint64_t)batch_size - 16),
                        CNRT_MEM_TRANS_DIR_DEV2DEV));
+      } else {
+        CNRT_CHECK(cnrtMemcpy(d_output, workspace,
+                              type_size * size_a * lda * ((uint64_t)batch_size),
+                              CNRT_MEM_TRANS_DIR_DEV2DEV));
       }
     }
   }
@@ -310,7 +307,7 @@ mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   }
 
   uint64_t type_size, total_size;
-  uint64_t size_limit = 1024*1024*1024*((uint64_t)7);
+  uint64_t size_limit = 1024 * 1024 * 1024 * ((uint64_t)7);
   MLUOP_CHECK(mluOpGetSizeOfDataType(dtype, &type_size));
   total_size = type_size * size_a * lda * ((uint64_t)batch_size);
   PARAM_CHECK("mluOpCholesky", total_size < size_limit);
