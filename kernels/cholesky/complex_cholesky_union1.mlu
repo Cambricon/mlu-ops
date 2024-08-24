@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 
-
 #include "cholesky.h"
 #define COMPLEX_OFFSET(A, off) (((float*)A) + (2 * (off)))
 #define COMPLEX_TYPE_SIZE ((2) * sizeof(float))
@@ -146,7 +145,7 @@ __mlu_func__ void small_cminout(int m, int width, float* dst,
     for (int iter = 0; iter < width; iter++) {
       factor = rdiag[(iter * CPOTF_NB + iter)];
       if (factor <= 0) {
-          MLULOG("The input matrix is not positive definite.\n");
+        MLULOG("The input matrix is not positive definite.\n");
       }
       factor = sqrt(factor);
       factor = 1.0 / factor;
@@ -290,7 +289,7 @@ __mlu_func__ void small_cminout_batch(int m, int width, float* r_dst,
   for (int iter = 0; iter < width; iter++) {
     factor = r_diag[iter * width + iter];
     if (factor <= 0) {
-        MLULOG("The input matrix is not positive definite.\n");
+      MLULOG("The input matrix is not positive definite.\n");
     }
     factor = sqrt(factor);
     factor = 1.0 / factor;
@@ -814,8 +813,7 @@ mluOpStatus_t cgemm_real(int batch, bool trans_a, bool trans_b, int m, int n,
   mluOpGetQueue(handle, &queue);
 
   float* workspace = cgemm_workspace;
-  float* sgemm_workspace =
-      cgemm_workspace + ((uint64_t)batch) * 2 * (m * k);
+  float* sgemm_workspace = cgemm_workspace + ((uint64_t)batch) * 2 * (m * k);
   float* copy_ra = workspace;
   float* copy_ia = copy_ra + ((uint64_t)batch) * m * k;
   int copy_lda = k;

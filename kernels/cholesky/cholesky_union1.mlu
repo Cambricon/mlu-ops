@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 
-
 #include "cholesky.h"
 #include <cmath>
 
@@ -175,10 +174,9 @@ static __mlu_func__ void spotf2_sminout_fixsize_device(int m, float* A,
       }
     }
 
-
     factor = diag[iter * POTF_NB + iter];
     if (factor <= 0) {
-        MLULOG("The input matrix is not positive definite.\n");
+      MLULOG("The input matrix is not positive definite.\n");
     }
     factor = std::sqrt(factor);
     factor = (1.0 / factor);
@@ -427,7 +425,7 @@ __mlu_func__ void small_sminout_batch(int m, int width, float* dst,
   for (int iter = 0; iter < width; iter++) {
     factor = diag[iter * width + iter];
     if (factor <= 0) {
-        MLULOG("The input matrix is not positive definite.\n");
+      MLULOG("The input matrix is not positive definite.\n");
     }
     factor = sqrt(factor);
     factor = 1.0 / factor;
@@ -1369,7 +1367,6 @@ mluOpStatus_t transpose(int batch, int m, int n, float* d_input,
 
   CALL_CNNL(cnnlGetTransposeWorkspaceSize(cnnl_handle, cnnl_in_desc,
                                           cnnl_trans_desc, &size));
-
 
   CALL_CNNL(cnnlTranspose_v2(cnnl_handle, cnnl_trans_desc, cnnl_in_desc,
                              d_input, cnnl_out_desc, d_output, workspace,
