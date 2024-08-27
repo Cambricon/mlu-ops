@@ -75,6 +75,8 @@
 
 #define FFT_PI (3.1415926535897932384626433832795)
 
+#define NRAM_SIZE_370 753664
+
 struct dft_table_entry {
   int radix;
   int offset;
@@ -177,6 +179,7 @@ struct cnfftButterflyAddrs {
   void *idft_matrix_2d;
   int *factors;
   int *factors_2d;
+  void *input_pad_addr;
 };
 struct mluOpFFTStruct {
   int rank;            // rank of FFT
