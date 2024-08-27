@@ -69,23 +69,23 @@ LU分解共分为两个过程，分别代表了在不同层次和分块尺寸上
   - - 当batch数量等于1时，使用实际的cluster数量（默认为8个）对应1个batch;
 
     - ```c
-       if (batch > 1)
-          {
-              id = taskId;
-              batch_id = id / 4;
-              if (batch_id >= batch)
-                  return;
-              tx = taskId % 4;
-              dA += batch_id * stride_a;
-              taskdim = TaskUnion1;
-          }
-          else
-          {
-              id = taskId;
-              batch_id = 0;
-              taskdim = taskDim;
-              tx = taskId;
-          }
+      if (batch > 1)
+         {
+             id = taskId;
+             batch_id = id / 4;
+             if (batch_id >= batch)
+                 return;
+             tx = taskId % 4;
+             dA += batch_id * stride_a;
+             taskdim = TaskUnion1;
+         }
+         else
+         {
+             id = taskId;
+             batch_id = 0;
+             taskdim = taskDim;
+             tx = taskId;
+         }
       ```
 
   - 变量与数据的对应
@@ -99,7 +99,7 @@ LU分解共分为两个过程，分别代表了在不同层次和分块尺寸上
       __nram__ float orig[MAX_M_SIZE * N + N * N];//每个core包含额外行和工作行的整个矩阵（未转置）
       ```
 
-    - ![img](25.png)
+    - ![img](2.png)
 
   - 任务切分
 
@@ -388,7 +388,7 @@ __mlu_func__ void MLUSubKernelScal_ger(
 
   * 在非主元分解算法的基础上增加了选主元的步骤(PivotSwap)，根据m的尺寸选取选主元的内核，MLUKernelPivotSwap采用Union1任务类型，核间通信时用SRAM暂存中间值并进行主元的选取；MLUKernelPivotSwap2采用Union8任务类型，核间通信时用GDRAM暂存中间值并进行主元的选取；
   * 关键代码如下：
-  
+
   ```c++
   for (STEP = 0; STEP < ib; STEP++)
   {
@@ -433,9 +433,9 @@ __mlu_func__ void MLUSubKernelScal_ger(
       }
   }
   ```
-  
+
   * 受限于片上空间的大小，当输入矩阵的规模非常大时，需要牺牲部分性能并交换分块和按列循环计算的顺序，适应算法的通用性，具体代码如下：
-  
+
   ```
   if (m > MAX_M_SIZE1 * TaskUnion8)
   {
@@ -545,10 +545,24 @@ __mlu_func__ void MLUSubKernelScal_ger(
       }
   }
   ```
-  
-  
-  
+
+
+
 - 性能优化设计
+
+  - 性能分析
+
+    LU分解中的主要kernel包括：scal_ger——最内层分解kernel、gemm、trsm。其中gemm的实现方式是从host端拼接调用矩阵乘算子，通常情况下时间开销占比最大，而由于算法库中缺少trsm相关功能的实现，在自行实现的过程中由于计算顺序上的依赖导致计算时有大量的标量计算，不能很好地利用向量化接口，如果算法库中拓展一版优化的trsm将会大大减小这部分的时间占比。在最内层的分解内核scal_ger中，该内核的时间开销大部分来自于二维内存拷贝操作，当输入矩阵过大时，需要对输入矩阵在行维度上进行任务切分，每个计算单元处理矩阵的一部分。受限于片上空间的不足，数据必须分批处理，当使用NRAM或SRAM和GDRAM进行数据交换时，会产生较大的时间开销，该过程在选主元模式中体现极为明显。在选主元模式中，需根据按列选主元-计算-选主元-计算...的顺序，当片上空间不足以一次性装入足够大的矩阵时，需要分块装入计算，此时产生较大额外的时间开销。对分批次装入矩阵时一次装入矩阵的大小是影响时间因素的之一，当前代码下的诸如MAX_M_SIZE等参数的设置是根据经验设置，通常情况下能得到比较好的效果。
+
+    ![](25.png)
+
+    - nb1=32; nb2=16时的kernel占比
+
+    ![img](26.png)
+
+    - nb1=32; nb2=32时的kernel占比
+
+    上图表示了在1024规模下对分块的大小调整导致的性能差异。改变gemm、trsm、scal_ger等内核之间的比例也是影响时间因素的之一，动态改变sgetrf_mlu中的nb1和sgetrf2_native中的nb2两个分块大小会显著影响程序的表现，当块大小越小时，内核处理数据的规模越小，调用次数越高，当前代码中的参数设置是根据调优经验设置，在大多数情况下能得到比较好的效果。
 
   - 资源分配
 
