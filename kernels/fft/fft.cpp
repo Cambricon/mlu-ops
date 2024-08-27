@@ -1078,7 +1078,6 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
   facbuf[2] = 0;
   facbuf[3] = 0;
   facbuf[4] = 0;
-
   if (stage_num > 21) {
     return MLUOP_STATUS_ALLOC_FAILED;
   }
@@ -1141,7 +1140,6 @@ mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpHandle_t handle,
       break;
     }
   }
-
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -1662,7 +1660,9 @@ mluOpAllocateC2C1D(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
                      fft_plan->is_batch_contiguous)
                         ? 0
                         : buffer_size;
-
+  if (fft_plan->n[0] > fft_plan->inembed[0]) {
+    workspace_size += buffer_size;
+  }
   size_t twiddles_size = in_c_dtype_size * nfft * 2;
   reservespace_size = sizeof(int) * (FFT_MAXFACTORS)            /* factors */
                       + twiddles_size * 2 + DFT_TABLE_SIZE * 2; /* twiddles */
@@ -1704,6 +1704,9 @@ mluOpAllocateR2C1D(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   reservespace_size = sizeof(int) * (FFT_MAXFACTORS)            /* factors */
                       + twiddles_size * 2 + DFT_TABLE_SIZE * 2; /* twiddles */
 
+  if (fft_plan->n[0] > fft_plan->inembed[0]) {
+    workspace_size += buffer_size;  // input_pad_addr
+  }
   fft_plan->workspace_size = workspace_size;
   fft_plan->reservespace_size = reservespace_size;
 
@@ -1745,6 +1748,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpAllocateC2C2D(
   }
 
   fft_plan->workspace_size = workspace_size;
+  if (fft_plan->n[0] > fft_plan->inembed[0] ||
+      fft_plan->n[1] > fft_plan->inembed[1]) {
+    fft_plan->workspace_size = workspace_size + buffer_size;  // input_pad_addr
+  }
   fft_plan->reservespace_size = reservespace_size;
 
   return MLUOP_STATUS_SUCCESS;
@@ -1779,6 +1786,9 @@ mluOpAllocateC2R1D(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   reservespace_size = sizeof(int) * (FFT_MAXFACTORS)            /* factors */
                       + twiddles_size * 2 + DFT_TABLE_SIZE * 2; /* twiddles */
 
+  if (fft_plan->n[0] > fft_plan->inembed[0]) {
+    workspace_size += buffer_size;  // input_pad_addr
+  }
   fft_plan->workspace_size = workspace_size;
   fft_plan->reservespace_size = reservespace_size;
 
@@ -1819,6 +1829,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpAllocateRFFT2D(
     workspace_size += (fft_plan->is_output_contiguous) ? 0 : buffer_size;
   }
 
+  if (fft_plan->n[0] > fft_plan->inembed[0] ||
+      fft_plan->n[1] > fft_plan->inembed[1]) {
+    workspace_size += buffer_size;
+  }
   fft_plan->workspace_size = workspace_size;
   fft_plan->reservespace_size = reservespace_size;
 
@@ -2573,28 +2587,30 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
     }
   }
   // let this case into old version
-  switch (fft_plan->fft_type) {
-    // r2c
-    case CNFFT_HALF2COMPLEX_HALF:
-    case CNFFT_FLOAT2COMPLEX_FLOAT: {
-      fft_plan->prime = fft_plan->prime ||
-                        fft_plan->n[rank - 1] > fft_plan->inembed[rank - 1];
-    }; break;
-    // c2c
-    case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
-    case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
-      fft_plan->prime = fft_plan->prime ||
-                        fft_plan->n[rank - 1] > fft_plan->inembed[rank - 1];
-    }; break;
-    // c2r
-    case CNFFT_COMPLEX_HALF2HALF:
-    case CNFFT_COMPLEX_FLOAT2FLOAT: {
-      fft_plan->prime = fft_plan->prime || (fft_plan->n[rank - 1] / 2 + 1) >
-                                               fft_plan->inembed[rank - 1];
-    }; break;
-    default: {
-      LOG(ERROR) << make_plan_api << ": invalid fft type.";
-      return MLUOP_STATUS_BAD_PARAM;
+  if (0) {
+    switch (fft_plan->fft_type) {
+      // r2c
+      case CNFFT_HALF2COMPLEX_HALF:
+      case CNFFT_FLOAT2COMPLEX_FLOAT: {
+        fft_plan->prime = fft_plan->prime ||
+                          fft_plan->n[rank - 1] > fft_plan->inembed[rank - 1];
+      }; break;
+      // c2c
+      case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
+      case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
+        fft_plan->prime = fft_plan->prime ||
+                          fft_plan->n[rank - 1] > fft_plan->inembed[rank - 1];
+      }; break;
+      // c2r
+      case CNFFT_COMPLEX_HALF2HALF:
+      case CNFFT_COMPLEX_FLOAT2FLOAT: {
+        fft_plan->prime = fft_plan->prime || (fft_plan->n[rank - 1] / 2 + 1) >
+                                                 fft_plan->inembed[rank - 1];
+      }; break;
+      default: {
+        LOG(ERROR) << make_plan_api << ": invalid fft type.";
+        return MLUOP_STATUS_BAD_PARAM;
+      }
     }
   }
   if (fft_plan->prime > 0 && rank == 2) {

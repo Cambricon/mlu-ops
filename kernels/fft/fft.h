@@ -177,6 +177,7 @@ struct cnfftButterflyAddrs {
   void *idft_matrix_2d;
   int *factors;
   int *factors_2d;
+  void *input_pad_addr;
 };
 struct mluOpFFTStruct {
   int rank;            // rank of FFT
