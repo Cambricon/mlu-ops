@@ -355,7 +355,7 @@ __mlu_func__ void computeLargeButterflyOtherstagesR2C(
 
   int nram_buf_offset = 0;
   DT *nram_in_r = (DT *)nram_buf + nram_buf_offset;
-  DT *nram_out_tmp = (DT *)nram_buf + nram_buf_offset;
+  DT *nram_out_tmp = (DT *)nram_in_r;
   nram_buf_offset += large_radix * max_para_ldst_num;
 
   DT *nram_in_i = (DT *)nram_buf + nram_buf_offset;
@@ -615,6 +615,7 @@ __mlu_func__ void computeLargeButterflyOtherstagesR2C(
           small_stage_count--;
           if (small_stage_count == 0) {
             {
+              nram_out_tmp = (DT *)nram_in_r;
               __bang_rotate90(nram_out_tmp, nram_out_r, para_ldst_num,
                               large_radix);
               __bang_rotate180(
@@ -759,6 +760,7 @@ __mlu_func__ void computeLargeButterflyOtherstagesR2C(
                   para_ldst_num, small_in_stride, 1, radix);
 
               {
+                nram_out_tmp = (DT *)nram_in_r;
                 __bang_rotate90(nram_out_tmp, nram_out_r, para_ldst_num,
                                 large_radix);
                 __bang_rotate180(

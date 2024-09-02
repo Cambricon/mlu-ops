@@ -462,6 +462,7 @@ mluOpStatus_t fftGetTransposeWorkspaceSize(mluOpHandle_t handle,
   // destroy descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   CALL_CNNL(cnnlDestroyTransposeDescriptor(trans_desc));
+  DESTROY_CNNL_HANDLE(cnnl_handle);
 
   return status;
 }

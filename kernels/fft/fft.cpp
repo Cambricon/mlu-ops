@@ -2614,33 +2614,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       }
     }
   }
-  // let this case into old version
-  if (0) {
-    switch (fft_plan->fft_type) {
-      // r2c
-      case CNFFT_HALF2COMPLEX_HALF:
-      case CNFFT_FLOAT2COMPLEX_FLOAT: {
-        fft_plan->prime = fft_plan->prime ||
-                          fft_plan->n[rank - 1] > fft_plan->inembed[rank - 1];
-      }; break;
-      // c2c
-      case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
-      case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
-        fft_plan->prime = fft_plan->prime ||
-                          fft_plan->n[rank - 1] > fft_plan->inembed[rank - 1];
-      }; break;
-      // c2r
-      case CNFFT_COMPLEX_HALF2HALF:
-      case CNFFT_COMPLEX_FLOAT2FLOAT: {
-        fft_plan->prime = fft_plan->prime || (fft_plan->n[rank - 1] / 2 + 1) >
-                                                 fft_plan->inembed[rank - 1];
-      }; break;
-      default: {
-        LOG(ERROR) << make_plan_api << ": invalid fft type.";
-        return MLUOP_STATUS_BAD_PARAM;
-      }
-    }
-  }
   if (fft_plan->prime > 0 && rank == 2) {
     LOG(ERROR) << make_plan_api << ": Only supports FFT2d sizes with factors"
                << " decomposed within the range of 2 to 64"
@@ -2706,7 +2679,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
 
       } else if (rank == 2) {
         VLOG(5) << "into make FFT2d Policy";
-
         // C2C 1D
         status = mluOpMakeFFTPlanC2C2D(handle, fft_plan, input_desc,
                                        output_desc, rank, n);
