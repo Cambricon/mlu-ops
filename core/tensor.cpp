@@ -912,17 +912,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpDestroyGroupTensorDescriptors(
 // usr interface.
 uint64_t MLUOP_WIN_API
 mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc) {
-  CHECK(desc != NULL);
+  PARAM_CHECK("[mluOpGetTensorElementNum]", desc != NULL);
   uint64_t tensor_num = 1;
   auto return_status = desc->tensorElementsNumber(tensor_num);
   return tensor_num;
 }
 
 uint64_t mluOpGetSeqDataElementNum(mluOpSeqDataDescriptor_t desc) {
-  CHECK(desc != NULL);
+  PARAM_CHECK("[mluOpGetSeqDataElementNum]", desc != NULL);
   uint64_t tensor_num = 1;
-  auto return_status = desc->seqDataElementsNumber(tensor_num);
-  CHECK(return_status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN("[mluOpGetSeqDataElementNum]",
+               desc->seqDataElementsNumber(tensor_num));
   return tensor_num;
 }
 
