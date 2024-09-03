@@ -228,7 +228,9 @@ extern bool mluop_check_large_tensor_dim_size_;
     }                                                                     \
   }
 
-#define MLUOP_CHECK(val) ((val), #val, __FILE__, __LINE__)
+void mluOpCheck(mluOpStatus_t result, char const *const func,
+                const char *const file, int const line);
+#define MLUOP_CHECK(val) mluOpCheck((val), #val, __FILE__, __LINE__)
 
 #define KERNEL_CALL_CHECK(parent_kernel, sub_kernel, status, statement)        \
   do {                                                                         \
