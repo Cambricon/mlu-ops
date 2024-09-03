@@ -14435,6 +14435,60 @@ mluOpExecFFT(mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
+
+// Group: Logcumsumexp
+/*!
+* @brief Compute the logarithm of the cumulative sum of the given
+* input. Specifically, given a tensor input, logcumsumexp(input) 
+* calculates along the dimension dim to obtain an array output of 
+* the same size as input, where each element output[i] is the logarithm 
+* of the sum of the exponentials of the first i elements of input.
+*
+* @param[in] handle
+* Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
+* in the logcumsumexp execution. For detailed information, see ::mluOpHandle_t.
+*
+* @param[in] dim
+* The target dimension to execute logcumsumexp
+*
+* @param[in] input_desc
+* The descriptor of input signals. For detailed information,
+* see ::mluOpTensorDescriptor_t.
+*
+* @param[in] input
+* Pointer to the MLU memory that stores the input tensor.
+*
+* @param[in] output_desc
+* The descriptor of input signals. For detailed information,
+* see ::mluOpTensorDescriptor_t.
+*
+* @param[in] output
+* Pointer to the MLU memory that stores the input tensor.
+*
+* @par Return
+* - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED, MLUOP_STATUS_BAD_PARAM
+*
+* @par Data Type
+* - ::MLUOP_DTYPE_FLOAT, ::MLUOP_DTYPE_HALT
+*
+* @par Data Layout
+* - ::MLUOP_LAYOUT_ARRAY
+*
+* @par Scale Limitation
+* - None.
+*
+* @par API Dependency
+* - None.
+*
+*/
+mluOpStatus_t MLUOP_WIN_API
+mluOpLogcumsumexp(mluOpHandle_t handle,
+                  const int32_t dim,
+                  const mluOpTensorDescriptor_t input_desc,
+                  const void *input,
+                  const mluOpTensorDescriptor_t output_desc,
+                  void *output);
+
 #if defined(__cplusplus)
 }
 #endif
