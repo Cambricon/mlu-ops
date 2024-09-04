@@ -822,7 +822,8 @@ mluOpStatus_t MLUOP_WIN_API fftFactor(const int _n, int *facbuf,
 // facbuf[5 * stage_num + 2] = out_stride;
 // facbuf[5 * stage_num + 3] = in_stride;
 // facbuf[5 * stage_num + 4] = small_factors_offset;
-mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
+                                             mluOpFFTPlan_t fft_plan,
                                              const int _n, int *facbuf,
                                              const int is_row_major,
                                              const int factor_type) {
@@ -833,197 +834,165 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpFFTPlan_t fft_plan,
   int large_radix = 1;
   int large_count = 1;
   int small_factors_offset = 22 * 5;
+  int max_nram_size = handle->nram_size + REM_FOR_STACK - 32 * 1024;
   while (n > 1) {
     if (is_row_major) {
-      switch (_n) {
-        case ((32 * 17) * (32 * 17)):
-          if (n % (32 * 17) == 0) {
-            r = (32 * 17);
-          }
-          break;
+      if (max_nram_size >= NRAM_SIZE_370) {
+        switch (_n) {
+          case (200):
+            r = 200;
+            break;
 
-        case ((13 * 17) * (13 * 17) * (13 * 17)):
-          if (n % (13 * 17) == 0) {
-            r = (13 * 17);
-          }
-          break;
+          case (600):
+            r = 600;
+            break;
 
-        case ((25) * (25) * (25)):
-          if (n % (25) == 0) {
-            r = (25);
-          }
-          break;
-
-        case ((32 * 17)):
-          if (n % (32 * 17) == 0) {
-            r = (32 * 17);
-          }
-          break;
-
-        case ((23 * 300)):
-          if (n % (23) == 0) {
-            r = (23);
-          } else if (n % (300) == 0) {
-            r = (300);
-          }
-          break;
-
-        case ((32) * (32 * 17)):
-          if (n % (32 * 17) == 0) {
-            r = (32 * 17);
-          } else if (n % (32) == 0) {
-            r = (32);
-          }
-          break;
-
-        case ((58 * 17) * (33)):
-          if (n % (58 * 17) == 0) {
-            r = (58 * 17);
-          } else if (n % (33) == 0) {
-            r = (33);
-          }
-          break;
-
-        case (200):
-          r = 200;
-          break;
-
-        case (600):
-          r = 600;
-          break;
-
-        case (256):
-          r = 256;
-          break;
-
-        case 1024:
-          if (n % 32 == 0) {
-            r = 32;
-          }
-          break;
-
-        case 2048:
-          if (n % 64 == 0) {
-            r = 64;
-          } else if ((n % 32) == 0) {
-            r = 32;
-          }
-          break;
-
-        case 6000:
-          if (n % 300 == 0) {
-            r = 300;
-          } else if ((n % 20) == 0) {
-            r = 20;
-          }
-          break;
-
-        case 7000:
-          if (n % 280 == 0) {
-            r = 280;
-          } else if ((n % 25) == 0) {
-            r = 25;
-          }
-          break;
-
-        case 8000:
-          if (n % 160 == 0) {
-            r = 160;
-          } else if ((n % 50) == 0) {
-            r = 50;
-          }
-          break;
-
-        case 9000:
-          if (n % 500 == 0) {
-            r = 500;
-          } else if ((n % 18) == 0) {
-            r = 18;
-          }
-          break;
-
-        case 10000:
-          if (n % 500 == 0) {
-            r = 500;
-          } else if ((n % 20) == 0) {
-            r = 20;
-          }
-          break;
-
-        case 11000:
-          if (n % 275 == 0) {
-            r = 275;
-          } else if ((n % 40) == 0) {
-            r = 40;
-          }
-          break;
-
-        case 12000:
-          if (n % 400 == 0) {
-            r = 400;
-          } else if ((n % 30) == 0) {
-            r = 30;
-          }
-          break;
-
-        case 13000:
-          if (n % 650 == 0) {
-            r = 650;
-          } else if ((n % 20) == 0) {
-            r = 20;
-          }
-          break;
-
-        case 14000:
-          if (n % 350 == 0) {
-            r = 350;
-          } else if ((n % 40) == 0) {
-            r = 40;
-          }
-          break;
-
-        case 8192:
-          if (n % 512 == 0) {
-            r = 512;
-          } else if ((n % 16) == 0) {
-            r = 16;
-          }
-          break;
-
-        case 16384:
-          if (n % 256 == 0) {
+          case (256):
             r = 256;
-          } else if ((n % 64) == 0) {
-            r = 64;
-          }
-          break;
+            break;
 
-        case 32768:
-          if (n % 512 == 0) {
-            r = 512;
-          } else if ((n % 64) == 0) {
-            r = 64;
-          }
-          break;
+          case 1024:
+            if (n % 32 == 0) {
+              r = 32;
+            }
+            break;
 
-        case 131072:
-          if (n % 1024 == 0) {
-            r = 1024;
-          } else if ((n % 128) == 0) {
-            r = 128;
-          }
-          break;
+          case 2048:
+            if (n % 64 == 0) {
+              r = 64;
+            } else if ((n % 32) == 0) {
+              r = 32;
+            }
+            break;
 
-        default:
-          if (n <= 64) {
-            r = n;
-          } else {
-            int *cur_facbuf = &facbuf[small_factors_offset];
-            searchLargeRadix(fft_plan, r, cur_facbuf, stage_num + 1, n,
-                             is_row_major);
-          }
-          break;
+          case 6000:
+            if (n % 300 == 0) {
+              r = 300;
+            } else if ((n % 20) == 0) {
+              r = 20;
+            }
+            break;
+
+          case 7000:
+            if (n % 280 == 0) {
+              r = 280;
+            } else if ((n % 25) == 0) {
+              r = 25;
+            }
+            break;
+
+          case 8000:
+            if (n % 160 == 0) {
+              r = 160;
+            } else if ((n % 50) == 0) {
+              r = 50;
+            }
+            break;
+
+          case 9000:
+            if (n % 500 == 0) {
+              r = 500;
+            } else if ((n % 18) == 0) {
+              r = 18;
+            }
+            break;
+
+          case 10000:
+            if (n % 500 == 0) {
+              r = 500;
+            } else if ((n % 20) == 0) {
+              r = 20;
+            }
+            break;
+
+          case 11000:
+            if (n % 275 == 0) {
+              r = 275;
+            } else if ((n % 40) == 0) {
+              r = 40;
+            }
+            break;
+
+          case 12000:
+            if (n % 400 == 0) {
+              r = 400;
+            } else if ((n % 30) == 0) {
+              r = 30;
+            }
+            break;
+
+          case 13000:
+            if (n % 650 == 0) {
+              r = 650;
+            } else if ((n % 20) == 0) {
+              r = 20;
+            }
+            break;
+
+          case 14000:
+            if (n % 350 == 0) {
+              r = 350;
+            } else if ((n % 40) == 0) {
+              r = 40;
+            }
+            break;
+
+          case 8192:
+            if (n % 512 == 0) {
+              r = 512;
+            } else if ((n % 16) == 0) {
+              r = 16;
+            }
+            break;
+
+          case 16384:
+            if (n % 256 == 0) {
+              r = 256;
+            } else if ((n % 64) == 0) {
+              r = 64;
+            }
+            break;
+
+          case 32768:
+            if (n % 512 == 0) {
+              r = 512;
+            } else if ((n % 64) == 0) {
+              r = 64;
+            }
+            break;
+
+          case 131072:
+            if (n % 1024 == 0) {
+              r = 1024;
+            } else if ((n % 128) == 0) {
+              r = 128;
+            }
+            break;
+
+          default:
+            if (n <= 64) {
+              r = n;
+            } else {
+              int *cur_facbuf = &facbuf[small_factors_offset];
+              searchLargeRadix(handle, fft_plan, r, cur_facbuf, stage_num + 1,
+                               n, is_row_major);
+            }
+            break;
+        }
+      } else {
+        switch (_n) {
+          default:
+            if (n <= 64) {
+              r = n;
+            } else {
+              int *cur_facbuf = &facbuf[small_factors_offset];
+              searchLargeRadix(handle, fft_plan, r, cur_facbuf, stage_num + 1,
+                               n, is_row_major);
+            }
+            break;
+        }
       }
+
     } else {
       // column major
       // Larger base factorization (e.g., 64) is faster but less accurate.
@@ -1096,10 +1065,9 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpFFTPlan_t fft_plan,
     status =
         fftFactor(r, facbuf, small_factors_offset, factor_type, large_count);
     INTERNAL_CHECK("[fftTwoStepFactor]", status == MLUOP_STATUS_SUCCESS);
-    status =
-        setMaxParallelNum(fft_plan, cur_facbuf, stage_num, r, is_row_major);
+    status = setMaxParallelNum(handle, fft_plan, cur_facbuf, stage_num, r,
+                               is_row_major);
     INTERNAL_CHECK("[fftTwoStepFactor]", status == MLUOP_STATUS_SUCCESS);
-
     out_stride *= r;
     large_count++;
   }
@@ -1109,7 +1077,6 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpFFTPlan_t fft_plan,
   facbuf[2] = 0;
   facbuf[3] = 0;
   facbuf[4] = 0;
-
   if (stage_num > 21) {
     return MLUOP_STATUS_ALLOC_FAILED;
   }
@@ -1117,7 +1084,8 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpFFTPlan_t fft_plan,
   return status;
 }
 
-mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpHandle_t handle,
+                                             mluOpFFTPlan_t fft_plan,
                                              int &large_radix, int *facbuf,
                                              const int large_stage_id,
                                              const int _n,
@@ -1151,7 +1119,7 @@ mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpFFTPlan_t fft_plan,
         facbuf[1] = large_radix * small_radix;
         int parallel_num_lb = 0;
 
-        calParallelNumLowBound(fft_plan, facbuf, large_stage_id,
+        calParallelNumLowBound(handle, fft_plan, facbuf, large_stage_id,
                                parallel_num_lb, is_row_major);
         if (parallel_num_lb > 0) {
           out_stride *= small_radix;
@@ -1166,22 +1134,21 @@ mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpFFTPlan_t fft_plan,
         }
       }
     }
-
     if (small_radix == 1) {
       break;
     }
   }
-
   return MLUOP_STATUS_SUCCESS;
 }
 
 // low bound
-mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpHandle_t handle,
+                                                   mluOpFFTPlan_t fft_plan,
                                                    int *facbuf, const int stage,
                                                    int &parallel_num_lb,
                                                    const int is_row_major) {
   const size_t nram_space_size =
-      (MAX_NRAM_SIZE + REM_FOR_STACK - 32 * 1024 - FFT_MAXFACTORS * 4);
+      (handle->nram_size + REM_FOR_STACK - 32 * 1024 - FFT_MAXFACTORS * 4);
   size_t workspace_size = 0;
   size_t reservespace_size = 0;
   const int max_radix = 64;
@@ -1189,9 +1156,9 @@ mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpFFTPlan_t fft_plan,
   parallel_num_lb = 0;
   size_t nram_space_need = 0;
   size_t nram_space_need_tw = 0;
-  size_t nram_space_need_dftmtx = (stage == 1)
-                                      ? max_radix * max_radix * 2 * 2
-                                      : max_radix * max_radix * 2;  // complex
+  size_t nram_space_need_dftmtx =
+      (stage == 1) ? max_radix * max_radix * 2 * 2 * 4
+                   : max_radix * max_radix * 2 * 4;  // complex
   // int nram_space_need_dftmtx_align = 0;
   size_t space_need_matmul = 0;
   size_t space_need_matmul_tmp = 0;
@@ -1210,6 +1177,8 @@ mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpFFTPlan_t fft_plan,
 
   switch (fft_plan->fft_type) {
     // r2c
+    case CNFFT_COMPLEX_HALF2HALF:
+    case CNFFT_COMPLEX_FLOAT2FLOAT:
     case CNFFT_HALF2COMPLEX_HALF:
     case CNFFT_FLOAT2COMPLEX_FLOAT: {
       TYPE_SIZE = 4;
@@ -1246,7 +1215,7 @@ mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpFFTPlan_t fft_plan,
 
       space_need_matmul = 0;
       if (stage != 1) {
-        space_need_matmul = _n * 4 * TYPE_SIZE;
+        space_need_matmul = _n * 6 * TYPE_SIZE;
       }
       for (int small_stage_id = 1; small_stage_id <= small_stage_num;
            small_stage_id++) {
@@ -1288,8 +1257,6 @@ mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpFFTPlan_t fft_plan,
               : nram_space_remain / (nram_space_need + space_need_matmul);
     }; break;
 
-    case CNFFT_COMPLEX_HALF2HALF:
-    case CNFFT_COMPLEX_FLOAT2FLOAT:
     case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
     case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
       TYPE_SIZE = 4;
@@ -1324,7 +1291,7 @@ mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpFFTPlan_t fft_plan,
 
       space_need_matmul = 0;
       if (stage != 1) {
-        space_need_matmul = _n * 4 * TYPE_SIZE;
+        space_need_matmul = _n * 6 * TYPE_SIZE;
       }
       for (int small_stage_id = 1; small_stage_id <= small_stage_num;
            small_stage_id++) {
@@ -1371,14 +1338,15 @@ mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpFFTPlan_t fft_plan,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle,
+                                              mluOpFFTPlan_t fft_plan,
                                               int *facbuf, const int stage,
                                               const int large_radix,
                                               const int is_row_major) {
   const std::string make_plan_api = "[setMaxParallelNum]";
 
   const size_t nram_space_size =
-      (MAX_NRAM_SIZE + REM_FOR_STACK - 32 * 1024 - FFT_MAXFACTORS * 4);
+      (handle->nram_size + REM_FOR_STACK - 32 * 1024 - FFT_MAXFACTORS * 4);
   size_t workspace_size = 0;
   size_t reservespace_size = 0;
   const int max_radix = 64;
@@ -1387,8 +1355,8 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
   size_t nram_space_need = 0;
   int nram_space_need_tw = 0;
   int nram_space_need_dftmtx = (stage == 1)
-                                   ? max_radix * max_radix * 2 * 2
-                                   : max_radix * max_radix * 2;  // complex
+                                   ? max_radix * max_radix * 2 * 2 * 4
+                                   : max_radix * max_radix * 2 * 4;  // complex
   size_t space_need_matmul = 0;
   size_t space_need_matmul_tmp = 0;
   int small_stage_num = facbuf[0];
@@ -1405,6 +1373,8 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
   // space(large_radix) * para_num > space(para_num * large_radix)
   switch (fft_plan->fft_type) {
     // r2c
+    case CNFFT_COMPLEX_HALF2HALF:
+    case CNFFT_COMPLEX_FLOAT2FLOAT:
     case CNFFT_HALF2COMPLEX_HALF:
     case CNFFT_FLOAT2COMPLEX_FLOAT: {
       TYPE_SIZE = 4;
@@ -1441,7 +1411,7 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
 
       space_need_matmul = 0;
       if (stage != 1) {
-        space_need_matmul = large_radix * 4 * TYPE_SIZE;
+        space_need_matmul = large_radix * 6 * TYPE_SIZE;
       }
       for (int small_stage_id = 1; small_stage_id <= small_stage_num;
            small_stage_id++) {
@@ -1484,6 +1454,9 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
       while (1) {
         space_need_matmul = 0;
 
+        if (stage != 1) {
+          space_need_matmul = large_radix * 6 * TYPE_SIZE * max_parallel_num;
+        }
         for (int small_stage_id = 1; small_stage_id <= small_stage_num;
              small_stage_id++) {
           radix = facbuf[small_stage_id * 4 + 0];
@@ -1524,8 +1497,6 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
         }
       }
     }; break;
-    case CNFFT_COMPLEX_HALF2HALF:
-    case CNFFT_COMPLEX_FLOAT2FLOAT:
     case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
     case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
       TYPE_SIZE = 4;
@@ -1561,7 +1532,9 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
 
       space_need_matmul = 0;
       if (stage != 1) {
-        space_need_matmul = large_radix * 4 * TYPE_SIZE;
+        // space_need_matmul = large_radix * 4 * TYPE_SIZE;
+        space_need_matmul =
+            large_radix * 4 * TYPE_SIZE + large_radix * 2 * TYPE_SIZE;
       }
       for (int small_stage_id = 1; small_stage_id <= small_stage_num;
            small_stage_id++) {
@@ -1604,6 +1577,10 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
       while (1) {
         space_need_matmul = 0;
 
+        if (stage != 1) {
+          // space_need_matmul = large_radix * 4 * TYPE_SIZE;
+          space_need_matmul = large_radix * 6 * TYPE_SIZE * max_parallel_num;
+        }
         for (int small_stage_id = 1; small_stage_id <= small_stage_num;
              small_stage_id++) {
           radix = facbuf[small_stage_id * 4 + 0];
@@ -1645,7 +1622,6 @@ mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
       }
     }; break;
   }
-
   if (max_parallel_num <= 0) {
     status = MLUOP_STATUS_ALLOC_FAILED;
   } else {
@@ -1671,19 +1647,63 @@ mluOpAllocateC2C1D(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   size_t buffer_size = batch * in_c_dtype_size * nfft;
 
   workspace_size = buffer_size * 2;
-  workspace_size +=
-      (fft_plan->is_input_contiguous || fft_plan->is_batch_contiguous)
-          ? 0
-          : buffer_size;
-  workspace_size +=
-      (fft_plan->is_output_contiguous || fft_plan->is_batch_contiguous)
-          ? 0
-          : buffer_size;
+  workspace_size += ((fft_plan->is_input_contiguous &&
+                      fft_plan->n[0] <= fft_plan->inembed[0]) ||
+                     fft_plan->is_batch_contiguous)
+                        ? 0
+                        : buffer_size;
+  workspace_size += ((fft_plan->is_output_contiguous &&
+                      fft_plan->n[0] <= fft_plan->onembed[0]) ||
+                     fft_plan->is_batch_contiguous)
+                        ? 0
+                        : buffer_size;
+  if (fft_plan->n[0] > fft_plan->inembed[0]) {
+    workspace_size += buffer_size;
+  }
+  size_t twiddles_size = in_c_dtype_size * nfft * 2;
+  reservespace_size = sizeof(int) * (FFT_MAXFACTORS)            /* factors */
+                      + twiddles_size * 2 + DFT_TABLE_SIZE * 2; /* twiddles */
+
+  fft_plan->workspace_size = workspace_size;
+  fft_plan->reservespace_size = reservespace_size;
+
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpAllocateR2C1D(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
+                   mluOpTensorDescriptor_t input_desc,
+                   mluOpTensorDescriptor_t output_desc, const int nfft) {
+  const std::string make_plan_api = "[mluOpAllocateC2C1D]";
+  size_t workspace_size = 0;
+  size_t reservespace_size = 0;
+
+  mluOpDataType_t in_c_dtype = fft_plan->input_dtype;
+  size_t in_c_dtype_size = mluOpDataTypeBytes(in_c_dtype);
+
+  int batch = fft_plan->batch;
+
+  size_t buffer_size = batch * in_c_dtype_size * nfft * 2;
+
+  workspace_size = buffer_size * 2;
+  workspace_size += ((fft_plan->is_input_contiguous &&
+                      fft_plan->n[0] <= fft_plan->inembed[0]) ||
+                     fft_plan->is_batch_contiguous)
+                        ? 0
+                        : buffer_size;
+  workspace_size += ((fft_plan->is_output_contiguous &&
+                      fft_plan->n[0] / 2 + 1 <= fft_plan->onembed[0]) ||
+                     fft_plan->is_batch_contiguous)
+                        ? 0
+                        : buffer_size;
 
   size_t twiddles_size = in_c_dtype_size * nfft * 2;
   reservespace_size = sizeof(int) * (FFT_MAXFACTORS)            /* factors */
                       + twiddles_size * 2 + DFT_TABLE_SIZE * 2; /* twiddles */
 
+  if (fft_plan->n[0] > fft_plan->inembed[0]) {
+    workspace_size += buffer_size;  // input_pad_addr
+  }
   fft_plan->workspace_size = workspace_size;
   fft_plan->reservespace_size = reservespace_size;
 
@@ -1725,6 +1745,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpAllocateC2C2D(
   }
 
   fft_plan->workspace_size = workspace_size;
+  if (fft_plan->n[0] > fft_plan->inembed[0] ||
+      fft_plan->n[1] > fft_plan->inembed[1]) {
+    fft_plan->workspace_size = workspace_size + buffer_size;  // input_pad_addr
+  }
   fft_plan->reservespace_size = reservespace_size;
 
   return MLUOP_STATUS_SUCCESS;
@@ -1746,13 +1770,22 @@ mluOpAllocateC2R1D(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   size_t buffer_size = batch * in_c_dtype_size * nfft;
 
   workspace_size = buffer_size * 2;
-  workspace_size += (fft_plan->is_input_contiguous) ? 0 : buffer_size;
-  workspace_size += (fft_plan->is_output_contiguous) ? 0 : buffer_size;
+  workspace_size += (fft_plan->is_input_contiguous &&
+                     fft_plan->n[0] / 2 + 1 <= fft_plan->inembed[0])
+                        ? 0
+                        : buffer_size;
+  workspace_size +=
+      (fft_plan->is_output_contiguous && fft_plan->n[0] <= fft_plan->onembed[0])
+          ? 0
+          : buffer_size;
 
   size_t twiddles_size = in_c_dtype_size * nfft * 2;
   reservespace_size = sizeof(int) * (FFT_MAXFACTORS)            /* factors */
                       + twiddles_size * 2 + DFT_TABLE_SIZE * 2; /* twiddles */
 
+  if (fft_plan->n[0] > fft_plan->inembed[0]) {
+    workspace_size += buffer_size;  // input_pad_addr
+  }
   fft_plan->workspace_size = workspace_size;
   fft_plan->reservespace_size = reservespace_size;
 
@@ -1793,6 +1826,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpAllocateRFFT2D(
     workspace_size += (fft_plan->is_output_contiguous) ? 0 : buffer_size;
   }
 
+  if (fft_plan->n[0] > fft_plan->inembed[0] ||
+      fft_plan->n[1] > fft_plan->inembed[1]) {
+    workspace_size += buffer_size;
+  }
   fft_plan->workspace_size = workspace_size;
   fft_plan->reservespace_size = reservespace_size;
 
@@ -1813,7 +1850,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanC2C1D(
        fft_plan->ostride == fft_plan->batch);
   mluOpAllocateC2C1D(handle, fft_plan, input_desc, output_desc, n[0]);
   int is_row_major = !fft_plan->is_batch_contiguous;
-  fftTwoStepFactor(fft_plan, n[0], fft_plan->factors, is_row_major,
+  fftTwoStepFactor(handle, fft_plan, n[0], fft_plan->factors, is_row_major,
                    fft_plan->fft_type);
 
   switch (fft_plan->fft_type) {
@@ -1879,7 +1916,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanC2R1D(
     const int rank, const int *n) {
   mluOpAllocateC2R1D(handle, fft_plan, input_desc, output_desc, n[0]);
   int is_row_major = 1;
-  fftTwoStepFactor(fft_plan, n[0], fft_plan->factors, is_row_major,
+  fftTwoStepFactor(handle, fft_plan, n[0], fft_plan->factors, is_row_major,
                    fft_plan->fft_type);
 
   switch (fft_plan->fft_type) {
@@ -1965,8 +2002,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanC2C2D(
   }
 
   if (fft_plan->fft_strategy == CNFFT_FUNC_TWO_LEVEL_STOCKHAM) {
-    fftTwoStepFactor(fft_plan, n[1], fft_plan->factors, 1, fft_plan->fft_type);
-    fftTwoStepFactor(fft_plan, n[0], fft_plan->factors_2d, 0,
+    fftTwoStepFactor(handle, fft_plan, n[1], fft_plan->factors, 1,
+                     fft_plan->fft_type);
+    fftTwoStepFactor(handle, fft_plan, n[0], fft_plan->factors_2d, 0,
                      fft_plan->fft_type);
 
     switch (fft_plan->fft_type) {
@@ -2039,9 +2077,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanR2C1D(
     mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
     mluOpTensorDescriptor_t input_desc, mluOpTensorDescriptor_t output_desc,
     const int rank, const int *n) {
-  mluOpAllocateC2C1D(handle, fft_plan, input_desc, output_desc, n[0]);
-  // fftTwoStepFactor(n[0], fft_plan->factors);
-  fftTwoStepFactor(fft_plan, n[0], fft_plan->factors, 1, fft_plan->fft_type);
+  mluOpAllocateR2C1D(handle, fft_plan, input_desc, output_desc, n[0]);
+  fftTwoStepFactor(handle, fft_plan, n[0], fft_plan->factors, 1,
+                   fft_plan->fft_type);
 
   switch (fft_plan->fft_type) {
     case CNFFT_FLOAT2COMPLEX_FLOAT:
@@ -2117,8 +2155,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanR2C2D(
   }
 
   if (fft_plan->fft_strategy == CNFFT_FUNC_TWO_LEVEL_STOCKHAM) {
-    fftTwoStepFactor(fft_plan, n[1], fft_plan->factors, 1, fft_plan->fft_type);
-    fftTwoStepFactor(fft_plan, n[0], fft_plan->factors_2d, 0,
+    fftTwoStepFactor(handle, fft_plan, n[1], fft_plan->factors, 1,
+                     fft_plan->fft_type);
+    fftTwoStepFactor(handle, fft_plan, n[0], fft_plan->factors_2d, 0,
                      CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT);
 
     switch (fft_plan->fft_type) {
@@ -2214,8 +2253,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanC2R2D(
   }
 
   if (fft_plan->fft_strategy == CNFFT_FUNC_TWO_LEVEL_STOCKHAM) {
-    fftTwoStepFactor(fft_plan, n[1], fft_plan->factors, 1, fft_plan->fft_type);
-    fftTwoStepFactor(fft_plan, n[0], fft_plan->factors_2d, 0,
+    fftTwoStepFactor(handle, fft_plan, n[1], fft_plan->factors, 1,
+                     fft_plan->fft_type);
+    fftTwoStepFactor(handle, fft_plan, n[0], fft_plan->factors_2d, 0,
                      CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT);
 
     switch (fft_plan->fft_type) {
@@ -2403,16 +2443,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
   VLOG(5) << "execution data type: "
           << mluOpGetNameOfDataType(fft_plan->execution_dtype);
 
-  // fft length check
-  for (auto i = 0; i < fft_plan->rank - 1; i++) {  // except the last dim
-    PARAM_CHECK_EQ(
-        make_plan_api, n[i], fft_plan->inembed[i],
-        ": the signal lengths of fft and input mismatch in dimention ", i, ".");
-    PARAM_CHECK_EQ(
-        make_plan_api, n[i], fft_plan->onembed[i],
-        ": the signal lengths of fft and output mismatch in dimension ", i,
-        ".");
-  }
   switch (fft_plan->fft_type) {
     // r2c
     case CNFFT_HALF2COMPLEX_HALF:
@@ -2595,6 +2625,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       fft_plan->fft_type == CNFFT_COMPLEX_HALF2COMPLEX_HALF || n[0] == 1) {
     fft_plan->prime = 1;
   }
+  fft_plan->prime = fft_plan->prime || (n[0] <= 2 && rank == 1);
   /*
    * decision part
    */
@@ -2648,7 +2679,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
 
       } else if (rank == 2) {
         VLOG(5) << "into make FFT2d Policy";
-
         // C2C 1D
         status = mluOpMakeFFTPlanC2C2D(handle, fft_plan, input_desc,
                                        output_desc, rank, n);

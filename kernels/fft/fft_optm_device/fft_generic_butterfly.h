@@ -245,10 +245,10 @@ __mlu_func__ void computeGenericButterflyOtherstagesMat(
                          butterfly_num * section_num, DT)
 
   DT *wram_sratch = (DT *)wram_buffer;
-  FFT_CPX_T<DT> in_wram = {
-      &wram_sratch[wram_scratch_offset],
-      &wram_sratch[wram_scratch_offset + align_N * align_K]};
-  wram_scratch_offset += (align_N * align_K * 2);
+  FFT_CPX_T<DT> in_wram = {&wram_sratch[wram_scratch_offset],
+                           &wram_sratch[wram_scratch_offset +
+                                        __MLU_WRAM_SIZE__ * 1024 / LT_NUM / 2]};
+  wram_scratch_offset += (align_N * align_K * 2) / LT_NUM;
 
   FFT_CPX_T<DT> in_align = {
       &nram_scratch[nram_scratch_offset],
@@ -325,7 +325,6 @@ __mlu_func__ void computeGenericButterflyOtherstagesMat(
                  NRAM2WRAM);
   __memcpy_async(in_wram.i, in_align2.i, align_N * align_K * sizeof(DT),
                  NRAM2WRAM);
-
   __sync_move();
 
   __bang_matmul((float *)RR, (float *)dftmtx.r, (float *)in_wram.r, align_M,

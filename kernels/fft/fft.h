@@ -75,6 +75,8 @@
 
 #define FFT_PI (3.1415926535897932384626433832795)
 
+#define NRAM_SIZE_370 753664
+
 struct dft_table_entry {
   int radix;
   int offset;
@@ -177,6 +179,7 @@ struct cnfftButterflyAddrs {
   void *idft_matrix_2d;
   int *factors;
   int *factors_2d;
+  void *input_pad_addr;
 };
 struct mluOpFFTStruct {
   int rank;            // rank of FFT
@@ -302,14 +305,16 @@ kernelFFTStockham(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
 
 // Sets the maximum parallel number for the FFT plan, factoring in the given
 // buffer, stage, large radix, and row-major flag.
-mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API setMaxParallelNum(mluOpHandle_t handle,
+                                              mluOpFFTPlan_t fft_plan,
                                               int *facbuf, int stage,
                                               const int large_radix,
                                               const int is_row_major);
 
 // Factors the given FFT plan into two steps based on the size, factoring
 // buffer, row-major flag, and FFT type.
-mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
+                                             mluOpFFTPlan_t fft_plan,
                                              const int _n, int *facbuf,
                                              const int is_row_major,
                                              const int fft_type);
@@ -390,14 +395,16 @@ mluOpStatus_t MLUOP_WIN_API kernelC2CFFTDFTMatrix(
 
 // Searches for a large radix in the FFT plan, updating large radix and
 // factoring buffer based on the stage ID, size, and row-major flag.
-mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API searchLargeRadix(mluOpHandle_t handle,
+                                             mluOpFFTPlan_t fft_plan,
                                              int &large_radix, int *facbuf,
                                              int large_stage_id, int _n,
                                              const int is_row_major);
 
 // Calculates the lower bound of the parallel number for the FFT plan, factoring
 // in the stage, buffer, and row-major flag, updating parallel_num_lb.
-mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpFFTPlan_t fft_plan,
+mluOpStatus_t MLUOP_WIN_API calParallelNumLowBound(mluOpHandle_t handle,
+                                                   mluOpFFTPlan_t fft_plan,
                                                    int *facbuf, int stage,
                                                    int &parallel_num_lb,
                                                    const int is_row_major);
