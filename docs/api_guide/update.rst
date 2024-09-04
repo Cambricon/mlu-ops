@@ -3,6 +3,69 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V1.3.0
+
+  **Date:** September 6, 2024
+
+  **Changes:**
+
+  - ``exec_fft``
+
+    - support 2D mode for FFT computation.
+    - support tensor stride for 1D FFT computation.
+    - optimize performance.
+    - update called CNNL APIs version.
+
+  - ``adam_w``
+
+    - add fool-proofing for MLU300 series.
+
+  - Other operations.
+
+    - add fool-proofing if it does not support tensor stride.
+    - some bug fixes.
+
+  - Kernel utils
+
+    - support philox random algorithm.
+
+
+* V1.2.4
+
+  **Date:** August 15, 2024
+
+  **Changes:**
+
+  - None.
+
+
+* V1.2.3
+
+  **Date:** July 25, 2024
+
+  **Changes:**
+
+  - None.
+
+
+* V1.2.2
+
+  **Date:** July 25, 2024
+
+  **Changes:**
+
+  - None.
+
+
+* V1.2.1
+
+  **Date:** June 28, 2024
+
+  **Changes:**
+
+  - None.
+
+
 * V1.2.0
 
   **Date:** May 27, 2024

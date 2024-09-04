@@ -30,10 +30,10 @@ jobs:
     strategy:
       matrix:
         runner: [mlu370-m8]
-        mlu_ops_version : [1.2.0]
-        cntoolkit_version : [3.8.4]
-        cnnl_version: [1.23.2]
-        os: [ubuntu20.04, centos7, centos8, kylin10]
+        mlu_ops_version : [1.3.0]
+        cntoolkit_version : [3.14.0]
+        cnnl_version: [1.26.6]
+        os: [ubuntu20.04, centos7, centos8, kylin10, ubuntu22.04]
     runs-on: ${{matrix.runner}}
     steps:
       - uses: actions/checkout@v3
