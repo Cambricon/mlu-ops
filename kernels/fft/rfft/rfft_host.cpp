@@ -389,7 +389,7 @@ static void configureRFFT1dWorkspaceAddrs(mluOpHandle_t handle,
   fft_plan->mlu_addrs.buffer_buf = (uint8_t *)workspace + offset;
   offset += buffer_size * 2;
 
-  if (fft_plan->is_input_contiguous) {
+  if (fft_plan->is_input_contiguous && fft_plan->inembed[0] <= fft_plan->n[0]) {
     fft_plan->mlu_addrs.input = input;
   } else {
     fft_plan->mlu_addrs.input = (uint8_t *)workspace + offset;
