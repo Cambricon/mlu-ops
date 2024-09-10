@@ -2625,7 +2625,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       fft_plan->fft_type == CNFFT_COMPLEX_HALF2COMPLEX_HALF || n[0] == 1) {
     fft_plan->prime = 1;
   }
-  fft_plan->prime = fft_plan->prime || (n[0] <= 2 && rank == 1);
+  fft_plan->prime =
+      fft_plan->prime ||
+      ((n[0] <= 2 || n[0] == 400 || n[0] == 512 || n[0] == 48000) && rank == 1);
   /*
    * decision part
    */
