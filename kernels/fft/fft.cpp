@@ -2814,6 +2814,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(mluOpHandle_t handle,
 
   bool is_in_place = (input == output);
   VLOG(5) << exec_api << ": in place ? " << is_in_place;
+
+  if (fft_plan->rank == 2 &&
+      mluop::strideCaseWithNotConsistentDense(2, fft_plan->input_desc,
+                                              fft_plan->output_desc)) {
+    LOG(ERROR)
+        << exec_api
+        << ": stride case with not consistent dense is not supported now.";
+    status = MLUOP_STATUS_BAD_PARAM;
+    GEN_CASE_END();
+    return status;
+  }
   switch (fft_plan->fft_type) {
     // r2c
     case CNFFT_HALF2COMPLEX_HALF:
@@ -2831,8 +2842,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(mluOpHandle_t handle,
         status = execRFFT1d(handle, fft_plan, input, scale_factor, workspace,
                             output);
       } else if (fft_plan->rank == 2) {
-        status = execRFFT2d(handle, fft_plan, input, scale_factor, workspace,
-                            output);
+        if (fft_plan->inembed[1] > fft_plan->n[1]) {
+          LOG(ERROR) << exec_api
+                     << ": inembed[1] > fft_plan->n[1] is not supported now";
+          status = MLUOP_STATUS_BAD_PARAM;
+
+        } else {
+          status = execRFFT2d(handle, fft_plan, input, scale_factor, workspace,
+                              output);
+        }
       } else if (fft_plan->rank == 3) {
         // TODO(who)
         status = MLUOP_STATUS_NOT_SUPPORTED;
@@ -2854,8 +2872,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(mluOpHandle_t handle,
         status = execFFT1d(handle, fft_plan, input, scale_factor, workspace,
                            output, direction);
       } else if (fft_plan->rank == 2) {
-        status = execFFT2d(handle, fft_plan, input, scale_factor, workspace,
-                           output, direction);
+        if (fft_plan->inembed[1] > fft_plan->n[1]) {
+          LOG(ERROR) << exec_api
+                     << ": inembed[1] > fft_plan->n[1] is not supported now";
+          status = MLUOP_STATUS_BAD_PARAM;
+
+        } else {
+          status = execFFT2d(handle, fft_plan, input, scale_factor, workspace,
+                             output, direction);
+        }
       } else if (fft_plan->rank == 3) {
         // TODO(who)
         status = MLUOP_STATUS_NOT_SUPPORTED;
@@ -2864,7 +2889,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(mluOpHandle_t handle,
     // c2r
     case CNFFT_COMPLEX_HALF2HALF:
     case CNFFT_COMPLEX_FLOAT2FLOAT: {
-      if (((fft_plan->idist * 2) < fft_plan->odist) && is_in_place) {
+      if (((fft_plan->idist * 2) > fft_plan->odist) && is_in_place) {
         LOG(ERROR)
             << exec_api
             << ": output overwritten may occur during an in-place "
@@ -2877,8 +2902,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(mluOpHandle_t handle,
         status = execIRFFT1d(handle, fft_plan, input, scale_factor, workspace,
                              output);
       } else if (fft_plan->rank == 2) {
-        status = execIRFFT2d(handle, fft_plan, input, scale_factor, workspace,
-                             output);
+        if (fft_plan->inembed[1] > (fft_plan->n[1] / 2 + 1)) {
+          LOG(ERROR) << exec_api
+                     << ": inembed[1] > fft_plan->n[1] is not supported now";
+          status = MLUOP_STATUS_BAD_PARAM;
+
+        } else {
+          status = execIRFFT2d(handle, fft_plan, input, scale_factor, workspace,
+                               output);
+        }
       } else if (fft_plan->rank == 3) {
         // TODO(who)
         status = MLUOP_STATUS_NOT_SUPPORTED;

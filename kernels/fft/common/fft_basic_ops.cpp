@@ -211,7 +211,35 @@ mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(
     CALL_CNNL(cnnlMatMulDescDestroy(matmul_desc));
     CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo));
   } else {
-    workspace_size = 0;  // mluOpMatmul doesn't need workspace.
+    // workspace_size = 0;  // mluOpMatmul doesn't need workspace.
+    cnnlMatMulDescriptor_t matmul_desc;
+    cnnlMatMulAlgo_t matmul_algo;
+    cnnlMatMulHeuristicResult_t heuristic_result;
+    size_t matmul_ws_size = 0, workspace_size = 0;
+    bool allow_tf32 = false;
+    cnnlDataType_t cnnl_compute_type = CNNL_DTYPE_FLOAT;  // (TODO)
+
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_d_desc);
+    CALL_CNNL(cnnlMatMulDescCreate(&matmul_desc));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSA,
+                                    &trans_a_int, sizeof(int32_t)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSB,
+                                    &trans_b_int, sizeof(int32_t)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_ALLOW_TF32,
+                                    &allow_tf32, sizeof(int32_t)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_COMPUTE_TYPE,
+                                    &cnnl_compute_type,
+                                    sizeof(cnnl_compute_type)));
+    CALL_CNNL(cnnlMatMulAlgoCreate(&matmul_algo));
+    CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
+    int32_t requested_algo_count = 1, return_algo_count = 0;
+
+    CALL_CNNL(cnnlGetMatMulAlgoHeuristic(
+        cnnl_handle, matmul_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc,
+        cnnl_d_desc, nullptr, requested_algo_count, &heuristic_result,
+        &return_algo_count));
+    CALL_CNNL(cnnlGetMatMulHeuristicResult(heuristic_result, matmul_algo,
+                                           &workspace_size));
   }
 
   // destroy cnnl descriptor
@@ -265,6 +293,7 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
     b_dims[0] = k;
     b_dims[1] = n;
   }
+
   status = mluOpSetTensorDescriptor_v2(a_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
                                        a_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
@@ -298,6 +327,7 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, cnnl_a_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_d_desc);
 
   // compute matmul result
   if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type)) {
@@ -334,11 +364,137 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
     CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo));
   } else {
     c_desc->onchip_dtype = MLUOP_DTYPE_FLOAT;
-    CALL_CNNL(cnnlMatMul(cnnl_handle, is_trans_a, is_trans_b, &alpha,
-                         cnnl_a_desc, a_ptr, cnnl_b_desc, b_ptr, &beta,
-                         cnnl_c_desc, c_ptr));
+    cnnlMatMulDescriptor_t matmul_desc;
+    cnnlMatMulAlgo_t matmul_algo;
+    cnnlMatMulHeuristicResult_t heuristic_result;
+    size_t matmul_ws_size = 0, workspace_size = 0;
+    bool allow_tf32 = false;
+    cnnlDataType_t cnnl_compute_type = CNNL_DTYPE_FLOAT;  // (TODO)
+
+    CALL_CNNL(cnnlMatMulDescCreate(&matmul_desc));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSA,
+                                    &trans_a_int, sizeof(int32_t)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSB,
+                                    &trans_b_int, sizeof(int32_t)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_ALLOW_TF32,
+                                    &allow_tf32, sizeof(int32_t)));
+    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_COMPUTE_TYPE,
+                                    &cnnl_compute_type,
+                                    sizeof(cnnl_compute_type)));
+    CALL_CNNL(cnnlMatMulAlgoCreate(&matmul_algo));
+    CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
+    int32_t requested_algo_count = 1, return_algo_count = 0;
+
+    CALL_CNNL(cnnlGetMatMulAlgoHeuristic(
+        cnnl_handle, matmul_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc,
+        cnnl_d_desc, nullptr, requested_algo_count, &heuristic_result,
+        &return_algo_count));
+    CALL_CNNL(cnnlGetMatMulHeuristicResult(heuristic_result, matmul_algo,
+                                           &workspace_size));
+    float *workspace = nullptr;
+    if (workspace_size > 0) {
+      CNRT_CHECK(cnrtMalloc((void **)&workspace, workspace_size));
+    }
+    CALL_CNNL(cnnlMatMul_v2(cnnl_handle, matmul_desc, matmul_algo, &alpha,
+                            cnnl_a_desc, a_ptr, cnnl_b_desc, b_ptr, &beta,
+                            cnnl_c_desc, c_ptr, workspace, workspace_size,
+                            cnnl_d_desc, c_ptr));
   }
 
+  // destroy cnnl descriptor
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
+  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+
+  DESTROY_CNNL_HANDLE(cnnl_handle);
+
+  return status;
+}
+
+mluOpStatus_t fftGetBatchMatMulBcastWorkspaceSize(
+    mluOpHandle_t handle,
+    int m,  // 2 * L = 750
+    int k,  // L = 375
+    int n,  // 2^m = 128
+    int batch, void *a_ptr, void *a_pos, void *a_scale, void *b_ptr,
+    void *b_pos, void *b_scale, void *c_ptr, bool is_trans_a, bool is_trans_b,
+    float alpha, float beta, mluOpDataType_t a_compute_type,
+    mluOpDataType_t b_compute_type, mluOpDataType_t data_type, void *workspace,
+    size_t workspace_size, const std::string api) {
+  mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
+  int trans_a_int = (int)is_trans_a;
+  int trans_b_int = (int)is_trans_b;
+
+  // create descriptor
+  mluOpTensorDescriptor_t a_desc = nullptr;
+  mluOpTensorDescriptor_t b_desc = nullptr;
+  mluOpTensorDescriptor_t c_desc = nullptr;
+  status = mluOpCreateTensorDescriptor(&a_desc);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  status = mluOpCreateTensorDescriptor(&b_desc);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  status = mluOpCreateTensorDescriptor(&c_desc);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
+  // set descriptor
+  int64_t a_dims[2];
+  int64_t b_dims[3] = {batch, k, n};
+  int64_t c_dims[3] = {batch, m, n};
+  if (is_trans_a) {
+    a_dims[0] = k;
+    a_dims[1] = m;
+  } else {
+    a_dims[0] = m;
+    a_dims[1] = k;
+  }
+  if (is_trans_b) {
+    b_dims[1] = n;
+    b_dims[2] = k;
+  } else {
+    b_dims[1] = k;
+    b_dims[2] = n;
+  }
+  status = mluOpSetTensorDescriptor_v2(a_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
+                                       a_dims);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  status = mluOpSetTensorDescriptorOnchipDataType(a_desc, a_compute_type);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  status = mluOpSetTensorDescriptor_v2(b_desc, MLUOP_LAYOUT_ARRAY, data_type, 3,
+                                       b_dims);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  status = mluOpSetTensorDescriptorOnchipDataType(b_desc, b_compute_type);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY, data_type, 3,
+                                       c_dims);
+  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  c_desc->onchip_dtype = MLUOP_DTYPE_FLOAT;
+
+  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
+                                    cnnl_handle);  // convert to cnnl_handle
+
+  // convert to cnnl_tensor_descriptor
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(a_desc, cnnl_a_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
+  cnnlMatMulAlgo_t algo;
+  CALL_CNNL(cnnlMatMulAlgoCreate(&algo));
+  cnnlMatMulDescriptor_t bmm_bcast_desc;
+  bool use_stride = false;
+  auto cast_mode = CNNL_MATMUL_BYPASS_QUANTIZE;
+  CALL_CNNL(cnnlMatMulDescCreate(&bmm_bcast_desc));
+  CALL_CNNL(cnnlSetMatMulDescAttr(bmm_bcast_desc, CNNL_MATMUL_DESC_TRANSA,
+                                  &trans_a_int, sizeof(int32_t)));
+  CALL_CNNL(cnnlSetMatMulDescAttr(bmm_bcast_desc, CNNL_MATMUL_DESC_TRANSB,
+                                  &trans_b_int, sizeof(int32_t)));
+
+  cnnlMatMulHeuristicResult_t heuristic_result;
+  CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
+  int requested_algo_count = 1, return_algo_count = 0;
+  cnnlGetBatchMatMulAlgoHeuristic(
+      cnnl_handle, bmm_bcast_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc, NULL,
+      requested_algo_count, &heuristic_result, &return_algo_count);
+  cnnlGetBatchMatMulHeuristicResult(heuristic_result, algo, &workspace_size);
+  // destroy descriptor
   // destroy cnnl descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
@@ -375,9 +531,9 @@ mluOpStatus_t fftBatchMatMulBcast(
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
   // set descriptor
-  int a_dims[2];
-  int b_dims[3] = {batch, k, n};
-  int c_dims[3] = {batch, m, n};
+  int64_t a_dims[2];
+  int64_t b_dims[3] = {batch, k, n};
+  int64_t c_dims[3] = {batch, m, n};
   if (is_trans_a) {
     a_dims[0] = k;
     a_dims[1] = m;
@@ -392,18 +548,18 @@ mluOpStatus_t fftBatchMatMulBcast(
     b_dims[1] = k;
     b_dims[2] = n;
   }
-  status = mluOpSetTensorDescriptor(a_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
-                                    a_dims);
+  status = mluOpSetTensorDescriptor_v2(a_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
+                                       a_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   status = mluOpSetTensorDescriptorOnchipDataType(a_desc, a_compute_type);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpSetTensorDescriptor(b_desc, MLUOP_LAYOUT_ARRAY, data_type, 3,
-                                    b_dims);
+  status = mluOpSetTensorDescriptor_v2(b_desc, MLUOP_LAYOUT_ARRAY, data_type, 3,
+                                       b_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   status = mluOpSetTensorDescriptorOnchipDataType(b_desc, b_compute_type);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpSetTensorDescriptor(c_desc, MLUOP_LAYOUT_ARRAY, data_type, 3,
-                                    c_dims);
+  status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY, data_type, 3,
+                                       c_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   c_desc->onchip_dtype = MLUOP_DTYPE_FLOAT;
 
@@ -415,10 +571,36 @@ mluOpStatus_t fftBatchMatMulBcast(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
 
-  CALL_CNNL(cnnlBatchMatMulBCast(cnnl_handle, is_trans_a, is_trans_b,
-                                 cnnl_a_desc, a_ptr, cnnl_b_desc, b_ptr, NULL,
-                                 0, cnnl_c_desc, c_ptr));
+  cnnlMatMulAlgo_t algo;
+  CALL_CNNL(cnnlMatMulAlgoCreate(&algo));
+  cnnlMatMulDescriptor_t bmm_bcast_desc;
+  bool use_stride = false;
+  auto cast_mode = CNNL_MATMUL_BYPASS_QUANTIZE;
+  CALL_CNNL(cnnlMatMulDescCreate(&bmm_bcast_desc));
+  CALL_CNNL(cnnlSetMatMulDescAttr(bmm_bcast_desc, CNNL_MATMUL_DESC_TRANSA,
+                                  &trans_a_int, sizeof(int32_t)));
+  CALL_CNNL(cnnlSetMatMulDescAttr(bmm_bcast_desc, CNNL_MATMUL_DESC_TRANSB,
+                                  &trans_b_int, sizeof(int32_t)));
 
+  cnnlMatMulHeuristicResult_t heuristic_result;
+  CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
+  alpha = 1.0;
+  beta = 0.0;
+  int requested_algo_count = 1, return_algo_count = 0;
+  cnnlGetBatchMatMulAlgoHeuristic(
+      cnnl_handle, bmm_bcast_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc, NULL,
+      requested_algo_count, &heuristic_result, &return_algo_count);
+  cnnlGetBatchMatMulHeuristicResult(heuristic_result, algo, &workspace_size);
+  if (workspace_size > 0) {
+    CNRT_CHECK(cnrtMalloc((void **)&workspace, workspace_size));
+  } else {
+    CNRT_CHECK(cnrtMalloc((void **)&workspace, m * n * sizeof(float)));
+  }
+
+  CALL_CNNL(cnnlBatchMatMulBCast_v2(cnnl_handle, bmm_bcast_desc, algo, &alpha,
+                                    cnnl_a_desc, a_ptr, cnnl_b_desc, b_ptr,
+                                    &beta, cnnl_c_desc, c_ptr,
+                                    (void *)workspace, workspace_size));
   // destroy descriptor
   // destroy cnnl descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
@@ -432,11 +614,10 @@ mluOpStatus_t fftBatchMatMulBcast(
 
 mluOpStatus_t fftGetTransposeWorkspaceSize(mluOpHandle_t handle,
                                            size_t &workspace_size, int dim_num,
-                                           int ori_dims[], int permute[],
+                                           int64_t ori_dims[], int permute[],
                                            mluOpDataType_t data_type,
                                            const std::string api) {
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
-
   // create descriptor
   mluOpTensorDescriptor_t input_desc = nullptr;
   status = mluOpCreateTensorDescriptor(&input_desc);
@@ -448,13 +629,11 @@ mluOpStatus_t fftGetTransposeWorkspaceSize(mluOpHandle_t handle,
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
                                     cnnl_handle);  // convert to cnnl_handle
   // set descriptor
-  status = mluOpSetTensorDescriptor(input_desc, MLUOP_LAYOUT_ARRAY, data_type,
-                                    dim_num, ori_dims);
+  status = mluOpSetTensorDescriptor_v2(input_desc, MLUOP_LAYOUT_ARRAY,
+                                       data_type, dim_num, ori_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
-
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_v2(input_desc, cnnl_input_desc);
   CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, dim_num, permute));
-
   // get workspace
   CALL_CNNL(cnnlGetTransposeWorkspaceSize(cnnl_handle, cnnl_input_desc,
                                           trans_desc, &workspace_size));
@@ -463,15 +642,14 @@ mluOpStatus_t fftGetTransposeWorkspaceSize(mluOpHandle_t handle,
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   CALL_CNNL(cnnlDestroyTransposeDescriptor(trans_desc));
   DESTROY_CNNL_HANDLE(cnnl_handle);
-
   return status;
 }
 
-mluOpStatus_t fftTranspose(mluOpHandle_t handle, int dim_num, int ori_dims[],
-                           int transed_dims[], int permute[], void *ori_ptr,
-                           void *transed_ptr, mluOpDataType_t data_type,
-                           void *workspace, size_t workspace_size,
-                           const std::string api) {
+mluOpStatus_t fftTranspose(mluOpHandle_t handle, int dim_num,
+                           int64_t ori_dims[], int64_t transed_dims[],
+                           int permute[], void *ori_ptr, void *transed_ptr,
+                           mluOpDataType_t data_type, void *workspace,
+                           size_t workspace_size, const std::string api) {
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
 
   // create descriptor
@@ -483,20 +661,24 @@ mluOpStatus_t fftTranspose(mluOpHandle_t handle, int dim_num, int ori_dims[],
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
   // set descriptor
-  status = mluOpSetTensorDescriptor(input_desc, MLUOP_LAYOUT_ARRAY, data_type,
-                                    dim_num, ori_dims);
+  status = mluOpSetTensorDescriptor_v2(input_desc, MLUOP_LAYOUT_ARRAY,
+                                       data_type, dim_num, ori_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  status = mluOpSetTensorDescriptor(transed_input_desc, MLUOP_LAYOUT_ARRAY,
-                                    data_type, dim_num, transed_dims);
+  status = mluOpSetTensorDescriptor_v2(transed_input_desc, MLUOP_LAYOUT_ARRAY,
+                                       data_type, dim_num, transed_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
                                     cnnl_handle);  // convert to cnnl_handle
-  // convert to cnnl_tensor_descriptor
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(transed_input_desc,
-                                               cnnl_transed_input_desc);
 
+  // convert to cnnl_tensor_descriptor
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_v2(input_desc, cnnl_input_desc);
+  // cnnlTensorDescriptor_t cnnl_input_desc = NULL;
+  // CALL_CNNL(cnnlSetTensorDescriptor_v2(cnnl_input_desc, CNNL_LAYOUT_ARRAY,
+  // data_type,
+  //                                   dim_num, ori_dims));
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_v2(transed_input_desc,
+                                                  cnnl_transed_input_desc);
   // compute transpose
   cnnlTransposeDescriptor_t trans_desc = nullptr;
   CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));

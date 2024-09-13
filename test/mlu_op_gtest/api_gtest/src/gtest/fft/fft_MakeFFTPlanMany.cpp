@@ -46,9 +46,9 @@ class fft_MakeFFTPlanMany : public testing::Test {
 
     if (input_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_desc_));
-      std::vector<int> input_dims{1, 400};
-      const int input_dim_stride[2] = {400, 1};
-      MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+      std::vector<int64_t> input_dims{1, 400};
+      const int64_t input_dim_stride[2] = {400, 1};
+      MLUOP_CHECK(mluOpSetTensorDescriptorEx_v2(
           input_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, input_dims.size(),
           input_dims.data(), input_dim_stride));
       MLUOP_CHECK(mluOpSetTensorDescriptorOnchipDataType(input_desc_,
@@ -57,9 +57,9 @@ class fft_MakeFFTPlanMany : public testing::Test {
 
     if (output_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
-      std::vector<int> output_dims{1, 201};
-      const int output_dim_stride[2] = {201, 1};
-      MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+      std::vector<int64_t> output_dims{1, 201};
+      const int64_t output_dim_stride[2] = {201, 1};
+      MLUOP_CHECK(mluOpSetTensorDescriptorEx_v2(
           output_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_COMPLEX_FLOAT,
           output_dims.size(), output_dims.data(), output_dim_stride));
     }

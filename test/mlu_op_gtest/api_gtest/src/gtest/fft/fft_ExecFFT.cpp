@@ -68,20 +68,21 @@ class fft_ExecFFT : public testing::Test {
     const int batch = 2000;
     const int n[rank] = {400};
     const int ndim = rank + 1;
-    const int input_dim_size[ndim] = {batch, n[0] / 2 + 1};
-    const int input_dim_stride[ndim] = {n[0] / 2 + 1, 1};
+    const int64_t input_dim_size[ndim] = {batch, n[0] / 2 + 1};
+    const int64_t input_dim_stride[ndim] = {n[0] / 2 + 1, 1};
 
-    const int output_dim_size[ndim] = {batch, n[0] / 2 + 1};
-    const int output_dim_stride[ndim] = {n[0] / 2 + 1, 1};
+    const int64_t output_dim_size[ndim] = {batch, n[0] / 2 + 1};
+    const int64_t output_dim_stride[ndim] = {n[0] / 2 + 1, 1};
 
     mluOpCreateTensorDescriptor(&input_desc_);
     mluOpCreateTensorDescriptor(&output_desc_);
-    mluOpSetTensorDescriptorEx(input_desc_, MLUOP_LAYOUT_ARRAY, input_data_type,
-                               ndim, input_dim_size, input_dim_stride);
+    mluOpSetTensorDescriptorEx_v2(input_desc_, MLUOP_LAYOUT_ARRAY,
+                                  input_data_type, ndim, input_dim_size,
+                                  input_dim_stride);
     mluOpSetTensorDescriptorOnchipDataType(input_desc_, execution_dtype);
-    mluOpSetTensorDescriptorEx(output_desc_, MLUOP_LAYOUT_ARRAY,
-                               output_data_type, ndim, output_dim_size,
-                               output_dim_stride);
+    mluOpSetTensorDescriptorEx_v2(output_desc_, MLUOP_LAYOUT_ARRAY,
+                                  output_data_type, ndim, output_dim_size,
+                                  output_dim_stride);
     size_t reservespaceSizeInBytes_ = 64;
     size_t workspaceSizeInBytes_ = 64;
     size_t *reservespace_size = &reservespaceSizeInBytes_;
