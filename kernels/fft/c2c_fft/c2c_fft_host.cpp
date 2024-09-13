@@ -157,7 +157,8 @@ mluOpStatus_t makeFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
       fft_plan->workspace_size += transed_input_size;
       // input trans workspace: batch * n * 2 --> 2 * batch * n
       const int in_trans_dim_num = 2;
-      int in_trans_input_dims[in_trans_dim_num] = {padded_input_num, COMPLEX};
+      int64_t in_trans_input_dims[in_trans_dim_num] = {padded_input_num,
+                                                       COMPLEX};
       int in_trans_permute[in_trans_dim_num] = {1, 0};
       size_t in_trans_workspace_size = 0;
       status = fftGetTransposeWorkspaceSize(
@@ -205,8 +206,8 @@ mluOpStatus_t makeFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
 
       // output trans workspace: 2 * batch * n --> batch * n * 2
       const int out_trans_dim_num = 2;
-      int out_trans_input_dims[out_trans_dim_num] = {COMPLEX,
-                                                     per_matmul_output_num};
+      int64_t out_trans_input_dims[out_trans_dim_num] = {COMPLEX,
+                                                         per_matmul_output_num};
       int out_trans_permute[out_trans_dim_num] = {1, 0};
       size_t out_trans_workspace_size = 0;
       status = fftGetTransposeWorkspaceSize(
@@ -332,8 +333,8 @@ mluOpStatus_t makeFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
       // input trans workspace
       // 1st transpose: batch * n * 2 --> 2 * batch * n
       const int in_trans_1st_dim_num = 2;
-      int in_trans_1st_input_dims[in_trans_1st_dim_num] = {padded_input_num,
-                                                           COMPLEX};
+      int64_t in_trans_1st_input_dims[in_trans_1st_dim_num] = {padded_input_num,
+                                                               COMPLEX};
       int in_trans_1st_permute[in_trans_1st_dim_num] = {1, 0};
       size_t in_trans_1st_workspace_size = 0;
       status = fftGetTransposeWorkspaceSize(
@@ -344,8 +345,8 @@ mluOpStatus_t makeFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
                    in_trans_1st_workspace_size);
       // 2nd transpose: 2 * batch * L * 2^m --> 2 * batch * 2^m * L
       const int in_trans_2nd_dim_num = 3;
-      int in_trans_2nd_input_dims[in_trans_2nd_dim_num] = {COMPLEX * batch, L,
-                                                           m};
+      int64_t in_trans_2nd_input_dims[in_trans_2nd_dim_num] = {COMPLEX * batch,
+                                                               L, m};
       int in_trans_2nd_permute[in_trans_2nd_dim_num] = {0, 2, 1};
       size_t in_trans_2nd_workspace_size = 0;
       status = fftGetTransposeWorkspaceSize(
@@ -375,12 +376,28 @@ mluOpStatus_t makeFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
       fft_plan->workspace_size += matmul_times * per_matmul_output_size;
       // matmul workspace
       size_t matmul_workspace_size = 0;
-      status = fftGetQuantizeMatMulWorkspaceSize(
-          handle, matmul_workspace_size, batch * m, L, L, false, true,
-          in_e_dtype, in_e_dtype, in_r_dtype, api);
-      fft_plan->matmul_addrs.internal_workspace_size =
-          std::max(fft_plan->matmul_addrs.internal_workspace_size,
-                   matmul_workspace_size);
+      if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY) {
+        status = fftGetQuantizeMatMulWorkspaceSize(
+            handle, matmul_workspace_size, batch * m, L, L, false, true,
+            in_e_dtype, in_e_dtype, in_r_dtype, api);
+        fft_plan->matmul_addrs.internal_workspace_size =
+            std::max(fft_plan->matmul_addrs.internal_workspace_size,
+                     matmul_workspace_size);
+      } else {
+        status = fftGetBatchMatMulBcastWorkspaceSize(
+            handle, 2 * L, L, m * 2, batch,
+            fft_plan->matmul_addrs.dft_im_matrix_addr,
+            fft_plan->matmul_addrs.dft_pos_addr,
+            fft_plan->matmul_addrs.dft_scale_addr,
+            fft_plan->matmul_addrs.input_pad_addr,
+            fft_plan->matmul_addrs.input_pos_addr,
+            fft_plan->matmul_addrs.input_scale_addr,
+            fft_plan->matmul_addrs.matmul_re_mul_re_addr, false, false, 1.0,
+            0.0, in_e_dtype, in_e_dtype, in_r_dtype,
+            fft_plan->matmul_addrs.internal_workspace_addr,
+            fft_plan->matmul_addrs.internal_workspace_size, api);
+      }
+
       // optensor workspace
       size_t optensor_workspace_size = 0;
       status =
@@ -1396,8 +1413,8 @@ static mluOpStatus_t transposeFFT1dPaddedInput(mluOpHandle_t handle,
     VLOG(5) << "launch mluOpTranspose for input CNFFT_FUNC_MATMUL";
     int padded_input_num = batch * n;
     const int trans_dim_num = 2;
-    int trans_input_dims[trans_dim_num] = {padded_input_num, COMPLEX};
-    int trans_output_dims[trans_dim_num] = {COMPLEX, padded_input_num};
+    int64_t trans_input_dims[trans_dim_num] = {padded_input_num, COMPLEX};
+    int64_t trans_output_dims[trans_dim_num] = {COMPLEX, padded_input_num};
     int trans_permute[trans_dim_num] = {1, 0};
 
     status =
@@ -1415,8 +1432,8 @@ static mluOpStatus_t transposeFFT1dPaddedInput(mluOpHandle_t handle,
     // 1st transpose: batch * n * 2 --> 2 * batch * n
     int padded_input_num = batch * n;
     const int trans_dim_num = 2;
-    int trans_input_dims[trans_dim_num] = {padded_input_num, COMPLEX};
-    int trans_output_dims[trans_dim_num] = {COMPLEX, padded_input_num};
+    int64_t trans_input_dims[trans_dim_num] = {padded_input_num, COMPLEX};
+    int64_t trans_output_dims[trans_dim_num] = {COMPLEX, padded_input_num};
     int trans_permute[trans_dim_num] = {1, 0};
 
     status =
@@ -1428,8 +1445,8 @@ static mluOpStatus_t transposeFFT1dPaddedInput(mluOpHandle_t handle,
 
     // 2nd transpose: 2 * batch * L * 2^m --> 2 * batch * 2^m * L
     const int trans_2nd_dim_num = 3;
-    int trans_2nd_input_dims[trans_2nd_dim_num] = {COMPLEX * batch, L, m};
-    int trans_2nd_output_dims[trans_2nd_dim_num] = {COMPLEX * batch, m, L};
+    int64_t trans_2nd_input_dims[trans_2nd_dim_num] = {COMPLEX * batch, L, m};
+    int64_t trans_2nd_output_dims[trans_2nd_dim_num] = {COMPLEX * batch, m, L};
     int trans_2nd_permute[trans_2nd_dim_num] = {0, 2, 1};
 
     status = fftTranspose(handle, trans_2nd_dim_num, trans_2nd_input_dims,
@@ -1739,8 +1756,8 @@ static mluOpStatus_t transposeFFT1dOutput(mluOpHandle_t handle,
 
     int output_num = batch * n;
     const int trans_dim_num = 2;
-    int trans_input_dims[trans_dim_num] = {COMPLEX, output_num};
-    int trans_output_dims[trans_dim_num] = {output_num, COMPLEX};
+    int64_t trans_input_dims[trans_dim_num] = {COMPLEX, output_num};
+    int64_t trans_output_dims[trans_dim_num] = {output_num, COMPLEX};
     int trans_permute[trans_dim_num] = {1, 0};
 
     status = fftTranspose(

@@ -59,7 +59,39 @@ class MLUOpTensorParam {
   mluOpDataType_t dtype_;
   int dim_nb_;
   std::vector<int> dim_size_;
+  std::vector<int64_t> dim_size_int64_;
   std::vector<int> dim_stride_;
+  std::vector<int64_t> dim_stride_int64_;
+  mluOpDataType_t onchip_dtype_;
+};
+
+class MLUOpTensorParamInt64 {
+ public:
+  MLUOpTensorParamInt64(mluOpTensorLayout_t layout, mluOpDataType_t dtype,
+                        int64_t dim_nb, std::vector<int64_t> dim_size,
+                        std::vector<int64_t> dim_stride = {},
+                        mluOpDataType_t onchip_dtype = MLUOP_DTYPE_INVALID) {
+    layout_ = layout;
+    dtype_ = dtype;
+    dim_nb_ = dim_nb;
+    dim_size_ = dim_size;
+    dim_stride_ = dim_stride;
+    onchip_dtype_ = onchip_dtype;
+  }
+
+  mluOpTensorLayout_t get_layout() { return layout_; }
+  mluOpDataType_t get_dtype() { return dtype_; }
+  int64_t get_dim_nb() { return dim_nb_; }
+  std::vector<int64_t> get_dim_size() { return dim_size_; }
+  std::vector<int64_t> get_dim_stride() { return dim_stride_; }
+  mluOpDataType_t get_onchip_dtype() { return onchip_dtype_; }
+
+ private:
+  mluOpTensorLayout_t layout_;
+  mluOpDataType_t dtype_;
+  int64_t dim_nb_;
+  std::vector<int64_t> dim_size_;
+  std::vector<int64_t> dim_stride_;
   mluOpDataType_t onchip_dtype_;
 };
 }  // namespace mluopapitest

@@ -105,6 +105,71 @@ cnnlStatus_t mluOpConvertDescriptor(mluOpTensorDescriptor_t desc,
   return CNNL_STATUS_SUCCESS;
 }
 
+cnnlStatus_t mluOpConvertDescriptor_v2(mluOpTensorDescriptor_t desc,
+                                    cnnlTensorDescriptor_t _desc) {
+  if (desc == NULL) {
+    return CNNL_STATUS_SUCCESS;
+  }
+  mluOpDataType_t dtype, onchip_dtype;
+  mluOpTensorLayout_t layout;
+  int tensor_dim;
+  CHECK_FUNC_RETURN(
+      mluOpGetTensorDescriptor(desc, &layout, &dtype, &tensor_dim, NULL),
+      MLUOP_STATUS_SUCCESS, "MLUOPS get tensor descriptor failed.",
+      CNNL_STATUS_INTERNAL_ERROR);
+  CHECK_FUNC_RETURN(mluOpGetTensorDescriptorOnchipDataType(desc, &onchip_dtype),
+                    MLUOP_STATUS_SUCCESS,
+                    "MLUOPS get tensor descriptor onchip type failed.",
+                    CNNL_STATUS_INTERNAL_ERROR);
+  int64_t *dims = new int64_t[tensor_dim];
+  int64_t *strides = new int64_t[tensor_dim];
+  CHECK_FUNC_RETURN(mluOpGetTensorDescriptorEx_v2(desc, &layout, &dtype,
+                                               &tensor_dim, dims, strides),
+                    MLUOP_STATUS_SUCCESS,
+                    "MLUOPS get tensor descriptor Ex failed.",
+                    CNNL_STATUS_INTERNAL_ERROR);
+  CHECK_FUNC_RETURN(
+      cnnlSetTensorDescriptor_v2(
+          _desc,
+          mluOpConvertEnum<mluOpTensorLayout_t, cnnlTensorLayout_t>(layout),
+          mluOpConvertEnum<mluOpDataType_t, cnnlDataType_t>(dtype), tensor_dim,
+          dims),
+      CNNL_STATUS_SUCCESS, "Internal set tensor descriptor failed.",
+      CNNL_STATUS_INTERNAL_ERROR);
+  CHECK_FUNC_RETURN(
+      cnnlSetTensorDescriptorEx_v2(
+          _desc,
+          mluOpConvertEnum<mluOpTensorLayout_t, cnnlTensorLayout_t>(layout),
+          mluOpConvertEnum<mluOpDataType_t, cnnlDataType_t>(dtype), tensor_dim,
+          dims, strides),
+      CNNL_STATUS_SUCCESS, "Internal set tensor descriptor Ex failed.",
+      CNNL_STATUS_INTERNAL_ERROR);
+  CHECK_FUNC_RETURN(
+      cnnlSetTensorDescriptorOnchipDataType(
+          _desc,
+          mluOpConvertEnum<mluOpDataType_t, cnnlDataType_t>(onchip_dtype)),
+      CNNL_STATUS_SUCCESS, "Internal set tensor descriptor Ex failed.",
+      CNNL_STATUS_INTERNAL_ERROR);
+  int position;
+  float scale;
+  int offset;
+  CHECK_FUNC_RETURN(
+      mluOpGetTensorDescriptorPositionScaleAndOffset(desc, &position, &scale,
+                                                     &offset),
+      MLUOP_STATUS_SUCCESS,
+      "MLUOPS get tensor descriptor position scale and offset failed.",
+      CNNL_STATUS_INTERNAL_ERROR);
+  CHECK_FUNC_RETURN(
+      cnnlSetTensorDescriptorPositionScaleAndOffset(_desc, position, scale,
+                                                    offset),
+      CNNL_STATUS_SUCCESS,
+      "Internal set tensor descriptor position scale and offset failed.",
+      CNNL_STATUS_INTERNAL_ERROR);
+  delete[] dims;
+  delete[] strides;
+  return CNNL_STATUS_SUCCESS;
+}
+
 cnnlStatus_t mluOpConvertHandle(mluOpHandle_t handle, cnnlHandle_t _handle) {
   cnrtQueue_t queue;
   CHECK_FUNC_RETURN(mluOpGetQueue(handle, &queue), MLUOP_STATUS_SUCCESS,
