@@ -14148,12 +14148,8 @@ typedef struct mluOpFFTStruct *mluOpFFTPlan_t;
  *   Otherwise, the memory leak may occur.
  *
  * @par Note
- * - This function only supports 1D FFT currently. 2D FFT and 3D FFT
+ * - This function only supports 1D and 2D FFT currently. 3D FFT
  *   will be supported in the future.
- * - When the data type of input is float or complex_float, the 1D FFT length should be equal to:
- *   length = \f$base * 2^ {m}\f$, and the base should be less than or equal to 4096.
- * - When the data type of input is half or complex_half, the 1D FFT length should be equal to:
- *   length = \f$2^{m}\f$.
  *
  * @par Example.
  * - None.
@@ -14374,6 +14370,10 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  * when planning to use FFT with half-precision floating-point data, as it limits the flexibility compared to float data
  * types.
  *
+ * - For FFT 2D:
+ *     - real-to-complex FFT: Output numbers / 2 + 1 should not be less than input numbers.
+ *     - complex-to-complex FFT: Output numbers should not be less than input numbers.
+ *     - complex-to-real FFT: Output numbers should not be less than input numbers / 2 + 1.
  *
  * @par API Dependency
  * - Before calling this function, you need to call the ::mluOpCreateFFTPlan

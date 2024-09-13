@@ -60,6 +60,9 @@ void mluOpCnnlCheck(mluOpStatus_t result, char const *const func,
 cnnlStatus_t mluOpConvertDescriptor(mluOpTensorDescriptor_t desc,
                                     cnnlTensorDescriptor_t _desc);
 
+cnnlStatus_t mluOpConvertDescriptor_v2(mluOpTensorDescriptor_t desc,
+                                       cnnlTensorDescriptor_t _desc);
+
 cnnlStatus_t mluOpConvertHandle(mluOpHandle_t handle, cnnlHandle_t _handle);
 
 // Pointer type force convert
@@ -77,6 +80,27 @@ DTYPE mluOpPointerForceConvert(STYPE ptr);
         return MLUOP_STATUS_INTERNAL_ERROR;                                  \
       }                                                                      \
       ret = mluOpConvertDescriptor(desc, _desc);                             \
+      if (ret != CNNL_STATUS_SUCCESS) {                                      \
+        LOG(ERROR)                                                           \
+            << "CNNL_HELPER: Internal convert tensor descriptor failed.";    \
+        return MLUOP_STATUS_INTERNAL_ERROR;                                  \
+      }                                                                      \
+    } else {                                                                 \
+      _desc = NULL;                                                          \
+    }                                                                        \
+  }
+
+// TensorDescriptor
+#define DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_v2(desc, _desc)         \
+  cnnlTensorDescriptor_t _desc;                                              \
+  {                                                                          \
+    if (desc != NULL) {                                                      \
+      cnnlStatus_t ret = cnnlCreateTensorDescriptor(&_desc);                 \
+      if (ret != CNNL_STATUS_SUCCESS) {                                      \
+        LOG(ERROR) << "CNNL_HELPER: CNNL creates tensor descriptor failed."; \
+        return MLUOP_STATUS_INTERNAL_ERROR;                                  \
+      }                                                                      \
+      ret = mluOpConvertDescriptor_v2(desc, _desc);                          \
       if (ret != CNNL_STATUS_SUCCESS) {                                      \
         LOG(ERROR)                                                           \
             << "CNNL_HELPER: Internal convert tensor descriptor failed.";    \
