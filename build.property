@@ -6,6 +6,7 @@
                      "driver": "6.0.3",
                      "eigen3": "3.4.0",
                      "libxml2": "2.9.0",
+                     "fmt": "11.0.2",
                      "protoc": "3.9.0"},
   "package_type": ["rpm","deb"]
 }

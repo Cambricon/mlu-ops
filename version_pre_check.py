@@ -141,6 +141,22 @@ def check_protoc():
 
     return version_status["success"]
 
+def check_fmt():
+    sys_out = os.popen("pkg-config --modversion fmt").readline()
+    if len(sys_out) == 0:
+        print("Warning: Not found fmt version")
+        return version_status["not_found_version"]
+
+    sys_out = sys_out.strip("\n")
+    if gtVersion(sys_out, required_version["fmt"]):
+        print(
+            "Warning: The version of fmt needs to be at most "
+            + required_version["fmt"]
+            + ", but local version is "
+            + sys_out
+        )
+        return version_status["version_check_failed"]
+    return version_status["success"]
 
 def check_libxml2():
     sys_out = os.popen("xml2-config --version").readline()
@@ -208,6 +224,8 @@ def check_build_requires():
         print("If compilation failed, please check libxml2 version")
     if check_eigen3() != version_status["success"]:
         print("If compilation failed, please check eigen3 version")
+    if check_fmt() != version_status["success"]:
+        print("If compilation failed, please check fmt version")
 
 
 argvs = sys.argv[1:]
