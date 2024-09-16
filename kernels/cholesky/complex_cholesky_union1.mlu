@@ -145,7 +145,8 @@ __mlu_func__ void small_cminout(int m, int width, float* dst,
     for (int iter = 0; iter < width; iter++) {
       factor = rdiag[(iter * CPOTF_NB + iter)];
       if (factor <= 0) {
-        MLULOG("The input matrix is not positive definite.\n");
+        printf("The input matrix is not positive definite.\n");
+        exit(-1);
       }
       factor = sqrt(factor);
       factor = 1.0 / factor;
@@ -202,9 +203,9 @@ __mlu_func__ void cmplout(int batch, const int m, float* rA0, float* rA,
   if (id == 0) {
     for (int i = 0; i < width; i++) {
       __memcpy((rA + (i * lda)), (rdst + (i * CPOTF_NB)),
-               (i + 1) * sizeof(float), NRAM2LDRAM);
+               (i + 1) * sizeof(float), NRAM2GDRAM);
       __memcpy((iA + (i * lda)), (idst + (i * CPOTF_NB)),
-               (i + 1) * sizeof(float), NRAM2LDRAM);
+               (i + 1) * sizeof(float), NRAM2GDRAM);
     }
 
   } else if (if_execute) {
@@ -289,7 +290,8 @@ __mlu_func__ void small_cminout_batch(int m, int width, float* r_dst,
   for (int iter = 0; iter < width; iter++) {
     factor = r_diag[iter * width + iter];
     if (factor <= 0) {
-      MLULOG("The input matrix is not positive definite.\n");
+      printf("The input matrix is not positive definite.\n");
+      exit(-1);
     }
     factor = sqrt(factor);
     factor = 1.0 / factor;

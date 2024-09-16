@@ -176,7 +176,8 @@ static __mlu_func__ void spotf2_sminout_fixsize_device(int m, float* A,
 
     factor = diag[iter * POTF_NB + iter];
     if (factor <= 0) {
-      MLULOG("The input matrix is not positive definite.\n");
+      printf("The input matrix is not positive definite.\n");
+      exit(-1);
     }
     factor = std::sqrt(factor);
     factor = (1.0 / factor);
@@ -266,7 +267,8 @@ static __mlu_func__ void spotf2_sminout_anysize_device(int m, float* A,
   for (int iter = 0; iter < iter_num; iter++) {
     factor = A[iter * lda + iter];
     if (factor <= 0) {
-      MLULOG("The input matrix is not positive definite.\n");
+      printf("The input matrix is not positive definite.\n");
+      exit(-1);
     }
     factor = sqrt(factor);
     factor = 1.0 / factor;
@@ -311,7 +313,7 @@ __mlu_func__ void spotf2_smlpout_fixwidth_device(const int m, float* A0,
   if (id == 0) {
     for (int i = 0; i < span; i++) {
       __memcpy(A + (i * lda), sdata_A + i * POTF_NB, (i + 1) * sizeof(float),
-               SRAM2LDRAM);
+               SRAM2GDRAM);
     }
 
   } else if (id * span < m) {
@@ -425,7 +427,8 @@ __mlu_func__ void small_sminout_batch(int m, int width, float* dst,
   for (int iter = 0; iter < width; iter++) {
     factor = diag[iter * width + iter];
     if (factor <= 0) {
-      MLULOG("The input matrix is not positive definite.\n");
+      printf("The input matrix is not positive definite.\n");
+      exit(-1);
     }
     factor = sqrt(factor);
     factor = 1.0 / factor;
@@ -652,7 +655,7 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(int batch, int stride, int m, int n,
   factor = 0;
 
   if (id == 0) {
-    __memcpy(sA, dA, sizeof(float), LDRAM2SRAM);
+    __memcpy(sA, dA, sizeof(float), GDRAM2SRAM);
   }
   if (if_execute)
     __memcpy(rBp, OFFSET_B_ROW(dB, start, 0), sizeof(float), LDRAM2NRAM,
@@ -666,7 +669,7 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(int batch, int stride, int m, int n,
                      calc_length * sizeof(float), sizeof(float), span - 1);
     __sync_cluster();
     if (id == 0) {
-      __memcpy_async(sA, OFFSET_ROW(dA, 1, 0), 2 * sizeof(float), LDRAM2SRAM);
+      __memcpy_async(sA, OFFSET_ROW(dA, 1, 0), 2 * sizeof(float), GDRAM2SRAM);
     }
     if (if_execute)
       __memcpy_async(rBp, OFFSET_B_ROW(dB, start, 1), sizeof(float), LDRAM2NRAM,
@@ -686,7 +689,7 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(int batch, int stride, int m, int n,
       __sync_cluster();
       if (id == 0) {
         __memcpy_async(sA, OFFSET_ROW(dA, iter + 1, 0),
-                       (iter + 2) * sizeof(float), LDRAM2SRAM);
+                       (iter + 2) * sizeof(float), GDRAM2SRAM);
       }
       if (if_execute)
         __memcpy_async(rBp, OFFSET_B_ROW(dB, start, iter + 1), sizeof(float),
@@ -1144,22 +1147,30 @@ __mlu_global__ void set_zero(int batch, int stride, bool upper, int m,
   float* orignC = d_c;
   d_c = orignC + batch_id * stride;
   id = taskId % 4;
-  int span = m / 4;
+  int span = m;
   int pre = id * span;
   float* start_c = d_c + pre * lddc + pre;
+  float* zero_space = (float*)nram_buffer;
+  __memset_nram(zero_space, m, (float)ZERO);
+
   float* temp_c = start_c;
   if (id == 3) {
     span = m - 3 * span;
   }
+
   for (int i = 0; i < span - 1; i++) {
     temp_c = start_c + i * lddc + i;
     int num = m - pre - i;
-    __ldramset(temp_c + 1, num - 1, 0);
+    if (num > 1 && id == 0) {
+      __memcpy(temp_c + 1, zero_space, sizeof(float)*(num-1), NRAM2GDRAM);
+    }
   }
-  if (id != 3 && span > 0) {
+  if (id == 0 && span > 0) {
     temp_c = start_c + (span - 1) * lddc + span - 1;
     int num = m - pre - span + 1;
-    __ldramset(temp_c + 1, num - 1, 0);
+    if (num > 1) {
+      __memcpy(temp_c + 1, zero_space, sizeof(float)*(num-1), NRAM2GDRAM);
+    }
   }
 }
 
