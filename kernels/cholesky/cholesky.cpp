@@ -268,6 +268,8 @@ mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   PARAM_CHECK("mluOpCholesky", d_input != NULL);
   PARAM_CHECK("mluOpCholesky", output_desc != NULL);
   PARAM_CHECK("mluOpCholesky", d_output != NULL);
+  PARAM_CHECK("mluOpCholesky", input_desc->layout == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK("mluOpCholesky", output_desc->layout == MLUOP_LAYOUT_ARRAY);
 
   PARAM_CHECK("mluOpCholesky", input_desc->dim == 2 || input_desc->dim == 3);
   PARAM_CHECK("mluOpCholesky", output_desc->dim == input_desc->dim);
