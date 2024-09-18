@@ -1090,7 +1090,9 @@ static void configureFFT2dWorkspaceAddrs(mluOpHandle_t handle,
     fft_plan->mlu_addrs.buffer_buf = (uint8_t *)workspace + offset;
     offset += batch * in_c_dtype_size * _n0 * _n1 * 2;
 
-    if (fft_plan->is_input_contiguous) {
+    if ((fft_plan->is_input_contiguous &&
+         fft_plan->inembed[0] <= fft_plan->n[0] &&
+         fft_plan->inembed[1] <= fft_plan->n[1])) {
       fft_plan->mlu_addrs.input = input;
     } else {
       fft_plan->mlu_addrs.input = (uint8_t *)workspace + offset;
@@ -1205,6 +1207,7 @@ static mluOpStatus_t makeFFT2dContiguousInput(mluOpHandle_t handle,
     status = mluOpDestroyTensorDescriptor(input_desc);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   }
+
   return status;
 }
 
@@ -1836,9 +1839,10 @@ static mluOpStatus_t makeFFT2dContiguousOutput(mluOpHandle_t handle,
     const int out_dim_num = 3;
     int64_t dims[out_dim_num] = {fft_plan->batch, fft_plan->n[0],
                                  fft_plan->n[1]};
-    int64_t strides[out_dim_num] = {fft_plan->odist,
-                                    fft_plan->ostride * fft_plan->onembed[1],
-                                    fft_plan->ostride};
+    int64_t strides[3];
+    for (int i = 0; i < out_dim_num; i++) {
+      strides[i] = fft_plan->out_stride[i];
+    }
     status = mluOpSetTensorDescriptor_v2(copy_src_desc, MLUOP_LAYOUT_ARRAY,
                                          out_c_dtype, out_dim_num, dims);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
@@ -1846,8 +1850,6 @@ static mluOpStatus_t makeFFT2dContiguousOutput(mluOpHandle_t handle,
         mluOpSetTensorDescriptorEx_v2(copy_dst_desc, MLUOP_LAYOUT_ARRAY,
                                       out_c_dtype, out_dim_num, dims, strides);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-
-    // void *copy_src_addr = fft_plan->matmul_addrs.output_contiguous_addr;
     void *copy_src_addr = output_contiguous;
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
                                       cnnl_handle);  // convert to cnnl_handle

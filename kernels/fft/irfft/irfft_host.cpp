@@ -1608,13 +1608,15 @@ static void configureIRFFT2dWorkspaceAddrs(mluOpHandle_t handle,
     fft_plan->mlu_addrs.buffer_out = (uint8_t *)workspace + offset;
     offset += buffer_size;
   }
-
   if (fft_plan->fft_strategy == CNFFT_FUNC_TWO_LEVEL_STOCKHAM) {
     offset = 0;
     fft_plan->mlu_addrs.buffer_buf = (uint8_t *)workspace + offset;
     offset += batch * in_c_dtype_size * _n0 * _n1 * 2;
 
-    if (fft_plan->is_input_contiguous) {
+    if (fft_plan->is_input_contiguous &&
+            fft_plan->inembed[0] <= fft_plan->n[0] &&
+            fft_plan->inembed[1] <= fft_plan->n[1] / 2 + 1 ||
+        fft_plan->fft_strategy == CNFFT_FUNC_MANY_DIST1_2D) {
       fft_plan->mlu_addrs.input = input;
     } else {
       fft_plan->mlu_addrs.input = (uint8_t *)workspace + offset;
@@ -1628,9 +1630,8 @@ static void configureIRFFT2dWorkspaceAddrs(mluOpHandle_t handle,
       offset += batch * in_c_dtype_size * _n0 * _n1;
     }
   }
-
   if (fft_plan->n[0] > fft_plan->inembed[0] ||
-      fft_plan->n[1] > fft_plan->inembed[1]) {
+      fft_plan->n[1] / 2 + 1 > fft_plan->inembed[1]) {
     fft_plan->mlu_addrs.input_pad_addr = (uint8_t *)workspace + offset;
   }
 }
@@ -1853,14 +1854,12 @@ static mluOpStatus_t makeIRFFT2dContiguousInput(mluOpHandle_t handle,
   auto status = MLUOP_STATUS_SUCCESS;
   if ((!fft_plan->is_input_contiguous ||
        (fft_plan->inembed[0] > fft_plan->n[0] ||
-        fft_plan->inembed[1] > fft_plan->n[1] / 2 + 1) &&
-           !fft_plan->prime) &&
+        fft_plan->inembed[1] > fft_plan->n[1] / 2 + 1)) &&
       fft_plan->fft_strategy != CNFFT_FUNC_MANY_DIST1_2D) {
     VLOG(5) << "launch mluOpContiguous for irfft2d input";
     mluOpTensorDescriptor_t input_desc;
     status = mluOpCreateTensorDescriptor(&input_desc);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-
     const int in_dim_num = 3;
     int64_t dims[in_dim_num] = {
         fft_plan->batch, std::min(fft_plan->inembed[0], fft_plan->n[0]),
