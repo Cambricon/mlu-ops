@@ -51,11 +51,7 @@ void policyFuncBallQuery(const mluOpHandle_t &handle,
   size_t core_in_cluster = handle->core_num_per_cluster;
   VLOG(5) << "In current device, core_in_cluster:" << core_in_cluster;
 
-  size_t total_data_num;
-  if (desc->tensorElementsNumber(total_data_num) != MLUOP_STATUS_SUCCESS) {
-    LOG(ERROR) << "[mluOpBallQuery], In policyFuncBallQuery function, fail to "
-                  "get elem_count";
-  }
+  size_t total_data_num = desc->total_element_num;
 
   // On a core, a lot of new_xyz data element can be stored; but only one data
   // element can be processed at a time. So a cluster can only process four data
