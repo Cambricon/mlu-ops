@@ -277,6 +277,13 @@ mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   PARAM_CHECK("mluOpCholesky", input_desc->dims[1] > 0);
   PARAM_CHECK("mluOpCholesky", output_desc->dims[0] > 0);
   PARAM_CHECK("mluOpCholesky", output_desc->dims[1] > 0);
+  if (input_desc->dim == 2) {
+    PARAM_CHECK("mluOpCholesky", input_desc->dims[0] == input_desc->dims[1]);
+    PARAM_CHECK("mluOpCholesky", output_desc->dims[0] == output_desc->dims[1]);
+  } else {
+    PARAM_CHECK("mluOpCholesky", input_desc->dims[1] == input_desc->dims[2]);
+    PARAM_CHECK("mluOpCholesky", output_desc->dims[1] == output_desc->dims[2]);
+  }
 
   cnrtQueue_t queue;
   mluOpGetQueue(handle, &queue);
