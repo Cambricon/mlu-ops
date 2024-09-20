@@ -457,8 +457,8 @@ complex类型多batch性能测试：
 - [✓] nan / inf测试：输入中若有nan会在运行中报错，与Pytorch一致
 - [✓] bug 修复测试
 - [✓] 内存泄漏检查
-- [ ] 代码覆盖率检查：代码覆盖率无法检查
-![image](coverage_error.png)
+- [✓] 代码覆盖率检查：代码覆盖率达到95%要求
+![image](coverage.png)
 
 ### 3.4 防呆检查
 算子中做了如下检查：
