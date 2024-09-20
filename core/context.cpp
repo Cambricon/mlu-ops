@@ -39,6 +39,7 @@ namespace mluop {
 static struct deviceName name_list_table[] = {
     {"MLU270", MLUOP_MLU270},
     {"MLU290", MLUOP_MLU290},
+    {"MLU365-D2", MLUOP_MLU370},
     {"MLU370", MLUOP_MLU370},
     {"MLU500", MLUOP_MLU590}
     // {"MLU100", MLUOP_MLU100},  // mluop not support mlu100 only for error
