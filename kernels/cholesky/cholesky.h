@@ -45,7 +45,7 @@
 #include "kernels/debug.h"
 #include "kernels/utils/cnnl_helper.h"
 
-#define CNB (16)
+#define CNB (32)
 #define REC_NB (16)
 #define POTF_NB ((REC_NB) / 4)
 #define CREC_NB (16)
@@ -98,8 +98,6 @@ mluOpStatus_t cgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k,
                     int stride_a, float* d_rb, float* d_ib, int ldb,
                     int stride_b, float* d_rc, float* d_ic, int ldc,
                     int stride_c, mluOpHandle_t handle, float* workspace);
-
-mluOpStatus_t workspace_malloc(size_t size, float** workspace);
 
 mluOpStatus_t workspace_free(float** workspace);
 

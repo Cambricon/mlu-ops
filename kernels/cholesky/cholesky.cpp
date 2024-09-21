@@ -58,9 +58,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetCholeskyWorkspaceSize(
     *size = size_a * size_a * sizeof(float) * 2 * batch_size * 3;
   }
   printf("workspace size:%ul\n", (int)(*size));
-  // if (*size > 0) {
-  //   CHECK_RETURN("mluOpCholesky", workspace_malloc(*size, workspace));
-  // }
   return MLUOP_STATUS_SUCCESS;
 }
 
