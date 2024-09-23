@@ -18,6 +18,7 @@ sqrt = ["binary_op", "unary_op"]
 tensor_stride_process = ["copy"]
 voxelization = ["fill_zero"]
 yolo_box = ["fill_zero"]
+ms_deform_attn_forward = ["fill"]
 
 
 [bangc-ops.gtest]
