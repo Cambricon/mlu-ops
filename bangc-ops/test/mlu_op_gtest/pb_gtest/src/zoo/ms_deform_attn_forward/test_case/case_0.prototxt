@@ -1,0 +1,279 @@
+op_name: "ms_deform_attn_forward"
+input {
+  id: "data_value"
+  shape: {
+    dims: 1
+    dims: 30
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 23
+    upper_bound: 0.01
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+  value_h: "3832d333"
+  value_h: "3a8a5f33"
+  value_h: "3b3b5469"
+  value_h: "398d5229"
+  value_h: "3b9a89e1"
+  value_h: "3a1d975c"
+  value_h: "3bfceccc"
+  value_h: "3bf3b206"
+  value_h: "3bc2c7aa"
+  value_h: "3c117768"
+  value_h: "3b93cb40"
+  value_h: "3c02fd11"
+  value_h: "3ac46642"
+  value_h: "3b838da5"
+  value_h: "3a0e0585"
+  value_h: "3b9689b4"
+  value_h: "3ae62b57"
+  value_h: "3c1b839d"
+  value_h: "3c0ad31f"
+  value_h: "3c0f5621"
+  value_h: "3bd47038"
+  value_h: "3b0cbe5f"
+  value_h: "3c1b88bd"
+  value_h: "38fdf000"
+  value_h: "3aed1452"
+  value_h: "3af60ac2"
+  value_h: "3b3fda69"
+  value_h: "3bc4825e"
+  value_h: "3a9eee85"
+  value_h: "3a967714"
+  value_h: "3b2af857"
+  value_h: "3c03eb5b"
+  value_h: "3ab6aa29"
+  value_h: "3a0723e1"
+  value_h: "3a2eb53d"
+  value_h: "3b266efb"
+  value_h: "3b71952b"
+  value_h: "38356147"
+  value_h: "3b2e43a9"
+  value_h: "3ba6fded"
+  value_h: "3bbed91b"
+  value_h: "3b8c5a21"
+  value_h: "3b914352"
+  value_h: "3ae4ffe6"
+  value_h: "3bf7c6b5"
+  value_h: "3b78bd82"
+  value_h: "3acf4785"
+  value_h: "3b78c445"
+  value_h: "3b8cf35d"
+  value_h: "3c1da9e8"
+  value_h: "3bf939fe"
+  value_h: "3b435deb"
+  value_h: "3b8c9881"
+  value_h: "3c1a4f69"
+  value_h: "3c068c65"
+  value_h: "3bccb0e2"
+  value_h: "3b5222c5"
+  value_h: "3c161570"
+  value_h: "3bea08b5"
+  value_h: "3b35bd52"
+  value_h: "3c0c0e26"
+  value_h: "3baf846f"
+  value_h: "3aaaaf29"
+  value_h: "3b3670a4"
+  value_h: "3aa488f6"
+  value_h: "3a611dcc"
+  value_h: "3ba7d869"
+  value_h: "3ab9b585"
+  value_h: "3bfb28a2"
+  value_h: "3bed1cfc"
+  value_h: "3bc71566"
+  value_h: "3c156b57"
+  value_h: "3b3309ab"
+  value_h: "3ba64881"
+  value_h: "3c0441e9"
+  value_h: "3bdc7930"
+  value_h: "3bb7b0ce"
+  value_h: "3c166bcd"
+  value_h: "3bc92e15"
+  value_h: "3c0909d0"
+  value_h: "3a352366"
+  value_h: "3a354233"
+  value_h: "39ff57d7"
+  value_h: "3bad1d56"
+  value_h: "3c17704f"
+  value_h: "3a26e029"
+  value_h: "3be5082c"
+  value_h: "3a1a08c2"
+  value_h: "3adbd4cc"
+  value_h: "3b57f0a1"
+  value_h: "3b426ee1"
+  value_h: "3bd43bae"
+  value_h: "3a53a999"
+  value_h: "3c22ee0b"
+  value_h: "3bbbb9b0"
+  value_h: "3bdcf4db"
+  value_h: "3ad4a780"
+  value_h: "3bfe41c2"
+  value_h: "3b7b2b30"
+  value_h: "3b24a540"
+  value_h: "3bbfb54e"
+  value_h: "3be80730"
+  value_h: "3bb530e1"
+  value_h: "3b550992"
+  value_h: "3bc24e3e"
+  value_h: "3b48e45c"
+  value_h: "3b58bd4a"
+  value_h: "3b4df099"
+  value_h: "3c02ba34"
+  value_h: "3ac547b8"
+  value_h: "3beafba9"
+  value_h: "3bf8c2bd"
+  value_h: "3adbe833"
+  value_h: "3a9d9400"
+  value_h: "3adaeef5"
+  value_h: "3a49f28f"
+  value_h: "3c16b2b5"
+  value_h: "3c1a2125"
+  value_h: "3b8cf6ab"
+  value_h: "3c1ebc1e"
+}
+input {
+  id: "data_spatial_shapes"
+  shape: {
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  random_data: {
+    seed: 25
+    upper_bound: 10
+    lower_bound: 1
+    distribution: UNIFORM
+  }
+  value_l: 6
+  value_l: 4
+  value_l: 3
+  value_l: 2
+}
+input {
+  id: "level_start_index"
+  shape: {
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  random_data: {
+    seed: 32
+    upper_bound: 100
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+  value_l: 0
+  value_l: 24
+}
+input {
+  id: "data_sampling_loc"
+  shape: {
+    dims: 1
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 32
+    upper_bound: 1
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+  value_h: "3f2441e4"
+  value_h: "3c1b96c0"
+  value_h: "3d2e1f10"
+  value_h: "3e84622a"
+  value_h: "3aa4e200"
+  value_h: "3e8a8e70"
+  value_h: "3f229e68"
+  value_h: "3efa424e"
+  value_h: "3ed0323a"
+  value_h: "3f07dca0"
+  value_h: "3f7506b0"
+  value_h: "3f016409"
+  value_h: "3f405c21"
+  value_h: "3ec24bde"
+  value_h: "3dffcfb8"
+  value_h: "3f1909bc"
+  value_h: "3f3af2d8"
+  value_h: "3f4a6d37"
+  value_h: "3cf22160"
+  value_h: "3ede19a8"
+  value_h: "3c957140"
+  value_h: "3f019170"
+  value_h: "3f05a6d0"
+  value_h: "3f29a84c"
+  value_h: "3ea82688"
+  value_h: "3eda9a58"
+  value_h: "3f1f682c"
+  value_h: "3c807f60"
+  value_h: "3f3ef513"
+  value_h: "3f7bbb90"
+  value_h: "3e13a1e0"
+  value_h: "3f7cd2e2"
+}
+input {
+  id: "data_attn_weight"
+  shape: {
+    dims: 1
+    dims: 2
+    dims: 2
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data: {
+    seed: 32
+    upper_bound: 1
+    lower_bound: 0
+    distribution: UNIFORM
+  }
+  value_h: "3e648b6c"
+  value_h: "3ec55e52"
+  value_h: "3eba173a"
+  value_h: "3ce44be9"
+  value_h: "3ebfdc55"
+  value_h: "3e6267f7"
+  value_h: "3e893298"
+  value_h: "3e0b7a30"
+  value_h: "3d477c1e"
+  value_h: "3e89a8c4"
+  value_h: "3ea0967e"
+  value_h: "3ebcd13c"
+  value_h: "3d85b4f7"
+  value_h: "3c56e348"
+  value_h: "3f190225"
+  value_h: "3ea5d75c"
+}
+output {
+  id: "data_col"
+  shape: {
+    dims: 1
+    dims: 2
+    dims: 2
+    dims: 2
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+ms_deform_attn_forward_param: {
+  im2col_step: 2
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_threshold: 0.003
+  error_threshold: 0.003
+  baseline_device: CPU
+}
