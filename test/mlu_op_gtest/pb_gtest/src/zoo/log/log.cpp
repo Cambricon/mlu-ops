@@ -56,8 +56,8 @@ void LogExecutor::setMiscellaneousParam() {
 }
 
 void LogExecutor::cpuCompute() {
-  assert(parser_->getInputNum() == 1);
-  assert(parser_->getOutputNum() == 1);
+  GTEST_CHECK(parser_->getInputNum() == 1);
+  GTEST_CHECK(parser_->getOutputNum() == 1);
   auto count = parser_->getInputDataCount(0);
 
   mluOpLogBase_t base =
@@ -76,7 +76,7 @@ void LogExecutor::cpuCompute() {
       cpu_fp32_output_[0][i] = log10(cpu_fp32_input_[0][i]);
     }
   } else {
-    assert(0);
+    GTEST_CHECK(0);
   }
 }
 

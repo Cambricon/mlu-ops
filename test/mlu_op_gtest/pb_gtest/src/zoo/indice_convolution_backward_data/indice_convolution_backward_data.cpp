@@ -252,11 +252,11 @@ void IndiceConvolutionBackwardDataExecutor::cpuTransposeFilter(
 }
 
 void IndiceConvolutionBackwardDataExecutor::cpuCompute() {
-  assert(parser_->getInputNum() == 3);
-  assert(parser_->getOutputNum() == 1);
+  GTEST_CHECK(parser_->getInputNum() == 3);
+  GTEST_CHECK(parser_->getOutputNum() == 1);
   VLOG(4) << "compute cpu IndiceConvolutionBackwardData";
   auto count = parser_->getOutputDataCount(0);
-  assert(count != 0);
+  GTEST_CHECK(count != 0);
   getFilterDims();
   setSpconvdataParams();
   int K = kd * kh * kw;
@@ -300,7 +300,7 @@ void IndiceConvolutionBackwardDataExecutor::cpuCompute() {
   for (int kk = 0; kk < K; ++kk) {
     int filter_offset = kk * dxc * dyc;
     int index_num = (int)(indice_num_[kk]);
-    assert(L >= index_num);
+    GTEST_CHECK(L >= index_num);
     for (int l = 0; l < index_num; ++l) {  // index_pair data loop
       int input_idx = indice_pairs[kk * 2 * L + l];
       int output_idx = indice_pairs[kk * 2 * L + L + l];

@@ -143,10 +143,4 @@
 #define NEG_MAX_INT2FLOAT_EXACT (-powf(2, 23))
 #endif
 
-#define MLU_KERNEL_ASSERT(cond, message)                                  \
-  if (!(cond)) {                                                          \
-    __assert_fail(message, __FILE__, static_cast<unsigned int>(__LINE__), \
-                  __func__);                                              \
-  }
-
 #endif  // KERNELS_KERNEL_H_

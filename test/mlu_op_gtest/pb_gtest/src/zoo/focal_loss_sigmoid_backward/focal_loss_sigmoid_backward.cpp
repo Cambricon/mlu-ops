@@ -91,7 +91,7 @@ void FocalLossSigmoidBackwardExecutor::setMiscellaneousParam() {
 }
 
 void FocalLossSigmoidBackwardExecutor::cpuCompute() {
-  assert(parser_->getOutputNum() == 1);
+  GTEST_CHECK(parser_->getOutputNum() == 1);
   auto alpha =
       parser_->getProtoNode()->focal_loss_sigmoid_backward_param().alpha();
   auto gamma =

@@ -359,7 +359,7 @@ template <typename T>
 int NmsRotatedExecutor::convexHullGraham(const Point<T> (&p)[24],
                                          const int &num_in,
                                          Point<T> (&q)[24]) {
-  assert(num_in >= 2);
+  GTEST_CHECK(num_in >= 2);
   // Step1:
   // Find point with minimum y
   // if more than 1 points have the same minimum y,

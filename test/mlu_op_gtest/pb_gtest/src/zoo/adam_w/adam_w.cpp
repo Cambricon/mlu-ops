@@ -91,8 +91,8 @@ void AdamWExecutor::setMiscellaneousParam() {
 }
 
 void AdamWExecutor::cpuCompute() {
-  assert(parser_->getInputNum() == 5);
-  assert(parser_->getOutputNum() == 4);
+  GTEST_CHECK(parser_->getInputNum() == 5);
+  GTEST_CHECK(parser_->getOutputNum() == 4);
   float lr = parser_->getProtoNode()->adamw_param().lr();
   float beta1 = parser_->getProtoNode()->adamw_param().beta1();
   float beta2 = parser_->getProtoNode()->adamw_param().beta2();
@@ -110,10 +110,10 @@ void AdamWExecutor::cpuCompute() {
   auto count4 = parser_->getInputDataCount(3);
   auto count5 = parser_->getInputDataCount(4);
 
-  assert(count1 == count2);
-  assert(count1 == count3);
-  assert(count1 == count4);
-  assert(count1 == count5);
+  GTEST_CHECK(count1 == count2);
+  GTEST_CHECK(count1 == count3);
+  GTEST_CHECK(count1 == count4);
+  GTEST_CHECK(count1 == count5);
 
   auto cpu_tensor_param = cpu_fp32_input_[0];
   auto cpu_tensor_paramh = cpu_fp32_input_[1];
