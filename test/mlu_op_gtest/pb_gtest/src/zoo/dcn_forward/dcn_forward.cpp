@@ -382,7 +382,7 @@ static void BatchMatMul(const int &g, const int &m, const int &k, const int &n,
                         const bool is_transa, const bool is_transb) {
   const int batch_size = g;
 
-  assert(batch_size >= 1);
+  GTEST_CHECK(batch_size >= 1);
 #if USE_OPENBLAS
   const CBLAS_ORDER Order = CblasRowMajor;
   const CBLAS_TRANSPOSE TransA = is_transa ? CblasTrans : CblasNoTrans;

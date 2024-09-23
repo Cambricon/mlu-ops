@@ -69,7 +69,7 @@ for i in ${filenames} ; do
   #not_in_tools=$(echo $i | sed -r "s/^tools.*//")
   if [[ -n "${include_mlu}" ]] && [[ -n "${check_dir}" ]]; then
     printf_log=$(sed -n -e '/\<printf\>/=' -e \
-      '/\<__bang_printf\>/=' -e '/\<std::cout\>/=' -e '/assert(/=' $i)
+      '/\<__bang_printf\>/=' -e '/\<std::cout\>/=' -e '/\bassert(/=' $i)
     for line in ${printf_log};
     do
       echo $i +${line}

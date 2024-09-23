@@ -46,12 +46,12 @@ void SqrtBackwardExecutor::compute() {
 }
 
 void SqrtBackwardExecutor::cpuCompute() {
-  assert(parser_->getInputNum() == 2);
-  assert(parser_->getOutputNum() == 1);
+  GTEST_CHECK(parser_->getInputNum() == 2);
+  GTEST_CHECK(parser_->getOutputNum() == 1);
 
   auto count1 = parser_->getInputDataCount(0);
   auto count2 = parser_->getInputDataCount(1);
-  assert(count1 == count2);
+  GTEST_CHECK(count1 == count2);
 
   for (size_t i = 0; i < count1; ++i) {
     cpu_fp32_output_[0][i] =
