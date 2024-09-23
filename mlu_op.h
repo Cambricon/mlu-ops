@@ -14435,6 +14435,110 @@ mluOpExecFFT(mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
+
+/*!
+ * @brief Computes the Cholesky decomposition of a symmetric positive-definite matrix using the input tensor descriptor
+ * \p input_desc and writes the result to the output tensor descriptor \p output_desc.
+ *
+ * @param[in] handle
+ * The handle to the MLU operation environment.
+ * @param[in] input_desc
+ * The descriptor for the input tensor.
+ * @param[in] d_input
+ * Pointer to the input data in device memory.
+ * @param[in] output_desc
+ * The descriptor for the output tensor.
+ * @param[out] d_output
+ * Pointer to the output data in device memory.
+ * @param[in] upper
+ * Boolean flag to indicate whether to compute the upper or lower triangular Cholesky factor. True for upper, False for
+ * lower.
+ * @param[in] workspace
+ * Pointer to workspace buffer in device memory used for intermediate computations.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED
+ *
+ * @par Data Type
+ * - The supported combinations of data types are shown below:
+ *   - float(\b d_input) - float(\b d_output)
+ *
+ * @par Data Layout
+ * - The data layout of d_input should be \p MLUOP_LAYOUT_ARRAY.
+ * - The data layout of d_output should be \p MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - The dimension of input/output tensor must be 2 or 3.
+ * - The shape of output should be equal to input shape.
+ * - When the dimension of tensor is 2, the shape[0] and shape[1] should be equal.
+ * - When the dimension of tensor is 3, the shape[1] and shape[2] should be equal.
+ * - Considering the size of the GDRAM, the space occupied by the input matrix should not exceed 7GB.
+ *   For example, when the batch size is 32, the shape[1] of the tensor cannot exceed 7,662(32*7662*4<7GB).
+ *
+ * @par API Dependency
+ * - Before calling this function, you need to call the ::mluOpGetCholeskyWorkspaceSize
+ *   function to get workspace size.
+ *
+ * @par Note
+ * - The function assumes the matrix is symmetric positive-definite.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpCholesky(mluOpHandle_t handle,
+              const mluOpTensorDescriptor_t input_desc,
+              float *d_input,
+              const mluOpTensorDescriptor_t output_desc,
+              float *d_output,
+              bool upper,
+              void *workspace);
+
+/*!
+ * @brief Calculates the size of the workspace required for the Cholesky decomposition and initializes a workspace
+ * pointer. This function must be called before performing Cholesky decomposition using mluOpCholesky.
+ *
+ * @param[in] input_desc
+ * The descriptor for the input tensor for which the Cholesky decomposition will be performed.
+ * @param[out] size
+ * Pointer to a size_t variable where the size of the required workspace will be stored.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS if the workspace size is successfully calculated.
+ * - ::MLUOP_STATUS_EXECUTION_FAILED if there are issues during the calculation allocation.
+ *
+ * @par Data Type
+ * - The supported combinations of data types are shown below:
+ *   - size_t(\b size)
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - The dimension of input tensor must be 2 or 3.
+ * - When the dimension of tensor is 2, the shape[0] and shape[1] should be equal.
+ * - When the dimension of tensor is 3, the shape[1] and shape[2] should be equal.
+ *
+ * @par API Dependency
+ * - The allocated extra workspace should be passed to ::mluOpCholesky to perform the Cholesky operation.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetCholeskyWorkspaceSize(mluOpTensorDescriptor_t input_desc, size_t *size);
+
 #if defined(__cplusplus)
 }
 #endif
