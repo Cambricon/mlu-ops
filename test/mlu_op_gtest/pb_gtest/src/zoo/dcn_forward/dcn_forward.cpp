@@ -351,6 +351,7 @@ void DcnForwardExecutor::transpose(float *input, float *output,
   if (dim_desc > 8 || dim_desc <= 0) {
     LOG(ERROR) << "dim_desc is " << dim_desc
                << ", it shoule less than 8 and greater than 0";
+    return;
   }
   { std::vector<int>().swap(permute_desc); }
   for (int i = 0; i < dim_num; i++) {
