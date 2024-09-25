@@ -409,17 +409,17 @@ prog_log_info "MLUOP_TARGET_CPU_ARCH = ${MLUOP_TARGET_CPU_ARCH}"
 prog_log_info "BUILD_JOBS = ${BUILD_JOBS}"
 #check compiler version and consider activate devtoolset for CentOS 7
 if [ "$OS_RELEASE_ID" = "centos" -a "$OS_RELEASE_VERSION_ID" = "7" ]; then
-  if [ ! -f "/opt/rh/devtoolset-7/enable" ]; then
-    prog_log_warn "You are using CentOS 7 but without 'devtoolset-7' installed."
-    prog_log_warn "You should use docker image, or prepare devtoolset-7 by yourself."
+  if [ ! -f "/opt/rh/devtoolset-8/enable" ]; then
+    prog_log_warn "You are using CentOS 8 but without 'devtoolset-8' installed."
+    prog_log_warn "You should use docker image, or prepare devtoolset-8 by yourself."
     sleep 1 # I hope user will see it
   fi
 fi
 
 if [[ "$(g++ --version | head -n1 | awk '{ print $3 }' | cut -d '.' -f1)" < "5" ]]; then
-  prog_log_note "we do not support g++<5, try to activate devtoolset-7 env"
-  source /opt/rh/devtoolset-7/enable && prog_log_warn "devtoolset-7 activated" \
-    || ( prog_log_warn "source devtoolset-7 failed, ignore this info if you have set env TOOLCHAIN_ROOT, TARGET_C_COMPILER, TARGET_CXX_COMPILER properly (see more details in README.md)" && sleep 4 ) # I hope user will see it
+  prog_log_note "we do not support g++<5, try to activate devtoolset-8 env"
+  source /opt/rh/devtoolset-8/enable && prog_log_warn "devtoolset-8 activated" \
+    || ( prog_log_warn "source devtoolset-8 failed, ignore this info if you have set env TOOLCHAIN_ROOT, TARGET_C_COMPILER, TARGET_CXX_COMPILER properly (see more details in README.md)" && sleep 4 ) # I hope user will see it
 fi
 
 if [ ! -d "$BUILD_PATH" ]; then
