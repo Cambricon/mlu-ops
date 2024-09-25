@@ -254,7 +254,7 @@ mluOpStatus_t makeRFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
       fft_plan->workspace_size += transed_input_size;
       // input trans workspace: batch * L * 2^m --> batch * 2^m * L
       const int trans_dim_num = 3;
-      int trans_input_dims[trans_dim_num] = {batch, L, m};
+      int64_t trans_input_dims[trans_dim_num] = {batch, L, m};
       int trans_permute[trans_dim_num] = {0, 2, 1};
       size_t trans_workspace_size = 0;
       status = fftGetTransposeWorkspaceSize(handle, trans_workspace_size,
@@ -283,12 +283,29 @@ mluOpStatus_t makeRFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
       fft_plan->workspace_size += matmul_output_size;
       // matmul workspace
       size_t matmul_workspace_size = 0;
-      status = fftGetQuantizeMatMulWorkspaceSize(
-          handle, matmul_workspace_size, batch * m, L, L, false, true,
-          in_e_dtype, in_e_dtype, in_r_dtype, api);
-      fft_plan->matmul_addrs.internal_workspace_size =
-          std::max(fft_plan->matmul_addrs.internal_workspace_size,
-                   matmul_workspace_size);
+      if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY) {
+        status = fftGetQuantizeMatMulWorkspaceSize(
+            handle, matmul_workspace_size, batch * m, L, L, false, true,
+            in_e_dtype, in_e_dtype, in_r_dtype, api);
+        fft_plan->matmul_addrs.internal_workspace_size =
+            std::max(fft_plan->matmul_addrs.internal_workspace_size,
+                     matmul_workspace_size);
+      } else {
+        status = fftGetBatchMatMulBcastWorkspaceSize(
+            handle,
+            L <= fft_plan->L_sub ? (2 * L)
+                                 : (2 * (PAD_UP(L / 2, fft_plan->L_sub) + 1)),
+            L, m, batch, fft_plan->matmul_addrs.dft_re_matrix_addr,
+            fft_plan->matmul_addrs.dft_pos_addr,
+            fft_plan->matmul_addrs.dft_scale_addr,
+            fft_plan->matmul_addrs.input_pad_addr,
+            fft_plan->matmul_addrs.input_pos_addr,
+            fft_plan->matmul_addrs.input_scale_addr,
+            fft_plan->matmul_addrs.matmul_re_mul_re_addr, false, false, 1.0,
+            0.0, in_e_dtype, in_e_dtype, in_r_dtype,
+            fft_plan->matmul_addrs.internal_workspace_addr,
+            fft_plan->matmul_addrs.internal_workspace_size, api);
+      }
 
       // output merge workspace
       size_t merge_workspace_size = matmul_output_size;
@@ -389,7 +406,7 @@ static void configureRFFT1dWorkspaceAddrs(mluOpHandle_t handle,
   fft_plan->mlu_addrs.buffer_buf = (uint8_t *)workspace + offset;
   offset += buffer_size * 2;
 
-  if (fft_plan->is_input_contiguous) {
+  if (fft_plan->is_input_contiguous && fft_plan->inembed[0] <= fft_plan->n[0]) {
     fft_plan->mlu_addrs.input = input;
   } else {
     fft_plan->mlu_addrs.input = (uint8_t *)workspace + offset;
@@ -863,8 +880,8 @@ static mluOpStatus_t transposeRFFT1dPaddedInput(mluOpHandle_t handle,
     int m = (1 << fft_plan->m);
 
     const int trans_dim_num = 3;
-    int trans_input_dims[trans_dim_num] = {batch, L, m};
-    int trans_output_dims[trans_dim_num] = {batch, m, L};
+    int64_t trans_input_dims[trans_dim_num] = {batch, L, m};
+    int64_t trans_output_dims[trans_dim_num] = {batch, m, L};
     int trans_permute[trans_dim_num] = {0, 2, 1};
 
     status =
@@ -1221,7 +1238,6 @@ mluOpStatus_t execRFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
                          void *workspace, void *output) {
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
   std::string api = "[mluOpExecFFT]";
-
   if (fft_plan->prime) {
     configureRFFT1dMatmulWorkspaceAddrs(handle, fft_plan, (void *)input,
                                         workspace, output);

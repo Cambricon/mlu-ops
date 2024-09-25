@@ -65,6 +65,14 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
                              mluOpDataType_t data_type, void *workspace,
                              size_t workspace_size, const std::string api);
 
+mluOpStatus_t fftGetBatchMatMulBcastWorkspaceSize(
+    mluOpHandle_t handle, int m, int k, int n, int batch, void *a_ptr,
+    void *a_pos, void *a_scale, void *b_ptr, void *b_pos, void *b_scale,
+    void *c_ptr, bool is_trans_a, bool is_trans_b, float alpha, float beta,
+    mluOpDataType_t a_compute_type, mluOpDataType_t b_compute_type,
+    mluOpDataType_t data_type, void *workspace, size_t workspace_size,
+    const std::string api);
+
 mluOpStatus_t fftBatchMatMulBcast(mluOpHandle_t handle, int m, int k, int n,
                                   int batch, void *a_ptr, void *a_pos,
                                   void *a_scale, void *b_ptr, void *b_pos,
@@ -77,15 +85,15 @@ mluOpStatus_t fftBatchMatMulBcast(mluOpHandle_t handle, int m, int k, int n,
 
 mluOpStatus_t fftGetTransposeWorkspaceSize(mluOpHandle_t handle,
                                            size_t &workspace_size, int dim_num,
-                                           int ori_dims[], int permute[],
+                                           int64_t ori_dims[], int permute[],
                                            mluOpDataType_t data_type,
                                            const std::string api);
 
-mluOpStatus_t fftTranspose(mluOpHandle_t handle, int dim_num, int ori_dims[],
-                           int transed_dims[], int permute[], void *ori_ptr,
-                           void *transed_ptr, mluOpDataType_t data_type,
-                           void *workspace, size_t workspace_size,
-                           const std::string api);
+mluOpStatus_t fftTranspose(mluOpHandle_t handle, int dim_num,
+                           int64_t ori_dims[], int64_t transed_dims[],
+                           int permute[], void *ori_ptr, void *transed_ptr,
+                           mluOpDataType_t data_type, void *workspace,
+                           size_t workspace_size, const std::string api);
 
 mluOpStatus_t fftGetOptensorWorkspaceSize(mluOpHandle_t handle,
                                           size_t &workspace_size, int elem_num,

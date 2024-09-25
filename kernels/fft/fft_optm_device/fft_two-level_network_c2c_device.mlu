@@ -116,7 +116,7 @@ mluOpStatus_t MLUOP_WIN_API kernelFFT2dButterflyColumn(
 mluOpStatus_t MLUOP_WIN_API kernelFFT1dButterflyColumn(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpFFTPlan_t fft_plan, const int direction, FFTFlag flag) {
-  VLOG(5) << "Launch Kernel kernelFFT1dButterflyRow <<Union"
+  VLOG(5) << "Launch Kernel kernelFFT1dButterflyColumn <<Union"
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
   if (direction == FFT_FORWARD) {
