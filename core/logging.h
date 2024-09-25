@@ -122,7 +122,7 @@
   }
 
 #define PARAM_CHECK(api, condition, ...)                                 \
-  if (!(condition)) {                                                    \
+  if MLUOP_PREDICT_FALSE (!(condition)) {                                \
     LOG(ERROR) << api << " Check failed: " #condition ". " #__VA_ARGS__; \
     return MLUOP_STATUS_BAD_PARAM;                                       \
   }
