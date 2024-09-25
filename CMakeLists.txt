@@ -4,6 +4,8 @@ project(mluops VERSION ${BUILD_VERSION})
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/test")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wdeprecated-declarations -fPIC -std=c++11 -pthread -pipe")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-sections -fPIC")
 
@@ -88,6 +90,7 @@ elseif (NOT BANG_CNCC_EXECUTABLE)
   message(FATAL_ERROR "cncc not found, please ensure cncc is in your PATH env or set variable BANG_CNCC_EXECUTABLE from cmake. Otherwise you should check path used by find_program(BANG_CNCC_EXECUTABLE) in FindBANG.cmake")
 endif()
 
+find_package(fmt REQUIRED)
 # setup cncc flags
 set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Werror -Wdeprecated-declarations -Wall -std=c++11 -fPIC -pthread --neuware-path=${NEUWARE_HOME}")
 if(${_CMAKE_BUILD_TYPE_LOWER} MATCHES "debug")
@@ -174,11 +177,16 @@ else()
   message(FATAL_ERROR "${MLUOP_SYMBOL_VIS_FILE} doesn't exist.")
 endif()
 
+
 set(LINK_FLAGS "-Wl,--version-script=${CMAKE_BINARY_DIR}/${MLUOP_SYMBOL_VIS_FILE}")
 message(STATUS "LINK_FLAGS:${LINK_FLAGS}")
 add_library(mluopscore STATIC ${core_src_files})
 
 target_link_libraries(mluopscore cnnl cnrt cndrv)
+if (TARGET fmt::fmt-header-only)
+  target_link_libraries(mluopscore fmt::fmt-header-only)
+endif()
+
 bang_add_library(mluops SHARED ${src_files} ${src_helper_files})
 
 if(${MLUOP_BUILD_STATIC} MATCHES "ON")
@@ -195,6 +203,7 @@ target_link_libraries(mluops
   cnrt cndrv dl
   -Wl,--end-group
 )
+
 target_link_libraries(mluops ${LINK_FLAGS})
 set_target_properties(mluops PROPERTIES
   OUTPUT_NAME "mluops"

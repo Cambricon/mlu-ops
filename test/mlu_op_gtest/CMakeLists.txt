@@ -183,11 +183,13 @@ add_library(mluop_pb_gtest_obj OBJECT ${MLUOP_PB_TEST_DIR} ${MLUOP_PB_GTEST_DIR}
 target_include_directories(mluop_pb_gtest_obj PRIVATE ${MLUOP_PB_GTEST_INCLUDE} ${PROTO_PATH})
 add_dependencies(mluop_pb_gtest_obj mluop_build_proto)
 add_executable(mluop_gtest $<TARGET_OBJECTS:mluop_pb_gtest_obj>)
+target_link_libraries(mluop_pb_gtest_obj PRIVATE fmt::fmt)
 target_link_libraries(mluop_gtest mluops)
 set(targets_mluop_gtest mluop_gtest)
 
 message(STATUS "EXTRA_LIBS: ${EXTRA_LIBS}")
 foreach(target_gtest ${targets_mluop_gtest})
+  target_link_libraries(${target_gtest} fmt::fmt)
   target_link_libraries(${target_gtest} mluop_gtest_kernels)
   target_link_libraries(${target_gtest} -Wl,--no-as-needed cnbin -Wl,--as-needed)
   target_link_libraries(${target_gtest} cnrt cndev cndrv pthread gtest_shared stdc++ m dl)

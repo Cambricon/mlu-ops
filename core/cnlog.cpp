@@ -30,6 +30,7 @@
 #include <fstream>
 #include <sstream>
 
+
 #include "tool.h"
 
 #if defined(WINDOWS) || defined(WIN32)  // used in windows
@@ -46,6 +47,9 @@
 #include <unistd.h>
 
 #endif
+
+#include <fmt/chrono.h>
+#include <fmt/color.h>
 
 #ifdef ANDROID_LOG  // used in android
 
@@ -91,7 +95,7 @@ class cnlogSingleton {
   static inline std::ostream& userStream() { return get().userStream_; }
 
   bool isPrintToScreen() {
-    if (userStream_.rdbuf() == std::cout.rdbuf()) {
+    if (userStream_.rdbuf() == std::cout.rdbuf()) {  // NOLINT
       return isatty(fileno(stdout));
     }
     if (userStream_.rdbuf() == std::cerr.rdbuf()) {
@@ -144,7 +148,7 @@ class cnlogSingleton {
       g_color_print_ = isPrintToScreen();
     }
   }
-  std::ostream userStream_{std::cout.rdbuf()};  // stream to print on screen.
+  std::ostream userStream_{std::cout.rdbuf()};  // NOLINT
   bool is_open_log_ = false;
   std::ofstream logFile_;  // which file to save log message.
   int logLevel_ = getLevelEnvVar("MLUOP_MIN_LOG_LEVEL",
@@ -186,21 +190,15 @@ LogMessage::LogMessage(std::string file, int line, int module, int severity,
       is_print_tail_(is_print_tail),
       is_clear_endl_(is_clear_endl),
       release_can_print_(release_can_print) {
+  bool is_colored = false;
 #ifndef ANDROID_LOG
-  if (is_print_head_) {
-    if ((log_module_ == LOG_SHOW_ONLY) || (log_module_ == LOG_SAVE_AND_SHOW)) {
-      if (cnlogSingleton::g_color_print()) {
-        printHead(true);  // print head colored.
-      } else {
-        printHead(false);  // print head no colored.
-      }
-    } else {
-      printHead(false);  // print head no colored.
-    }
+  if (is_print_head_ &&
+      ((log_module_ == LOG_SHOW_ONLY) || (log_module_ == LOG_SAVE_AND_SHOW)) &&
+      cnlogSingleton::g_color_print()) {
+    is_colored = true;
   }
-#else
-  printHead(false);  // print head no colored.
 #endif
+  printHead(is_colored);
 }
 
 /**
@@ -327,45 +325,85 @@ LogMessage::~LogMessage() {
   }
 }
 
+inline static auto formatSeverityColor(int logSeverity_) {
+  switch (logSeverity_) {
+    case LOG_INFO: {
+      return fmt::fg(fmt::terminal_color::green);
+    }
+    case LOG_WARNING: {
+      return fmt::fg(fmt::terminal_color::magenta);
+    }
+    case LOG_ERROR: {
+      return fmt::fg(fmt::terminal_color::red);
+    }
+    case LOG_FATAL: {
+      return fmt::fg(fmt::terminal_color::red);
+    }
+    case LOG_VLOG: {
+      return fmt::fg(fmt::terminal_color::blue);
+    }
+    case LOG_CNPAPI: {
+      return fmt::fg(fmt::terminal_color::blue);
+    }
+  }
+  // all enum used
+  return fmt::fg(fmt::terminal_color::white);
+}
+
+inline static std::string formatSeverityName(int logSeverity_) {
+  switch (logSeverity_) {
+    case LOG_INFO: {
+      return "INFO";
+    }
+    case LOG_WARNING: {
+      return "WARNING";
+    }
+    case LOG_ERROR: {
+      return "ERROR";
+    }
+    case LOG_FATAL: {
+      return "FATAL";
+    }
+    case LOG_VLOG: {
+      return "VLOG";
+    }
+    case LOG_CNPAPI: {
+      return "CNPAPI";
+    }
+  }
+  // all enum used
+  return "";
+}
+
+inline static std::string formatSeverity(int logSeverity_, bool is_colored) {
+  if (is_colored) {
+    return fmt::format("{}", fmt::styled(formatSeverityName(logSeverity_),
+                                         formatSeverityColor(logSeverity_) |
+                                             fmt::emphasis::bold));
+  } else {
+    return formatSeverityName(logSeverity_);
+  }
+}
+
+inline static auto getpid_() {
+#if defined(WINDOWS) || defined(WIN32)
+  // return GetCurrentProcessId();
+  return _getpid();
+#else
+  return getpid();
+#endif
+}
+
 /**
  * @brief: get system time.
  * @return: time stamp in string format.
  */
 std::string LogMessage::getTime() {
-#ifdef ANDROID_LOG
-  return "";
-#else
-#if defined(WINDOWS) || defined(WIN32)
-  SYSTEMTIME systime;
-  GetLocalTime(&systime);
-  std::string year = std::to_string(systime.wYear);
-  std::string month = std::to_string(systime.wMonth);
-  std::string day = std::to_string(systime.wDay);
-  std::string hour = std::to_string(systime.wHour);
-  std::string min = std::to_string(systime.wMinute);
-  std::string second = std::to_string(systime.wSecond);
-  std::string time_stamp = "[" + year + "-" + month + "-" + day + " " + hour +
-                           ":" + min + ":" + second + "] ";
-  return time_stamp;
-#else
-  time_t g_time;
-  time(&g_time);
-  g_time = g_time + HOURS_DIFFERENCE * SECONDS_PER_HOUR;
-  tm general_time;
-  if (NULL == gmtime_r(&g_time, &general_time)) {
-    return "";
-  }
-  std::string year = std::to_string(general_time.tm_year + BASE_YEAR);
-  std::string month = std::to_string(general_time.tm_mon + BASE_MONTH);
-  std::string day = std::to_string(general_time.tm_mday);
-  std::string hour = std::to_string(general_time.tm_hour);
-  std::string min = std::to_string(general_time.tm_min);
-  std::string second = std::to_string(general_time.tm_sec);
-  std::string time_stamp = "[" + year + "-" + month + "-" + day + " " + hour +
-                           ":" + min + ":" + second + "] ";
-  return time_stamp;
-#endif
-#endif
+  auto now = std::chrono::system_clock::now();
+  // [YY-MM-DD hh:mm:ss.ssssss]
+  return fmt::format(
+      "[{:%F %T}]",
+      std::chrono::time_point_cast<std::chrono::microseconds>(now));
 }
 
 /**
@@ -378,31 +416,48 @@ void LogMessage::printHead(bool is_colored) {
     return;
   }
 #endif
+  // [DATETIME][MLUOP][INFO][PID][Card:i]: xxxx
+  cout_str_ << fmt::format(
+      "{datetime}[{module}][{severity}][{pid}][Card:{card}]: ",
+      fmt::arg("datetime", getTime()),
+      fmt::arg("module",
+               is_colored
+                   ? fmt::to_string(fmt::styled(
+                         "MLUOP", fmt::emphasis::bold |
+                                      fmt::fg(fmt::terminal_color::yellow)))
+                   : "MLUOP"),
+      fmt::arg("severity", formatSeverity(logSeverity_, is_colored)),
+      fmt::arg("pid", getpid_()), fmt::arg("card", []() {
+        int dev_index = -1;
+        cnrtGetDevice(&dev_index);
+        return dev_index;
+      }()));
+#if 0
   file_str_ << getTime();
-  file_str_ << "[" << module_name_ << "] ";
+  file_str_ << "[" << module_name_ <<"] ";
   switch (logSeverity_) {
     case LOG_INFO: {
-      file_str_ << "[Info]: ";
+      file_str_ << "[INFO]: ";
       break;
     }
     case LOG_WARNING: {
-      file_str_ << "[Warning]: ";
+      file_str_ << "[WARNING]: ";
       break;
     }
     case LOG_ERROR: {
-      file_str_ << "[Error]: ";
+      file_str_ << "[ERROR]: ";
       break;
     }
     case LOG_FATAL: {
-      file_str_ << "[Fatal]: ";
+      file_str_ << "[FATAL]: ";
       break;
     }
     case LOG_VLOG: {
-      file_str_ << "[Vlog]: ";
+      file_str_ << "[VLOG]: ";
       break;
     }
     case LOG_CNPAPI: {
-      file_str_ << "[Cnpapi]: ";
+      file_str_ << "[CNPAPI]: ";
       break;
     }
     default: {
@@ -411,39 +466,40 @@ void LogMessage::printHead(bool is_colored) {
   }
   if (is_colored) {
     cout_str_ << getTime();
-    cout_str_ << HIGHLIGHT << YELLOW << "[" << module_name_ << "] ";
+    cout_str_ << HIGHLIGHT << YELLOW << "[" << module_name_ <<"] ";
     switch (logSeverity_) {
-      case LOG_INFO: {
-        cout_str_ << HIGHLIGHT << GREEN << "[Info]:" << RESET;
-        break;
-      }
-      case LOG_WARNING: {
-        cout_str_ << HIGHLIGHT << MAGENTA << "[Warning]:" << RESET;
-        break;
-      }
-      case LOG_ERROR: {
-        cout_str_ << HIGHLIGHT << RED << "[Error]:" << RESET;
-        break;
-      }
-      case LOG_FATAL: {
-        cout_str_ << HIGHLIGHT << RED << "[Fatal]:" << RESET;
-        break;
-      }
-      case LOG_VLOG: {
-        cout_str_ << HIGHLIGHT << BLUE << "[Vlog]:" << RESET;
-        break;
-      }
-      case LOG_CNPAPI: {
-        cout_str_ << HIGHLIGHT << BLUE << "[Cnpapi]:" << RESET;
-        break;
-      }
-      default: {
-        break;
-      }
+        case LOG_INFO: {
+          cout_str_ << HIGHLIGHT << GREEN << "[INFO]:" << RESET;
+          break;
+        }
+        case LOG_WARNING: {
+          cout_str_ << HIGHLIGHT << MAGENTA << "[WARNING]:" << RESET;
+          break;
+        }
+        case LOG_ERROR: {
+          cout_str_ << HIGHLIGHT << RED << "[ERROR]:" << RESET;
+          break;
+        }
+        case LOG_FATAL: {
+          cout_str_ << HIGHLIGHT << RED << "[FATAL]:" << RESET;
+          break;
+        }
+        case LOG_VLOG: {
+          cout_str_ << HIGHLIGHT << BLUE << "[VLOG]:" << RESET;
+          break;
+        }
+        case LOG_CNPAPI: {
+          cout_str_ << HIGHLIGHT << BLUE << "[CNPAPI]:" << RESET;
+          break;
+        }
+        default: {
+          break;
+        }
     }
   } else {
     cout_str_ << file_str_.str();
   }
+#endif
 }
 
 /**
@@ -455,11 +511,10 @@ void LogMessage::printTail(bool is_colored) {
   if (!releasePrint(module_name_)) {
     return;
   }
+  int pid = getpid_();
 #if defined(WINDOWS) || defined(WIN32)
-  int pid = _getpid();
   int tid = GetCurrentThreadId();
 #else
-  int pid = getpid();
   int tid = syscall(SYS_gettid);
 #endif
   std::stringstream realId;
@@ -537,6 +592,6 @@ using mluop::logging::cnlogSingleton;
 static cnlogSingleton *log_ctx = nullptr;
 
 static void __attribute__((destructor(101))) mluOpLoggingLibDestructor() {
-  std::cout << __func__ << std::endl;
+  std::cout << __func__ << std::endl; // NOLINT
 }
 #endif
