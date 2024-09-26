@@ -1,0 +1,280 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "lgamma.h"
+
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/unary_op/unary_op_3pipeline.h"
+#include "kernels/tensor_stride_process/tensor_stride_process_common.h"
+#include "kernels/unary_op/unary_op_stride_3pipeline.h"
+
+#define AUX_N 3
+
+__nram__ char nram_buffer[UNARY_NRAM_SIZE];
+
+const float epsilon = 1e-15;
+const uint32_t inf_float_value = 0x7f800000;
+const uint32_t nan_float_mask = inf_float_value | 0x7fffff;
+const float log_e_2 =
+    0.69314718055994530941723212145818;  // ln(x) = log(x) * log_e_2
+
+// dst = a*sel + !sel*b
+// a can overlap with dst
+// float 1: [0 01111111 00000000000000000000000] >> 29 -> int 1
+__mlu_func__ void mux2(float *dst, float *a, float *b, float *sel,
+                       uint32_t sz) {
+  __bang_srl((uint32_t *)sel, (uint32_t *)sel, 29, sz);
+  __bang_mul_scalar((int32_t *)sel, (int32_t *)sel, -1, sz);
+  __bang_band((char *)dst, (char *)a, (char *)sel, sz * sizeof(float));
+  __bang_bnot((char *)sel, (char *)sel, sz * sizeof(float));
+  __bang_band((char *)sel, (char *)b, (char *)sel, sz * sizeof(float));
+  __bang_bor((char *)dst, (char *)dst, (char *)sel, sz * sizeof(float));
+}
+
+__mlu_func__ void isFinite(float *dst, float *src, uint32_t sz) {
+  __bang_band_scalar((int *)dst, (int *)src, (int)inf_float_value, sz);
+  __bang_ne_scalar((int *)dst, (int *)dst, (int)inf_float_value, sz);
+  __bang_int322float(dst, (int *)dst, sz, 0);
+}
+
+__mlu_func__ void isInf(float *dst, float *src, uint32_t sz) {
+  __bang_band_scalar((int *)dst, (int *)src, (int)nan_float_mask, sz);
+  __bang_eq_scalar((int *)dst, (int *)dst, (int)inf_float_value, sz);
+  __bang_int322float(dst, (int *)dst, sz, 0);
+}
+
+__mlu_func__ void logHp(float *dst, float *src, uint32_t sz) {
+  __bang_log(dst, src, sz);
+  __bang_mul_scalar(dst, dst, log_e_2, sz);
+}
+
+__mlu_func__ void calcLgamma(float *buf0, float *buf1, float *buf2, float *buf3,
+                             float *buf4, int num_deal) {
+  static const int numCoeff = 4;
+  static const float log_pi = 1.144730;
+  static const float coeff[numCoeff] = {
+      2.50663,
+      34.7892,
+      -20.8994,
+      1.35914,
+  };
+
+  // eliminate the -0 by add epsilon and sub epsilon
+  __bang_add_scalar(buf0, buf0, epsilon, num_deal);
+  __bang_sub_scalar(buf0, buf0, epsilon, num_deal);
+
+  /**
+   * bool need_to_reflect = (input < 0);
+   */
+  __bang_lt_scalar(buf4, buf0, 0, num_deal);
+
+  /**
+   * float reflect_x = need_reflect ? 1-input : input;
+   */
+  // using buf1 -> reflect_x
+  __bang_mul_scalar(buf1, buf0, -1, num_deal);
+  __bang_add_scalar(buf1, buf1, 1, num_deal);
+  mux2(buf1, buf1, buf0, buf4, num_deal);
+
+  /**
+    float accm = coeffs[0];
+    int numCoeff = coeffs.size();   // aka a
+    for (size_t k = 1; k < numCoeff; k++) {
+      accm += coeffs[k] / (reflect_x + k);
+    }
+    */
+  // do loop flatten, using buf2 -> accm
+  __bang_add_scalar(buf3, buf1, 1, num_deal);
+  __bang_recip(buf3, buf3, num_deal);
+  __bang_fusion(FUSION_FMA, buf2, buf3, coeff[1], coeff[0], num_deal);
+
+  __bang_add_scalar(buf3, buf1, 2, num_deal);
+  __bang_recip(buf3, buf3, num_deal);
+  __bang_fusion(FUSION_FMA, buf2, buf3, coeff[2], buf2, num_deal, num_deal);
+
+  __bang_add_scalar(buf3, buf1, 3, num_deal);
+  __bang_recip(buf3, buf3, num_deal);
+  __bang_fusion(FUSION_FMA, buf2, buf3, coeff[3], buf2, num_deal, num_deal);
+
+  /**
+   * float lgamma_x = (reflect_x+0.5)*log(reflect_x+numCoeff) -
+   * (reflect_x+numCoeff) + log(accm/reflect_x);
+   */
+  // using buf1 -> lgamma_x
+  __mluop_div(buf3, buf2, buf1, (float *)0, 0, num_deal);
+  logHp(buf2, buf3, num_deal);
+  __bang_add_scalar(buf3, buf1, numCoeff, num_deal);
+  __bang_add_scalar(buf1, buf1, 0.5, num_deal);
+  __bang_sub(buf2, buf2, buf3, num_deal);
+  logHp(buf3, buf3, num_deal);
+  __bang_fusion(FUSION_FMA, buf1, buf3, buf1, buf2, num_deal, num_deal);
+
+  /**
+   * float abs_input = fabs(input);
+   * float abs_frac_input = abs_input - floorf(abs_input);
+   */
+  // using buf4 -> abs_frac_input
+  __bang_abs(buf2, buf0, num_deal);
+  __bang_floor(buf3, buf2, num_deal);
+  __bang_sub(buf4, buf2, buf3, num_deal);
+
+  /**
+   * float reduced_frac_input = (abs_frac_input > 0.5) ? 1 - abs_frac_input :
+   * abs_frac_input;
+   */
+  // using buf3 -> reduced_frac_input
+  __bang_gt_scalar(buf2, buf4, 0.5, num_deal);
+  __bang_fusion(FUSION_FMA, buf3, buf4, -1, 1, num_deal);
+  mux2(buf3, buf3, buf4, buf2, num_deal);
+
+  /**
+   * float reflection_denom = log(sinf(M_PI * reduced_frac_input));
+   */
+  // using buf2 -> reflection_denom
+  __bang_mul_scalar(buf2, buf3, M_PI, num_deal);
+  __cn_vector_sin_f32(num_deal, buf2, buf2);
+  logHp(buf2, buf2, num_deal);
+
+  /**
+   * float reflection = std::isfinite(reflection_denom) ? log_pi -
+   * reflection_denom - lgamma_x : -reflection_denom;
+   */
+  // using buf3 -> reflection
+  __bang_write_zero(buf4, num_deal);
+  __bang_sub(buf2, buf4, buf2, num_deal);
+  isFinite(buf4, buf2, num_deal);
+  __bang_sub(buf3, buf2, buf1, num_deal);
+  __bang_add_scalar(buf3, buf3, log_pi, num_deal);
+  mux2(buf3, buf3, buf2, buf4, num_deal);
+
+  /**
+   * float result = need_to_reflect ? reflection : lgamma_x;
+   */
+  // using buf2 -> result
+  __bang_lt_scalar(buf4, buf0, 0, num_deal);
+  mux2(buf2, buf3, buf1, buf4, num_deal);
+
+  /**
+   * return isinf(input) ? INFINITY : result;
+   */
+  isInf(buf1, buf0, num_deal);
+  __bang_write_value(buf3, num_deal, (int)(inf_float_value));
+  mux2(buf4, buf3, buf2, buf1, num_deal);
+}
+
+template <typename T1, typename T2>
+__mlu_func__ void auxFunc3LgammaFloat(
+    size_t &output_input_gap, size_t &ping_pong_gap, size_t &auxiliary_a_gap,
+    size_t &auxiliary_b_gap, size_t &span_num_deal, size_t &align_num) {
+  align_num = NFU_ALIGN_SIZE / sizeof(float);
+  // | input-ping | output-ping | input-pong | output-pong | aux1 | aux2 | aux3
+  // | 7 buffer
+  span_num_deal = PAD_DOWN(UNARY_NRAM_SIZE / sizeof(float) / 7,
+                           NFU_ALIGN_SIZE / sizeof(float));
+  ping_pong_gap = 2 * span_num_deal * sizeof(float);
+  output_input_gap = span_num_deal * sizeof(float);
+  auxiliary_a_gap = 4 * span_num_deal * sizeof(float);
+  auxiliary_b_gap = 0;
+}
+
+template <typename T1, typename T2>
+__mlu_func__ void computeLgammaFloat(char *nram_output, char *nram_input,
+                                     char *auxiliary_a, char *auxiliary_b,
+                                     size_t deal_num, size_t actual_num) {
+  float *aux_array[AUX_N];
+  for (size_t i = 0; i < AUX_N; i++) {
+    aux_array[i] = (float *)(auxiliary_a + i * deal_num * sizeof(float));
+  }
+  calcLgamma((float *)nram_input, aux_array[0], aux_array[1], aux_array[2],
+             (float *)nram_output, actual_num);
+}
+
+template <typename T1, typename T2>
+__mlu_func__ void auxFunc3LgammaHalf(size_t &output_input_gap,
+                                     size_t &ping_pong_gap,
+                                     size_t &auxiliary_a_gap,
+                                     size_t &auxiliary_b_gap,
+                                     size_t &span_num_deal, size_t &align_num) {
+  align_num = NFU_ALIGN_SIZE / sizeof(float);
+  // input-ping -- output--ping | input-pong -- ouput-poing | aux....|
+  // 7 buffer
+  span_num_deal = PAD_DOWN(UNARY_NRAM_SIZE / sizeof(float) / 7,
+                           NFU_ALIGN_SIZE / sizeof(float));
+  ping_pong_gap = 2 * span_num_deal * sizeof(float);
+  output_input_gap = span_num_deal * sizeof(float);
+  auxiliary_a_gap = 4 * span_num_deal * sizeof(float);
+  auxiliary_b_gap = 0;
+}
+
+template <typename T1, typename T2>
+__mlu_func__ void computeLgammaHalf(char *nram_output, char *nram_input,
+                                    char *auxiliary_a, char *auxiliary_b,
+                                    size_t deal_num, size_t actual_num) {
+  float *aux_array[AUX_N];
+  for (size_t i = 0; i < AUX_N; i++) {
+    aux_array[i] = (float *)(auxiliary_a + i * deal_num * sizeof(float));
+  }
+
+  __bang_half2float(aux_array[0], (half *)nram_input, actual_num);
+
+  calcLgamma(aux_array[0], (float *)nram_input, aux_array[1], aux_array[2],
+             (float *)nram_output, actual_num);
+
+  __mluop_float2half((half *)nram_output, (float *)nram_output, actual_num);
+}
+
+UNARY_OP_KERNEL_3PIPELINE_IMPLE(Lgamma, Float);
+UNARY_OP_KERNEL_3PIPELINE_WITH_STRIDE_IMPLE(Lgamma, Float);
+
+UNARY_OP_KERNEL_3PIPELINE_IMPLE(Lgamma, Half);
+UNARY_OP_KERNEL_3PIPELINE_WITH_STRIDE_IMPLE(Lgamma, Half);
+
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineLgamma(
+    const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+    const cnrtQueue_t queue, const mluOpDataType_t d_type, const void *x,
+    void *y, const int32_t num) {
+  if (d_type == MLUOP_DTYPE_FLOAT) {
+    KERNEL_CHECK(MLUBlockKernel3StagePipelineLgammaFloat<float, float>
+                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, num););
+  } else {  // d_type == MLUOP_DTYPE_HALF
+    KERNEL_CHECK(MLUBlockKernel3StagePipelineLgammaHalf<half, half>
+                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, num););
+  }
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineWithStrideLgamma(
+    const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+    const cnrtQueue_t queue, const mluOpDataType_t d_type, const void *x,
+    mluop::TensorShape x_shape, void *y, mluop::TensorShape y_shape,
+    size_t element_num) {
+  if (d_type == MLUOP_DTYPE_FLOAT) {
+    KERNEL_CHECK(MLUBlockKernel3StagePipelineLgammaFloat<float, float>
+                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, element_num));
+  } else {
+    KERNEL_CHECK(MLUBlockKernel3StagePipelineLgammaHalf<half, half>
+                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, element_num));
+  }
+  return MLUOP_STATUS_SUCCESS;
+}

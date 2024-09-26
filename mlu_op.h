@@ -14435,6 +14435,62 @@ mluOpExecFFT(mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
+
+// Group:Lgamma
+/*!
+ * @brief Computes the lgamma value for every element of the input tensor \b x
+ * and returns results in \b y.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
+ * queues in the lgamma operation. For detailed information, see
+ * ::mluOpHandle_t.
+ * @param[in] x_desc
+ * The descriptor of the tensor \b x. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] y_desc
+ * The descriptor of the tensor \b y. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] y
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Data Type
+ * - The data type of input tensor and output tensor must be the same.
+ * - The supported data types of input and output tensors are as follows:
+ *   - input tensor: half, float
+ *   - output tensor: half, float
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - The input tensor and output tensor must have the same shape.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - Node.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://pytorch.org/docs/stable/generated/torch.lgamma.html#torch-lgamma
+ */
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpLgamma(mluOpHandle_t handle,
+            const mluOpTensorDescriptor_t x_desc,
+            const void *x,
+            const mluOpTensorDescriptor_t y_desc,
+            void *y);
+
 #if defined(__cplusplus)
 }
 #endif
