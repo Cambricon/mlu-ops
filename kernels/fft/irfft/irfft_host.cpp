@@ -800,8 +800,9 @@ static mluOpStatus_t makeIRFFT1dContiguousInput(mluOpHandle_t handle,
 
     const int in_dim_num = 2;
     int64_t dims[in_dim_num] = {
-        fft_plan->batch,
-        std::min(fft_plan->inembed[0], FFT_HALF(fft_plan->n[0]))};
+        fft_plan->batch, fft_plan->prime ? fft_plan->inembed[0]
+                                         : std::min(fft_plan->inembed[0],
+                                                    FFT_HALF(fft_plan->n[0]))};
     int64_t strides[in_dim_num] = {fft_plan->idist, fft_plan->istride};
     status = mluOpSetTensorDescriptorEx_v2(input_desc, MLUOP_LAYOUT_ARRAY,
                                            fft_plan->input_dtype, in_dim_num,
