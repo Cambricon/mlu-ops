@@ -82,7 +82,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpSgetrf2(mluOpHandle_t handle,
   /* sgetrf参数转换*/
   int m, n, batch = 1;
   mluOpDataType_t dtype = x_desc->dtype;
+  PARAM_CHECK("mluOpSgetrf2", x_desc != NULL);
 
+  PARAM_CHECK("mluOpSgetrf2", x_desc->dim == 2 || x_desc->dim == 3 || x_desc->dim == 4);
+  PARAM_CHECK("mluOpSgetrf2", x_desc->dims[0] > 0);
+  PARAM_CHECK("mluOpSgetrf2", x_desc->dims[1] > 0);
+
+  if (x_desc->dim == 3) {
+    PARAM_CHECK("mluOpSgetrf2", x_desc->dims[2] > 0);
+  }
+  if(x_desc->dim == 4){
+    PARAM_CHECK("mluOpSgetrf2", x_desc->dims[3] > 0);
+  }
+
+  PARAM_CHECK("mluOpSgetrf2",
+              dtype == MLUOP_DTYPE_FLOAT || dtype == MLUOP_DTYPE_COMPLEX_FLOAT);
   if (x_desc->dim == 2) {
     m = x_desc->dims[0];
     n = x_desc->dims[1];

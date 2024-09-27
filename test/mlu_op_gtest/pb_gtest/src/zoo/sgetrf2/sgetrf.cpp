@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include <complex.h>
+// #include <complex.h>
 #include "sgetrf2.h"
 
 namespace mluoptest {
@@ -445,6 +445,8 @@ void Sgetrf2Executor::compute() {
   int *ipiv = ipiv0.get();
   int info;
   int mode = 0;
+  mode = parser_->getProtoNode()->sgetrf2_param().mode();
+  
   for (int b = 0; b < batch; b++) {
     for (int i = 0; i < row; i++) ipiv[i + b * row] = i;
   }
