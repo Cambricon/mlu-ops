@@ -209,10 +209,14 @@ int64_t IndiceConvolutionForwardExecutor::getTheoryIoSize() {
   int64_t num_active_out = features_out_desc_->dims[0];
   int64_t num_filters = indice_pairs_desc_->dims[0];
   int64_t theory_ios = 0;
-  auto features_dwidth = mluop::getSizeOfDataType(features_desc_->dtype);
-  auto filters_dwidth = mluop::getSizeOfDataType(filters_desc_->dtype);
-  auto indice_pairs_dwith = mluop::getSizeOfDataType(indice_pairs_desc_->dtype);
-  auto features_out_dwith = mluop::getSizeOfDataType(features_out_desc_->dtype);
+  size_t features_dwidth, filters_dwidth, indice_pairs_dwith,
+      features_out_dwith;
+  MLUOP_CHECK(mluOpGetSizeOfDataType(features_desc_->dtype, &features_dwidth));
+  MLUOP_CHECK(mluOpGetSizeOfDataType(filters_desc_->dtype, &filters_dwidth));
+  MLUOP_CHECK(
+      mluOpGetSizeOfDataType(indice_pairs_desc_->dtype, &indice_pairs_dwith));
+  MLUOP_CHECK(
+      mluOpGetSizeOfDataType(features_out_desc_->dtype, &features_out_dwith));
 
   auto gather_scatter_ios = [&](const int64_t index, const int64_t num,
                                 const int64_t channel,
