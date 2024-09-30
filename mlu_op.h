@@ -3072,6 +3072,64 @@ mluOpLog(mluOpHandle_t handle,
          const mluOpTensorDescriptor_t y_desc,
          void *y);
 
+// Group: Log
+/*!
+ * @brief Returns a one-dimensional tensor of \b steps points logarithmically
+ * spaced with base \b base between \b base^start and \b base^end.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
+ * queues in the log operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] start
+ * The starting value for the set of points.
+ * @param[in] end
+ * The ending value for the set of points.
+ * @param[in] steps
+ * Number of points to sample between \b start and \b end.
+ * @param[in] base
+ * Base of the logarithm function.
+ * @param[in] res_desc
+ * The descriptor of the tensor \b res. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] res
+ * Pointer to the MLU memory that stores the output tensor \b res.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The supported data types of output tensor are as follows:
+ *   - output tensor: half, float, int32
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - \b base cannot be NAN or infinity.
+ * - \b steps should be greater than or equal to 0.
+ * - \b steps should be less than or equal to the length of the output tensor \b res.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/pytorch/pytorch/blob/v2.1.0/aten/src/ATen/native/cuda/RangeFactories.cu#L123
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpLogspace(mluOpHandle_t handle,
+              const float start,
+              const float end,
+              const int64_t steps,
+              const float base,
+              const mluOpTensorDescriptor_t res_desc,
+              void *res);
+
 // Group: Carafe
 /*!
  * @brief Creates a descriptor pointed by \b carafe_desc for CARAFE upsampling forward and backward operations,
