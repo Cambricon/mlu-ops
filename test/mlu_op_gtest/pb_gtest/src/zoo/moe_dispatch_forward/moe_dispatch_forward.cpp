@@ -113,7 +113,6 @@ int64_t MoeDispatchForwardExecutor::getTheoryOps() {
 }
 
 int64_t MoeDispatchForwardExecutor::getTheoryIoSize() {
-  ;
   size_t gates_dwidth, indices_dwidth, locations_dwidth, input_dwidth,
       dispatch_dwidth;
   MLUOP_CHECK(mluOpGetSizeOfDataType(desc_gates_->dtype, &gates_dwidth));
