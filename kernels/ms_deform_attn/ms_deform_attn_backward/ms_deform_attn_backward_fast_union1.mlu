@@ -330,13 +330,13 @@ __mlu_func__ void backwardStageTwoLoop(
     int32_t all_valid_count = __bang_sum(cond_all_valid, nq_nl_np);
     int32_t* dst_offset = (int32_t*)offset_zero_nram_stg2;
     for (int i = 0; i < 4; i++) {
-      __bang_collect((T*)dst_offset + i * nq_nl_np,
+      __bang_filter((T*)dst_offset + i * nq_nl_np,
                      (T*)offset_nram + i * nq_nl_np, cond_all_valid, nq_nl_np);
     }
     int32_t* src_offset = (int32_t*)inter_grad;
     int32_t* stride_4_2 = dst_offset + 3 * nq_nl_np;
     int32_t* stride_1_2 = dst_offset;
-    __bang_collect((T*)src_offset, (T*)seq_nram, cond_all_valid, nq_nl_np);
+    __bang_filter((T*)src_offset, (T*)seq_nram, cond_all_valid, nq_nl_np);
     __bang_mul_scalar(src_offset, src_offset, channels * sizeof(T), nq_nl_np);
     __bang_sub(stride_4_2, stride_4_2, dst_offset + nq_nl_np, nq_nl_np);
     __bang_sub(stride_1_2, stride_1_2, dst_offset + nq_nl_np, nq_nl_np);
@@ -366,9 +366,9 @@ __mlu_func__ void backwardStageTwoLoop(
       int32_t* tmp_src_offset = (int32_t*)inter_grad;
       int32_t valid_count = __bang_sum(tmp_cond, nq_nl_np);
       if (valid_count > 0) {
-        __bang_collect((T*)tmp_dst_offset, (T*)tmp_dst_offset, tmp_cond,
+        __bang_filter((T*)tmp_dst_offset, (T*)tmp_dst_offset, tmp_cond,
                        nq_nl_np);
-        __bang_collect((T*)tmp_src_offset, (T*)seq_nram, tmp_cond, nq_nl_np);
+        __bang_filter((T*)tmp_src_offset, (T*)seq_nram, tmp_cond, nq_nl_np);
         __bang_mul_scalar(tmp_src_offset, tmp_src_offset, channels * sizeof(T),
                           valid_count);
         for (int p = 0; p < valid_count; p++) {
