@@ -219,7 +219,7 @@ __mlu_func__ void ballQueryWorkflow(
                              min_radius2, max_radius2);
           }
 
-          __bang_select((float *)out3, (float *)vec_index, (float *)vec_sub_z1,
+          __bang_filter((float *)out3, (float *)vec_index, (float *)vec_sub_z1,
                         num_deal_xyz);
           uint32_t selected_num = ((uint32_t *)out3)[0];
 
