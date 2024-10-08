@@ -62,14 +62,13 @@ __mlu_func__ void convertFloat2Int(int32_t *dst, float *dst_addtion,
                                    const void *src_origin,
                                    const float *src_addtion,
                                    const uint32_t elem_count,
-                                   const uint32_t offset,
-                                   const uint32_t start_index) {
+                                   const uint32_t offset) {
   if (elem_count == 0) return;
 #if __BANG_ARCH__ >= 322
-  int32_t *src = (int32_t *)src_origin + start_index;
+  int32_t *src = (int32_t *)src_origin;
   __bang_add_scalar((int32_t *)dst, (int32_t *)src, offset, elem_count);
 #else
-  float *src = (float *)src_origin + start_index;
+  float *src = (float *)src_origin;
   __bang_add_scalar((float *)src, (float *)src, (float)(offset),
                     CEIL_ALIGN(elem_count, ALIGN_NUM));
   __mluop_float2int32((int32_t *)dst, (float *)dst_addtion, (float *)src,
@@ -131,7 +130,7 @@ __mlu_func__ void ballQueryWorkflow(
   uint32_t num_loop_xyz = n / num_stride;
   const uint32_t rem_num_xyz = n % num_stride;
   num_loop_xyz = rem_num_xyz > 0 ? num_loop_xyz + 1 : num_loop_xyz;
-  uint32_t start_index = NFU_ALIGN_SIZE / sizeof(float);
+
   uint32_t index_start = 0, cur_batch_id = 0;
   uint32_t same_batch_s = 0, same_batch_e = 0;
 #if __BANG_ARCH__ < 322
@@ -219,14 +218,14 @@ __mlu_func__ void ballQueryWorkflow(
                              min_radius2, max_radius2);
           }
 
-          __bang_filter((float *)out3, (float *)vec_index, (float *)vec_sub_z1,
-                        num_deal_xyz);
-          uint32_t selected_num = ((uint32_t *)out3)[0];
+          uint32_t selected_num =
+              __bang_filter((float *)out3, (float *)vec_index,
+                            (float *)vec_sub_z1, num_deal_xyz);
 
           if (selected_num > 0) {
             convertFloat2Int<T>((int32_t *)vec_sub_z1, (float *)out1, out3,
                                 (float *)src_addtion, selected_num,
-                                index_xyz_same_batch, start_index);
+                                index_xyz_same_batch);
             int32_t *in_ball_idx = (int32_t *)vec_sub_z1;
             uint32_t gdram_offset = index_new_xyz * nsample + k * nsample;
             if (vec_idx_num[k] == 0) {

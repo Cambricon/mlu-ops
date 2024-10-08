@@ -132,9 +132,8 @@ __mlu_func__ void computeStoreRoipointPool3d(
 
   // __bang_filter returns selected elements vector and the number of selected
   // elements
-  __bang_filter((T *)auxiliary_b, (T *)points_x, (T *)pts_assign,
-                span_num_deal);
-  uint32_t select_num = *((uint32_t *)auxiliary_b);
+  uint32_t select_num = __bang_filter((T *)auxiliary_b, (T *)points_x,
+                                      (T *)pts_assign, span_num_deal);
 
   if (select_num == 0) {
     return;
@@ -147,15 +146,14 @@ __mlu_func__ void computeStoreRoipointPool3d(
   // The first 4-byte is the number of selected element, whose data type is
   // unsigned int. The next 124-byte is zero. The rest bytes are the selected
   // elements.
-  int select_num_size = 128;
   __memcpy(pooled_features_gdram + (box_idx * sampled_pts_num + *cnt) *
                                        (3 + feature_in_len) * sizeof(T),
-           (T *)((int8_t *)auxiliary_b + select_num_size), sizeof(T),
-           NRAM2GDRAM, (3 + feature_in_len) * sizeof(T), sizeof(T), segnum);
+           (T *)auxiliary_b, sizeof(T), NRAM2GDRAM,
+           (3 + feature_in_len) * sizeof(T), sizeof(T), segnum);
 
   // copy y to pooled_features_gdram
   __bang_filter((T *)auxiliary_d, (T *)points_y, (T *)pts_assign,
-                 span_num_deal);
+                span_num_deal);
   __memcpy(pooled_features_gdram +
                (box_idx * sampled_pts_num + *cnt) * (3 + feature_in_len) *
                    sizeof(T) +
@@ -165,7 +163,7 @@ __mlu_func__ void computeStoreRoipointPool3d(
 
   // copy z to pooled_features_gdram
   __bang_filter((T *)auxiliary_e, (T *)points_z, (T *)pts_assign,
-                 span_num_deal);
+                span_num_deal);
   __memcpy(pooled_features_gdram +
                (box_idx * sampled_pts_num + *cnt) * (3 + feature_in_len) *
                    sizeof(T) +
@@ -178,7 +176,7 @@ __mlu_func__ void computeStoreRoipointPool3d(
     __memcpy(auxiliary_d, point_features + c_idx * pts_num * sizeof(T),
              span_num_deal * sizeof(T), GDRAM2NRAM);
     __bang_filter((T *)auxiliary_e, (T *)auxiliary_d, (T *)pts_assign,
-                   span_num_deal);
+                  span_num_deal);
     __memcpy(pooled_features_gdram +
                  (box_idx * sampled_pts_num + *cnt) * (3 + feature_in_len) *
                      sizeof(T) +
@@ -214,9 +212,8 @@ __mlu_func__ void computeStoreLastBlockRoipointPool3d(
 
   // __bang_filter returns selected elements vector and the number of selected
   // elements
-  __bang_filter((T *)auxiliary_b, (T *)points_x, (T *)pts_assign,
-                span_num_deal);
-  uint32_t select_num = *((uint32_t *)auxiliary_b);
+  uint32_t select_num = __bang_filter((T *)auxiliary_b, (T *)points_x,
+                                      (T *)pts_assign, span_num_deal);
 
   if (*cnt + select_num == 0) {
     // pooled_empty_flag_gdram set 1
@@ -257,15 +254,14 @@ __mlu_func__ void computeStoreLastBlockRoipointPool3d(
     // The first 4-byte is the number of selected element, whose data type is
     // unsigned int. The next 124-byte is zero. The rest bytes are the selected
     // elements.
-    int select_num_size = 128;
     __memcpy(pooled_features_gdram + (box_idx * sampled_pts_num + *cnt) *
                                          (3 + feature_in_len) * sizeof(T),
-             (T *)((int8_t *)auxiliary_b + select_num_size), sizeof(T),
-             NRAM2GDRAM, (3 + feature_in_len) * sizeof(T), sizeof(T), segnum);
+             (T *)auxiliary_b, sizeof(T), NRAM2GDRAM,
+             (3 + feature_in_len) * sizeof(T), sizeof(T), segnum);
 
     // copy y to pooled_features_gdram
     __bang_filter((T *)auxiliary_d, (T *)points_y, (T *)pts_assign,
-                   span_num_deal);
+                  span_num_deal);
     __memcpy(pooled_features_gdram +
                  (box_idx * sampled_pts_num + *cnt) * (3 + feature_in_len) *
                      sizeof(T) +
@@ -275,7 +271,7 @@ __mlu_func__ void computeStoreLastBlockRoipointPool3d(
 
     // copy z to pooled_features_gdram
     __bang_filter((T *)auxiliary_e, (T *)points_z, (T *)pts_assign,
-                   span_num_deal);
+                  span_num_deal);
     __memcpy(pooled_features_gdram +
                  (box_idx * sampled_pts_num + *cnt) * (3 + feature_in_len) *
                      sizeof(T) +
@@ -288,7 +284,7 @@ __mlu_func__ void computeStoreLastBlockRoipointPool3d(
       __memcpy(auxiliary_d, point_features + c_idx * pts_num * sizeof(T),
                span_num_deal * sizeof(T), GDRAM2NRAM);
       __bang_filter((T *)auxiliary_e, (T *)auxiliary_d, (T *)pts_assign,
-                     span_num_deal);
+                    span_num_deal);
       __memcpy(pooled_features_gdram +
                    (box_idx * sampled_pts_num + *cnt) * (3 + feature_in_len) *
                        sizeof(T) +
