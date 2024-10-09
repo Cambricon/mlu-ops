@@ -370,8 +370,8 @@ __mlu_func__ void nms_detection(
                       (float *)temp10_ram, (float *)temp1_ram,
                       (float *)temp2_ram, /*mode=*/0, seg_len);
       __bang_float2int32((int32_t *)temp9_ram, (float *)temp9_ram, seg_len, 0);
-      __bang_lut_s32((int32_t *)temp9_ram, (int32_t *)temp9_ram,
-                     (int32_t *)table_float, seg_len, TABLE_LENGTH);
+      __bang_lut((int32_t *)temp9_ram, (uint32_t *)temp9_ram,
+                 (int32_t *)table_float, seg_len, TABLE_LENGTH);
       __bang_band((char *)temp2_ram, (char *)temp2_ram, (char *)temp9_ram,
                   seg_len * sizeof(float));
       // temp1: 1 = area_I / area_U > iou_threshold, 0 = else

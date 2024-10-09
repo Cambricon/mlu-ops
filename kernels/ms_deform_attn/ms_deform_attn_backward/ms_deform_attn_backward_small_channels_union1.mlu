@@ -378,8 +378,8 @@ void __mlu_func__ loadValue(
   __nram__ int32_t table[64] = {0, (int32_t)0xffffffff};
   __bang_float2int32((int32_t *)grad_temp3, grad_temp3,
                      num_deal_grid * deal_num_real, 0);
-  __bang_lut_s32((int32_t *)grad_temp3, (int32_t *)grad_temp3, (int32_t *)table,
-                 num_deal_grid * deal_num_real, 64);
+  __bang_lut((int32_t *)grad_temp3, (uint32_t *)grad_temp3, (int32_t *)table,
+             num_deal_grid * deal_num_real, 64);
   __bang_write_zero(grad_temp1, deal_num_real * num_deal_grid);
   __bang_cycle_add(grad_temp1, grad_temp1, mask1, deal_num_real * num_deal_grid,
                    num_deal_grid);
@@ -392,8 +392,8 @@ void __mlu_func__ loadValue(
 
   __bang_float2int32((int32_t *)grad_temp3, grad_temp3,
                      num_deal_grid * deal_num_real, 0);
-  __bang_lut_s32((int32_t *)grad_temp3, (int32_t *)grad_temp3, (int32_t *)table,
-                 num_deal_grid * deal_num_real, 64);
+  __bang_lut((int32_t *)grad_temp3, (uint32_t *)grad_temp3, (int32_t *)table,
+             num_deal_grid * deal_num_real, 64);
   __bang_band((char *)nram_grad_output_tr, (char *)nram_grad_output_tr,
               (char *)grad_temp3,
               num_deal_grid * deal_num_real * sizeof(float));
@@ -405,8 +405,8 @@ void __mlu_func__ loadValue(
 
   __bang_float2int32((int32_t *)grad_temp3, grad_temp3,
                      num_deal_grid * deal_num_real, 0);
-  __bang_lut_s32((int32_t *)grad_temp3, (int32_t *)grad_temp3, (int32_t *)table,
-                 num_deal_grid * deal_num_real, 64);
+  __bang_lut((int32_t *)grad_temp3, (uint32_t *)grad_temp3, (int32_t *)table,
+             num_deal_grid * deal_num_real, 64);
   __bang_band((char *)nram_grad_output_bl, (char *)nram_grad_output_bl,
               (char *)grad_temp3,
               num_deal_grid * deal_num_real * sizeof(float));
@@ -418,8 +418,8 @@ void __mlu_func__ loadValue(
 
   __bang_float2int32((int32_t *)grad_temp3, grad_temp3,
                      num_deal_grid * deal_num_real, 0);
-  __bang_lut_s32((int32_t *)grad_temp3, (int32_t *)grad_temp3, (int32_t *)table,
-                 num_deal_grid * deal_num_real, 64);
+  __bang_lut((int32_t *)grad_temp3, (uint32_t *)grad_temp3, (int32_t *)table,
+             num_deal_grid * deal_num_real, 64);
   __bang_band((char *)nram_grad_output_br, (char *)nram_grad_output_br,
               (char *)grad_temp3,
               num_deal_grid * deal_num_real * sizeof(float));
@@ -690,8 +690,8 @@ void __mlu_func__ computeGradAttnWeight(
   __bang_float2int32((int32_t *)nram_h_high_temp, nram_h_high_temp,
                      num_deal_grid, 0);
   __nram__ int32_t table[64] = {0, (int32_t)0xffffffff};
-  __bang_lut_s32((int32_t *)nram_h_high_temp, (int32_t *)nram_h_high_temp,
-                 (int32_t *)table, num_deal_grid, 64);
+  __bang_lut((int32_t *)nram_h_high_temp, (uint32_t *)nram_h_high_temp,
+             (int32_t *)table, num_deal_grid, 64);
   __bang_band((char *)nram_grad_output_tr, (char *)nram_grad_output_tr,
               (char *)nram_h_high_temp, num_deal_grid * sizeof(float));
   __bang_atomic_reduce_add((float *)grad_attn_weight + grid_offset,
@@ -746,8 +746,8 @@ void __mlu_func__ computeGradSampingLoc(
                              ALIGN_NUM);
 
   __nram__ int32_t table[64] = {0, (int32_t)0xffffffff};
-  __bang_lut_s32((int32_t *)nram_h_high_temp, (int32_t *)nram_h_high_temp,
-                 (int32_t *)table, num_deal_grid, 64);
+  __bang_lut((int32_t *)nram_h_high_temp, (uint32_t *)nram_h_high_temp,
+             (int32_t *)table, num_deal_grid, 64);
   __bang_band((char *)grad_h_weight, (char *)grad_h_weight,
               (char *)nram_h_high_temp, num_deal_grid * sizeof(float));
 
@@ -769,8 +769,8 @@ void __mlu_func__ computeGradSampingLoc(
                  num_deal_grid * deal_num_real * sizeof(float), NRAM2NRAM);
   __mluop_recursive_sum_pool(grad_w_weight, num_deal_grid, deal_num_real,
                              ALIGN_NUM);
-  __bang_lut_s32((int32_t *)nram_h_high_temp, (int32_t *)nram_h_high_temp,
-                 (int32_t *)table, num_deal_grid, 64);
+  __bang_lut((int32_t *)nram_h_high_temp, (uint32_t *)nram_h_high_temp,
+             (int32_t *)table, num_deal_grid, 64);
   __bang_band((char *)grad_w_weight, (char *)grad_w_weight,
               (char *)nram_h_high_temp, num_deal_grid * sizeof(float));
 
