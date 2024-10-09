@@ -177,15 +177,17 @@ __mlu_func__ void computeImpl(T *nram_grad_output, const T *grad_output,
                 deal_num_align);  // NOLINT
       if (__mluop_is_float<T>()) {
         __nram__ int32_t table[COMPUTE_COUNT_ALIGN] = {0, (int32_t)0xffffffff};
-        __bang_lut_s32((int32_t *)nram_argmax_idx, (int32_t *)nram_argmax_idx,
-                       table, deal_num_align, COMPUTE_COUNT_ALIGN);  // NOLINT
+        __bang_lut((int32_t *)nram_argmax_idx, (uint32_t *)nram_argmax_idx,
+                   table, (uint32_t)deal_num_align,
+                   COMPUTE_COUNT_ALIGN);  // NOLINT
       } else {
         __nram__ int16_t table[COMPUTE_COUNT_ALIGN] = {0, (int16_t)0xffff};
         __bang_int322int16((int16_t *)nram_argmax_idx,
                            (int32_t *)nram_argmax_idx, deal_num_align, 0,
                            0);  // NOLINT
-        __bang_lut_s16((int16_t *)nram_argmax_idx, (int16_t *)nram_argmax_idx,
-                       table, deal_num_align, COMPUTE_COUNT_ALIGN);  // NOLINT
+        __bang_lut((int16_t *)nram_argmax_idx, (uint16_t *)nram_argmax_idx,
+                   table, (uint32_t)deal_num_align,
+                   COMPUTE_COUNT_ALIGN);  // NOLINT
       }
 
       // load grad_output, and calculate grad_input
