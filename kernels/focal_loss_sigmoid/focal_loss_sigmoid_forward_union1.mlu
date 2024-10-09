@@ -160,7 +160,7 @@ __mlu_func__ void compute(const focalLossSigmoidPreference_t prefer,
     if (gamma == float(0.0)) {
       __bang_write_value(compute_a, deal_num, (float)1.0);
     } else {
-      __bang_log(compute_a, compute_b, deal_num);
+      __bang_log2(compute_a, compute_b, deal_num);
       __bang_mul_scalar(compute_a, compute_a, (float)gamma, deal_num);
       __bang_pow2(compute_a, compute_a, deal_num);
     }
@@ -200,7 +200,7 @@ __mlu_func__ void compute(const focalLossSigmoidPreference_t prefer,
     if (gamma == float(0.0)) {
       __bang_write_value(compute_a, deal_num, (float)1.0);
     } else {
-      __bang_log(compute_a, compute_b, deal_num);
+      __bang_log2(compute_a, compute_b, deal_num);
       __bang_mul_scalar(compute_a, compute_a, (float)gamma, deal_num);
       __bang_pow2(compute_a, compute_a, deal_num);
     }

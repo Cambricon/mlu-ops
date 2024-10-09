@@ -157,11 +157,11 @@ __mlu_func__ void compute(T *nram_x, T *nram_y, T *nram_w, T *nram_h,
     } else if ((T)iou_aware_factor == (T)1.0) {
       __bang_write_value(nram_conf_p, deal_num, (T)1.0);
     } else {
-      __bang_log(nram_iou_p, nram_iou_p, deal_num);
+      __bang_log2(nram_iou_p, nram_iou_p, deal_num);
       __bang_mul_scalar(nram_iou_p, nram_iou_p, (T)iou_aware_factor, deal_num);
       __bang_pow2(nram_iou_p, nram_iou_p, deal_num);
 
-      __bang_log(nram_conf_p, nram_conf_p, deal_num);
+      __bang_log2(nram_conf_p, nram_conf_p, deal_num);
       __bang_mul_scalar(nram_conf_p, nram_conf_p, (T)1.0 - (T)iou_aware_factor,
                         deal_num);
       __bang_pow2(nram_conf_p, nram_conf_p, deal_num);
@@ -1154,11 +1154,11 @@ __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
     } else if ((T)iou_aware_factor == (T)1.0) {
       __bang_write_value(nram_conf_p, deal_num, (T)1.0);
     } else {
-      __bang_log(nram_iou_p, nram_iou_p, deal_num);
+      __bang_log2(nram_iou_p, nram_iou_p, deal_num);
       __bang_mul_scalar(nram_iou_p, nram_iou_p, (T)iou_aware_factor, deal_num);
       __bang_pow2(nram_iou_p, nram_iou_p, deal_num);
 
-      __bang_log(nram_conf_p, nram_conf_p, deal_num);
+      __bang_log2(nram_conf_p, nram_conf_p, deal_num);
       __bang_mul_scalar(nram_conf_p, nram_conf_p, (T)1.0 - (T)iou_aware_factor,
                         deal_num);
       __bang_pow2(nram_conf_p, nram_conf_p, deal_num);
