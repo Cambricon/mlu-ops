@@ -2700,6 +2700,122 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
   return MLUOP_STATUS_SUCCESS;
 }
 
+mluOpStatus_t destroyRFFT1dReserveArea(mluOpFFTPlan_t fft_plan,
+                                       const std::string api) {
+  VLOG(5) << "setRFFT1dReserveArea";
+  mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
+  if (!fft_plan->prime) {
+    CNRT_CHECK(cnrtFreeHost(fft_plan->factors));
+    CNRT_CHECK(cnrtFreeHost(fft_plan->twiddles));
+    CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix));
+  }
+  return status;
+}
+
+mluOpStatus_t destroyIRFFT1dReserveArea(mluOpFFTPlan_t fft_plan,
+                                        const std::string api) {
+  mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
+  if (!fft_plan->prime) {
+    CNRT_CHECK(cnrtFreeHost(fft_plan->factors));
+    CNRT_CHECK(cnrtFreeHost(fft_plan->twiddles));
+    CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix));
+  }
+  return status;
+}
+
+mluOpStatus_t destroyFFT1dReserveArea(mluOpFFTPlan_t fft_plan,
+                                      const std::string api) {
+  mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
+  if (!fft_plan->prime) {
+    CNRT_CHECK(cnrtFreeHost(fft_plan->factors));
+    CNRT_CHECK(cnrtFreeHost(fft_plan->twiddles));
+    CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix));
+    CNRT_CHECK(cnrtFreeHost(fft_plan->twiddles_inv));
+    CNRT_CHECK(cnrtFreeHost(fft_plan->idft_matrix));
+  }
+  return status;
+}
+
+mluOpStatus_t destroyFFT2dReserveArea(mluOpFFTPlan_t fft_plan,
+                                      const std::string api) {
+  mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
+
+  const std::string make_plan_api = "[setFFT2dReserveArea]";
+
+  size_t CPX_TYPE_SIZE = 0;
+
+  switch (fft_plan->fft_type) {
+    case CNFFT_HALF2COMPLEX_HALF:
+    case CNFFT_COMPLEX_HALF2HALF:
+    case CNFFT_COMPLEX_HALF2COMPLEX_HALF: {
+      CPX_TYPE_SIZE = 2 * 2;
+    } break;
+    case CNFFT_FLOAT2COMPLEX_FLOAT:
+    case CNFFT_COMPLEX_FLOAT2FLOAT:
+    case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
+      CPX_TYPE_SIZE = 4 * 2;
+    }; break;
+    default: {
+      LOG(ERROR) << make_plan_api << ": invalid 2d fft type.";
+      status = MLUOP_STATUS_NOT_SUPPORTED;
+      return status;
+    }
+  }
+
+  if (fft_plan->fft_strategy == CNFFT_FUNC_TWO_LEVEL_STOCKHAM) {
+    CNRT_CHECK(cnrtFreeHost(fft_plan->factors));
+    CNRT_CHECK(cnrtFreeHost(fft_plan->factors_2d));
+    CNRT_CHECK(cnrtFreeHost(fft_plan->twiddles));
+    CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix));
+    if (fft_plan->fft_type == CNFFT_HALF2COMPLEX_HALF ||
+        fft_plan->fft_type == CNFFT_FLOAT2COMPLEX_FLOAT) {
+      CNRT_CHECK(cnrtFreeHost(fft_plan->twiddles_2d));
+      CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix_2d));
+    } else if (fft_plan->fft_type == CNFFT_COMPLEX_HALF2HALF ||
+               fft_plan->fft_type == CNFFT_COMPLEX_FLOAT2FLOAT) {
+      CNRT_CHECK(cnrtFreeHost(fft_plan->twiddles_inv_2d));
+      CNRT_CHECK(cnrtFreeHost(fft_plan->idft_matrix_2d));
+    } else {
+      CNRT_CHECK(cnrtFreeHost(fft_plan->twiddles_2d));
+      CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix_2d));
+      CNRT_CHECK(cnrtFreeHost(fft_plan->twiddles_inv_2d));
+      CNRT_CHECK(cnrtFreeHost(fft_plan->twiddles_inv));
+      CNRT_CHECK(cnrtFreeHost(fft_plan->idft_matrix_2d));
+      CNRT_CHECK(cnrtFreeHost(fft_plan->idft_matrix));
+    }
+
+  } else if (fft_plan->fft_strategy == CNFFT_FUNC_MANY_DIST1_2D) {
+    switch (fft_plan->fft_type) {
+      case CNFFT_HALF2COMPLEX_HALF:
+      case CNFFT_FLOAT2COMPLEX_FLOAT: {
+        // R2C
+        CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix));
+        CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix_2d));
+      } break;
+      case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
+      case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
+        // C2C
+        CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix));
+        CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix_2d));
+        CNRT_CHECK(cnrtFreeHost(fft_plan->idft_matrix));
+        CNRT_CHECK(cnrtFreeHost(fft_plan->idft_matrix_2d));
+      }; break;
+      case CNFFT_COMPLEX_HALF2HALF:
+      case CNFFT_COMPLEX_FLOAT2FLOAT: {
+        // C2R
+        CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix));
+        CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix_2d));
+      }; break;
+      default: {
+        LOG(ERROR) << make_plan_api << ": invalid 2d fft type.";
+        status = MLUOP_STATUS_NOT_SUPPORTED;
+        return status;
+      }
+    }
+  }
+  return status;
+}
+
 mluOpStatus_t MLUOP_WIN_API mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan) {
   const std::string destroy_api = "[mluOpDestroyFFTPlan]";
   PARAM_CHECK_NE("[mluOpDestroyFFTPlan]", fft_plan, NULL);
@@ -2713,9 +2829,39 @@ mluOpStatus_t MLUOP_WIN_API mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan) {
                    mluOpDestroyTensorDescriptor(fft_plan->output_desc) ==
                        MLUOP_STATUS_SUCCESS);
   }
+  mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
+  switch (fft_plan->fft_type) {
+    // r2c
+    case CNFFT_HALF2COMPLEX_HALF:
+    case CNFFT_FLOAT2COMPLEX_FLOAT: {
+      if (fft_plan->rank == 1) {
+        status = destroyRFFT1dReserveArea(fft_plan, destroy_api);
+      } else if (fft_plan->rank == 2) {
+        status = destroyFFT2dReserveArea(fft_plan, destroy_api);
+      }
+    }; break;
+    // c2c
+    case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
+    case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
+      if (fft_plan->rank == 1) {
+        status = destroyFFT1dReserveArea(fft_plan, destroy_api);
+      } else if (fft_plan->rank == 2) {
+        status = destroyFFT2dReserveArea(fft_plan, destroy_api);
+      }
+    }; break;
+    // c2r
+    case CNFFT_COMPLEX_HALF2HALF:
+    case CNFFT_COMPLEX_FLOAT2FLOAT: {
+      if (fft_plan->rank == 1) {
+        status = destroyIRFFT1dReserveArea(fft_plan, destroy_api);
+      } else if (fft_plan->rank == 2) {
+        status = destroyFFT2dReserveArea(fft_plan, destroy_api);
+      }
+    }; break;
+  }
 
   delete fft_plan;
-  return MLUOP_STATUS_SUCCESS;
+  return status;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpSetFFTReserveArea(mluOpHandle_t handle,
