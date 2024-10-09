@@ -54,7 +54,7 @@ __mlu_func__ uint32_t getIndice(float *ret) {
 template <typename T>
 __mlu_func__ void auxArgmin(T *nram_dst, T *nram_src, const int num_deal,
                             T *value, int *index) {
-  __bang_min(nram_dst, nram_src, num_deal);
+  __bang_argmin(nram_dst, nram_src, num_deal);
   *value = nram_dst[0];
   __bang_write_value(nram_dst, num_deal, *value);
   __bang_eq(nram_dst, nram_src, nram_dst, num_deal);
