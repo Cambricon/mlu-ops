@@ -99,11 +99,9 @@
       __asm__ volatile("sync;");                                              \
     }                                                                         \
     for (int32_t i = 0; i < repeat - 2; ++i) {                                \
-      pvLock();                                                               \
       __memcpy_async(output_start + i * span_store_size,                      \
                      ping_output + (i % 2) * ping_pong_gap, span_store_size,  \
                      NRAM2GDRAM);                                             \
-      pvUnlock();                                                             \
       __memcpy_async(ping_input1 + (i % 2) * ping_pong_gap,                   \
                      input1_start + (i + 2) * span_load_input1_size,          \
                      span_load_input1_size, GDRAM2NRAM);                      \
@@ -118,11 +116,9 @@
       __asm__ volatile("sync;");                                              \
     }                                                                         \
     if (repeat > 1) {                                                         \
-      pvLock();                                                               \
       __memcpy_async(output_start + (repeat - 2) * span_store_size,           \
                      ping_output + ((repeat - 2) % 2) * ping_pong_gap,        \
                      span_store_size, NRAM2GDRAM);                            \
-      pvUnlock();                                                             \
     }                                                                         \
     if (rem > 0) {                                                            \
       __memcpy_async(ping_input1 + (repeat % 2) * ping_pong_gap,              \
@@ -141,11 +137,9 @@
     }                                                                         \
     __asm__ volatile("sync;");                                                \
     if (repeat > 0) {                                                         \
-      pvLock();                                                               \
       __memcpy_async(output_start + (repeat - 1) * span_store_size,           \
                      ping_output + ((repeat - 1) % 2) * ping_pong_gap,        \
                      span_store_size, NRAM2GDRAM);                            \
-      pvUnlock();                                                             \
     }                                                                         \
     if (rem > 0) {                                                            \
       compute##Op##Prefer<DType_in1, DType_in2, DType_out>(                   \
@@ -154,11 +148,9 @@
           ping_input2 + (repeat % 2) * ping_pong_gap, auxiliary_a,            \
           auxiliary_b, auxiliary_c, align_rem, rem, args...);                 \
       __asm__ volatile("sync;");                                              \
-      pvLock();                                                               \
       __memcpy_async(output_start + repeat * span_store_size,                 \
                      ping_output + (repeat % 2) * ping_pong_gap,              \
                      rem * sizeof(DType_out), NRAM2GDRAM);                    \
-      pvUnlock();                                                             \
     }                                                                         \
   }
 

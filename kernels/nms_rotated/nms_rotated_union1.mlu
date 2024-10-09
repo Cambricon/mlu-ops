@@ -206,10 +206,8 @@ __mlu_func__ void nms_detection(
 
     if (nram_save_count == nram_save_limit_count) {
       if (taskId == 0) {
-        pvLock();
         __memcpy(output_data, nram_save, nram_save_count * sizeof(OUT_DT),
                  NRAM2GDRAM);
-        pvUnlock();
       }
       output_data += nram_save_count;
       nram_save_count = 0;
@@ -409,18 +407,14 @@ __mlu_func__ void nms_detection(
       __bang_minequal((IN_DT *)score, (IN_DT *)score, (IN_DT *)temp1_ram,
                       seg_len);
 
-      pvLock();
       __memcpy(input_data_score + input_offset + i * max_seg_iou_pad, score,
                cpy_len * sizeof(IN_DT), scores_store_dir,
                cpy_len * sizeof(IN_DT), cpy_len * sizeof(IN_DT), 0);
-      pvUnlock();
     }
   }
   if (clusterId == 0 && coreId == 0 && nram_save_count) {
-    pvLock();
     __memcpy(output_data, nram_save, nram_save_count * sizeof(OUT_DT),
              NRAM2GDRAM);
-    pvUnlock();
   }
 }
 

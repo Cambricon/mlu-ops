@@ -507,22 +507,6 @@ __mlu_func__ void __mluop_float2int32(int32_t *dst, float *dst_addition,
 #endif
 }
 
-__mlu_func__ void pvLock() {
-#if __BANG_ARCH__ == 270
-  if (__is_ipu()) {
-    __bang_lock(0, 0);
-  }
-#endif
-}
-
-__mlu_func__ void pvUnlock() {
-#if __BANG_ARCH__ == 270
-  if (__is_ipu()) {
-    __bang_unlock(0, 0);
-  }
-#endif
-}
-
 /******************************************************************************
  * MLUOPS FUNC: __mluop_load_str_2D
  * param 'size' is the getC size.
