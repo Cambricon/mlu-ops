@@ -257,14 +257,14 @@ __mlu_func__ void __mluop_log(T *nram_dst, T *nram_src, void *nram_addition,
   if (sizeof(T) == sizeof(float)) {
     int x2d = 0x3f317217;
     float rlog2e = *(float *)&x2d;
-    __bang_log((float *)nram_dst, (float *)nram_src, deal_num);
+    __bang_log2((float *)nram_dst, (float *)nram_src, deal_num);
     __bang_mul_scalar((float *)nram_dst, (float *)nram_dst, (float)rlog2e,
                       deal_num);
   } else if (sizeof(T) == sizeof(half)) {
     int x2d = 0x3f317217;
     float rlog2e = *(float *)&x2d;
     __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
-    __bang_log((float *)nram_addition, (float *)nram_addition, deal_num);
+    __bang_log2((float *)nram_addition, (float *)nram_addition, deal_num);
     __mluop_float2half((half *)nram_dst, (float *)nram_addition, deal_num);
     __bang_mul_scalar((half *)nram_dst, (half *)nram_dst, (half)rlog2e,
                       deal_num);

@@ -59,7 +59,7 @@ __mlu_func__ void computeLogFloat(char *nram_output, char *nram_input,
                                   char *auxiliary_a, char *auxiliary_b,
                                   size_t deal_num, size_t actual_num,
                                   float coef) {
-  __bang_log((float *)nram_output, (float *)nram_input, actual_num);
+  __bang_log2((float *)nram_output, (float *)nram_input, actual_num);
   __bang_mul_scalar((float *)nram_output, (float *)nram_output, (float)coef,
                     deal_num);
 }
@@ -86,7 +86,7 @@ __mlu_func__ void computeLogHalf(char *nram_output, char *nram_input,
                                  size_t deal_num, size_t actual_num,
                                  float coef) {
   __bang_half2float((float *)nram_output, (half *)nram_input, deal_num);
-  __bang_log((float *)nram_output, (float *)nram_output, actual_num);
+  __bang_log2((float *)nram_output, (float *)nram_output, actual_num);
   __bang_mul_scalar((float *)nram_output, (float *)nram_output, coef, deal_num);
   __mluop_float2half((half *)nram_output, (float *)nram_output, deal_num);
 }
