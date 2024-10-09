@@ -82,11 +82,9 @@
       __asm__ volatile("sync;");                                               \
     }                                                                          \
     for (int i = 0; i < repeat - 2; i++) {                                     \
-      pvLock();                                                                \
       __memcpy_async(output_start + i * span_store_size,                       \
                      ping_output + (i % 2) * ping_pong_gap, span_store_size,   \
                      NRAM2GDRAM);                                              \
-      pvUnlock();                                                              \
       __memcpy_async(ping_input + (i % 2) * ping_pong_gap,                     \
                      input_start + (i + 2) * span_load_size, span_load_size,   \
                      GDRAM2NRAM);                                              \

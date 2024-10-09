@@ -70,20 +70,16 @@
       compute##Op##Prefer<DType_in, DType_out>(output, input, auxiliary_a,   \
                                                auxiliary_b, span_num_deal,   \
                                                span_num_deal, args...);      \
-      pvLock();                                                              \
       __memcpy(output_start + i * span_store_size, output, span_store_size,  \
                NRAM2GDRAM);                                                  \
-      pvUnlock();                                                            \
     }                                                                        \
     if (rem > 0) {                                                           \
       __memcpy(input, input_start + repeat * span_load_size,                 \
                rem * sizeof(DType_in), GDRAM2NRAM);                          \
       compute##Op##Prefer<DType_in, DType_out>(                              \
           output, input, auxiliary_a, auxiliary_b, align_rem, rem, args...); \
-      pvLock();                                                              \
       __memcpy(output_start + repeat * span_store_size, output,              \
                rem * sizeof(DType_out), NRAM2GDRAM);                         \
-      pvUnlock();                                                            \
     }                                                                        \
   }
 
