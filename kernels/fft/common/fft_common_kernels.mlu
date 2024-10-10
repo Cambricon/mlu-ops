@@ -78,21 +78,13 @@ __mlu_func__ void __mluop_mod(T *src_addr, T *temp_addr, T n, int len) {
  */
 __mlu_func__ void genSinCosVec(float *src_addr, float *sin_addr,
                                float *cos_addr, int deal_size) {
-#if __BANG_ARCH__ >= 372
   __bang_sin(sin_addr, src_addr, deal_size);
   __bang_cos(cos_addr, src_addr, deal_size);
-#else
-  for (int i = 0; i < deal_size; i++) {
-    sin_addr[i] = sinf(src_addr[i]);
-    cos_addr[i] = cosf(src_addr[i]);
-  }
-#endif
 }
 
 /*
   generate select offset vector function:
   bang_arch >= 372, for gather inst offset, should mul sizeof(float)
-  bang_arch < 372, for scalar select offset
   [input] offset_addr: offset data in float32
   [input] deal_size: offset data number(don't need align)
   [output] offset_int_addr: offset data in int32
@@ -107,7 +99,6 @@ __mlu_func__ void genSelectOffsetVec(float *offset_addr,
 /*
   select data function:
   bang_arch >= 372, use gather inst, offset should mul sizeof(float)
-  bang_arch < 372, use for and  scalar select inst
   [input] src_addr: input data to be selected
   [input] offset_int_addr: offset data to select data in int32
   [input] deal_size: offset data number(don't need align)

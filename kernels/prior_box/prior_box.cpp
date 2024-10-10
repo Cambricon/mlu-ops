@@ -28,7 +28,7 @@
 #include "core/runtime/device.h"
 
 #define api "mluOpPriorBox"
-#define MLU200_500SERIERS_MAX_SUPPORT 2100
+#define MLU500SERIERS_MAX_SUPPORT 2100
 #define MLU300SERIERS_MAX_SUPPORT 2900
 
 // policy function
@@ -132,8 +132,8 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
   const int num_priors =
       getNumPriors(min_sizes_desc, aspect_ratios_desc, max_sizes_desc);
   // check num_priors limit
-  const int max_support_num_priors = (handle->arch < 300 || handle->arch > 500)
-                                         ? MLU200_500SERIERS_MAX_SUPPORT
+  const int max_support_num_priors = (handle->arch > 500)
+                                         ? MLU500SERIERS_MAX_SUPPORT
                                          : MLU300SERIERS_MAX_SUPPORT;
   if (num_priors > max_support_num_priors) {
     LOG(ERROR) << api << " Support max num_priors is " << max_support_num_priors

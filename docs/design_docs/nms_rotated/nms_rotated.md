@@ -101,8 +101,6 @@ NmsRotated 算子有 2 个输入 Tensor，分别为 `boxes`[N,5] or [N,6], `scor
 
 - 该算子输出`output`为所选择的box的索引数据。`output`是 int32_t 数据类型。因此，该算子采用静态阈值，阈值标准：diff3 = 0.
 
-- 注意：MLU200 系列精度需要限定数值范围和规模大小，避免计算IOU时出现大规模随机错误。
-
 #### 1.5.2 性能验收标准
 
 ## 2 算子接口设计
@@ -186,7 +184,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpNmsRotated(mluOpHandle_t handle,
 
 - 单核BLOCK任务下：
   1. MLU370: box_num < 3200 不超时
-  2. MLU290: box_num < 1100 不超时
 
 ### 3.8 算子防呆检查
 

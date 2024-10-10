@@ -135,12 +135,7 @@
 #endif
 
 // maximum integer that can be represented by float
-#if __BANG_ARCH__ >= 322
 #define MAX_INT2FLOAT_EXACT (powf(2, 24))
 #define NEG_MAX_INT2FLOAT_EXACT (-powf(2, 24))
-#else
-#define MAX_INT2FLOAT_EXACT (powf(2, 23) - 1)
-#define NEG_MAX_INT2FLOAT_EXACT (-powf(2, 23))
-#endif
 
 #endif  // KERNELS_KERNEL_H_

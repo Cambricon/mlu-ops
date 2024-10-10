@@ -83,9 +83,11 @@ function process () {
     # run gtest
     readonly mluops_dir=$(dirname ${lib_path_})
     export LD_LIBRARY_PATH="${mluops_dir}":$LD_LIBRARY_PATH
-    export CNRT_DUMP_PGO=1
+    export CNRT_DUMP_PGO=1 # Will be removed
+    export CN_DUMP_PGO=1
     mkdir -p ${temp_dir_}
-    export CNRT_PGO_OUTPUT_DIR=${temp_dir_}/output
+    export CNRT_PGO_OUTPUT_DIR=${temp_dir_}/output # Will be removed
+    export CN_PGO_OUTPUT_DIR=${temp_dir_}/output
     export LLVM_PROFILE_FILE=${temp_dir_}/output/host.profraw
     ${test_cmd_}
     if [[ ! -z ${extra_test_dir_} ]]; then

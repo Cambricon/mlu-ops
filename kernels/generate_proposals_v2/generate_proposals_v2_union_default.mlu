@@ -169,11 +169,7 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
   if (taskId == 0) {
     __memcpy(workspace, intput_scores_ptr, HWA * sizeof(T), GDRAM2GDRAM);
 
-#if __BANG_ARCH__ >= 322
     const int memory_block = 2;
-#else
-    const int memory_block = 3;
-#endif
     const int limit = PROPOSAL_NRAM_SIZE / memory_block;
 
     const int max_seg_num = FLOOR_ALIGN(limit / sizeof(T), ALIGN_NUM);
@@ -193,13 +189,7 @@ __mlu_func__ void getKthScore(const T *intput_scores_ptr, T *workspace,
 
       __memcpy(scores, workspace + seg_id * max_seg_num, actual_num * sizeof(T),
                GDRAM2NRAM);
-#if __BANG_ARCH__ >= 322
       __bang_eq_scalar(mask_eq, scores, k_score[0], actual_num_align);
-#else
-      T *tmp = mask_eq + max_seg_num;
-      __bang_write_value(tmp, actual_num_align, k_score[0]);
-      __bang_eq(mask_eq, scores, tmp, actual_num_align);
-#endif
 
       for (int i = actual_num; i < actual_num_align; i++) {
         mask_eq[i] = 0;
@@ -381,14 +371,8 @@ __mlu_func__ void filterBoxes(T *proposal_scores, T *proposal_boxes,
   }
 
 // cx = box[0] + 0.5 * w, cy = box[1] + 0.5 * h
-#if __BANG_ARCH__ >= 322
   __bang_fusion(FUSION_FMA, cx, w, (T)0.5, xmin, align_count, align_count);
   __bang_fusion(FUSION_FMA, cy, h, (T)0.5, ymin, align_count, align_count);
-#else
-  __bang_mul_scalar(cx, w, (T)0.5, align_count * 2);
-  __bang_add(cx, xmin, cx, align_count);
-  __bang_add(cy, ymin, cy, align_count);
-#endif
 
   float real_min_size = min_size > 1.0 ? min_size : 1.0;
   // mask_tmp1 = w >= min_size ? 1 : 0;
@@ -463,22 +447,16 @@ __mlu_func__ void createAndRemoveBox(
     const T *variances_ptr, T *workspace, const T k_score, const int HWA,
     const int pre_nms_top_n, const T min_size, const bool pixel_offset,
     const bool need_collect, int *proposals_num) {
-  // nram  n = max_seg_num, transpose: 200 32N, 300 4N
+  // nram  n = max_seg_num, transpose: 300 4N
   // | scores | anchors | var | deltals | proposals | ge_mask | nram |
   // MLU300
   // |  N     |  4N     | 4N  |   4N    |   4N      |  N      | 10N   |
-  // MLU200
-  // |  N     |  4N     |  4N |  4N     |   trans_buffer  32N        |
 
   // workspace
   // | output_scores | output_boxes | scores_tmp | boxes_tmp | collect_num |
   // |    HWA        |   4*HWA      |    HWA     |   4*HWA   | taskDim     |
 
-#if __BANG_ARCH__ >= 300
   const int memory_block = 28;
-#else
-  const int memory_block = 45;
-#endif
   const int limit = PROPOSAL_NRAM_SIZE / memory_block;
   int max_seg_num = 0;
   int repeat = 0;

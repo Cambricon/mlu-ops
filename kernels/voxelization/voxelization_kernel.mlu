@@ -40,7 +40,6 @@ __mlu_func__ bool containNanInf(const T pos1, const T pos2) {
   return false;
 }
 
-#if __BANG_ARCH__ >= 322
 __mlu_func__ void computeDynamicVoxelize(
     int8_t *points_x, int8_t *points_y, int8_t *points_z, int8_t *auxiliary_a,
     int8_t *auxiliary_b, int8_t *auxiliary_c, const float coors_x_min,
@@ -153,14 +152,12 @@ __mlu_func__ void computePoint2Voxel(int8_t *coors_x, int8_t *coors_y,
     *num += (int32_t)__bang_count((float *)coors_x, deal_num);
   }
 }
-#endif
 
 __mlu_global__ void mluDynamicVoxelize(const float *points,
                                        const float *voxel_size_gdram,
                                        const float *coors_range_gdram,
                                        int32_t *coors, const int32_t num_points,
                                        const int32_t num_features) {
-#if __BANG_ARCH__ >= 322
   if (__is_mpu()) {
     return;
   }
@@ -349,14 +346,12 @@ __mlu_global__ void mluDynamicVoxelize(const float *points,
                    points_z + (repeat % 2) * ping_pong_gap,
                    rem * sizeof(int32_t), NRAM2GDRAM);
   }
-#endif
 }
 
 __mlu_global__ void mluPoint2Voxel(int32_t *coors, int32_t *point_to_pointidx,
                                    int32_t *point_to_voxelidx,
                                    const int32_t num_points,
                                    const int32_t max_points) {
-#if __BANG_ARCH__ >= 322
   if (__is_mpu()) {
     return;
   }
@@ -460,7 +455,6 @@ __mlu_global__ void mluPoint2Voxel(int32_t *coors, int32_t *point_to_pointidx,
       point_to_voxelidx[point_idx] = -1;
     }
   }
-#endif
 }
 
 __mlu_global__ void mluCalcPointsPerVoxel(
@@ -695,7 +689,6 @@ __mlu_global__ void mluAssignVoxelsCoors(
     int32_t *coor_to_voxelidx, float *voxels, int32_t *coors,
     const int32_t max_points, const int32_t num_points,
     const int32_t num_features) {
-#if __BANG_ARCH__ >= 322
   if (__is_mpu()) {
     return;
   }
@@ -747,7 +740,6 @@ __mlu_global__ void mluAssignVoxelsCoors(
     }
   }
   __sync();
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelDynamicVoxelize(

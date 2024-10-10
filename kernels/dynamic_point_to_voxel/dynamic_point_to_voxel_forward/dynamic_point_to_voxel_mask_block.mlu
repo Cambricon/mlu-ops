@@ -81,7 +81,6 @@ __mlu_func__ void store(int32_t *output_addr, int32_t *nram_output,
 
 __mlu_global__ void MLUKernelMaskFillCoorsForward(int32_t num_points,
                                                   int32_t *coors) {
-#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -162,8 +161,6 @@ __mlu_global__ void MLUKernelMaskFillCoorsForward(int32_t num_points,
     int32_t *output_addr = base_coors + repeat_n * deal_num;
     store(output_addr, coors_ping_in, pingpong, rem_num, repeat_n);
   }
-
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API

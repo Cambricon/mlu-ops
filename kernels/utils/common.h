@@ -68,22 +68,14 @@ __mlu_func__ T __mluop_max(T a, T b) {
  * param 'src' is the source pointer in NRAM.
  * param 'src_count' is the src element count.
  * Note:
- *      The rounding mode on MLU200 is rd, on MLU300 is rn.
+ *      The rounding mode on MLU300 is rn.
  ******************************************************************************/
 __mlu_func__ void __mluop_float2half(half *dst, float *src, int src_count) {
-#if __BANG_ARCH__ >= 300
   __bang_float2half_rn(dst, src, src_count);
-#else
-  __bang_float2half_rd(dst, src, src_count);
-#endif
 }
 
 __mlu_func__ half __mluop_float2half(float a) {
-#if __BANG_ARCH__ >= 300
   return __float2half_rn(a);
-#else
-  return __float2half_rd(a);
-#endif
 }
 
 /******************************************************************************
@@ -165,26 +157,11 @@ __mlu_func__ void __mluop_recip(T *nram_dst, T *nram_src, void *nram_addition,
                                 const bool is_high_precision,
                                 const uint32_t deal_num) {
   if (sizeof(T) == sizeof(float)) {
-#if __BANG_ARCH__ >= 300
     __bang_recip((float *)nram_dst, (float *)nram_src, deal_num);
-#else
-    __bang_active_reciphp((float *)nram_dst, (float *)nram_src, deal_num);
-#endif
   } else if (sizeof(T) == sizeof(half)) {
-#if __BANG_ARCH__ >= 300
     __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
     __bang_recip((float *)nram_addition, (float *)nram_addition, deal_num);
     __bang_float2half_rn((half *)nram_dst, (float *)nram_addition, deal_num);
-#else
-    if (is_high_precision) {
-      __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
-      __bang_active_reciphp((float *)nram_addition, (float *)nram_addition,
-                            deal_num);
-      __bang_float2half_rd((half *)nram_dst, (float *)nram_addition, deal_num);
-    } else {
-      __bang_active_reciphp((half *)nram_dst, (half *)nram_src, deal_num);
-    }
-#endif
   } else {
     return;
   }
@@ -204,17 +181,12 @@ template <typename T>
 __mlu_func__ void __mluop_exp(T *nram_dst, T *nram_src, void *nram_addition,
                               const int is_high_precision, const int deal_num) {
   if (sizeof(T) == sizeof(float)) {
-#if __BANG_ARCH__ >= 300
     int x2d = 0x3fb8aa3b;
     float log2e = *(float *)&x2d;
     __bang_mul_scalar((float *)nram_dst, (float *)nram_src, (float)log2e,
                       deal_num);
     __bang_pow2((float *)nram_dst, (float *)nram_dst, deal_num);
-#else
-    __bang_active_exphp((float *)nram_dst, (float *)nram_src, deal_num);
-#endif
   } else if (sizeof(T) == sizeof(half)) {
-#if __BANG_ARCH__ >= 300
     int x2d = 0x3fb8aa3b;
     float log2e = *(float *)&x2d;
     __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
@@ -222,16 +194,6 @@ __mlu_func__ void __mluop_exp(T *nram_dst, T *nram_src, void *nram_addition,
                       (float)log2e, deal_num);
     __bang_pow2((float *)nram_addition, (float *)nram_addition, deal_num);
     __bang_float2half_rn((half *)nram_dst, (float *)nram_addition, deal_num);
-#else
-    if (is_high_precision) {
-      __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
-      __bang_active_exphp((float *)nram_addition, (float *)nram_addition,
-                          deal_num);
-      __bang_float2half_rd((half *)nram_dst, (float *)nram_addition, deal_num);
-    } else {
-      __bang_active_exphp((half *)nram_dst, (half *)nram_src, deal_num);
-    }
-#endif
   } else {
     return;
   }
@@ -289,18 +251,13 @@ __mlu_func__ void __mluop_sigmoid(T *nram_dst, T *nram_src, void *nram_addition,
                                   const int is_high_precision,
                                   const int deal_num) {
   if (sizeof(T) == sizeof(float)) {
-#if __BANG_ARCH__ >= 300
     __bang_mul_scalar((float *)nram_dst, (float *)nram_src, (float)-1.0,
                       deal_num);
     __mluop_exp((float *)nram_dst, (float *)nram_dst, NULL, 0, deal_num);
     __bang_add_scalar((float *)nram_dst, (float *)nram_dst, (float)1.0,
                       deal_num);
     __mluop_recip((float *)nram_dst, (float *)nram_dst, NULL, 0, deal_num);
-#else
-    __bang_active_sigmoid((float *)nram_dst, (float *)nram_src, deal_num);
-#endif
   } else if (sizeof(T) == sizeof(half)) {
-#if __BANG_ARCH__ >= 300
     __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
     __bang_mul_scalar((float *)nram_addition, (float *)nram_addition,
                       (float)-1.0, deal_num);
@@ -310,16 +267,6 @@ __mlu_func__ void __mluop_sigmoid(T *nram_dst, T *nram_src, void *nram_addition,
                       (float)1.0, deal_num);
     __mluop_recip((float *)nram_dst, (float *)nram_addition, NULL, 0, deal_num);
     __bang_float2half_rn((half *)nram_dst, (float *)nram_dst, deal_num);
-#else
-    if (is_high_precision) {
-      __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
-      __bang_active_sigmoid((float *)nram_addition, (float *)nram_addition,
-                            deal_num);
-      __bang_float2half_rd((half *)nram_dst, (float *)nram_addition, deal_num);
-    } else {
-      __bang_active_sigmoid((half *)nram_dst, (half *)nram_src, deal_num);
-    }
-#endif
   } else {
     return;
   }

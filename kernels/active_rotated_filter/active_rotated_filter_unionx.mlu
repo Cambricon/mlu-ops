@@ -247,28 +247,6 @@ __mlu_global__ void MLUKernelActiveRotatedFilterForward(
       {8, 7, 6, 5, 4, 3, 2, 1, 0}, {5, 8, 7, 2, 4, 6, 1, 0, 3},
       {2, 5, 8, 1, 4, 7, 0, 3, 6}, {1, 2, 5, 0, 4, 8, 3, 6, 7}};
 
-#if __BANG_ARCH__ < 322
-  for (int i = 0; i < num_op_per_core; i++) {
-    T *workspace_core =
-        workspace + (op_core_offset + i) * input_planes * kernel_size;
-    T *input_core = input + (op_core_offset + i) * input_planes * kernel_size;
-    T *output_core =
-        output + (op_core_offset + i) * rotations * input_planes * kernel_size;
-
-    const int src_stride = kH * kW;
-
-    for (int k = 0; k < rotations; k++) {
-      angle = delta_rotation * (float)k;
-      block_num = int(angle / delta_orientation);
-
-      orientation_move<T>(workspace_core, input_core, kH, kW, block_num,
-                          total_num, kernel_size, input_planes);
-      rotateHW<T>(output_core + k * input_planes * kernel_size, workspace_core,
-                  trans, kH, kW, src_stride, src_stride,
-                  orientations * input_planes, int(angle) / ROTATE_BASE_ANGLE);
-    }
-  }
-#else
   if (rotations == 8) {
     for (int i = 0; i < num_op_per_core; i++) {
       T *workspace_core =
@@ -405,7 +383,6 @@ __mlu_global__ void MLUKernelActiveRotatedFilterForward(
       __sync();
     }
   }
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelActiveRotatedFilterForward(

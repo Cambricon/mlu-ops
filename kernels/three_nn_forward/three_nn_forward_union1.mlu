@@ -31,7 +31,6 @@
 
 __nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
-#if __BANG_ARCH__ >= 322
 /**
  * returns the index of ret, which is stored at the 1st position of the `ret`,
  * used after bang_argmin
@@ -49,7 +48,6 @@ __mlu_func__ uint32_t getIndice(float *ret) {
   uint32_t indice = ((uint32_t *)ret)[1];
   return indice;
 }
-#endif
 
 template <typename T>
 __mlu_func__ void auxArgmin(T *nram_dst, T *nram_src, const int num_deal,
@@ -70,15 +68,9 @@ __mlu_func__ void auxFuncFind3Min(T *nram_aux_a, const int auxa_offset,
   __bang_write_value(nram_aux_sort_b, auxb_offset, (int)0);
   int index = 0;
   for (int i = 0; i < 3; i++) {
-#if __BANG_ARCH__ >= 322
     __bang_argmin(nram_dest, nram_aux_a, auxa_offset);
     nram_aux_sort_a[i] = nram_dest[0];
     index = getIndice(nram_dest);
-#else
-    T value = 0;
-    auxArgmin(nram_dest, nram_aux_a, auxa_offset, &value, &index);
-    nram_aux_sort_a[i] = value;
-#endif
     nram_aux_sort_b[i] = nram_aux_b[index];
     __memset_nram(nram_aux_a + index, 1, (T)(INFINITY));
   }
@@ -126,19 +118,11 @@ __mlu_func__ void auxFuncNN(
   *align_num = NFU_ALIGN_SIZE / sizeof(T);
   *auxa_offset = NFU_ALIGN_SIZE / sizeof(T);
   *auxb_offset = 2 * NFU_ALIGN_SIZE / sizeof(int);
-#if __BANG_ARCH__ >= 322
   *known_num_deal = PAD_DOWN(
       (MAX_NRAM_SIZE - 3 * NFU_ALIGN_SIZE) / 5 / (7 * sizeof(T)), *align_num);
   *unknown_num_deal = PAD_DOWN((MAX_NRAM_SIZE - 3 * NFU_ALIGN_SIZE) / 5 * 4 /
                                    (3 * sizeof(T) + 3 * NFU_ALIGN_SIZE),
                                *align_num);
-#else
-  *known_num_deal = PAD_DOWN(
-      (MAX_NRAM_SIZE - 3 * NFU_ALIGN_SIZE) / 3 / (7 * sizeof(T)), *align_num);
-  *unknown_num_deal = PAD_DOWN((MAX_NRAM_SIZE - 3 * NFU_ALIGN_SIZE) / 3 * 2 /
-                                   (3 * sizeof(T) + 3 * NFU_ALIGN_SIZE),
-                               *align_num);
-#endif
 
   *output_aux_sort_a_gap = 0;
   *output_aux_sort_b_gap = *output_aux_sort_a_gap + NFU_ALIGN_SIZE;
@@ -151,7 +135,6 @@ __mlu_func__ void auxFuncNN(
   *auxillary_b_gap = *auxillary_a_gap + *unknown_num_deal * NFU_ALIGN_SIZE;
 }
 
-#if __BANG_ARCH__ >= 322
 template <typename T>
 __mlu_func__ bool containNanInf(T *nram_unknown) {
   if (std::isnan(nram_unknown[0]) || std::isnan(nram_unknown[1]) ||
@@ -161,7 +144,6 @@ __mlu_func__ bool containNanInf(T *nram_unknown) {
   else
     return false;
 }
-#endif
 
 template <typename T>
 __mlu_func__ void computeThreeNN(T *nram_unknown, T *nram_known, T *nram_dist,
@@ -172,9 +154,7 @@ __mlu_func__ void computeThreeNN(T *nram_unknown, T *nram_known, T *nram_dist,
                                  const int known_count,
                                  const int known_count_align) {
   __bang_write_value(nram_dist, 3 * known_num_deal, (T)(INFINITY));
-#if __BANG_ARCH__ >= 322
   if (!containNanInf(nram_unknown)) {
-#endif
     // x1 - x2
     __bang_sub_scalar(nram_dist, nram_known, nram_unknown[0],
                       known_count_align);
@@ -191,21 +171,13 @@ __mlu_func__ void computeThreeNN(T *nram_unknown, T *nram_known, T *nram_dist,
                known_count_align);
     __bang_add(nram_dist, nram_dist, nram_dist + 2 * known_count_align,
                known_count_align);
-#if __BANG_ARCH__ >= 322
   }
-#endif
 
   int index = 0;
   for (int i = 0; i < 3; i++) {
-#if __BANG_ARCH__ >= 322
     __bang_argmin(nram_dest, nram_dist, known_count_align);
     nram_aux_a[i + deal_offset] = nram_dest[0];
     index = getIndice(nram_dest);
-#else
-    T value = 0;
-    auxArgmin(nram_dest, nram_dist, known_count_align, &value, &index);
-    nram_aux_a[i + deal_offset] = value;
-#endif
     nram_aux_b[i + deal_offset] = index + known_seg_num * known_num_deal;
     __memset_nram(nram_dist + index, 1, (T)(INFINITY));
   }
@@ -217,19 +189,12 @@ __mlu_func__ void loadTransposedKnownTensor(
     const int batch_id, const int m, const int known_seg_num, const int count,
     const int count_align_num) {
   __bang_write_value(nram_known, 3 * known_num_deal, (T)(INFINITY));
-#if __BANG_ARCH__ >= 322
   __bang_write_value(nram_dist, 3 * known_num_deal, (T)(INFINITY));
   __memcpy(nram_dist,
            known_gdram + (batch_id * m * 3 + known_seg_num * known_num_deal),
            count * sizeof(T), GDRAM2NRAM, count_align_num * sizeof(T),
            m * sizeof(T), 2);
   __bang_minequal(nram_known, nram_known, nram_dist, 3 * count_align_num);
-#else
-  __memcpy(nram_known,
-           known_gdram + (batch_id * m * 3 + known_seg_num * known_num_deal),
-           count * sizeof(T), GDRAM2NRAM, count_align_num * sizeof(T),
-           m * sizeof(T), 2);
-#endif
 }
 
 template <typename T>
