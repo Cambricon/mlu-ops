@@ -192,6 +192,9 @@ bang_add_library(mluops SHARED ${src_files} ${src_helper_files})
 if(${MLUOP_BUILD_STATIC} MATCHES "ON")
   message("-- Build MLUOP static")
   bang_add_library(mluops_static STATIC ${src_files} ${src_helper_files} ${core_src_files})
+  if (TARGET fmt::fmt-header-only)
+    target_link_libraries(mluops_static fmt::fmt-header-only)
+  endif()
 endif()
 
 target_link_libraries(mluops

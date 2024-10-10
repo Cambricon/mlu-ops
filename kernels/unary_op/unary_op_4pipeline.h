@@ -107,7 +107,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
                      GDRAM2SRAM);                                              \
       __memcpy_async(ping_input, sram_ping + sram_load_offset, core_load_size, \
                      SRAM2NRAM);                                               \
-      __sync_copy_sram_to_nram();                                              \
+      __sync_move();                                              \
       compute##Op##Prefer<DType_in, DType_out>(                                \
           ping_output, ping_input, auxiliary_a, auxiliary_b, span_num_deal,    \
           span_num_deal, args...);                                             \
@@ -126,7 +126,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
       __memcpy_async(ping_input + pong_flag * ping_pong_gap,                   \
                      sram_ping + pong_flag * sram_pong_gap + sram_load_offset, \
                      core_load_size, SRAM2NRAM);                               \
-      __sync_copy_sram_to_nram();                                              \
+      __sync_move();                                              \
       compute##Op##Prefer<DType_in, DType_out>(                                \
           ping_output + pong_flag * ping_pong_gap,                             \
           ping_input + pong_flag * ping_pong_gap, auxiliary_a, auxiliary_b,    \
@@ -152,7 +152,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
           ping_input + ping_pong_flag * ping_pong_gap,                         \
           sram_ping + ping_pong_flag * sram_pong_gap + sram_load_offset,       \
           core_load_size, SRAM2NRAM);                                          \
-      __sync_copy_sram_to_nram();                                              \
+      __sync_move();                                              \
       compute##Op##Prefer<DType_in, DType_out>(                                \
           ping_output + ping_pong_flag * ping_pong_gap,                        \
           ping_input + ping_pong_flag * ping_pong_gap, auxiliary_a,            \
@@ -173,7 +173,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
                      sram_ping + ping_pong_flag * sram_pong_gap +              \
                          core_remain_offset * sizeof(DType_in),                \
                      core_remain_num_deal * sizeof(DType_in), SRAM2NRAM);      \
-      __sync_copy_sram_to_nram();                                              \
+      __sync_move();                                              \
       compute##Op##Prefer<DType_in, DType_out>(                                \
           ping_output + ping_pong_flag * ping_pong_gap,                        \
           ping_input + ping_pong_flag * ping_pong_gap, auxiliary_a,            \

@@ -126,7 +126,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t data_num, size_t &num_per_core,
                      GDRAM2SRAM);                                              \
       __memcpy_async(nram_input, sram_ping + sram_load_offset, core_load_size, \
                      SRAM2NRAM);                                               \
-      __sync_copy_sram_to_nram();                                              \
+      __sync_move();                                              \
       compute##Op##Prefer<DType_in, DType_out>(nram_output, nram_input,        \
                                                nram_aux_a, nram_aux_b,         \
                                                num_deal, num_deal, args...);   \
@@ -147,7 +147,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t data_num, size_t &num_per_core,
           nram_input,                                                          \
           sram_ping + ((i + 1) % 2) * sram_pong_gap + sram_load_offset,        \
           core_load_size, SRAM2NRAM);                                          \
-      __sync_copy_sram_to_nram();                                              \
+      __sync_move();                                              \
       compute##Op##Prefer<DType_in, DType_out>(nram_output, nram_input,        \
                                                nram_aux_a, nram_aux_b,         \
                                                num_deal, num_deal, args...);   \
@@ -175,7 +175,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t data_num, size_t &num_per_core,
           nram_input,                                                          \
           sram_ping + ((repeat - 1) % 2) * sram_pong_gap + sram_load_offset,   \
           core_load_size, SRAM2NRAM);                                          \
-      __sync_copy_sram_to_nram();                                              \
+      __sync_move();                                              \
       compute##Op##Prefer<DType_in, DType_out>(nram_output, nram_input,        \
                                                nram_aux_a, nram_aux_b,         \
                                                num_deal, num_deal, args...);   \
@@ -198,7 +198,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t data_num, size_t &num_per_core,
                        sram_ping + (repeat % 2) * sram_pong_gap +              \
                            offset_core * sizeof(DType_in),                     \
                        cluster_rem_per_core * sizeof(DType_in), SRAM2NRAM);    \
-        __sync_copy_sram_to_nram();                                            \
+        __sync_move();                                            \
         compute##Op##Prefer<DType_in, DType_out>(                              \
             nram_output, nram_input, nram_aux_a, nram_aux_b,                   \
             cluster_rem_per_core_align, cluster_rem_per_core, args...);        \
