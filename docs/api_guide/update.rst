@@ -3,6 +3,18 @@ Update History
 
 This section lists contents that were made for each product release.
 
+
+* V1.3.1
+
+  **Date:** October 10, 2024
+
+  **Changes:**
+
+  - ``exec_fft``
+
+    - adjust memory-free strategy to avoid duplicated memory-free operation.
+
+
 * V1.3.0
 
   **Date:** September 6, 2024
