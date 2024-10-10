@@ -5,7 +5,7 @@
 
 Name: mluops
 Summary: The Machine Lerning Unit OPerators
-Version: 1.3.0
+Version: 1.3.1
 Release: 1%{?dist}
 License: Cambricon Release License
 Vendor: Cambricon Inc.
@@ -19,7 +19,6 @@ BuildRequires: glibc-devel
 BuildRequires: binutils >= 2.27
 BuildRequires: readline-devel >= 6.2-4
 BuildRequires: rpm-devel
-BuildRequires: texinfo-tex
 BuildRequires: /usr/bin/pod2man
 BuildRequires: texlive-ec texlive-cm-super
 BuildRequires: systemtap-sdt-devel
@@ -65,7 +64,9 @@ cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 %postun -p /sbin/ldconfig
 
 %changelog
-* Thu Sep 6 2024 Cambricon Software Team <service@cambricon.com>
+* Thu Oct 10 2024 Cambricon Software Team <service@cambricon.com>
+- release mluops v1.3.1
+* Fri Sep 6 2024 Cambricon Software Team <service@cambricon.com>
 - release mluops v1.3.0
 * Thu Aug 15 2024 Cambricon Software Team <service@cambricon.com>
 - release mluops v1.2.4
