@@ -23,4 +23,4 @@
 
 #pragma once
 
-__mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
+__mlu_shared__ int8_t sram_buffer[MAX_SRAM_SIZE];

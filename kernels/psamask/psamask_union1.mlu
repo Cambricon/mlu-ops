@@ -31,7 +31,7 @@
 
 #define DEBUG_TASKID 0
 
-__nram__ char buf[MAX_NRAM_SIZE];
+__nram__ int8_t buf[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void swap(T &a, T &b) {

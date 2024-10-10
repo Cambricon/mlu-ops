@@ -49,9 +49,8 @@ static mluOpStatus_t getIndiceIndexIn(
     const mluOpTensorDescriptor_t indice_pairs_desc, const int kernel_volume,
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
-  total_size =
-      kernel_volume * input_active_site *
-      mluop::getSizeOfDataType(indice_pairs_desc->dtype);
+  total_size = kernel_volume * input_active_site *
+               mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -60,9 +59,8 @@ static mluOpStatus_t getIndiceIndexOut(
     const mluOpTensorDescriptor_t indice_pairs_desc, const int kernel_volume,
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
-  total_size =
-      kernel_volume * input_active_site *
-      mluop::getSizeOfDataType(indice_pairs_desc->dtype);
+  total_size = kernel_volume * input_active_site *
+               mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -71,9 +69,8 @@ static mluOpStatus_t getIndiceOutExpand(
     const mluOpTensorDescriptor_t indice_pairs_desc, const int kernel_volume,
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
-  total_size =
-      kernel_volume * input_active_site *
-      mluop::getSizeOfDataType(indice_pairs_desc->dtype);
+  total_size = kernel_volume * input_active_site *
+               mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -82,8 +79,8 @@ static mluOpStatus_t getIndiceInExpand(
     const mluOpTensorDescriptor_t indice_pairs_desc,
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
-  total_size = input_active_site *
-  mluop::getSizeOfDataType(indice_pairs_desc->dtype);
+  total_size =
+      input_active_site * mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }

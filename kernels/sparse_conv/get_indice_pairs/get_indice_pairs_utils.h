@@ -245,13 +245,13 @@ __mlu_func__ void genIndiceOutExpand(int32_t *nram_output, int32_t *mask_all,
                                      int32_t *nram_input, int32_t *temp,
                                      int32_t deal_num, int32_t output_size) {
   __bang_mul_scalar((int32_t *)temp, (int32_t *)mask_all, int(-1), deal_num);
-  __bang_band((char *)nram_output, (char *)nram_input, (char *)temp,
+  __bang_band((int8_t *)nram_output, (int8_t *)nram_input, (int8_t *)temp,
               deal_num * sizeof(int32_t));
   // clost to intmax
   __bang_sub_scalar((int32_t *)temp, (int32_t *)mask_all, int(1), deal_num);
   __bang_mul_scalar((int32_t *)temp, (int32_t *)temp, int(-1 * output_size),
                     deal_num);
-  __bang_bor((char *)nram_output, (char *)nram_output, (char *)temp,
+  __bang_bor((int8_t *)nram_output, (int8_t *)nram_output, (int8_t *)temp,
              deal_num * sizeof(int32_t));
 }
 

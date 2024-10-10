@@ -33,9 +33,9 @@
 #define SQRT_RECOVER 1e3
 
 __nram__ float nram_tmp[NFU_ALIGN_SIZE];
-__nram__ char nram_buffer[BINARY_NRAM_SIZE];
+__nram__ int8_t nram_buffer[BINARY_NRAM_SIZE];
 #if __BANG_ARCH__ != 520
-__mlu_shared__ char sram_buffer[BINARY_NRAM_SIZE];
+__mlu_shared__ int8_t sram_buffer[BINARY_NRAM_SIZE];
 #endif
 
 template <typename T1, typename T2>
@@ -88,16 +88,16 @@ __mlu_func__ void funcSqrtFast(bfloat16_t *nram_output, bfloat16_t *nram_input,
 }
 
 template <typename T1, typename T2>
-__mlu_func__ void computeSqrtFast(char *nram_output, char *nram_input,
-                                  char *auxiliary_a, char *auxiliary_b,
+__mlu_func__ void computeSqrtFast(int8_t *nram_output, int8_t *nram_input,
+                                  int8_t *auxiliary_a, int8_t *auxiliary_b,
                                   size_t deal_num, size_t actual_num) {
   funcSqrtFast((T2 *)nram_output, (T1 *)nram_input, (T2 *)auxiliary_a,
                (T2 *)auxiliary_b, actual_num, deal_num);
 }
 
 template <typename T1, typename T2>
-__mlu_func__ void computeSqrtHighAcc(char *nram_output, char *nram_input,
-                                     char *auxiliary_a, char *auxiliary_b,
+__mlu_func__ void computeSqrtHighAcc(int8_t *nram_output, int8_t *nram_input,
+                                     int8_t *auxiliary_a, int8_t *auxiliary_b,
                                      size_t deal_num, size_t actual_num) {
   __bang_half2float((float *)nram_output, (half *)nram_input, deal_num);
   __bang_sqrt((float *)nram_output, (float *)nram_output, actual_num);
@@ -192,8 +192,9 @@ __mlu_func__ void auxFunc5SqrtBackwardFast(
 template <typename DType_in1, typename DType_in2 = DType_in1,
           typename DType_out = DType_in1>
 __mlu_func__ void computeSqrtBackwardHighAcc(
-    char *nram_output, char *nram_input1, char *nram_input2, char *auxiliary_a,
-    char *auxiliary_b, char *auxiliary_c, size_t deal_num, size_t actual_num) {
+    int8_t *nram_output, int8_t *nram_input1, int8_t *nram_input2,
+    int8_t *auxiliary_a, int8_t *auxiliary_b, int8_t *auxiliary_c,
+    size_t deal_num, size_t actual_num) {
 #if __BANG_ARCH__ != 520  // TODO(sram): tp_520
   float *nram_fp_y = (float *)((DType_in1 *)nram_input1 - deal_num);
   float *nram_fp_dy = (float *)((DType_in1 *)nram_input2 - deal_num);
@@ -216,10 +217,10 @@ __mlu_func__ void computeSqrtBackwardHighAcc(
  */
 template <typename DType_in1, typename DType_in2 = DType_in1,
           typename DType_out = DType_in1>
-__mlu_func__ void computeSqrtBackwardFast(char *nram_output, char *nram_input1,
-                                          char *nram_input2, char *auxiliary_a,
-                                          char *auxiliary_b, char *auxiliary_c,
-                                          size_t deal_num, size_t actual_num) {
+__mlu_func__ void computeSqrtBackwardFast(
+    int8_t *nram_output, int8_t *nram_input1, int8_t *nram_input2,
+    int8_t *auxiliary_a, int8_t *auxiliary_b, int8_t *auxiliary_c,
+    size_t deal_num, size_t actual_num) {
 #if __BANG_ARCH__ != 520  // TODO(sram): tp_520
 #if __BANG_ARCH__ >= 300
   __bang_mul_scalar((DType_in1 *)nram_input2, (DType_in1 *)nram_input2,
@@ -252,17 +253,17 @@ mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineSqrt(
   // launch kernel
   if (d_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
     KERNEL_CHECK(MLUBlockKernel3StagePipelineSqrtFast<float, float>
-                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, num));
+                 <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y, num));
   } else if (d_type == mluOpDataType_t::MLUOP_DTYPE_INT32) {
     KERNEL_CHECK(MLUBlockKernel3StagePipelineSqrtFast<int32_t, float>
-                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, num));
+                 <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y, num));
   } else if (d_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
     KERNEL_CHECK(MLUBlockKernel3StagePipelineSqrtHighAcc<half, half>
-                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, num));
+                 <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y, num));
   } else {
     // bfloat16
     KERNEL_CHECK(MLUBlockKernel3StagePipelineSqrtFast<bfloat16_t, bfloat16_t>
-                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, num));
+                 <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y, num));
   }
   return MLUOP_STATUS_SUCCESS;
 }
@@ -275,12 +276,14 @@ mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineSqrtBackward(
   if (d_type == mluOpDataType_t::MLUOP_DTYPE_HALF) {
     KERNEL_CHECK(
         MLUBlockKernel3StagePipelineSqrtBackwardHighAcc<half, half, half>
-        <<<k_dim, k_type, queue>>>((char *)y, (char *)diff_y, (char *)x, num));
+        <<<k_dim, k_type, queue>>>((int8_t *)y, (int8_t *)diff_y, (int8_t *)x,
+                                   num));
   } else {
     // half
     KERNEL_CHECK(
         MLUBlockKernel3StagePipelineSqrtBackwardFast<float, float, float>
-        <<<k_dim, k_type, queue>>>((char *)y, (char *)diff_y, (char *)x, num));
+        <<<k_dim, k_type, queue>>>((int8_t *)y, (int8_t *)diff_y, (int8_t *)x,
+                                   num));
   }
   return MLUOP_STATUS_SUCCESS;
 }

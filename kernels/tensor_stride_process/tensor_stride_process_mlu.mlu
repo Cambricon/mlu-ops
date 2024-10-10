@@ -42,7 +42,7 @@ mluOpStatus_t MLUOP_WIN_API KernelTensorStrideIn(
     case MLUOP_DTYPE_INT8:
     case MLUOP_DTYPE_BOOL:
     case MLUOP_DTYPE_UINT8: {
-      KERNEL_CHECK(MLUUnionKernelTensorStrideIn<int8>
+      KERNEL_CHECK(MLUUnionKernelTensorStrideIn<int8_t>
                    <<<k_dim, k_type, queue>>>(input, input_shape, output));
     } break;
 
@@ -72,7 +72,7 @@ KernelTensorStrideOut(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
     case MLUOP_DTYPE_INT8:
     case MLUOP_DTYPE_BOOL:
     case MLUOP_DTYPE_UINT8: {
-      KERNEL_CHECK(MLUUnionKernelTensorStrideOut<int8>
+      KERNEL_CHECK(MLUUnionKernelTensorStrideOut<int8_t>
                    <<<k_dim, k_type, queue>>>(input, output, output_shape));
     } break;
 

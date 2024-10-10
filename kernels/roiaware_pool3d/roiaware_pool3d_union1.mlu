@@ -34,7 +34,7 @@
 #define HALF_NRAM_BUFFER_NUM 25
 #define ALIGN_NUM 64
 
-__nram__ char data_nram[MAX_NRAM_SIZE];
+__nram__ int8_t data_nram[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
@@ -54,13 +54,13 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
         (MAX_NRAM_SIZE / sizeof(half) / HALF_NRAM_BUFFER_NUM), ALIGN_NUM);
   }
 
-  char *X = NULL;
-  char *Y = NULL;
-  char *Z = NULL;
-  char *local_X = NULL;
-  char *local_Y = NULL;
-  char *local_Z = NULL;
-  char *nram_pts_in_flag = NULL;
+  int8_t *X = NULL;
+  int8_t *Y = NULL;
+  int8_t *Z = NULL;
+  int8_t *local_X = NULL;
+  int8_t *local_Y = NULL;
+  int8_t *local_Z = NULL;
+  int8_t *nram_pts_in_flag = NULL;
   float *temp_buffer1 = NULL;
   float *temp_buffer2 = NULL;
   float *temp_buffer3 = NULL;
@@ -73,13 +73,13 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
   float *fp_local_Z = NULL;
   float *fp_nram_pts_in_flag = NULL;
   if (__mluop_is_float<T>()) {
-    X = (char *)((float *)data_nram);
-    Y = (char *)((float *)data_nram + nram_pts_num);
-    Z = (char *)((float *)data_nram + nram_pts_num * 2);
-    local_X = (char *)((float *)data_nram + nram_pts_num * 3);
-    local_Y = (char *)((float *)data_nram + nram_pts_num * 4);
-    local_Z = (char *)((float *)data_nram + nram_pts_num * 5);
-    nram_pts_in_flag = (char *)((float *)data_nram + nram_pts_num * 6);
+    X = (int8_t *)((float *)data_nram);
+    Y = (int8_t *)((float *)data_nram + nram_pts_num);
+    Z = (int8_t *)((float *)data_nram + nram_pts_num * 2);
+    local_X = (int8_t *)((float *)data_nram + nram_pts_num * 3);
+    local_Y = (int8_t *)((float *)data_nram + nram_pts_num * 4);
+    local_Z = (int8_t *)((float *)data_nram + nram_pts_num * 5);
+    nram_pts_in_flag = (int8_t *)((float *)data_nram + nram_pts_num * 6);
     temp_buffer1 = (float *)data_nram + nram_pts_num * 7;
     temp_buffer2 = (float *)data_nram + nram_pts_num * 8;
     temp_buffer3 = (float *)data_nram + nram_pts_num * 9;
@@ -92,13 +92,13 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
     fp_local_Z = (float *)local_Z;
     fp_nram_pts_in_flag = (float *)nram_pts_in_flag;
   } else {
-    X = (char *)((half *)data_nram);
-    Y = (char *)((half *)data_nram + nram_pts_num);
-    Z = (char *)((half *)data_nram + nram_pts_num * 2);
-    local_X = (char *)((half *)data_nram + nram_pts_num * 4);
-    local_Y = (char *)((half *)data_nram + nram_pts_num * 6);
-    local_Z = (char *)((half *)data_nram + nram_pts_num * 8);
-    nram_pts_in_flag = (char *)((half *)data_nram + nram_pts_num * 10);
+    X = (int8_t *)((half *)data_nram);
+    Y = (int8_t *)((half *)data_nram + nram_pts_num);
+    Z = (int8_t *)((half *)data_nram + nram_pts_num * 2);
+    local_X = (int8_t *)((half *)data_nram + nram_pts_num * 4);
+    local_Y = (int8_t *)((half *)data_nram + nram_pts_num * 6);
+    local_Z = (int8_t *)((half *)data_nram + nram_pts_num * 8);
+    nram_pts_in_flag = (int8_t *)((half *)data_nram + nram_pts_num * 10);
     temp_buffer1 = (float *)((half *)data_nram + nram_pts_num * 11);
     temp_buffer2 = (float *)((half *)data_nram + nram_pts_num * 13);
     temp_buffer3 = (float *)((half *)data_nram + nram_pts_num * 15);
@@ -343,8 +343,8 @@ __mlu_entry__ void MLUMultiKernelRoiawarePool3dForward(
   int *nram_argmax_cur_voxel =
       (int *)((T *)nram_pooled_features_cur_voxel + nram_channels_limit);
   // nram_argmax_cur_voxel [nram_channels_limit]
-  char *one_pooled_feature =
-      (char *)((int *)nram_argmax_cur_voxel + nram_channels_limit);
+  int8_t *one_pooled_feature =
+      (int8_t *)((int *)nram_argmax_cur_voxel + nram_channels_limit);
   // one_pooled_feature [128]
   int channels_loop_times = channels / nram_channels_limit;
   int rem_channels = channels % nram_channels_limit;

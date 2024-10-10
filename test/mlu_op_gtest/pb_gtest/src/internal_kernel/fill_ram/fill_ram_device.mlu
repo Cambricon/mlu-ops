@@ -29,12 +29,12 @@
 #define FILL_SRAM_SIZE (MAX_SRAM_SIZE + REM_FOR_STACK - 4096)
 #define ONCE_WRAM (256 * 1024)
 #define ONCE_WRAM_STRIDE (ONCE_WRAM / LT_NUM)
-__nram__ char nram_buffer[FILL_NRAM_SIZE];
-__wram__ char wram_buffer[MAX_WRAM_SIZE];
+__nram__ int8_t nram_buffer[FILL_NRAM_SIZE];
+__wram__ int8_t wram_buffer[MAX_WRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void fillRamBase(const int &fill_value,
-                              char *sram_buffer) {
+                              int8_t *sram_buffer) {
   T *tmp = (T *)&fill_value;
   __bang_write_value(nram_buffer, FILL_NRAM_SIZE / sizeof(T), (T)*tmp);
 #if __BANG_ARCH__ == 520  // use nram to fill wram
@@ -42,7 +42,7 @@ __mlu_func__ void fillRamBase(const int &fill_value,
   uint32_t last_size = MAX_WRAM_SIZE - (wram_repeat - 1) * ONCE_WRAM;
   for (int i = 0; i < wram_repeat; ++i) {
     uint32_t size = i == wram_repeat - 1 ? last_size : ONCE_WRAM;
-    char *wram = wram_buffer + i * ONCE_WRAM_STRIDE;
+    int8_t *wram = wram_buffer + i * ONCE_WRAM_STRIDE;
     __memcpy(wram, nram_buffer, size, NRAM2WRAM);
   }
 #else  // use sram to fill wram
@@ -61,9 +61,9 @@ __mlu_func__ void fillRamBase(const int &fill_value,
 
 __mlu_global__ void MLUBlockKernelFillRam(nram_value value) {
 #if __BANG_ARCH__ != 520
-  __mlu_shared__ char sram_buffer[FILL_SRAM_SIZE];
+  __mlu_shared__ int8_t sram_buffer[FILL_SRAM_SIZE];
 #else
-  char *sram_buffer = NULL;
+  int8_t *sram_buffer = NULL;
 #endif
 
   const int nan_half_value = 0xffff;

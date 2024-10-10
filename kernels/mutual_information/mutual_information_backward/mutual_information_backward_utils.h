@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 __mlu_func__ void setNanInfToZero(float *src, float *mask, const int num) {
   // band with 0x7F800000, exp bits are not all 1, mask -> 0xffffffff
@@ -35,14 +35,16 @@ __mlu_func__ void setNanInfToZero(float *src, float *mask, const int num) {
           (int32_t *)mask),
       [ size ] "r"(num), [ src0 ] "r"((int32_t *)src), [ src1 ] "r"(0x7f800000),
       [ src2 ] "r"(0x7f800000), [ src3 ] "r"(-1));
-  __bang_band((char *)src, (char *)src, (char *)mask, num * sizeof(float));
+  __bang_band((int8_t *)src, (int8_t *)src, (int8_t *)mask,
+              num * sizeof(float));
 }
 
 __mlu_func__ void safeExp(float *dst, float *src, float *mask, const int num) {
   setNanInfToZero(src, mask, num);
   __mluop_exp(dst, src, NULL, 0, num);
   // erase exp(0) to 0 with mask
-  __bang_band((char *)dst, (char *)dst, (char *)mask, num * sizeof(float));
+  __bang_band((int8_t *)dst, (int8_t *)dst, (int8_t *)mask,
+              num * sizeof(float));
   setNanInfToZero(dst, mask, num);
 }
 

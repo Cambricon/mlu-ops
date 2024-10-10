@@ -35,20 +35,20 @@
 #define BINARY_NRAM_SIZE (MAX_NRAM_SIZE + REM_FOR_STACK - 112 * 1024)
 #define BINARY_SRAM_SIZE (CORE_DIM * BINARY_NRAM_SIZE)
 
-#define BINARY_OP_PIP3_WITH_STRIDE_DECLARE(Op, Prefer)                     \
-  template <typename DType_in1, typename DType_in2, typename DType_out,    \
-            typename... Args>                                              \
-  __mlu_global__ void MLUBlockKernelBinaryPipe3WithStride##Op##Prefer(     \
-      char *x, TensorShape x_shape, char *y, TensorShape y_shape, char *z, \
-      TensorShape z_shape, size_t element_num,                             \
+#define BINARY_OP_PIP3_WITH_STRIDE_DECLARE(Op, Prefer)                  \
+  template <typename DType_in1, typename DType_in2, typename DType_out, \
+            typename... Args>                                           \
+  __mlu_global__ void MLUBlockKernelBinaryPipe3WithStride##Op##Prefer(  \
+      int8_t *x, TensorShape x_shape, int8_t *y, TensorShape y_shape,   \
+      int8_t *z, TensorShape z_shape, size_t element_num,               \
       mluOpComputationPreference_t prefer, Args... args);
 
 #define BINARY_OP_PIP3_WITH_STRIDE_KERNEL(Op, Prefer)                         \
   template <typename DType_in1, typename DType_in2, typename DType_out,       \
             typename... Args>                                                 \
   __mlu_global__ void MLUBlockKernelBinaryPipe3WithStride##Op##Prefer(        \
-      char *x, TensorShape x_shape, char *y, TensorShape y_shape, char *z,    \
-      TensorShape z_shape, size_t element_num,                                \
+      int8_t *x, TensorShape x_shape, int8_t *y, TensorShape y_shape,         \
+      int8_t *z, TensorShape z_shape, size_t element_num,                     \
       mluOpComputationPreference_t prefer, Args... args) {                    \
     if (__is_mpu()) {                                                         \
       return;                                                                 \
@@ -70,12 +70,12 @@
     int repeat = num_per_core / span_num_deal;                                \
     size_t rem = num_per_core % span_num_deal;                                \
     int32_t align_rem = PAD_UP(rem, align_num);                               \
-    char *ping_output = nram_buffer;                                          \
-    char *ping_input1 = nram_buffer + output_input1_gap;                      \
-    char *ping_input2 = nram_buffer + output_input2_gap;                      \
-    char *auxiliary_a = nram_buffer + auxiliary_a_gap;                        \
-    char *auxiliary_b = nram_buffer + auxiliary_b_gap;                        \
-    char *auxiliary_c = nram_buffer + auxiliary_c_gap;                        \
+    int8_t *ping_output = nram_buffer;                                        \
+    int8_t *ping_input1 = nram_buffer + output_input1_gap;                    \
+    int8_t *ping_input2 = nram_buffer + output_input2_gap;                    \
+    int8_t *auxiliary_a = nram_buffer + auxiliary_a_gap;                      \
+    int8_t *auxiliary_b = nram_buffer + auxiliary_b_gap;                      \
+    int8_t *auxiliary_c = nram_buffer + auxiliary_c_gap;                      \
                                                                               \
     if (repeat > 0) {                                                         \
       offset = core_offset;                                                   \

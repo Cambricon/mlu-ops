@@ -27,13 +27,13 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 #if __BANG_ARCH__ >= 372
 template <typename T>
 static __mlu_func__ void load(const T *addr_vertices, const bool *addr_mask,
-                              const int *addr_num_valid, char *nram_vertices,
-                              char *nram_mask, char *nram_num_valid,
+                              const int *addr_num_valid, int8_t *nram_vertices,
+                              int8_t *nram_mask, int8_t *nram_num_valid,
                               const int dim_m, const int deal_num,
                               const int pingpong_offset, const int pi) {
   int offset = (pi % 2) * pingpong_offset;
@@ -112,8 +112,8 @@ static __mlu_func__ bool compare_vertices(T x1, T y1, T diff_1, T x2, T y2,
 }
 
 template <typename T>
-static __mlu_func__ void compute(char *nram_vertices, char *nram_mask,
-                                 char *nram_num_valid, char *nram_idx,
+static __mlu_func__ void compute(int8_t *nram_vertices, int8_t *nram_mask,
+                                 int8_t *nram_num_valid, int8_t *nram_idx,
                                  T *nram_pub_space, const int dim_m,
                                  const int deal_num, const int pingpong_offset,
                                  const int pi) {
@@ -204,7 +204,7 @@ static __mlu_func__ void compute(char *nram_vertices, char *nram_mask,
   }
 }
 
-static __mlu_func__ void store(int *addr_idx, char *nram_idx,
+static __mlu_func__ void store(int *addr_idx, int8_t *nram_idx,
                                const int deal_idx_num,
                                const int pingpong_offset, const int pi) {
   int offset = (pi % 2) * pingpong_offset;
@@ -215,8 +215,8 @@ static __mlu_func__ void store(int *addr_idx, char *nram_idx,
 template <typename T>
 static __mlu_func__ void lcs(const T *base_vertices, const bool *base_mask,
                              const int *base_num_valid, int *base_idx,
-                             char *nram_vertices, char *nram_mask,
-                             char *nram_num_valid, char *nram_idx,
+                             int8_t *nram_vertices, int8_t *nram_mask,
+                             int8_t *nram_num_valid, int8_t *nram_idx,
                              T *nram_pub_space, const int deal_num,
                              const int repeat_n, const int rem_num,
                              const int rem_offset, const int dim_m,
@@ -364,10 +364,10 @@ __mlu_global__ void MLUKernelDiffIouRotatedSortVerticesForward(
   T *nram_pub_space = (T *)nram_buffer;
 
   // ping/pong
-  char *nram_vertices = (char *)(nram_pub_space + 3 * deal_num * dim_m);
-  char *nram_mask = nram_vertices + deal_vertices_num * sizeof(T);
-  char *nram_num_valid = nram_mask + deal_mask_num * sizeof(bool);
-  char *nram_idx = nram_num_valid + deal_num_valid_num * sizeof(int);
+  int8_t *nram_vertices = (int8_t *)(nram_pub_space + 3 * deal_num * dim_m);
+  int8_t *nram_mask = nram_vertices + deal_vertices_num * sizeof(T);
+  int8_t *nram_num_valid = nram_mask + deal_mask_num * sizeof(bool);
+  int8_t *nram_idx = nram_num_valid + deal_num_valid_num * sizeof(int);
 
   int repeat_n = total_bn_num / (deal_num * taskDim);
   int rem_num_device = total_bn_num % (deal_num * taskDim);

@@ -31,7 +31,7 @@
 #define PING 0
 #define PONG 1
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 namespace backward {
 
@@ -66,7 +66,7 @@ __mlu_func__ void computeLogE(float *nram_dst, float *nram_src,
 }
 
 template <typename T>
-__mlu_func__ void loadInputBwd(char *nram_input, char *nram_target,
+__mlu_func__ void loadInputBwd(int8_t *nram_input, int8_t *nram_target,
                                const T *gdram_input,
                                const int32_t *gdram_target,
                                const int32_t deal_n, const int32_t total_c,
@@ -81,7 +81,7 @@ __mlu_func__ void loadInputBwd(char *nram_input, char *nram_target,
   __memcpy_async(nram_target, gdram_target + gdram_offset / total_c,
                  deal_n * sizeof(int32_t), GDRAM2NRAM);
 
-  char *nram_input_load = nram_input;
+  int8_t *nram_input_load = nram_input;
   int32_t compute_align_size = 2 * NFU_ALIGN_SIZE;
   if (has_weight) {
     if (sizeof(T) == sizeof(half)) {
@@ -108,7 +108,7 @@ __mlu_func__ void loadInputBwd(char *nram_input, char *nram_target,
 }
 
 template <typename T>
-__mlu_func__ void storeOutputBwd(T *gdram_output, const char *nram_output,
+__mlu_func__ void storeOutputBwd(T *gdram_output, const int8_t *nram_output,
                                  const int32_t deal_n, const int32_t total_c,
                                  const bool pingpong_flag,
                                  const bool has_weight,
@@ -131,11 +131,11 @@ __mlu_func__ void storeOutputBwd(T *gdram_output, const char *nram_output,
 }
 
 template <typename T>
-__mlu_func__ void coreCompute(char *nram_input, const T *nram_weight,
-                              const float *nram_flt_min, char *nram_pt,
-                              char *nram_alpha_t, char *nram_temp,
-                              char *nram_target, const float *nram_gamma,
-                              char *nram_output, const float alpha,
+__mlu_func__ void coreCompute(int8_t *nram_input, const T *nram_weight,
+                              const float *nram_flt_min, int8_t *nram_pt,
+                              int8_t *nram_alpha_t, int8_t *nram_temp,
+                              int8_t *nram_target, const float *nram_gamma,
+                              int8_t *nram_output, const float alpha,
                               const int32_t compute_num, const int32_t deal_n,
                               const int32_t total_c, const bool pingpong_flag,
                               const int32_t nram_offset,
@@ -151,7 +151,7 @@ __mlu_func__ void coreCompute(char *nram_input, const T *nram_weight,
 
   if (sizeof(T) == sizeof(half)) {
     const int32_t compute_size = compute_num * sizeof(float);
-    char *nram_input_load = nram_input + compute_size / 2;
+    int8_t *nram_input_load = nram_input + compute_size / 2;
     __bang_half2float((float *)nram_input, (half *)nram_input_load,
                       compute_num);
   }
@@ -302,12 +302,12 @@ __mlu_func__ void focalLossSigmoidBackwardBlock(
   T *base_addr_output = output + taskId * num_per_core;
 
   // nram addr
-  char *nram_input = (char *)nram_buffer;
-  char *nram_pt = nram_input + compute_size;
-  char *nram_alpha_t = nram_pt + compute_size;
-  char *nram_temp = nram_alpha_t + compute_size;
-  char *nram_output = nram_temp + compute_size;
-  char *nram_target = nram_output + compute_size;
+  int8_t *nram_input = (int8_t *)nram_buffer;
+  int8_t *nram_pt = nram_input + compute_size;
+  int8_t *nram_alpha_t = nram_pt + compute_size;
+  int8_t *nram_temp = nram_alpha_t + compute_size;
+  int8_t *nram_output = nram_temp + compute_size;
+  int8_t *nram_target = nram_output + compute_size;
   float *nram_flt_min = NULL;
   float *nram_gamma = NULL;
   T *nram_weight = NULL;

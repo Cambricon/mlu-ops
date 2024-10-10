@@ -50,7 +50,7 @@
   template <typename DType_in, typename DType_scalar, typename DType_out, \
             typename... Args>                                             \
   __mlu_global__ void MLUBlockKernelBinaryTensorScalarPipe3##Op##Prefer(  \
-      char *input_tensor, char *input_scalar, char *output,               \
+      int8_t *input_tensor, int8_t *input_scalar, int8_t *output,         \
       uint32_t host_scalar, mluOpPointerMode_t pointer_mode,              \
       size_t element_num, Args... args);
 
@@ -58,7 +58,7 @@
   template <typename DType_in, typename DType_scalar, typename DType_out,      \
             typename... Args>                                                  \
   __mlu_global__ void MLUBlockKernelBinaryTensorScalarPipe3##Op##Prefer(       \
-      char *input_tensor, char *input_scalar, char *output_tensor,             \
+      int8_t *input_tensor, int8_t *input_scalar, int8_t *output_tensor,       \
       uint32_t host_scalar, mluOpPointerMode_t pointer_mode,                   \
       size_t element_num, Args... args) {                                      \
     if (__is_mpu()) {                                                          \
@@ -86,12 +86,12 @@
     int32_t repeat = num_per_core / span_num_deal;                             \
     size_t rem = num_per_core % span_num_deal;                                 \
     size_t align_rem = PAD_UP(rem, align_num);                                 \
-    char *ping_output = nram_buffer;                                           \
-    char *ping_input = nram_buffer + output_input_gap;                         \
-    char *auxiliary_a = nram_buffer + auxiliary_a_gap;                         \
-    char *auxiliary_b = nram_buffer + auxiliary_b_gap;                         \
-    char *auxiliary_c = nram_buffer + auxiliary_c_gap;                         \
-    char *scalar = nram_buffer + BINARY_NRAM_SIZE;                             \
+    int8_t *ping_output = nram_buffer;                                         \
+    int8_t *ping_input = nram_buffer + output_input_gap;                       \
+    int8_t *auxiliary_a = nram_buffer + auxiliary_a_gap;                       \
+    int8_t *auxiliary_b = nram_buffer + auxiliary_b_gap;                       \
+    int8_t *auxiliary_c = nram_buffer + auxiliary_c_gap;                       \
+    int8_t *scalar = nram_buffer + BINARY_NRAM_SIZE;                           \
     if (pointer_mode == MLUOP_POINTER_MODE_HOST) {                             \
       ((DType_scalar *)scalar)[0] = *((DType_scalar *)&host_scalar);           \
     } else {                                                                   \
@@ -170,18 +170,19 @@
   template <typename DType_in, typename DType_scalar, typename DType_out,      \
             typename... Args>                                                  \
   __mlu_global__ void MLUBlockKernelBinaryStrideTensorScalarPipe3##Op##Prefer( \
-      char *input_tensor, TensorShape input_tensor_shape, char *input_scalar,  \
-      char *output, TensorShape output_shape, uint32_t host_scalar,            \
-      mluOpPointerMode_t pointer_mode, size_t element_num, Args... args);
+      int8_t *input_tensor, TensorShape input_tensor_shape,                    \
+      int8_t *input_scalar, int8_t *output, TensorShape output_shape,          \
+      uint32_t host_scalar, mluOpPointerMode_t pointer_mode,                   \
+      size_t element_num, Args... args);
 
 #define BINARY_OP_STRIDE_TENSOR_SCALAR_PIP3_KERNEL(Op, Prefer)                 \
   template <typename DType_in, typename DType_scalar, typename DType_out,      \
             typename... Args>                                                  \
   __mlu_global__ void MLUBlockKernelBinaryStrideTensorScalarPipe3##Op##Prefer( \
-      char *input_tensor, TensorShape input_tensor_shape, char *input_scalar,  \
-      char *output_tensor, TensorShape output_tensor_shape,                    \
-      uint32_t host_scalar, mluOpPointerMode_t pointer_mode,                   \
-      size_t element_num, Args... args) {                                      \
+      int8_t *input_tensor, TensorShape input_tensor_shape,                    \
+      int8_t *input_scalar, int8_t *output_tensor,                             \
+      TensorShape output_tensor_shape, uint32_t host_scalar,                   \
+      mluOpPointerMode_t pointer_mode, size_t element_num, Args... args) {     \
     if (__is_mpu()) {                                                          \
       return;                                                                  \
     }                                                                          \
@@ -206,12 +207,12 @@
     int32_t repeat = num_per_core / span_num_deal;                             \
     size_t rem = num_per_core % span_num_deal;                                 \
     size_t align_rem = PAD_UP(rem, align_num);                                 \
-    char *ping_output = nram_buffer;                                           \
-    char *ping_input = nram_buffer + output_input_gap;                         \
-    char *auxiliary_a = nram_buffer + auxiliary_a_gap;                         \
-    char *auxiliary_b = nram_buffer + auxiliary_b_gap;                         \
-    char *auxiliary_c = nram_buffer + auxiliary_c_gap;                         \
-    char *scalar = nram_buffer + BINARY_NRAM_SIZE;                             \
+    int8_t *ping_output = nram_buffer;                                         \
+    int8_t *ping_input = nram_buffer + output_input_gap;                       \
+    int8_t *auxiliary_a = nram_buffer + auxiliary_a_gap;                       \
+    int8_t *auxiliary_b = nram_buffer + auxiliary_b_gap;                       \
+    int8_t *auxiliary_c = nram_buffer + auxiliary_c_gap;                       \
+    int8_t *scalar = nram_buffer + BINARY_NRAM_SIZE;                           \
     if (pointer_mode == MLUOP_POINTER_MODE_HOST) {                             \
       ((DType_scalar *)scalar)[0] = *((DType_scalar *)&host_scalar);           \
     } else {                                                                   \

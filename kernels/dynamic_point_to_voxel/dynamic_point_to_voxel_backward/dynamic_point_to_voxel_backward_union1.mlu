@@ -27,7 +27,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void loadAsync(T *feats_nram, T *voxel_feats_nram,
@@ -168,7 +168,7 @@ __mlu_global__ void MLUKernelMaxReduceTracebackScatterIdx(
   // broadcast point2voxel_map to nram
   __memcpy(point2voxel_map_nram, point2voxel_map, size_input, GDRAM2NRAM);
   // initialze voxel_from_flag to false
-  __memset_nram(voxel_from_flag_nram, M, (char)false);
+  __memset_nram(voxel_from_flag_nram, M, (int8_t) false);
   for (int i = 0; i < C; i++) {
     index_col_nram[i] = i;
   }

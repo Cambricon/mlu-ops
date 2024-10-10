@@ -38,7 +38,7 @@
   template <typename DType_in1, typename DType_in2, typename DType_out, \
             typename... Args>                                           \
   __mlu_global__ void MLUBlockKernel5StagePipeline##Op##Prefer(         \
-      char *x, char *y, char *z, size_t data_num, Args... args)
+      int8_t *x, int8_t *y, int8_t *z, size_t data_num, Args... args)
 
 /****************************************************************************
  * GDRAM2SRAM: io pipeline
@@ -59,7 +59,7 @@
   template <typename DType_in1, typename DType_in2, typename DType_out,        \
             typename... Args>                                                  \
   __mlu_global__ void MLUBlockKernel5StagePipeline##Op##Prefer(                \
-      char *x, char *y, char *z, size_t data_num, Args... args) {              \
+      int8_t *x, int8_t *y, int8_t *z, size_t data_num, Args... args) {        \
     size_t span_num_deal = 0;                                                  \
     size_t output_input1_gap = 0, output_input2_gap = 0;                       \
     size_t auxiliary_a_gap = 0, auxiliary_b_gap = 0, auxiliary_c_gap = 0;      \
@@ -90,12 +90,12 @@
     }                                                                          \
     size_t align_cluster_rem_to_core = PAD_UP(cluster_rem_to_core, align_num); \
                                                                                \
-    char *nram_out = nram_buffer;                                              \
-    char *nram_in1 = nram_buffer + output_input1_gap;                          \
-    char *nram_in2 = nram_buffer + output_input2_gap;                          \
-    char *nram_aux1 = nram_buffer + auxiliary_a_gap;                           \
-    char *nram_aux2 = nram_buffer + auxiliary_b_gap;                           \
-    char *nram_aux3 = nram_buffer + auxiliary_c_gap;                           \
+    int8_t *nram_out = nram_buffer;                                            \
+    int8_t *nram_in1 = nram_buffer + output_input1_gap;                        \
+    int8_t *nram_in2 = nram_buffer + output_input2_gap;                        \
+    int8_t *nram_aux1 = nram_buffer + auxiliary_a_gap;                         \
+    int8_t *nram_aux2 = nram_buffer + auxiliary_b_gap;                         \
+    int8_t *nram_aux3 = nram_buffer + auxiliary_c_gap;                         \
                                                                                \
     if (repeat > 0) {                                                          \
       __memcpy_async(sram_in1, base_cluster_in1, sram_num * sizeof(DType_in1), \
@@ -223,6 +223,6 @@
   template <typename DType_in1, typename DType_in2, typename DType_out, \
             typename... Args>                                           \
   __mlu_global__ void MLUBlockKernel5StagePipeline##Op##Prefer(         \
-      char *x, char *y, char *z, size_t data_num, Args... args) {}
+      int8_t *x, int8_t *y, int8_t *z, size_t data_num, Args... args) {}
 #endif
 #endif  // KERNELS_BINARY_OP_BINARY_OP_5PIPELINE_H_

@@ -284,13 +284,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
   void *temp_coors = workspace;
   // point_to_pointidx : [num_points]
   void *point_to_pointidx =
-      (char *)temp_coors + num_points * 3 * sizeof(int32_t);
+      (int8_t *)temp_coors + num_points * 3 * sizeof(int32_t);
   // point_to_voxelidx : [num_points]
   void *point_to_voxelidx =
-      (char *)point_to_pointidx + num_points * sizeof(int32_t);
+      (int8_t *)point_to_pointidx + num_points * sizeof(int32_t);
   // coor_to_voxelidx : [num_points]
   void *coor_to_voxelidx =
-      (char *)point_to_voxelidx + num_points * sizeof(int32_t);
+      (int8_t *)point_to_voxelidx + num_points * sizeof(int32_t);
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
