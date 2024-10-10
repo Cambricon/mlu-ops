@@ -24,8 +24,8 @@
 #include "kernels/fft/fft_optm_device/fft_r2c_stockham_nram.h"
 #include "kernels/fft/fft_optm_device/fft_sram_allocate.h"
 
-extern __nram__ char nram_buffer[MAX_NRAM_SIZE + REM_FOR_STACK - 32 * 1024];
-extern __wram__ char wram_buffer[MAX_WRAM_SIZE];
+extern __nram__ int8_t nram_buffer[MAX_NRAM_SIZE + REM_FOR_STACK - 32 * 1024];
+extern __wram__ int8_t wram_buffer[MAX_WRAM_SIZE];
 
 // Compute multi-stage FFT from real to complex (R2C) on-chip
 template <typename DT>
@@ -39,7 +39,7 @@ __mlu_func__ void computeMutiStageR2COnchip(DT *input, DT *output, int *factors,
   int repeat_num = total_num / taskDim;
   int remain_num = total_num % taskDim;
 
-  char *nram_buf = nram_buffer + FFT_MAXFACTORS * sizeof(int);
+  int8_t *nram_buf = nram_buffer + FFT_MAXFACTORS * sizeof(int);
   int *nram_factors = (int *)nram_buffer;
 
   int t_len = repeat_num + ((remain_num > 0 && taskId < remain_num) ? 1 : 0);

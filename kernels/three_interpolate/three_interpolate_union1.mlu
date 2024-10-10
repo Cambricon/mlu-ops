@@ -27,7 +27,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define BATCH_LIMIT 1
 #define INDEX_WEIGHT_LAST_DIM 3
@@ -43,8 +43,8 @@ __mlu_func__ void memcpy2D(T *dst, const T *src, uint32_t data_size,
                            mluMemcpyDirection_t dir, uint64_t dst_stride,
                            uint64_t src_stride, uint32_t segnum) {
   for (uint32_t loopi = 0; loopi <= segnum; ++loopi) {
-    char *dst_addr = (char *)dst + loopi * dst_stride * sizeof(T);
-    char *src_addr = (char *)src + loopi * src_stride * sizeof(T);
+    int8_t *dst_addr = (int8_t *)dst + loopi * dst_stride * sizeof(T);
+    int8_t *src_addr = (int8_t *)src + loopi * src_stride * sizeof(T);
     __memcpy(dst_addr, src_addr, data_size * sizeof(T), dir);
   }
 }
@@ -80,9 +80,9 @@ __mlu_func__ void selectIndicesBetweenMinAndMaxWithoutLimit(
     __bang_mul_scalar((int32_t *)nram_mask_int32,
                       (int32_t *)nram_indices_transpose_addition,
                       (int32_t)INT32_MAX_MASK, n_limit);
-    __bang_band((char *)(nram_weights_transpose + index * n_limit),
-                (char *)(nram_weights_transpose + index * n_limit),
-                (char *)nram_mask_int32, INT32_MASK_REPEAT_TIMES * n_limit);
+    __bang_band((int8_t *)(nram_weights_transpose + index * n_limit),
+                (int8_t *)(nram_weights_transpose + index * n_limit),
+                (int8_t *)nram_mask_int32, INT32_MASK_REPEAT_TIMES * n_limit);
   } else if (sizeof(T) == sizeof(half)) {
     int16_t *nram_mask_int16 = (int16_t *)nram_indices_transpose_float_addition;
     __bang_int322int16(nram_mask_int16,
@@ -90,9 +90,9 @@ __mlu_func__ void selectIndicesBetweenMinAndMaxWithoutLimit(
                        0);
     __bang_mul_scalar((int16_t *)nram_mask_int16, (int16_t *)nram_mask_int16,
                       (int16_t)INT16_MAX_MASK, n_limit);
-    __bang_band((char *)(nram_weights_transpose + index * n_limit),
-                (char *)(nram_weights_transpose + index * n_limit),
-                (char *)nram_mask_int16, INT16_MASK_REPEAT_TIMES * n_limit);
+    __bang_band((int8_t *)(nram_weights_transpose + index * n_limit),
+                (int8_t *)(nram_weights_transpose + index * n_limit),
+                (int8_t *)nram_mask_int16, INT16_MASK_REPEAT_TIMES * n_limit);
   }
 #endif
   // multiply the indices with values in the range of [m_min, m_max)
@@ -157,18 +157,18 @@ __mlu_func__ void selectIndicesBetweenMinAndMax(
                        n_limit, 0);
     __bang_mul_scalar((int32_t *)nram_mask_int32, (int32_t *)nram_mask_int32,
                       (int32_t)INT32_MAX_MASK, n_limit);
-    __bang_band((char *)(nram_weights_transpose + index * n_limit),
-                (char *)(nram_weights_transpose + index * n_limit),
-                (char *)nram_mask_int32, INT32_MASK_REPEAT_TIMES * n_limit);
+    __bang_band((int8_t *)(nram_weights_transpose + index * n_limit),
+                (int8_t *)(nram_weights_transpose + index * n_limit),
+                (int8_t *)nram_mask_int32, INT32_MASK_REPEAT_TIMES * n_limit);
   } else if (sizeof(T) == sizeof(half)) {
     int16_t *nram_mask_int16 = (int16_t *)nram_indices_transpose_float_addition;
     __bang_float2int16_rd(nram_mask_int16, nram_indices_transpose_addition,
                           n_limit, 0);
     __bang_mul_scalar((int16_t *)nram_mask_int16, (int16_t *)nram_mask_int16,
                       (int16_t)INT16_MAX_MASK, n_limit);
-    __bang_band((char *)(nram_weights_transpose + index * n_limit),
-                (char *)(nram_weights_transpose + index * n_limit),
-                (char *)nram_mask_int16, INT16_MASK_REPEAT_TIMES * n_limit);
+    __bang_band((int8_t *)(nram_weights_transpose + index * n_limit),
+                (int8_t *)(nram_weights_transpose + index * n_limit),
+                (int8_t *)nram_mask_int16, INT16_MASK_REPEAT_TIMES * n_limit);
   }
 #endif
   // multiply the indices with values in the range of [m_min, m_max)

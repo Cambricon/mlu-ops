@@ -29,7 +29,7 @@
 
 #define MARGIN 1e-5
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 __mlu_func__ void check_point_in_box(
     float *x_nram_buffer, float *y_nram_buffer, float *z_nram_buffer, float cx,

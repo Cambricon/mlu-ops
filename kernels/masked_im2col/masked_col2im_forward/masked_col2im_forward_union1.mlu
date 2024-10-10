@@ -29,7 +29,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
-__nram__ char data_nram[MAX_NRAM_SIZE];
+__nram__ int8_t data_nram[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void MLUMultiKernelMaskedCol2imForward(

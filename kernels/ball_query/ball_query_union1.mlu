@@ -33,7 +33,7 @@
 #define REM_FOR_FLOAT2INT32 128
 #define ALIGN_NUM 64
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void genIndexFunc(T *index, const uint32_t max_index,
@@ -281,27 +281,27 @@ __mlu_global__ void MLUUnion1KernelBallQuery(
                   nfu_align_size);
   const uint32_t num_stride = FLOOR_ALIGN(num_stride1, 64);
 
-  char *vec_new_x1 = nram_buffer;
-  char *vec_new_y1 = vec_new_x1 + num_stride * sizeof(T);
-  char *vec_new_z1 = vec_new_y1 + num_stride * sizeof(T);
-  char *vec_idx_num = vec_new_z1 + num_stride * sizeof(T);
+  int8_t *vec_new_x1 = nram_buffer;
+  int8_t *vec_new_y1 = vec_new_x1 + num_stride * sizeof(T);
+  int8_t *vec_new_z1 = vec_new_y1 + num_stride * sizeof(T);
+  int8_t *vec_idx_num = vec_new_z1 + num_stride * sizeof(T);
 
-  char *vec_x1 = vec_idx_num + num_stride * sizeof(int32_t);
-  char *vec_y1 = vec_x1 + num_stride * sizeof(T);
-  char *vec_z1 = vec_y1 + num_stride * sizeof(T);
-  char *vec_index = vec_z1 + num_stride * sizeof(T);
+  int8_t *vec_x1 = vec_idx_num + num_stride * sizeof(int32_t);
+  int8_t *vec_y1 = vec_x1 + num_stride * sizeof(T);
+  int8_t *vec_z1 = vec_y1 + num_stride * sizeof(T);
+  int8_t *vec_index = vec_z1 + num_stride * sizeof(T);
 
-  char *vec_sub_x1 = vec_index + num_stride * sizeof(int32_t);
-  char *vec_sub_y1 = vec_sub_x1 + num_stride * sizeof(T);
-  char *vec_sub_z1 = vec_sub_y1 + num_stride * sizeof(T);
-  char *tmp1 = vec_sub_z1 + num_stride * sizeof(T);
+  int8_t *vec_sub_x1 = vec_index + num_stride * sizeof(int32_t);
+  int8_t *vec_sub_y1 = vec_sub_x1 + num_stride * sizeof(T);
+  int8_t *vec_sub_z1 = vec_sub_y1 + num_stride * sizeof(T);
+  int8_t *tmp1 = vec_sub_z1 + num_stride * sizeof(T);
 
-  char *out1 = tmp1 + num_stride * sizeof(int32_t);
-  char *out2 = out1 + num_stride * sizeof(T);
-  char *out3 = out2 + num_stride * sizeof(T);
-  char *tmp2 = out3 + num_stride * sizeof(T);
+  int8_t *out1 = tmp1 + num_stride * sizeof(int32_t);
+  int8_t *out2 = out1 + num_stride * sizeof(T);
+  int8_t *out3 = out2 + num_stride * sizeof(T);
+  int8_t *tmp2 = out3 + num_stride * sizeof(T);
 
-  char *src_addtion = tmp2 + num_stride * sizeof(int32_t);
+  int8_t *src_addtion = tmp2 + num_stride * sizeof(int32_t);
 
   const float min_radius2 = min_radius * min_radius;
   const float max_radius2 = max_radius * max_radius;

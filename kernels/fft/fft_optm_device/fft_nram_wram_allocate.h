@@ -23,5 +23,5 @@
 
 #pragma once
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE + REM_FOR_STACK - 32 * 1024];
-__wram__ char wram_buffer[MAX_WRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE + REM_FOR_STACK - 32 * 1024];
+__wram__ int8_t wram_buffer[MAX_WRAM_SIZE];

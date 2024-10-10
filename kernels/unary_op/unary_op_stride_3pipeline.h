@@ -37,13 +37,13 @@
 #define UNARY_OP_KERNEL_3PIPELINE_WITH_STRIDE_DECLARE(Op, Prefer)         \
   template <typename DType_in, typename DType_out, typename... Args>      \
   __mlu_global__ void MLUBlockKernel3StagePipelineWithStride##Op##Prefer( \
-      char *x, mluop::TensorShape x_shape, char *y,                       \
+      int8_t *x, mluop::TensorShape x_shape, int8_t *y,                   \
       mluop::TensorShape y_shape, size_t element_num, Args... args);
 
 #define UNARY_OP_KERNEL_3PIPELINE_WITH_STRIDE_IMPLE(Op, Prefer)                \
   template <typename DType_in, typename DType_out, typename... Args>           \
   __mlu_global__ void MLUBlockKernel3StagePipelineWithStride##Op##Prefer(      \
-      char *input_gdram, mluop::TensorShape x_shape, char *output_gdram,       \
+      int8_t *input_gdram, mluop::TensorShape x_shape, int8_t *output_gdram,   \
       mluop::TensorShape y_shape, size_t element_num, Args... args) {          \
     if (__is_mpu()) {                                                          \
       return;                                                                  \
@@ -73,11 +73,11 @@
     size_t rem = num_per_core % num_deal;                                      \
     size_t rem_align = CEIL_ALIGN(rem, align_num);                             \
                                                                                \
-    char *ping_output = nram_buffer;                                           \
-    char *ping_input = nram_buffer + output_input_gap;                         \
+    int8_t *ping_output = nram_buffer;                                         \
+    int8_t *ping_input = nram_buffer + output_input_gap;                       \
     /* Two auxiliary pointers.*/                                               \
-    char *auxiliary_a = nram_buffer + auxiliary_a_gap;                         \
-    char *auxiliary_b = nram_buffer + auxiliary_b_gap;                         \
+    int8_t *auxiliary_a = nram_buffer + auxiliary_a_gap;                       \
+    int8_t *auxiliary_b = nram_buffer + auxiliary_b_gap;                       \
                                                                                \
     if (repeat > 0) {                                                          \
       tensorStrideLoad<DType_in>(ping_input, input_gdram, task_offset,         \

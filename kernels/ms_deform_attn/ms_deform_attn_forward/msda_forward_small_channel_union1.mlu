@@ -26,7 +26,7 @@
 
 #define ELE_COUNT 32 /* cycle element count */
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 __mlu_func__ void genMask0101(float *mask_ram, int32_t size) {
 #if __BANG_ARCH__ >= 372
@@ -45,12 +45,12 @@ __mlu_func__ void genMask0101(float *mask_ram, int32_t size) {
 
 template <typename T>
 __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
-    const char *data_value_gdram, const char *data_spatial_shapes_gdram,
-    const char *data_level_start_index_gdram,
-    const char *data_sampling_loc_gdram, const char *data_attn_weight_gdram,
+    const int8_t *data_value_gdram, const int8_t *data_spatial_shapes_gdram,
+    const int8_t *data_level_start_index_gdram,
+    const int8_t *data_sampling_loc_gdram, const int8_t *data_attn_weight_gdram,
     const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels, const int32_t num_queries,
-    const int32_t num_points, char *data_col_gdram) {
+    const int32_t num_points, int8_t *data_col_gdram) {
 #if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
@@ -109,44 +109,44 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
   const int32_t g_rep = deal_g / deal_num;
   const int32_t g_rem = deal_g % deal_num;
   // nram buffer alloc
-  char *data_spatial_shapes_nram = nram_buffer;
-  char *data_level_start_index_nram = data_spatial_shapes_nram + spatial_size;
-  char *input_tl = data_level_start_index_nram + level_start_index_size;
-  char *input_tr = input_tl + deal_num * mult * sizeof(T);
-  char *input_bl = input_tr + deal_num * mult * sizeof(T);
-  char *input_br = input_bl + deal_num * mult * sizeof(T);
-  char *weight_tl = input_tl + 4 * deal_num * mult * sizeof(T);
-  char *weight_tr = weight_tl + deal_num * mult * sizeof(T);
-  char *weight_bl = weight_tr + deal_num * mult * sizeof(T);
-  char *weight_br = weight_bl + deal_num * mult * sizeof(T);
-  char *mask_tl = weight_br + deal_num * mult * sizeof(T);
-  char *mask_tr = mask_tl + deal_num * sizeof(T);
-  char *mask_bl = mask_tr + deal_num * sizeof(T);
-  char *mask_br = mask_bl + deal_num * sizeof(T);
-  char *point_ram = mask_br + deal_num * sizeof(T);
-  char *index_tl = point_ram + deal_num * sizeof(T);
-  char *index_bl = index_tl + deal_num * sizeof(T);
-  char *valid_mask = index_bl + deal_num * sizeof(T);
+  int8_t *data_spatial_shapes_nram = nram_buffer;
+  int8_t *data_level_start_index_nram = data_spatial_shapes_nram + spatial_size;
+  int8_t *input_tl = data_level_start_index_nram + level_start_index_size;
+  int8_t *input_tr = input_tl + deal_num * mult * sizeof(T);
+  int8_t *input_bl = input_tr + deal_num * mult * sizeof(T);
+  int8_t *input_br = input_bl + deal_num * mult * sizeof(T);
+  int8_t *weight_tl = input_tl + 4 * deal_num * mult * sizeof(T);
+  int8_t *weight_tr = weight_tl + deal_num * mult * sizeof(T);
+  int8_t *weight_bl = weight_tr + deal_num * mult * sizeof(T);
+  int8_t *weight_br = weight_bl + deal_num * mult * sizeof(T);
+  int8_t *mask_tl = weight_br + deal_num * mult * sizeof(T);
+  int8_t *mask_tr = mask_tl + deal_num * sizeof(T);
+  int8_t *mask_bl = mask_tr + deal_num * sizeof(T);
+  int8_t *mask_br = mask_bl + deal_num * sizeof(T);
+  int8_t *point_ram = mask_br + deal_num * sizeof(T);
+  int8_t *index_tl = point_ram + deal_num * sizeof(T);
+  int8_t *index_bl = index_tl + deal_num * sizeof(T);
+  int8_t *valid_mask = index_bl + deal_num * sizeof(T);
   // nram space reuse
-  char *grid_ram = weight_tl;
-  char *mask_ram = weight_bl;
-  char *coord_x = input_bl;
-  char *coord_y = coord_x + deal_num * sizeof(T);
-  char *coord_x_low = input_tl;
-  char *coord_y_low = coord_x_low + deal_num * sizeof(T);
-  char *coord_x_low_int = weight_tl;
-  char *coord_y_low_int = weight_tr;
-  char *spatial_x = mask_tl;
-  char *spatial_y = mask_tr;
-  char *spatial_x_float = weight_bl;
-  char *spatial_y_float = weight_br;
-  char *spatial_x_temp = mask_bl;
-  char *spatial_y_temp = mask_br;
+  int8_t *grid_ram = weight_tl;
+  int8_t *mask_ram = weight_bl;
+  int8_t *coord_x = input_bl;
+  int8_t *coord_y = coord_x + deal_num * sizeof(T);
+  int8_t *coord_x_low = input_tl;
+  int8_t *coord_y_low = coord_x_low + deal_num * sizeof(T);
+  int8_t *coord_x_low_int = weight_tl;
+  int8_t *coord_y_low_int = weight_tr;
+  int8_t *spatial_x = mask_tl;
+  int8_t *spatial_y = mask_tr;
+  int8_t *spatial_x_float = weight_bl;
+  int8_t *spatial_y_float = weight_br;
+  int8_t *spatial_x_temp = mask_bl;
+  int8_t *spatial_y_temp = mask_br;
 #if MS_DEFORM_ATTN_FORWARD_HEADVECTOR
-  char *base_ptr_offset = weight_tl;
+  int8_t *base_ptr_offset = weight_tl;
 #endif
-  char *auxiliary_a = point_ram;
-  char *auxiliary_b = weight_bl;
+  int8_t *auxiliary_a = point_ram;
+  int8_t *auxiliary_b = weight_bl;
   __memcpy_async(data_spatial_shapes_nram, data_spatial_shapes_gdram,
                  num_levels * 2 * sizeof(int32_t), GDRAM2NRAM);
   __memcpy_async(data_level_start_index_nram, data_level_start_index_gdram,
@@ -165,7 +165,7 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
           io_data_num = g_rem;
         }
       }
-      char *data_col_gdram_start =
+      int8_t *data_col_gdram_start =
           data_col_gdram + (batch_idx * num_queries * num_heads * channels +
                             (offset_g + grid_iter * deal_num) /
                                 (num_levels * num_points) * channels) *
@@ -216,7 +216,7 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
       // generate valid mask, which means the location is nan/inf or not
       // condition coordx > -1 / coordy > -1
       __bang_gt_scalar((float *)auxiliary_a, (float *)coord_x, -1.0, deal_num);
-      __bang_move((char *)valid_mask, (char *)auxiliary_a,
+      __bang_move((int8_t *)valid_mask, (int8_t *)auxiliary_a,
                   deal_num * sizeof(float));
       __bang_gt_scalar((float *)auxiliary_a, (float *)coord_y, -1.0, deal_num);
       __bang_add((float *)valid_mask, (float *)valid_mask, (float *)auxiliary_a,
@@ -385,8 +385,9 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
                  (float *)weight_tr, deal_num);
       // if loc has nan/inf, fill all invalid potision with 0.
       // Note that this operation handles in bit-scale.
-      __bang_cycle_band((char *)input_tl, (char *)input_tl, (char *)valid_mask,
-                        4 * deal_num * sizeof(float), deal_num * sizeof(float));
+      __bang_cycle_band((int8_t *)input_tl, (int8_t *)input_tl,
+                        (int8_t *)valid_mask, 4 * deal_num * sizeof(float),
+                        deal_num * sizeof(float));
       __sync();
       // extend weight
       const int32_t w_rep = channel / ELE_COUNT * ELE_COUNT;
@@ -406,7 +407,7 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
         }
       }
       __sync();
-      const char *data_value_gdram_start =
+      const int8_t *data_value_gdram_start =
           data_value_gdram +
           batch_idx * num_keys * num_heads * channels * sizeof(float);
       const int32_t c_str = deal_num * channel * sizeof(float);
@@ -431,7 +432,7 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
               ((int32_t *)data_level_start_index_nram)[(p_idx / num_points) %
                                                        num_levels];
 #if MS_DEFORM_ATTN_FORWARD_HEADVECTOR
-          const char *data_value_ptr =
+          const int8_t *data_value_ptr =
               data_value_gdram_start +
               (level_start_id * num_heads * channels + c_iter * channel) *
                   sizeof(float);
@@ -439,7 +440,7 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
           const int32_t head_idx = ((p_idx + offset_g + grid_iter * deal_num) /
                                     (num_levels * num_points)) %
                                    num_heads;
-          const char *data_value_ptr =
+          const int8_t *data_value_ptr =
               data_value_gdram_start +
               (level_start_id * num_heads * channels + head_idx * channels +
                c_iter * channel) *
@@ -549,9 +550,9 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
 }
 
 template __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel<float>(
-    const char *data_value_gdram, const char *data_spatial_shapes_gdram,
-    const char *data_level_start_index_gdram,
-    const char *data_sampling_loc_gdram, const char *data_attn_weight_gdram,
+    const int8_t *data_value_gdram, const int8_t *data_spatial_shapes_gdram,
+    const int8_t *data_level_start_index_gdram,
+    const int8_t *data_sampling_loc_gdram, const int8_t *data_attn_weight_gdram,
     const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels, const int32_t num_queries,
-    const int32_t num_points, char *data_col_gdram);
+    const int32_t num_points, int8_t *data_col_gdram);

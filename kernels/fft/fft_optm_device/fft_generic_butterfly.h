@@ -23,7 +23,7 @@
 #pragma once
 #include "kernels/fft/fft_optm_device/fft_butterfly_ops.h"
 
-extern __wram__ char wram_buffer[MAX_WRAM_SIZE];
+extern __wram__ int8_t wram_buffer[MAX_WRAM_SIZE];
 
 template <typename DT>
 __mlu_func__ void computeGenericButterflyFirststageMat_v1(

@@ -25,7 +25,7 @@
 #include "mlu.h"
 
 #define SIZE_NRAM_BUF (MAX_NRAM_SIZE + REM_FOR_STACK - 12 * 1024)
-__nram__ char ram[SIZE_NRAM_BUF];
+__nram__ int8_t ram[SIZE_NRAM_BUF];
 
 template <typename T>
 __mlu_func__ void blockTensorStridedIn(T *input,
@@ -72,7 +72,7 @@ __mlu_global__ void MLUUnionKernelTensorStrideIn(const void *input,
   PERF_TIME_END();
 }
 
-template __mlu_global__ void MLUUnionKernelTensorStrideIn<int8>(
+template __mlu_global__ void MLUUnionKernelTensorStrideIn<int8_t>(
     const void *input, mluop::TensorShape input_shape, void *output);
 template __mlu_global__ void MLUUnionKernelTensorStrideIn<half>(
     const void *input, mluop::TensorShape input_shape, void *output);

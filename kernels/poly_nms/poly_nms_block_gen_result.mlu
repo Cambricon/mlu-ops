@@ -73,8 +73,8 @@ __mlu_global__ void mluGenNmsResult(int input_boxes_num,
     }
     __memcpy(mask_row_buffer, (uint32_t *)p_mask + box_id * mask_col_num,
              sizeof(uint32_t) * (mask_col_num), GDRAM2NRAM);
-    __bang_band((char *)final_mask_buffer, (char *)final_mask_buffer,
-                (char *)mask_row_buffer, 4 * mas_col_num_align);
+    __bang_band((int8_t *)final_mask_buffer, (int8_t *)final_mask_buffer,
+                (int8_t *)mask_row_buffer, 4 * mas_col_num_align);
   }
   if (OUTPUT_ORDER == OutputOrder::LOW_BOX_ID_FIRST) {
     int found = 0;

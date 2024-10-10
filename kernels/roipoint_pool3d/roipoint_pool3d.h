@@ -29,16 +29,16 @@ mluOpStatus_t MLUOP_WIN_API KernelRoipointPool3d(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const int batch_size, const int pts_num,
     const int boxes_num, const int feature_in_len, const int sampled_pts_num,
-    const char *points_xyz_gdram, const char *point_features_gdram,
-    const char *boxes3d_gdram, char *pooled_features_gdram,
-    char *pooled_empty_flag_gdram);
+    const int8_t *points_xyz_gdram, const int8_t *point_features_gdram,
+    const int8_t *boxes3d_gdram, int8_t *pooled_features_gdram,
+    int8_t *pooled_empty_flag_gdram);
 
 mluOpStatus_t MLUOP_WIN_API KernelRoipointPool3dLargeBoxesNum(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const int batch_size, const int pts_num,
     const int boxes_num, const int feature_in_len, const int sampled_pts_num,
-    const char *points_xyz_gdram, const char *point_features_gdram,
-    const char *boxes3d_gdram, char *pooled_features_gdram,
-    char *pooled_empty_flag_gdram);
+    const int8_t *points_xyz_gdram, const int8_t *point_features_gdram,
+    const int8_t *boxes3d_gdram, int8_t *pooled_features_gdram,
+    int8_t *pooled_empty_flag_gdram);
 
 #endif  // KERNELS_ROIPOINT_POOL3D_ROIPOINT_POOL3D_H
