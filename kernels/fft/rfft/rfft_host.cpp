@@ -592,9 +592,6 @@ mluOpStatus_t setRFFT1dReserveArea(mluOpHandle_t handle,
     CNRT_CHECK(cnrtMemcpyAsync(fft_plan->mlu_addrs.dft_matrix,
                                fft_plan->dft_matrix, DFT_TABLE_SIZE,
                                handle->queue, cnrtMemcpyHostToDev));
-    CNRT_CHECK(cnrtFreeHost(fft_plan->factors));
-    CNRT_CHECK(cnrtFreeHost(fft_plan->twiddles));
-    CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix));
   }
   return status;
 }
