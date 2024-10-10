@@ -52,9 +52,9 @@ MLU-OPS™提供了以下功能：
   - 支持 x86_64 架构下的 Ubuntu20.04、Centos7.6、Centos8.5、Kylin10
   - MLU-OPS™ v1.0.0版本后将不再支持 Ubuntu18.04。Ubuntu22.04系统将在后续的版本提供支持。
 - 寒武纪 MLU SDK：
-  - 编译和运行时依赖 CNToolkit v3.12.3 或更高版本，CNNL v1.26.1 或者更高版本
+  - 编译和运行时依赖 CNToolkit v3.14.0 或更高版本，CNNL v1.26.6 或者更高版本
 - 寒武纪 MLU 驱动：
-  - 运行时依赖驱动 v5.10.25 或更高版本
+  - 运行时依赖驱动 v6.0.3 或更高版本
 - 外部链接库：
   - libxml2-dev、libprotobuf-dev、protobuf-compiler、llvm-6.0-dev、libfmt-dev>=11.0.2、libeigen3-dev>=3.4
 - Python环境：
