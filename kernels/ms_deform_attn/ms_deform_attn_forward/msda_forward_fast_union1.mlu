@@ -166,8 +166,8 @@ __mlu_func__ void getConditionCoordWeight(
   w_contain_inf = buf_nram[2 * total_points] > 0;
   //================================================================================================
   int32_t total_coord_pad = PAD_UP(total_points * 2, BIT_COLLECT_PAD);
-  __bang_collect_bitindex(buf_x_nram, loc_nram, mask_x_nram, total_coord_pad);
-  __bang_collect_bitindex(buf_y_nram, loc_nram, mask_y_nram, total_coord_pad);
+  __bang_filter_bitindex(buf_x_nram, loc_nram, mask_x_nram, total_coord_pad);
+  __bang_filter_bitindex(buf_y_nram, loc_nram, mask_y_nram, total_coord_pad);
   // x = loc_x * spatial_w - 0.5; y = loc_y * spatial_h - 0.5;
   __bang_fusion(FUSION_FMS, buf_x_nram, buf_x_nram, spatial_w_bd_nram, (T)0.5,
                 total_points, block_points);
@@ -291,7 +291,7 @@ __mlu_func__ void getConditionCoordWeight(
                      weight_attn_nram, 4 * total_points, total_points);
   }
   __bang_mul_scalar(buf_nram, weight_attn_nram, (T)1, total_points);
-  __bang_collect((float*)weight_attn_nram, (float*)buf_nram,
+  __bang_filter((float*)weight_attn_nram, (float*)buf_nram,
                  cond_point_valid_nram, total_points);
   __bang_float2int32((int32_t*)cond_point_polation_nram,
                      cond_point_polation_nram, total_points * 4, 0);
@@ -301,15 +301,15 @@ __mlu_func__ void getConditionCoordWeight(
   __bang_band((char*)weight_polation_nram_tmp, (char*)weight_polation_nram,
               (char*)cond_point_polation_nram,
               total_points * 4 * sizeof(float));
-  __bang_collect((float*)weight_polation_nram, (float*)weight_polation_nram_tmp,
+  __bang_filter((float*)weight_polation_nram, (float*)weight_polation_nram_tmp,
                  cond_point_valid_nram, total_points);
-  __bang_collect((float*)weight_polation_nram + total_points,
+  __bang_filter((float*)weight_polation_nram + total_points,
                  (float*)weight_polation_nram_tmp + total_points,
                  cond_point_valid_nram, total_points);
-  __bang_collect((float*)weight_polation_nram + 2 * total_points,
+  __bang_filter((float*)weight_polation_nram + 2 * total_points,
                  (float*)weight_polation_nram_tmp + 2 * total_points,
                  cond_point_valid_nram, total_points);
-  __bang_collect((float*)weight_polation_nram + 3 * total_points,
+  __bang_filter((float*)weight_polation_nram + 3 * total_points,
                  (float*)weight_polation_nram_tmp + 3 * total_points,
                  cond_point_valid_nram, total_points);
   //================================================================================================
@@ -319,16 +319,16 @@ __mlu_func__ void getConditionCoordWeight(
     __bang_mul_scalar((int32_t*)cond_point_polation_nram_tmp,
                       (int32_t*)cond_point_polation_nram, (int32_t)1,
                       total_points * 4);
-    __bang_collect((float*)cond_point_polation_nram,
+    __bang_filter((float*)cond_point_polation_nram,
                    (float*)cond_point_polation_nram_tmp, cond_point_valid_nram,
                    total_points);
-    __bang_collect((float*)cond_point_polation_nram + total_points,
+    __bang_filter((float*)cond_point_polation_nram + total_points,
                    (float*)cond_point_polation_nram_tmp + total_points,
                    cond_point_valid_nram, total_points);
-    __bang_collect((float*)cond_point_polation_nram + 2 * total_points,
+    __bang_filter((float*)cond_point_polation_nram + 2 * total_points,
                    (float*)cond_point_polation_nram_tmp + 2 * total_points,
                    cond_point_valid_nram, total_points);
-    __bang_collect((float*)cond_point_polation_nram + 3 * total_points,
+    __bang_filter((float*)cond_point_polation_nram + 3 * total_points,
                    (float*)cond_point_polation_nram_tmp + 3 * total_points,
                    cond_point_valid_nram, total_points);
   }
@@ -349,11 +349,11 @@ __mlu_func__ void getConditionCoordWeight(
   __bang_sub((int32_t*)data_offset_nram_tr_tmp,
              (int32_t*)data_offset_nram_tr_tmp,
              (int32_t*)data_offset_nram_tl_tmp, total_points);
-  __bang_collect((float*)data_offset_nram_tl, (float*)data_offset_nram_tl_tmp,
+  __bang_filter((float*)data_offset_nram_tl, (float*)data_offset_nram_tl_tmp,
                  cond_point_valid_nram, total_points);
-  __bang_collect((float*)data_offset_nram_bl, (float*)data_offset_nram_bl_tmp,
+  __bang_filter((float*)data_offset_nram_bl, (float*)data_offset_nram_bl_tmp,
                  cond_point_valid_nram, total_points);
-  __bang_collect((float*)data_offset_nram_tr, (float*)data_offset_nram_tr_tmp,
+  __bang_filter((float*)data_offset_nram_tr, (float*)data_offset_nram_tr_tmp,
                  cond_point_valid_nram, total_points);
 }
 

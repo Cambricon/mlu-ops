@@ -165,8 +165,8 @@ __mlu_func__ void computePolationWeightOffsetCond(
   T* buf_y_ceil = buf_nram + 5 * total_points;
   //================================================================================================
   int32_t total_coord_pad = PAD_UP(total_points * 2, BIT_COLLECT_PAD);
-  __bang_collect_bitindex(buf_x_nram, loc_nram, mask_x_nram, total_coord_pad);
-  __bang_collect_bitindex(buf_y_nram, loc_nram, mask_y_nram, total_coord_pad);
+  __bang_filter_bitindex(buf_x_nram, loc_nram, mask_x_nram, total_coord_pad);
+  __bang_filter_bitindex(buf_y_nram, loc_nram, mask_y_nram, total_coord_pad);
   // x = loc_x * spatial_w - 0.5; y = loc_y * spatial_h - 0.5;
   __bang_fusion(FUSION_FMS, buf_x_nram, buf_x_nram, spatial_w_bd_nram, (T)0.5,
                 total_points, block_points);
