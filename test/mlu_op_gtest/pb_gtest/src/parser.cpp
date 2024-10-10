@@ -268,8 +268,10 @@ void Parser::parse(const std::string &file) {
     mt->total_count = getTensorStrideCount(pt, mt->value_type);
     // shape_count come from value_f/value_i/value_h/value_ui/value_ul and
     // shape. not include stride
+    size_t dtype_size;
+    MLUOP_CHECK(mluOpGetSizeOfDataType(mt->dtype, &dtype_size));
     mt->shape_count = getTensorShapeCount(pt);
-    mt->sizeof_dtype = mluop::getSizeOfDataType(mt->dtype);
+    mt->sizeof_dtype = dtype_size;
     mt->size_in_bytes = mt->total_count * mt->sizeof_dtype;
     if (mt->total_count != mt->shape_count) {
       VLOG(4) << "WARNING: Parser: the " << mt->name
