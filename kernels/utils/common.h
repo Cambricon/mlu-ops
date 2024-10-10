@@ -382,14 +382,14 @@ __mlu_func__ void __mluop_int322float(float *dst, float *dst_addition,
   // 0x80000000 = 1,000000000,0000000000000000000000000000
   __bang_write_value((unsigned *)src_addition, seg_elem_count,
                      (unsigned)0x80000000);
-  __bang_cycle_band((char *)dst_addition, (char *)src, (char *)src_addition,
-                    src_count * float_size, align_128);
+  __bang_cycle_band((int8_t *)dst_addition, (int8_t *)src,
+                    (int8_t *)src_addition, src_count * float_size, align_128);
   // get 1 or 0 from sign bit
   // judge is Odd
   __bang_write_value((unsigned *)src_addition, seg_elem_count,
                      (unsigned)0x00000001);
-  __bang_cycle_bor((char *)dst_addition, (char *)dst_addition,
-                   (char *)src_addition, src_count * float_size, align_128);
+  __bang_cycle_bor((int8_t *)dst_addition, (int8_t *)dst_addition,
+                   (int8_t *)src_addition, src_count * float_size, align_128);
   __bang_write_value((unsigned *)src_addition, seg_elem_count,
                      (unsigned)0x80000001);
   __bang_cycle_eq(dst_addition, dst_addition, src_addition, src_count,
@@ -398,15 +398,16 @@ __mlu_func__ void __mluop_int322float(float *dst, float *dst_addition,
   __bang_write_value((unsigned *)src_addition, seg_elem_count,
                      (unsigned)0xffffffff);
   __bang_cycle_mul(dst, dst_addition, src_addition, src_count, seg_elem_count);
-  __bang_bxor((char *)dst, (char *)src, (char *)dst, src_count * float_size);
+  __bang_bxor((int8_t *)dst, (int8_t *)src, (int8_t *)dst,
+              src_count * float_size);
   // convert int32 to float32
   __bang_write_value((unsigned *)src_addition, seg_elem_count,
                      (unsigned)0x7fffff);
-  __bang_cycle_band((char *)dst, (char *)dst, (char *)src_addition,
+  __bang_cycle_band((int8_t *)dst, (int8_t *)dst, (int8_t *)src_addition,
                     src_count * float_size, align_128);
   __bang_write_value((unsigned *)src_addition, seg_elem_count,
                      (unsigned)0x4b000000);
-  __bang_cycle_bor((char *)dst, (char *)dst, (char *)src_addition,
+  __bang_cycle_bor((int8_t *)dst, (int8_t *)dst, (int8_t *)src_addition,
                    src_count * float_size, align_128);
   __bang_sub_scalar(dst, dst, move_23bit, src_count);
   // add one
@@ -426,9 +427,9 @@ __mlu_func__ void __mluop_int322float(float *dst, float *dst_addition,
 
   __bang_write_value((unsigned *)src_addition, seg_elem_count,
                      (unsigned)0x80000000);
-  __bang_cycle_band((char *)dst_addition, (char *)dst_addition,
-                    (char *)src_addition, src_count * float_size, align_128);
-  __bang_bor((char *)dst, (char *)dst, (char *)dst_addition,
+  __bang_cycle_band((int8_t *)dst_addition, (int8_t *)dst_addition,
+                    (int8_t *)src_addition, src_count * float_size, align_128);
+  __bang_bor((int8_t *)dst, (int8_t *)dst, (int8_t *)dst_addition,
              src_count * float_size);
 #endif
 }
@@ -485,24 +486,24 @@ __mlu_func__ void __mluop_float2int32(int32_t *dst, float *dst_addition,
   __bang_sub(dst_addition, dst_addition, (float *)dst, src_count);
   // to fix max value
   __bang_mul_scalar((float *)dst, (float *)dst, 16777215.0, src_count);
-  __bang_bxor((char *)dst_addition, (char *)dst_addition, (char *)dst,
+  __bang_bxor((int8_t *)dst_addition, (int8_t *)dst_addition, (int8_t *)dst,
               src_count * floatDchar);
   // get log 23bit
   __bang_write_value((unsigned *)src_addition, NFU_ALIGN_SIZE / sizeof(float),
                      (unsigned)0x007fffff);
   // mask low 23bit is 1
-  __bang_cycle_band((char *)dst_addition, (char *)dst_addition,
-                    (char *)src_addition, src_count * floatDchar,
+  __bang_cycle_band((int8_t *)dst_addition, (int8_t *)dst_addition,
+                    (int8_t *)src_addition, src_count * floatDchar,
                     NFU_ALIGN_SIZE / sizeof(char));
 
   __bang_write_value(src_addition, NFU_ALIGN_SIZE / sizeof(float), 0x3f800000);
   __bang_cycle_and((float *)dst, (float *)dst, src_addition, src_count,
                    NFU_ALIGN_SIZE / sizeof(float));
   // src or dst_addition
-  __bang_bor((char *)dst_addition, (char *)dst, (char *)dst_addition,
+  __bang_bor((int8_t *)dst_addition, (int8_t *)dst, (int8_t *)dst_addition,
              src_count * floatDchar);
   __bang_mul_scalar((float *)dst, (float *)dst, -2.0, src_count);
-  __bang_bor((char *)dst, (char *)dst, (char *)dst_addition,
+  __bang_bor((int8_t *)dst, (int8_t *)dst, (int8_t *)dst_addition,
              src_count * floatDchar);
 #endif
 }

@@ -621,14 +621,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
       getMaxNumInArray(indice_num, K) * output_grad_desc->dims[1] * cal_dwidth;
   input_grad_condence_size =
       getMaxNumInArray(indice_num, K) * input_grad_desc->dims[1] * cal_dwidth;
-  char *filter_transpose = (char *)filters;
-  char *workspace_base = (char *)workspace;
+  int8_t *filter_transpose = (int8_t *)filters;
+  int8_t *workspace_base = (int8_t *)workspace;
 
   // transpose filters to layout XHWCN
   mluOpTensorDescriptor_t filter_transpose_desc;
   if (filters_desc->layout != MLUOP_LAYOUT_HWCN &&
       filters_desc->layout != MLUOP_LAYOUT_ARRAY) {
-    filter_transpose = (char *)workspace;
+    filter_transpose = (int8_t *)workspace;
     workspace_base += filter_transpose_size;
     cnnlTransposeDescriptor_t trans_desc;
     CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&filter_transpose_desc));
@@ -655,7 +655,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
       DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
       DESTROY_CNNL_HANDLE(cnnl_handle);
     }
-    char *transpose_workspace = workspace_base;
+    int8_t *transpose_workspace = workspace_base;
     workspace_base += transpose_workspace_size;
     {
       DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
@@ -674,9 +674,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
   } else {
     filter_transpose_desc = filters_desc;
   }
-  char *output_grad_condence = workspace_base;
+  int8_t *output_grad_condence = workspace_base;
   workspace_base += output_grad_condence_size;
-  char *input_grad_condence = workspace_base;
+  int8_t *input_grad_condence = workspace_base;
   workspace_base += input_grad_condence_size;
 
   // filters calculate desc
@@ -696,8 +696,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
   DESTROY_CNNL_HANDLE(cnnl_handle);
 
   void *workspace_matmul = NULL;
-  char *workspace_input_grad_tmp = NULL;
-  char *workspace_addn = NULL;
+  int8_t *workspace_input_grad_tmp = NULL;
+  int8_t *workspace_addn = NULL;
 
   // filters DHW dim loop
   int kk_count = 0;
@@ -707,7 +707,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
       continue;
     }
     const int int_dwidth = 4;
-    char *sub_filter = filter_transpose + kk * dyc * dxc * cal_dwidth;
+    int8_t *sub_filter = filter_transpose + kk * dyc * dxc * cal_dwidth;
 
     // gather output_grad
     mluOpTensorDescriptor_t gather_indices_desc;
@@ -726,8 +726,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
                                                     output_grad_condence_dims));
     uint64_t gather_indices_offset =
         (kk * 2 + 1) * int(indice_pairs_desc->dims[2]) * int_dwidth;
-    char *gather_indices =
-        (char *)(const_cast<void *>(indice_pairs)) + gather_indices_offset;
+    int8_t *gather_indices =
+        (int8_t *)(const_cast<void *>(indice_pairs)) + gather_indices_offset;
     {
       DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
       DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_grad_desc,
@@ -849,8 +849,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
     // scatter input_grad
     uint64_t scatter_indices_offset =
         (kk * 2) * int(indice_pairs_desc->dims[2]) * int_dwidth;
-    char *scatter_indices =
-        (char *)(const_cast<void *>(indice_pairs)) + scatter_indices_offset;
+    int8_t *scatter_indices =
+        (int8_t *)(const_cast<void *>(indice_pairs)) + scatter_indices_offset;
     {
       DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
       DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(gather_indices_desc,

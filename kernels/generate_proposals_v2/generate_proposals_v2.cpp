@@ -475,8 +475,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
     mluOpGetSizeOfDataType(scores_desc->dtype, &data_size);
 
     const size_t indices_size = PAD_UP(n * max_k * data_size, GDRAM_ALIGN_SIZE);
-    void *sorted_score = (void *)((char *)workspace + tok_workspace_align_size);
-    void *sorted_index = (void *)((char *)sorted_score + indices_size);
+    void *sorted_score =
+        (void *)((int8_t *)workspace + tok_workspace_align_size);
+    void *sorted_index = (void *)((int8_t *)sorted_score + indices_size);
 
     // call cnnlTopK
     CALL_CNNL(cnnlTopKTensor_v3(
@@ -488,7 +489,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
     CALL_CNNL(cnnlDestroyTensorDescriptor(sorted_score_desc));
     CALL_CNNL(cnnlDestroyTensorDescriptor(sorted_index_desc));
     DESTROY_CNNL_HANDLE(cnnl_handle);
-    void *workspace_buffer = (void *)((char *)sorted_index + indices_size);
+    void *workspace_buffer = (void *)((int8_t *)sorted_index + indices_size);
     CHECK_RETURN(
         "[mluOpGenerateProposalsV2]",
         KernelGenerateProposalsV2(

@@ -29,7 +29,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ bool containNanInf(const T pos1, const T pos2) {
@@ -42,8 +42,8 @@ __mlu_func__ bool containNanInf(const T pos1, const T pos2) {
 
 #if __BANG_ARCH__ >= 322
 __mlu_func__ void computeDynamicVoxelize(
-    char *points_x, char *points_y, char *points_z, char *auxiliary_a,
-    char *auxiliary_b, char *auxiliary_c, const float coors_x_min,
+    int8_t *points_x, int8_t *points_y, int8_t *points_z, int8_t *auxiliary_a,
+    int8_t *auxiliary_b, int8_t *auxiliary_c, const float coors_x_min,
     const float coors_y_min, const float coors_z_min, const float voxel_x,
     const float voxel_y, const float voxel_z, const int32_t grid_x,
     const int32_t grid_y, const int32_t grid_z, const int32_t deal_num) {
@@ -125,8 +125,8 @@ __mlu_func__ void computeDynamicVoxelize(
              deal_num);
 }
 
-__mlu_func__ void computePoint2Voxel(char *coors_x, char *coors_y,
-                                     char *coors_z, const int32_t c_x,
+__mlu_func__ void computePoint2Voxel(int8_t *coors_x, int8_t *coors_y,
+                                     int8_t *coors_z, const int32_t c_x,
                                      const int32_t c_y, const int32_t c_z,
                                      const int32_t max_points, int32_t *num,
                                      int32_t *first_point,
@@ -206,12 +206,12 @@ __mlu_global__ void mluDynamicVoxelize(const float *points,
   const int32_t rem = points_per_core % deal_num;
   const int32_t ping_pong_gap = 3 * deal_num * sizeof(float);
 
-  char *points_x = nram_buffer;
-  char *points_y = points_x + deal_num * sizeof(float);
-  char *points_z = points_y + deal_num * sizeof(float);
-  char *auxiliary_a = points_x + 2 * ping_pong_gap;
-  char *auxiliary_b = auxiliary_a + deal_num * sizeof(float);
-  char *auxiliary_c = auxiliary_b + deal_num * sizeof(float);
+  int8_t *points_x = nram_buffer;
+  int8_t *points_y = points_x + deal_num * sizeof(float);
+  int8_t *points_z = points_y + deal_num * sizeof(float);
+  int8_t *auxiliary_a = points_x + 2 * ping_pong_gap;
+  int8_t *auxiliary_b = auxiliary_a + deal_num * sizeof(float);
+  int8_t *auxiliary_c = auxiliary_b + deal_num * sizeof(float);
 
   int32_t *coors_z_start = coors + points_start;
   int32_t *coors_y_start = coors + num_points + points_start;
@@ -366,9 +366,9 @@ __mlu_global__ void mluPoint2Voxel(int32_t *coors, int32_t *point_to_pointidx,
       FLOOR_ALIGN(MAX_NRAM_SIZE / split_num / sizeof(int32_t), NFU_ALIGN_SIZE);
   const int32_t ping_pong_gap = 3 * deal_num * sizeof(int32_t);
 
-  char *coors_x = nram_buffer;
-  char *coors_y = coors_x + deal_num * sizeof(int32_t);
-  char *coors_z = coors_y + deal_num * sizeof(int32_t);
+  int8_t *coors_x = nram_buffer;
+  int8_t *coors_y = coors_x + deal_num * sizeof(int32_t);
+  int8_t *coors_z = coors_y + deal_num * sizeof(int32_t);
 
   int32_t *coors_z_start = coors;
   int32_t *coors_y_start = coors + num_points;

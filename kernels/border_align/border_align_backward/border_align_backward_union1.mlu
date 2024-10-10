@@ -27,7 +27,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 #define BORDER_NUM 4
 #define CALCULATE_GRAD_INPUT(w, x, y)                                          \
@@ -36,8 +36,8 @@ __nram__ char nram_buffer[MAX_NRAM_SIZE];
                              x * origin_c * BORDER_NUM + border * origin_c +   \
                              c;                                                \
   __bang_mul_scalar(nram_grad_input, nram_grad_output, w, deal_num_align);     \
-  __bang_band((char *)nram_grad_input, (char *)nram_grad_input, (char *)mask,  \
-              sizeof(T) * deal_num_align);                                     \
+  __bang_band((int8_t *)nram_grad_input, (int8_t *)nram_grad_input,            \
+              (int8_t *)mask, sizeof(T) * deal_num_align);                     \
   __bang_atomic_reduce_add(grad_input + offset_##w, nram_grad_input, deal_num);
 
 template <typename T>
@@ -230,7 +230,7 @@ __mlu_global__ void MLUKernelBorderAlignBackward(
       (MAX_NRAM_SIZE - NFU_ALIGN_SIZE) / (2 * sizeof(T) + 1 * sizeof(int32_t)),
       NFU_ALIGN_SIZE);
   T *nram_boxes = (T *)nram_buffer;
-  T *nram_grad_output = (T *)((char *)nram_buffer + NFU_ALIGN_SIZE);
+  T *nram_grad_output = (T *)((int8_t *)nram_buffer + NFU_ALIGN_SIZE);
   T *nram_grad_input = (T *)nram_grad_output + deal_num;
   int32_t *nram_argmax_idx = (int32_t *)((T *)nram_grad_input + deal_num);
 

@@ -31,7 +31,7 @@
 #define UNARY_OP_4PIPELINE_DECLARE(Op, Prefer)                       \
   template <typename DType_in, typename DType_out, typename... Args> \
   __mlu_global__ void MLUBlockKernel4StagePipeline##Op##Prefer(      \
-      char *x, char *y, size_t element_num, Args... args);
+      int8_t *x, int8_t *y, size_t element_num, Args... args);
 
 #define PRINTF(fmt, ...)                 \
   if (false) {                           \
@@ -65,7 +65,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
 #define UNARY_OP_4PIPELINE_IMPLEMENTATION(Op, Prefer)                          \
   template <typename DType_in, typename DType_out, typename... Args>           \
   __mlu_global__ void MLUBlockKernel4StagePipeline##Op##Prefer(                \
-      char *input_gdram, char *output_gdram, size_t element_num,               \
+      int8_t *input_gdram, int8_t *output_gdram, size_t element_num,           \
       Args... args) {                                                          \
     size_t output_input_gap = 0, ping_pong_gap = 0;                            \
     size_t auxiliary_a_gap = 0, auxiliary_b_gap = 0;                           \
@@ -76,8 +76,8 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
         span_num_deal, align_num, args...);                                    \
     size_t cluster_num_deal = 0, cluster_offset = 0;                           \
     strategyOfPartitionCluster(element_num, cluster_num_deal, cluster_offset); \
-    char *load_start = input_gdram + cluster_offset * sizeof(DType_in);        \
-    char *store_start = output_gdram + cluster_offset * sizeof(DType_out);     \
+    int8_t *load_start = input_gdram + cluster_offset * sizeof(DType_in);      \
+    int8_t *store_start = output_gdram + cluster_offset * sizeof(DType_out);   \
     size_t cluster_span_deal = span_num_deal * coreDim;                        \
     int32_t repeat = cluster_num_deal / cluster_span_deal;                     \
     size_t cluster_remain = cluster_num_deal % cluster_span_deal;              \
@@ -92,11 +92,11 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
     strategyOfPartitionCore(cluster_remain, core_remain_num_deal,              \
                             core_remain_offset);                               \
     size_t align_remain_num = PAD_UP(core_remain_num_deal, align_num);         \
-    char *sram_ping = sram_buffer;                                             \
-    char *ping_output = nram_buffer;                                           \
-    char *ping_input = nram_buffer + output_input_gap;                         \
-    char *auxiliary_a = nram_buffer + auxiliary_a_gap;                         \
-    char *auxiliary_b = nram_buffer + auxiliary_b_gap;                         \
+    int8_t *sram_ping = sram_buffer;                                           \
+    int8_t *ping_output = nram_buffer;                                         \
+    int8_t *ping_input = nram_buffer + output_input_gap;                       \
+    int8_t *auxiliary_a = nram_buffer + auxiliary_a_gap;                       \
+    int8_t *auxiliary_b = nram_buffer + auxiliary_b_gap;                       \
     if (repeat > 0) {                                                          \
       __memcpy_async(sram_ping, load_start, cluster_load_size, GDRAM2SRAM);    \
       __sync_cluster();                                                        \
@@ -107,7 +107,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
                      GDRAM2SRAM);                                              \
       __memcpy_async(ping_input, sram_ping + sram_load_offset, core_load_size, \
                      SRAM2NRAM);                                               \
-      __sync_move();                                              \
+      __sync_move();                                                           \
       compute##Op##Prefer<DType_in, DType_out>(                                \
           ping_output, ping_input, auxiliary_a, auxiliary_b, span_num_deal,    \
           span_num_deal, args...);                                             \
@@ -124,7 +124,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
       __memcpy_async(ping_input + pong_flag * ping_pong_gap,                   \
                      sram_ping + pong_flag * sram_pong_gap + sram_load_offset, \
                      core_load_size, SRAM2NRAM);                               \
-      __sync_move();                                              \
+      __sync_move();                                                           \
       compute##Op##Prefer<DType_in, DType_out>(                                \
           ping_output + pong_flag * ping_pong_gap,                             \
           ping_input + pong_flag * ping_pong_gap, auxiliary_a, auxiliary_b,    \
@@ -148,7 +148,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
           ping_input + ping_pong_flag * ping_pong_gap,                         \
           sram_ping + ping_pong_flag * sram_pong_gap + sram_load_offset,       \
           core_load_size, SRAM2NRAM);                                          \
-      __sync_move();                                              \
+      __sync_move();                                                           \
       compute##Op##Prefer<DType_in, DType_out>(                                \
           ping_output + ping_pong_flag * ping_pong_gap,                        \
           ping_input + ping_pong_flag * ping_pong_gap, auxiliary_a,            \
@@ -167,7 +167,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
                      sram_ping + ping_pong_flag * sram_pong_gap +              \
                          core_remain_offset * sizeof(DType_in),                \
                      core_remain_num_deal * sizeof(DType_in), SRAM2NRAM);      \
-      __sync_move();                                              \
+      __sync_move();                                                           \
       compute##Op##Prefer<DType_in, DType_out>(                                \
           ping_output + ping_pong_flag * ping_pong_gap,                        \
           ping_input + ping_pong_flag * ping_pong_gap, auxiliary_a,            \
@@ -183,7 +183,7 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
 #define UNARY_OP_4PIPELINE_IMPLEMENTATION(Op, Prefer)                \
   template <typename DType_in, typename DType_out, typename... Args> \
   __mlu_global__ void MLUBlockKernel4StagePipeline##Op##Prefer(      \
-      char *input_gdram, char *output_gdram, size_t element_num,     \
+      int8_t *input_gdram, int8_t *output_gdram, size_t element_num, \
       Args... args) {}
 #endif
 #endif  // KERNELS_UNARY_OP_UNARY_OP_4PIPELINE_H_

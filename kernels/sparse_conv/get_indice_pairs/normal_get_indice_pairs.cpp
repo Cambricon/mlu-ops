@@ -49,9 +49,8 @@ static mluOpStatus_t getIndiceIndexIn(
     const mluOpTensorDescriptor_t indice_pairs_desc, const int kernel_volume,
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
-  total_size =
-      kernel_volume * input_active_site *
-      mluop::getSizeOfDataType(indice_pairs_desc->dtype);
+  total_size = kernel_volume * input_active_site *
+               mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -60,9 +59,8 @@ static mluOpStatus_t getIndiceIndexOut(
     const mluOpTensorDescriptor_t indice_pairs_desc, const int kernel_volume,
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
-  total_size =
-      kernel_volume * input_active_site *
-      mluop::getSizeOfDataType(indice_pairs_desc->dtype);
+  total_size = kernel_volume * input_active_site *
+               mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -71,9 +69,8 @@ static mluOpStatus_t getIndiceOutExpand(
     const mluOpTensorDescriptor_t indice_pairs_desc, const int kernel_volume,
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
-  total_size =
-      kernel_volume * input_active_site *
-      mluop::getSizeOfDataType(indice_pairs_desc->dtype);
+  total_size = kernel_volume * input_active_site *
+               mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -82,8 +79,8 @@ static mluOpStatus_t getIndiceInExpand(
     const mluOpTensorDescriptor_t indice_pairs_desc,
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
-  total_size = input_active_site *
-  mluop::getSizeOfDataType(indice_pairs_desc->dtype);
+  total_size =
+      input_active_site * mluop::getSizeOfDataType(indice_pairs_desc->dtype);
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -875,13 +872,13 @@ mluOpStatus_t NormalGetIndicePairsKernel(
                  getReduceOpWS(handle, interface_name, kernel_volume,
                                input_active_site, &reduce_op_ws));
     const void *compute_indices_ptr = indices;
-    void *mask_all_ptr = (void *)((char *)workspace);
-    void *indice_index_in_ptr = (void *)((char *)workspace + mask_all_ws);
+    void *mask_all_ptr = (void *)((int8_t *)workspace);
+    void *indice_index_in_ptr = (void *)((int8_t *)workspace + mask_all_ws);
     void *indice_in_expand_ptr =
-        (void *)((char *)workspace + mask_all_ws + indice_index_in_ws +
+        (void *)((int8_t *)workspace + mask_all_ws + indice_index_in_ws +
                  indice_index_out_ws);
     void *out_indices_expand_ptr =
-        (void *)((char *)workspace + mask_all_ws + indice_index_in_ws +
+        (void *)((int8_t *)workspace + mask_all_ws + indice_index_in_ws +
                  indice_index_out_ws + indice_in_expand_ws);
     CHECK_RETURN(
         interface_name,
@@ -892,8 +889,8 @@ mluOpStatus_t NormalGetIndicePairsKernel(
 
     // call launchDefaultKernel2   gen step_index
     void *step_index_addr = NULL;
-    step_index_addr =
-        (void *)((char *)(char *)workspace + mask_all_ws + indice_index_in_ws);
+    step_index_addr = (void *)((int8_t *)(int8_t *)workspace + mask_all_ws +
+                               indice_index_in_ws);
     CHECK_RETURN(interface_name, launchDefaultKernel2(handle, step_index_addr,
                                                       input_active_site));
 
@@ -902,7 +899,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
          *scatter_indice_addr = NULL;
     scatter_input_addr = step_index_addr;
     scatter_indice_addr = indice_in_expand_ptr;
-    scatter_output_addr = (void *)((char *)workspace + mask_all_ws +
+    scatter_output_addr = (void *)((int8_t *)workspace + mask_all_ws +
                                    indice_index_in_ws + indice_index_out_ws +
                                    indice_in_expand_ws + out_indices_expand_ws);
     int fill_value = -1;
@@ -918,7 +915,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     void *gather_input_addr = NULL, *gather_output_addr = NULL,
          *gather_indice_addr = NULL;
     gather_output_addr =
-        (void *)((char *)workspace + mask_all_ws + indice_index_in_ws);
+        (void *)((int8_t *)workspace + mask_all_ws + indice_index_in_ws);
     gather_input_addr = scatter_output_addr;
     gather_indice_addr = out_indices_expand_ptr;
     CHECK_RETURN(
@@ -949,7 +946,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     void *reduce_workspace_ptr = NULL;
     if (reduce_op_ws > 0) {
       reduce_workspace_ptr =
-          (void *)((char *)workspace + mask_all_ws + indice_index_in_ws +
+          (void *)((int8_t *)workspace + mask_all_ws + indice_index_in_ws +
                    indice_index_out_ws + indice_in_expand_ws +
                    out_indices_expand_ws);
     }
@@ -1009,10 +1006,10 @@ mluOpStatus_t NormalGetIndicePairsKernel(
         getUniqueOpWS(handle, interface_name, indices_desc, kernel_volume,
                       input_active_site, &unique_op_ws));
     const void *compute_indices_ptr = indices;
-    void *mask_all_ptr = (void *)((char *)workspace);
-    void *indice_index_in_ptr = (void *)((char *)workspace + mask_all_ws);
+    void *mask_all_ptr = (void *)((int8_t *)workspace);
+    void *indice_index_in_ptr = (void *)((int8_t *)workspace + mask_all_ws);
     void *out_indices_expand_ptr =
-        (void *)((char *)workspace + mask_all_ws + indice_index_out_ws +
+        (void *)((int8_t *)workspace + mask_all_ws + indice_index_out_ws +
                  indice_index_in_ws);
     CHECK_RETURN(interface_name,
                  launchDefaultKernel1(
@@ -1026,7 +1023,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     reduce_output_addr = indice_num;
     void *reduce_workspace_ptr = NULL;
     if (reduce_op_ws > 0) {
-      reduce_workspace_ptr = (void *)((char *)workspace + mask_all_ws +
+      reduce_workspace_ptr = (void *)((int8_t *)workspace + mask_all_ws +
                                       indice_index_in_ws + indice_index_out_ws +
                                       out_indices_expand_ws + indice_unique_ws);
     }
@@ -1042,13 +1039,13 @@ mluOpStatus_t NormalGetIndicePairsKernel(
          *unique_output_num_addr = NULL;
     unique_input_addr = out_indices_expand_ptr;
     unique_output_addr =
-        (void *)((char *)workspace + mask_all_ws + indice_index_in_ws +
+        (void *)((int8_t *)workspace + mask_all_ws + indice_index_in_ws +
                  indice_index_out_ws + out_indices_expand_ws);
     unique_output_num_addr =
-        (void *)((char *)workspace + mask_all_ws + indice_index_in_ws);
+        (void *)((int8_t *)workspace + mask_all_ws + indice_index_in_ws);
     void *unique_workspace_ptr = NULL;
     if (unique_op_ws > 0) {
-      unique_workspace_ptr = (void *)((char *)workspace + mask_all_ws +
+      unique_workspace_ptr = (void *)((int8_t *)workspace + mask_all_ws +
                                       indice_index_in_ws + indice_index_out_ws +
                                       out_indices_expand_ws + indice_unique_ws);
     }
@@ -1079,7 +1076,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     // call launchDefaultKernel2   gen step_index
     void *step_index_addr = NULL;
     step_index_addr =
-        (void *)((char *)workspace + mask_all_ws + indice_index_in_ws);
+        (void *)((int8_t *)workspace + mask_all_ws + indice_index_in_ws);
     CHECK_RETURN(interface_name,
                  launchDefaultKernel2(handle, step_index_addr, num_act_out));
 
@@ -1100,7 +1097,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
          *scatter_indice_addr = NULL;
     scatter_input_addr = step_index_addr;
     scatter_indice_addr = unique_output_addr;
-    scatter_output_addr = (void *)((char *)workspace + mask_all_ws +
+    scatter_output_addr = (void *)((int8_t *)workspace + mask_all_ws +
                                    indice_index_in_ws + indice_index_out_ws +
                                    out_indices_expand_ws + indice_unique_ws);
     int fill_value = -1;
@@ -1116,7 +1113,7 @@ mluOpStatus_t NormalGetIndicePairsKernel(
     void *gather_input_addr = NULL, *gather_output_addr = NULL,
          *gather_indice_addr = NULL;
     gather_output_addr =
-        (void *)((char *)workspace + mask_all_ws + indice_index_in_ws);
+        (void *)((int8_t *)workspace + mask_all_ws + indice_index_in_ws);
     gather_input_addr = scatter_output_addr;
     gather_indice_addr = out_indices_expand_ptr;
     CHECK_RETURN(

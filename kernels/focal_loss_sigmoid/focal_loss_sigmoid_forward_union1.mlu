@@ -31,7 +31,7 @@
 #define PING 0
 #define PONG 1
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 namespace forward {
 
@@ -44,27 +44,27 @@ namespace forward {
  * |----------|------------------------------------|
  */
 template <typename SrcType, typename DstType>
-__mlu_func__ void inplaceConvert(char *nram_ptr, const int32_t count) {
+__mlu_func__ void inplaceConvert(int8_t *nram_ptr, const int32_t count) {
   // no need to convert when SrcType and DstType are the same
 }
 
 template <>
-__mlu_func__ void inplaceConvert<float, half>(char *nram_ptr,
+__mlu_func__ void inplaceConvert<float, half>(int8_t *nram_ptr,
                                               const int32_t count) {
   __bang_float2half_rd((half *)nram_ptr, (float *)nram_ptr,
                        PAD_UP(count, COMPUTE_COUNT_ALIGN));
 }
 
 template <>
-__mlu_func__ void inplaceConvert<half, float>(char *nram_ptr,
+__mlu_func__ void inplaceConvert<half, float>(int8_t *nram_ptr,
                                               const int32_t count) {
   __bang_half2float((float *)nram_ptr, (half *)nram_ptr + count,
                     PAD_UP(count, COMPUTE_COUNT_ALIGN));
 }
 
 template <typename T>
-__mlu_func__ void loadInput(char *nram_input, T *dram_input, const int32_t size,
-                            const int32_t dst_stride = 0,
+__mlu_func__ void loadInput(int8_t *nram_input, T *dram_input,
+                            const int32_t size, const int32_t dst_stride = 0,
                             const int32_t src_stride = 0,
                             const int32_t count = 1) {
   if (dst_stride == src_stride) {
@@ -76,7 +76,7 @@ __mlu_func__ void loadInput(char *nram_input, T *dram_input, const int32_t size,
 }
 
 template <>
-__mlu_func__ void loadInput<half>(char *nram_input, half *dram_input,
+__mlu_func__ void loadInput<half>(int8_t *nram_input, half *dram_input,
                                   const int32_t size, const int32_t dst_stride,
                                   const int32_t src_stride,
                                   const int32_t count) {
@@ -93,7 +93,7 @@ __mlu_func__ void loadInput<half>(char *nram_input, half *dram_input,
 }
 
 template <typename T>
-__mlu_func__ void loadWeight(char *nram_input, T *dram_input, const int32_t t,
+__mlu_func__ void loadWeight(int8_t *nram_input, T *dram_input, const int32_t t,
                              const int32_t c, const int32_t has_weight,
                              const int32_t partition_nc) {
   if (has_weight && partition_nc && t >= 0 && t < c) {
@@ -102,7 +102,7 @@ __mlu_func__ void loadWeight(char *nram_input, T *dram_input, const int32_t t,
 }
 
 template <typename T>
-__mlu_func__ void storeOutput(T *dram_output, char *nram_output,
+__mlu_func__ void storeOutput(T *dram_output, int8_t *nram_output,
                               const int32_t size, const int32_t dst_stride = 0,
                               const int32_t src_stride = 0,
                               const int32_t count = 1) {
@@ -234,7 +234,7 @@ __mlu_func__ void compute(const focalLossSigmoidPreference_t prefer,
     __nram__ int32_t table[COMPUTE_COUNT_ALIGN] = {0, (int32_t)0xffffffff};
     __bang_lut((int32_t *)input, (uint32_t *)input, table, (uint32_t)deal_num,
                COMPUTE_COUNT_ALIGN);  // NOLINT
-    __bang_band((char *)compute_b, (char *)compute_b, (char *)input,
+    __bang_band((int8_t *)compute_b, (int8_t *)compute_b, (int8_t *)input,
                 sizeof(float) * deal_num);  // NOLINT
     __bang_sub(compute_a, compute_a, compute_b, deal_num);
 
@@ -258,9 +258,9 @@ __mlu_func__ void compute(const focalLossSigmoidPreference_t prefer,
 template <typename T>
 __mlu_func__ void startPipeline(
     const focalLossSigmoidPreference_t prefer, const T *input,
-    const int32_t *target, const T *weight, char *nram_compute_a,
-    char *nram_compute_b, char *nram_input, char *nram_target,
-    char *nram_weight, char *nram_output, const int32_t has_weight,
+    const int32_t *target, const T *weight, int8_t *nram_compute_a,
+    int8_t *nram_compute_b, int8_t *nram_input, int8_t *nram_target,
+    int8_t *nram_weight, int8_t *nram_output, const int32_t has_weight,
     const int32_t partition_nc, const int32_t pingpong_offset,
     const int32_t pingpong_weight_offset, const int32_t c_offset_num,
     const int32_t n, const int32_t n_seg, const int32_t c, const int32_t c_seg,
@@ -498,12 +498,12 @@ __mlu_func__ void partitionInput(const focalLossSigmoidPreference_t prefer,
     const int32_t pingpong_offset =
         (MAX_NRAM_SIZE - weight_size - compute_size) / 2;
 
-    char *nram_weight = (char *)nram_buffer;
-    char *nram_compute_a = nram_weight + has_weight * c_align_size;
-    char *nram_compute_b = nram_compute_a + split_pipeline_size;
-    char *nram_input = nram_compute_b + split_pipeline_size;
-    char *nram_output = nram_input + split_pipeline_size;
-    char *nram_target = nram_output + split_pipeline_size;
+    int8_t *nram_weight = (int8_t *)nram_buffer;
+    int8_t *nram_compute_a = nram_weight + has_weight * c_align_size;
+    int8_t *nram_compute_b = nram_compute_a + split_pipeline_size;
+    int8_t *nram_input = nram_compute_b + split_pipeline_size;
+    int8_t *nram_output = nram_input + split_pipeline_size;
+    int8_t *nram_target = nram_output + split_pipeline_size;
     startPipeline<T>(prefer, input, target, weight, nram_compute_a,
                      nram_compute_b, nram_input, nram_target, nram_weight,
                      nram_output, has_weight, 0, pingpong_offset, 0, 0, n,
@@ -522,12 +522,12 @@ __mlu_func__ void partitionInput(const focalLossSigmoidPreference_t prefer,
         (MAX_NRAM_SIZE - weight_size - compute_size) / 2;
     const int32_t pingpong_weight_offset = weight_size / 2;
 
-    char *nram_weight = (char *)nram_buffer;
-    char *nram_compute_a = nram_weight + weight_size;
-    char *nram_compute_b = nram_compute_a + split_pipeline_size;
-    char *nram_input = nram_compute_b + split_pipeline_size;
-    char *nram_output = nram_input + split_pipeline_size;
-    char *nram_target = nram_output + split_pipeline_size;
+    int8_t *nram_weight = (int8_t *)nram_buffer;
+    int8_t *nram_compute_a = nram_weight + weight_size;
+    int8_t *nram_compute_b = nram_compute_a + split_pipeline_size;
+    int8_t *nram_input = nram_compute_b + split_pipeline_size;
+    int8_t *nram_output = nram_input + split_pipeline_size;
+    int8_t *nram_target = nram_output + split_pipeline_size;
 
     const int32_t loop_num = (c + c_seg - 1) / c_seg;
     const int32_t partition_nc = 1;

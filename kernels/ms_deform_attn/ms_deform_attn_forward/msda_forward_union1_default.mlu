@@ -27,7 +27,7 @@
 #define TWELVE_SPLIT 12
 #define ELE_COUNT 32 /* cycle element count */
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void loadNeighborPointsData(
@@ -137,12 +137,12 @@ __mlu_func__ void computeMsDeformAttn(
 
 template <typename T>
 __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
-    const char *data_value_gdram, const char *data_spatial_shapes_gdram,
-    const char *data_level_start_index_gdram,
-    const char *data_sampling_loc_gdram, const char *data_attn_weight_gdram,
+    const int8_t *data_value_gdram, const int8_t *data_spatial_shapes_gdram,
+    const int8_t *data_level_start_index_gdram,
+    const int8_t *data_sampling_loc_gdram, const int8_t *data_attn_weight_gdram,
     const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels, const int32_t num_queries,
-    const int32_t num_points, char *data_col_gdram) {
+    const int32_t num_points, int8_t *data_col_gdram) {
   if (__is_mpu()) {
     return;
   }
@@ -154,28 +154,28 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
   const int32_t channels_seg_num = channels / span_num_deal;
   const size_t channels_rem = channels % span_num_deal;
   const size_t channels_align_rem = CEIL_ALIGN(channels_rem, align_num);
-  char *data_spatial_shapes_nram = nram_buffer;
-  char *ping_data_value_p1_nram = data_spatial_shapes_nram + spatial_size;
-  char *ping_data_value_p2_nram =
+  int8_t *data_spatial_shapes_nram = nram_buffer;
+  int8_t *ping_data_value_p1_nram = data_spatial_shapes_nram + spatial_size;
+  int8_t *ping_data_value_p2_nram =
       ping_data_value_p1_nram + span_num_deal * sizeof(T);
-  char *ping_data_value_p3_nram =
+  int8_t *ping_data_value_p3_nram =
       ping_data_value_p2_nram + span_num_deal * sizeof(T);
-  char *ping_data_value_p4_nram =
+  int8_t *ping_data_value_p4_nram =
       ping_data_value_p3_nram + span_num_deal * sizeof(T);
-  char *ping_data_col_nram =
+  int8_t *ping_data_col_nram =
       ping_data_value_p4_nram + span_num_deal * sizeof(T);
-  char *pong_data_value_p1_nram =
+  int8_t *pong_data_value_p1_nram =
       ping_data_col_nram + span_num_deal * sizeof(T);
-  char *pong_data_value_p2_nram =
+  int8_t *pong_data_value_p2_nram =
       pong_data_value_p1_nram + span_num_deal * sizeof(T);
-  char *pong_data_value_p3_nram =
+  int8_t *pong_data_value_p3_nram =
       pong_data_value_p2_nram + span_num_deal * sizeof(T);
-  char *pong_data_value_p4_nram =
+  int8_t *pong_data_value_p4_nram =
       pong_data_value_p3_nram + span_num_deal * sizeof(T);
-  char *pong_data_col_nram =
+  int8_t *pong_data_col_nram =
       pong_data_value_p4_nram + span_num_deal * sizeof(T);
-  char *auxiliary_a = pong_data_col_nram + span_num_deal * sizeof(T);
-  char *auxiliary_b = auxiliary_a + span_num_deal * sizeof(T);
+  int8_t *auxiliary_a = pong_data_col_nram + span_num_deal * sizeof(T);
+  int8_t *auxiliary_b = auxiliary_a + span_num_deal * sizeof(T);
   const size_t ping_pong_gap = 5 * span_num_deal * sizeof(T);
   size_t data_col_ping_pong_idx = 0;
   int32_t block_num_per_core = (batch_size * num_queries * num_heads) / taskDim;
@@ -196,15 +196,15 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
     */
     const int32_t head_idx = cur_idx % num_heads;
     const int32_t batch_idx = (cur_idx / num_heads) / num_queries;
-    const char *data_value_gdram_start =
+    const int8_t *data_value_gdram_start =
         data_value_gdram +
         batch_idx * num_keys * num_heads * channels * sizeof(T);
-    const char *data_sampling_loc_gdram_start =
+    const int8_t *data_sampling_loc_gdram_start =
         data_sampling_loc_gdram +
         cur_idx * num_levels * num_points * 2 * sizeof(T);
-    const char *data_attn_weight_gdram_start =
+    const int8_t *data_attn_weight_gdram_start =
         data_attn_weight_gdram + cur_idx * num_levels * num_points * sizeof(T);
-    char *data_col_gdram_start =
+    int8_t *data_col_gdram_start =
         data_col_gdram + cur_idx * channels * sizeof(T);
     for (int32_t c_seg_idx = 0; c_seg_idx < channels_seg_num; ++c_seg_idx) {
       __bang_write_value(
@@ -216,7 +216,7 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
                2 * sizeof(int32_t), GDRAM2NRAM);
       int32_t spatial_h = ((int32_t *)data_spatial_shapes_nram)[0];
       int32_t spatial_w = ((int32_t *)data_spatial_shapes_nram)[1];
-      const char *data_value_ptr =
+      const int8_t *data_value_ptr =
           data_value_gdram_start + c_seg_idx * span_num_deal * sizeof(T);
       T loc_w = ((T *)data_sampling_loc_gdram_start)[0];
       T loc_h = ((T *)data_sampling_loc_gdram_start)[1];
@@ -361,7 +361,7 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
                2 * sizeof(int32_t), GDRAM2NRAM);
       int32_t spatial_h = ((int32_t *)data_spatial_shapes_nram)[0];
       int32_t spatial_w = ((int32_t *)data_spatial_shapes_nram)[1];
-      const char *data_value_ptr =
+      const int8_t *data_value_ptr =
           data_value_gdram_start + channels_seg_num * span_num_deal * sizeof(T);
       T loc_w = ((T *)data_sampling_loc_gdram_start)[0];
       T loc_h = ((T *)data_sampling_loc_gdram_start)[1];
@@ -502,9 +502,9 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
 }
 
 template __mlu_global__ void MLUKernelMsDeformAttnForwardDefault<float>(
-    const char *data_value_gdram, const char *data_spatial_shapes_gdram,
-    const char *data_level_start_index_gdram,
-    const char *data_sampling_loc_gdram, const char *data_attn_weight_gdram,
+    const int8_t *data_value_gdram, const int8_t *data_spatial_shapes_gdram,
+    const int8_t *data_level_start_index_gdram,
+    const int8_t *data_sampling_loc_gdram, const int8_t *data_attn_weight_gdram,
     const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels, const int32_t num_queries,
-    const int32_t num_points, char *data_col_gdram);
+    const int32_t num_points, int8_t *data_col_gdram);

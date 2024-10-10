@@ -25,8 +25,8 @@
 #define PROPOSAL_NRAM_SIZE MAX_NRAM_SIZE
 #define CALC_AREA_NRAM_FLT_CAP CALC_AREA_NRAM_SIZE / sizeof(float)
 
-__nram__ char nram_buffer[PROPOSAL_NRAM_SIZE];
-__mlu_shared__ char sram_buffer[MAX_SRAM_SIZE];
+__nram__ int8_t nram_buffer[PROPOSAL_NRAM_SIZE];
+__mlu_shared__ int8_t sram_buffer[MAX_SRAM_SIZE];
 
 #define FLOAT_MIN_GPV2 (-(float)FLT_MAX)
 

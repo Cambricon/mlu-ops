@@ -32,7 +32,7 @@
 #include "kernels/unary_op/complex_unary_op_3pipeline.h"
 #include "kernels/unary_op/complex_unary_op_stride_3pipeline.h"
 
-__nram__ char nram_buffer[UNARY_NRAM_SIZE];
+__nram__ int8_t nram_buffer[UNARY_NRAM_SIZE];
 
 template <typename T1, typename T2>
 __mlu_func__ void auxFunc3AbsFloat(size_t &output_input_gap,
@@ -75,23 +75,27 @@ __mlu_func__ void auxComplexFunc3AbsComplexFloat(
 }
 
 template <typename T1, typename T2>
-__mlu_func__ void computeAbsHalfBfloat16(char *nram_output, char *nram_input,
-                                         char *auxiliary_a, char *auxiliary_b,
-                                         size_t deal_num, size_t actual_num) {
+__mlu_func__ void computeAbsHalfBfloat16(int8_t *nram_output,
+                                         int8_t *nram_input,
+                                         int8_t *auxiliary_a,
+                                         int8_t *auxiliary_b, size_t deal_num,
+                                         size_t actual_num) {
   __bang_abs((T2 *)nram_output, (T1 *)nram_input, deal_num);
 }
 
 template <typename T1, typename T2>
-__mlu_func__ void computeAbsFloat(char *nram_output, char *nram_input,
-                                  char *auxiliary_a, char *auxiliary_b,
+__mlu_func__ void computeAbsFloat(int8_t *nram_output, int8_t *nram_input,
+                                  int8_t *auxiliary_a, int8_t *auxiliary_b,
                                   size_t deal_num, size_t actual_num) {
   __bang_abs((T2 *)nram_output, (T1 *)nram_input, deal_num);
 }
 
 template <typename T1, typename T2>
-__mlu_func__ void computeAbsComplexFloat(char *nram_output, char *nram_input,
-                                         char *auxiliary_a, char *auxiliary_b,
-                                         size_t deal_num, size_t actual_num) {
+__mlu_func__ void computeAbsComplexFloat(int8_t *nram_output,
+                                         int8_t *nram_input,
+                                         int8_t *auxiliary_a,
+                                         int8_t *auxiliary_b, size_t deal_num,
+                                         size_t actual_num) {
   T2 *aux_a = (T2 *)nram_input + 2 * deal_num;
   T2 *aux_b = (T2 *)nram_input + 3 * deal_num;
   __bang_write_value((T2 *)auxiliary_a, deal_num * sizeof(T2), (int8_t)0xAA);
@@ -122,15 +126,17 @@ Kernel3StagePipelineAbs(const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
                         const cnrtQueue_t queue, const mluOpDataType_t d_type,
                         const void *x, void *y, size_t element_num) {
   if (d_type == MLUOP_DTYPE_FLOAT || d_type == MLUOP_DTYPE_INT32) {
-    KERNEL_CHECK(MLUBlockKernel3StagePipelineAbsFloat<float, float>
-                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, element_num));
+    KERNEL_CHECK(
+        MLUBlockKernel3StagePipelineAbsFloat<float, float>
+        <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y, element_num));
   } else if (d_type == MLUOP_DTYPE_HALF || d_type == MLUOP_DTYPE_BFLOAT16) {
-    KERNEL_CHECK(MLUBlockKernel3StagePipelineAbsHalfBfloat16<half, half>
-                 <<<k_dim, k_type, queue>>>((char *)x, (char *)y, element_num));
+    KERNEL_CHECK(
+        MLUBlockKernel3StagePipelineAbsHalfBfloat16<half, half>
+        <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y, element_num));
   } else {
     KERNEL_CHECK(
         MLUBlockKernel3StagePipelineComplexAbsComplexFloat<double, float>
-        <<<k_dim, k_type, queue>>>((char *)x, (char *)y, element_num))
+        <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y, element_num))
   }
   return MLUOP_STATUS_SUCCESS;
 }
@@ -142,17 +148,17 @@ mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineWithStrideAbs(
     size_t element_num) {
   if (d_type == MLUOP_DTYPE_FLOAT || d_type == MLUOP_DTYPE_INT32) {
     KERNEL_CHECK(MLUBlockKernel3StagePipelineWithStrideAbsFloat<float, float>
-                 <<<k_dim, k_type, queue>>>((char *)x, x_shape, (char *)y,
+                 <<<k_dim, k_type, queue>>>((int8_t *)x, x_shape, (int8_t *)y,
                                             y_shape, element_num));
   } else if (d_type == MLUOP_DTYPE_HALF || d_type == MLUOP_DTYPE_BFLOAT16) {
     KERNEL_CHECK(
         MLUBlockKernel3StagePipelineWithStrideAbsHalfBfloat16<half, half>
-        <<<k_dim, k_type, queue>>>((char *)x, x_shape, (char *)y, y_shape,
+        <<<k_dim, k_type, queue>>>((int8_t *)x, x_shape, (int8_t *)y, y_shape,
                                    element_num));
   } else {
     KERNEL_CHECK(MLUBlockKernel3StagePipelineWithStrideComplexAbsComplexFloat<
                  double, float><<<k_dim, k_type, queue>>>(
-        (char *)x, x_shape, (char *)y, y_shape, element_num))
+        (int8_t *)x, x_shape, (int8_t *)y, y_shape, element_num))
   }
   return MLUOP_STATUS_SUCCESS;
 }

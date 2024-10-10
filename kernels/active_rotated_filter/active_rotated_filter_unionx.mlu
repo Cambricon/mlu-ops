@@ -26,7 +26,7 @@
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 #define ROWS 8
 #define COLS 9
 #define CYCLE_ROTATE 360
@@ -180,7 +180,7 @@ __mlu_func__ void computeRotation(T *nram_output, T *nram_input,
         T *dst_ro = dst_base + layer * kH * kW;
         switch (r) {
           case 0: {
-            __bang_bor((char *)(dst_ro), (char *)(dst_ro), (char *)src_ro,
+            __bang_bor((int8_t *)(dst_ro), (int8_t *)(dst_ro), (int8_t *)src_ro,
                        kH * kW * sizeof(T));
           };
             continue;

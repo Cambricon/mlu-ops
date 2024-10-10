@@ -31,7 +31,7 @@
 #define SIZE_NRAM_PER_REGION PAD_DOWN((MAX_NRAM_SIZE / 12), NFU_ALIGN_SIZE)
 #define HIGH_PRECISION_MODE 1
 
-__nram__ char nbuf_head[MAX_NRAM_SIZE];
+__nram__ int8_t nbuf_head[MAX_NRAM_SIZE];
 
 __mlu_func__ void computeAdamW(bfloat16_t *nbuf_paramh, bfloat16_t *nbuf_grad,
                                float *nbuf_param, float *nbuf_grad_ptr,

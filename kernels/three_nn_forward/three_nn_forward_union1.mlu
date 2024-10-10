@@ -29,7 +29,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 #if __BANG_ARCH__ >= 322
 /**
@@ -82,9 +82,9 @@ __mlu_func__ void auxFuncFind3Min(T *nram_aux_a, const int auxa_offset,
     nram_aux_sort_b[i] = nram_aux_b[index];
     __memset_nram(nram_aux_a + index, 1, (T)(INFINITY));
   }
-  __memcpy((char *)nram_aux_a, (char *)nram_aux_sort_a, auxa_offset * sizeof(T),
-           NRAM2NRAM);
-  __memcpy((char *)nram_aux_b, (char *)nram_aux_sort_b,
+  __memcpy((int8_t *)nram_aux_a, (int8_t *)nram_aux_sort_a,
+           auxa_offset * sizeof(T), NRAM2NRAM);
+  __memcpy((int8_t *)nram_aux_b, (int8_t *)nram_aux_sort_b,
            auxb_offset * sizeof(int), NRAM2NRAM);
 }
 

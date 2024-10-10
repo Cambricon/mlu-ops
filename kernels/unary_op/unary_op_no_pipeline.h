@@ -30,12 +30,12 @@
 #define UNARY_OP_NO_PIPELINE_DECLARE(Op, Prefer)                     \
   template <typename DType_in, typename DType_out, typename... Args> \
   __mlu_global__ void MLUBlockKernelNoPipeline##Op##Prefer(          \
-      char *x, char *y, size_t element_num, Args... args);
+      int8_t *x, int8_t *y, size_t element_num, Args... args);
 
 #define UNARY_OP_NO_PIPELINE_IMPLE(Op, Prefer)                               \
   template <typename DType_in, typename DType_out, typename... Args>         \
   __mlu_global__ void MLUBlockKernelNoPipeline##Op##Prefer(                  \
-      char *input_gdram, char *output_gdram, size_t element_num,             \
+      int8_t *input_gdram, int8_t *output_gdram, size_t element_num,         \
       Args... args) {                                                        \
     if (__is_mpu()) {                                                        \
       return;                                                                \
@@ -48,9 +48,9 @@
         align_num, args...);                                                 \
     size_t num_per_core = element_num / taskDim;                             \
     size_t num_rem = element_num % taskDim;                                  \
-    char *input_start =                                                      \
+    int8_t *input_start =                                                    \
         input_gdram + taskId * num_per_core * sizeof(DType_in);              \
-    char *output_start =                                                     \
+    int8_t *output_start =                                                   \
         output_gdram + taskId * num_per_core * sizeof(DType_out);            \
     if (num_rem > 0 && taskId == taskDim - 1) {                              \
       num_per_core = num_per_core + num_rem;                                 \
@@ -58,10 +58,10 @@
     int repeat = num_per_core / span_num_deal;                               \
     size_t rem = num_per_core % span_num_deal;                               \
     size_t align_rem = CEIL_ALIGN(rem, align_num);                           \
-    char *output = nram_buffer;                                              \
-    char *input = nram_buffer + output_input_gap;                            \
-    char *auxiliary_a = nram_buffer + auxiliary_a_gap;                       \
-    char *auxiliary_b = nram_buffer + auxiliary_b_gap;                       \
+    int8_t *output = nram_buffer;                                            \
+    int8_t *input = nram_buffer + output_input_gap;                          \
+    int8_t *auxiliary_a = nram_buffer + auxiliary_a_gap;                     \
+    int8_t *auxiliary_b = nram_buffer + auxiliary_b_gap;                     \
     size_t span_load_size = span_num_deal * sizeof(DType_in);                \
     size_t span_store_size = span_num_deal * sizeof(DType_out);              \
     for (int i = 0; i < repeat; ++i) {                                       \

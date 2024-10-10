@@ -368,6 +368,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(
                << "Please check the device version!";
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
+
   PARAM_CHECK(interface_name, grad_voxel_feats_desc != NULL);
   PARAM_CHECK(interface_name, feats_desc != NULL);
   PARAM_CHECK(interface_name, voxel_feats_desc != NULL);

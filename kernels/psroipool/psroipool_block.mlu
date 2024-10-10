@@ -29,7 +29,7 @@
 
 #define ALIGN_SIZE 64
 
-__nram__ char nram_ptr[MAX_NRAM_SIZE];
+__nram__ int8_t nram_ptr[MAX_NRAM_SIZE];
 
 // This function is used to align the round_rn
 template <typename T>

@@ -62,8 +62,7 @@ __mlu_func__ void MLUUnion1BoxIouRotatedAligned(const T *box1, const T *box2,
   const uint32_t max_box_pair =
       FLOOR_ALIGN(MAX_NRAM_SIZE / copies_of_nram, COMPUTE_COUNT_ALIGN);
   // First, initialize ram with all 0, or could cause nan/inf unexcepted results
-  __bang_write_zero((unsigned char *)nram_buffer,
-                    copies_of_nram * max_box_pair);
+  __bang_write_zero((uint8_t *)nram_buffer, copies_of_nram * max_box_pair);
 
   void *box1_trans = nram_buffer + 4 * max_box_pair * sizeof(T);
   void *box2_trans =
@@ -74,50 +73,55 @@ __mlu_func__ void MLUUnion1BoxIouRotatedAligned(const T *box1, const T *box2,
       nram_buffer + (3 * COMPUTE_COUNT_ALIGN + 4) * max_box_pair * sizeof(T);
 
   // After transpose, box1/2_onchip data can be over-written
-  void *temp1_ram = (char *)box2_onchip;
-  void *temp2_ram = ((char *)box2_onchip) + 1 * max_box_pair * sizeof(T);
-  void *temp3_ram = ((char *)box2_onchip) + 2 * max_box_pair * sizeof(T);
+  void *temp1_ram = (int8_t *)box2_onchip;
+  void *temp2_ram = ((int8_t *)box2_onchip) + 1 * max_box_pair * sizeof(T);
+  void *temp3_ram = ((int8_t *)box2_onchip) + 2 * max_box_pair * sizeof(T);
   void *valid_box = nram_buffer;
   void *area1_ram = nram_buffer + 1 * max_box_pair * sizeof(T);
   void *area2_ram = nram_buffer + 2 * max_box_pair * sizeof(T);
   void *ious_ram = nram_buffer + 3 * max_box_pair * sizeof(T);
 
   // Rotated vertices, each box has 4 vertices, each point has (x, y)
-  void *rotated_pts1_x = ((char *)box1_onchip) + 48 * max_box_pair * sizeof(T);
-  void *rotated_pts1_y = ((char *)box1_onchip) + 52 * max_box_pair * sizeof(T);
-  void *rotated_pts2_x = ((char *)box1_onchip) + 56 * max_box_pair * sizeof(T);
-  void *rotated_pts2_y = ((char *)box1_onchip) + 60 * max_box_pair * sizeof(T);
-  void *temp4_ram = ((char *)box2_onchip) + 52 * max_box_pair * sizeof(T);
-  void *temp5_ram = ((char *)box2_onchip) + 53 * max_box_pair * sizeof(T);
+  void *rotated_pts1_x =
+      ((int8_t *)box1_onchip) + 48 * max_box_pair * sizeof(T);
+  void *rotated_pts1_y =
+      ((int8_t *)box1_onchip) + 52 * max_box_pair * sizeof(T);
+  void *rotated_pts2_x =
+      ((int8_t *)box1_onchip) + 56 * max_box_pair * sizeof(T);
+  void *rotated_pts2_y =
+      ((int8_t *)box1_onchip) + 60 * max_box_pair * sizeof(T);
+  void *temp4_ram = ((int8_t *)box2_onchip) + 52 * max_box_pair * sizeof(T);
+  void *temp5_ram = ((int8_t *)box2_onchip) + 53 * max_box_pair * sizeof(T);
 
   // After calculating rotated vertices, box1/2_trans data can be over-written
   // Intersect points = [24xN] points, each point has (x, y)
-  void *intersect_pts_x = (char *)box1_onchip;
-  void *intersect_pts_y = ((char *)box1_onchip) + 24 * max_box_pair * sizeof(T);
+  void *intersect_pts_x = (int8_t *)box1_onchip;
+  void *intersect_pts_y =
+      ((int8_t *)box1_onchip) + 24 * max_box_pair * sizeof(T);
   // Record whether this position of intersect points is valid or not
-  void *valid_pts = (char *)box1_trans;
+  void *valid_pts = (int8_t *)box1_trans;
   // Record each box pair has how many valid intersect points
-  void *nums_in_ram = ((char *)box2_onchip) + 3 * max_box_pair * sizeof(T);
+  void *nums_in_ram = ((int8_t *)box2_onchip) + 3 * max_box_pair * sizeof(T);
 
   // Line vector, from p1 to p2 is: p1+(p2-p1)*t, t=[0,1]
-  void *vec1_x = ((char *)box1_trans) + 24 * max_box_pair * sizeof(T);
-  void *vec1_y = ((char *)box1_trans) + 28 * max_box_pair * sizeof(T);
-  void *vec2_x = ((char *)box1_trans) + 32 * max_box_pair * sizeof(T);
-  void *vec2_y = ((char *)box1_trans) + 36 * max_box_pair * sizeof(T);
+  void *vec1_x = ((int8_t *)box1_trans) + 24 * max_box_pair * sizeof(T);
+  void *vec1_y = ((int8_t *)box1_trans) + 28 * max_box_pair * sizeof(T);
+  void *vec2_x = ((int8_t *)box1_trans) + 32 * max_box_pair * sizeof(T);
+  void *vec2_y = ((int8_t *)box1_trans) + 36 * max_box_pair * sizeof(T);
 
-  void *temp6_ram = ((char *)box2_onchip) + 54 * max_box_pair * sizeof(T);
-  void *temp7_ram = ((char *)box2_onchip) + 55 * max_box_pair * sizeof(T);
-  void *temp8_ram = ((char *)box2_onchip) + 56 * max_box_pair * sizeof(T);
-  void *temp9_ram = ((char *)box2_onchip) + 57 * max_box_pair * sizeof(T);
+  void *temp6_ram = ((int8_t *)box2_onchip) + 54 * max_box_pair * sizeof(T);
+  void *temp7_ram = ((int8_t *)box2_onchip) + 55 * max_box_pair * sizeof(T);
+  void *temp8_ram = ((int8_t *)box2_onchip) + 56 * max_box_pair * sizeof(T);
+  void *temp9_ram = ((int8_t *)box2_onchip) + 57 * max_box_pair * sizeof(T);
 
   // Ordered points = [24xN] points, each point has (x, y)
-  void *ordered_pts_x = ((char *)box2_onchip) + 4 * max_box_pair * sizeof(T);
-  void *ordered_pts_y = ((char *)box2_onchip) + 28 * max_box_pair * sizeof(T);
+  void *ordered_pts_x = ((int8_t *)box2_onchip) + 4 * max_box_pair * sizeof(T);
+  void *ordered_pts_y = ((int8_t *)box2_onchip) + 28 * max_box_pair * sizeof(T);
 
-  void *dist_ram = ((char *)box1_trans) + 24 * max_box_pair * sizeof(T);
-  void *temp_long_1 = ((char *)box1_trans) + 48 * max_box_pair * sizeof(T);
-  void *temp_long_2 = ((char *)box1_trans) + 72 * max_box_pair * sizeof(T);
-  void *temp_long_3 = ((char *)box1_trans) + 96 * max_box_pair * sizeof(T);
+  void *dist_ram = ((int8_t *)box1_trans) + 24 * max_box_pair * sizeof(T);
+  void *temp_long_1 = ((int8_t *)box1_trans) + 48 * max_box_pair * sizeof(T);
+  void *temp_long_2 = ((int8_t *)box1_trans) + 72 * max_box_pair * sizeof(T);
+  void *temp_long_3 = ((int8_t *)box1_trans) + 96 * max_box_pair * sizeof(T);
 
   // load offchip current data, for loop
   uint32_t repeat = num_box / max_box_pair;
@@ -276,7 +280,7 @@ __mlu_func__ void MLUUnion1BoxIouRotatedAligned(const T *box1, const T *box2,
       __bang_lut((int16_t *)temp9_ram, (uint16_t *)temp9_ram, (int16_t *)table,
                  actual_compute_box_num, TABLE_LENGTH);
     }
-    __bang_band((char *)ious_ram, (char *)ious_ram, (char *)temp9_ram,
+    __bang_band((int8_t *)ious_ram, (int8_t *)ious_ram, (int8_t *)temp9_ram,
                 actual_compute_box_num * sizeof(T));
 
     __memcpy(ious + current_ious_offset, (T *)ious_ram,

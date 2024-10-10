@@ -26,7 +26,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void memCopy(T *dst, const T *src, const int size,
@@ -234,13 +234,13 @@ __mlu_func__ void compute(T *nram_x, T *nram_y, T *nram_w, T *nram_h,
   __bang_float2int32(nram_mask_int32, nram_iou_p, deal_num, 0);
   __bang_mul_scalar((int *)nram_mask_int32, (int *)nram_mask_int32,
                     (int)0xffffffff, deal_num);
-  __bang_band((char *)nram_x_p, (char *)nram_x_p, (char *)nram_mask_int32,
+  __bang_band((int8_t *)nram_x_p, (int8_t *)nram_x_p, (int8_t *)nram_mask_int32,
               4 * deal_num);
-  __bang_band((char *)nram_y_p, (char *)nram_y_p, (char *)nram_mask_int32,
+  __bang_band((int8_t *)nram_y_p, (int8_t *)nram_y_p, (int8_t *)nram_mask_int32,
               4 * deal_num);
-  __bang_band((char *)nram_w_p, (char *)nram_w_p, (char *)nram_mask_int32,
+  __bang_band((int8_t *)nram_w_p, (int8_t *)nram_w_p, (int8_t *)nram_mask_int32,
               4 * deal_num);
-  __bang_band((char *)nram_h_p, (char *)nram_h_p, (char *)nram_mask_int32,
+  __bang_band((int8_t *)nram_h_p, (int8_t *)nram_h_p, (int8_t *)nram_mask_int32,
               4 * deal_num);
 #else
   const int x2d = 0x3fb8aa3b;
@@ -1181,8 +1181,8 @@ __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
   __bang_float2int32(nram_mask_int32, nram_iou_p, deal_num, 0);
   __bang_mul_scalar((int *)nram_mask_int32, (int *)nram_mask_int32,
                     (int)0xffffffff, deal_num);
-  __bang_cycle_band((char *)nram_cls_p, (char *)nram_cls_p,
-                    (char *)nram_mask_int32, 4 * class_num * deal_num,
+  __bang_cycle_band((int8_t *)nram_cls_p, (int8_t *)nram_cls_p,
+                    (int8_t *)nram_mask_int32, 4 * class_num * deal_num,
                     4 * deal_num);
 #else
   const int x2d = 0x3fb8aa3b;
@@ -1233,8 +1233,8 @@ __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
   __bang_cycle_mul(nram_cls_p, nram_cls_p, nram_conf_p, class_num * deal_num,
                    deal_num);
   // mask, set 0
-  __bang_cycle_band((char *)nram_cls_p, (char *)nram_cls_p,
-                    (char *)nram_mask_int32, 4 * class_num * deal_num,
+  __bang_cycle_band((int8_t *)nram_cls_p, (int8_t *)nram_cls_p,
+                    (int8_t *)nram_mask_int32, 4 * class_num * deal_num,
                     4 * deal_num);
 
 #endif
