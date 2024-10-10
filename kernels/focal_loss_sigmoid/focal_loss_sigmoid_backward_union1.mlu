@@ -57,7 +57,7 @@ __mlu_func__ void computeLogE(float *nram_dst, float *nram_src,
 #if __BANG_ARCH__ >= 372
   int x2d = 0x3f317217;
   float rlog2e = *(float *)&x2d;
-  __bang_log((float *)nram_dst, (float *)nram_src, deal_num);
+  __bang_log2((float *)nram_dst, (float *)nram_src, deal_num);
   __bang_mul_scalar((float *)nram_dst, (float *)nram_src, (float)rlog2e,
                     deal_num);
 #else

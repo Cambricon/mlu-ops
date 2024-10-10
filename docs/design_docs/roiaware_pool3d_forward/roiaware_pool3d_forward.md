@@ -274,21 +274,21 @@ __global__ roiaware_pool3d_forward_kernel(){
 __device__ check_point_in_roi(float *X, float *Y, float *Z,
       float *local_X, float *local_Y, float *local_Z,
       float cx, float cy, float cz, float x_size, float y_size, float z_size, float rz, int num) {
-  __bang_sub_const(local_Z, Z, cz, num);  //  local_Z
+  __bang_sub_scalar(local_Z, Z, cz, num);  //  local_Z
   __bang_active_abs(tmp, local_Z, num);
   __bang_write_value(tmp1, num, 0.5 * dz);
   __bang_le(flag, tmp, tmp1, num);     // Z in_flag
   float cosa = std::cos(-rz);
   float sina = std::sin(-rz);
-  __bang_sub_const(tmp, X, cx, num);
-  __bang_sub_const(tmp1, Y, cy, num);
-  __bang_mul_const(tmp2, tmp, cosa, num);
-  __bang_mul_const(tmp3, tmp1, sina, num);
-  __bang_sub_const(local_X, tmp2, tmp3, num);  //  local_X
+  __bang_sub_scalar(tmp, X, cx, num);
+  __bang_sub_scalar(tmp1, Y, cy, num);
+  __bang_mul_scalar(tmp2, tmp, cosa, num);
+  __bang_mul_scalar(tmp3, tmp1, sina, num);
+  __bang_sub_scalar(local_X, tmp2, tmp3, num);  //  local_X
 
-  __bang_mul_const(tmp, tmp, sina, num);
-  __bang_mul_const(tmp1, tmp1, cosa, num);
-  __bang_add_const(local_Y, tmp, tmp1, num);  //  local_Y
+  __bang_mul_scalar(tmp, tmp, sina, num);
+  __bang_mul_scalar(tmp1, tmp1, cosa, num);
+  __bang_add_scalar(local_Y, tmp, tmp1, num);  //  local_Y
 
   __bang_active_abs(tmp2, tmp2, num);
   __bang_write_value(tmp1, num, 0.5 * dx);

@@ -151,14 +151,12 @@ __mlu_func__ void storeResult(T *max_box, T *nram_save, T *&output_boxes_tmp,
         (float(max_box[0]) <= FLOAT_MIN_GPV2) || keep == nms_num - 1) {
       if (nram_save_count != 0) {
         if (clusterId == 0 && coreId == 0) {
-          pvLock();
           // x1, y1, x2, y2
           __memcpy(output_boxes_tmp, nram_save + 1, 4 * sizeof(T), NRAM2GDRAM,
                    4 * sizeof(T), 5 * sizeof(T), nram_save_count - 1);
           // score
           __memcpy(output_scores_tmp, nram_save, sizeof(T), NRAM2GDRAM,
                    sizeof(T), 5 * sizeof(T), nram_save_count - 1);
-          pvUnlock();
           output_boxes_tmp += nram_save_count * 4;
           output_scores_tmp += nram_save_count;
           nram_save_count = 0;
