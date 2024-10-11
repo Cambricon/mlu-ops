@@ -51,12 +51,12 @@ class tin_shift_forward_general
           input_params.get_dim_nb(), input_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(input_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&input_,
                        mluOpDataTypeBytes(input_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&input_, mluOpDataTypeBytes(input_params.get_dtype()) *
                                     mluOpGetTensorElementNum(input_desc_)));
       }
@@ -68,12 +68,12 @@ class tin_shift_forward_general
           shifts_params.get_dim_nb(), shifts_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(shifts_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&shifts_,
                        mluOpDataTypeBytes(shifts_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&shifts_, mluOpDataTypeBytes(shifts_params.get_dtype()) *
                                      mluOpGetTensorElementNum(shifts_desc_)));
       }
@@ -85,12 +85,12 @@ class tin_shift_forward_general
           output_params.get_dim_nb(), output_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(output_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&output_,
                        mluOpDataTypeBytes(output_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&output_, mluOpDataTypeBytes(output_params.get_dtype()) *
                                      mluOpGetTensorElementNum(output_desc_)));
       }
@@ -136,15 +136,15 @@ class tin_shift_forward_general
       output_desc_ = NULL;
     }
     if (input_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
       input_ = NULL;
     }
     if (shifts_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(shifts_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(shifts_));
       shifts_ = NULL;
     }
     if (output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       output_ = NULL;
     }
   }

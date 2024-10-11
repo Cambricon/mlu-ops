@@ -72,25 +72,25 @@ class voxel_pooling_forward : public testing::Test {
       size_t g_ele_num = 2 * 4 * 3;
       size_t g_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t g_bytes = g_ele_num * g_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&geom_xyz_, g_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&geom_xyz_, g_bytes));
     }
     if (input_features) {
       size_t i_ele_num = 2 * 4 * 10;
       size_t i_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t i_bytes = i_ele_num * i_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&input_features_, i_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&input_features_, i_bytes));
     }
     if (output_features) {
       size_t o_ele_num = 2 * 5 * 6 * 10;
       size_t o_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t o_bytes = o_ele_num * o_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_features_, o_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_features_, o_bytes));
     }
     if (pos_memo) {
       size_t p_ele_num = 2 * 4 * 3;
       size_t p_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t p_bytes = p_ele_num * p_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&pos_memo_, p_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&pos_memo_, p_bytes));
     }
   }
 
@@ -129,19 +129,19 @@ class voxel_pooling_forward : public testing::Test {
       pos_memo_desc_ = NULL;
     }
     if (geom_xyz_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(geom_xyz_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(geom_xyz_));
       geom_xyz_ = NULL;
     }
     if (input_features_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_features_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(input_features_));
       input_features_ = NULL;
     }
     if (output_features_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_features_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_features_));
       output_features_ = NULL;
     }
     if (pos_memo_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(pos_memo_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(pos_memo_));
       output_features_ = NULL;
     }
   }

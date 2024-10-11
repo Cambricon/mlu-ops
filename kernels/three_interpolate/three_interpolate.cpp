@@ -250,7 +250,7 @@ static void policyFuncThreeInterpolate(
     use_cluster =
         (b * m_aligned_limit / m_limit + core_in_cluster - 1) / core_in_cluster;
   }
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   k_dim->x = core_in_cluster;
   k_dim->y = use_cluster > cluster_num ? cluster_num : use_cluster;
   k_dim->z = 1;

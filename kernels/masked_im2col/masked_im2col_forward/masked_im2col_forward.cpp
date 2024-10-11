@@ -40,7 +40,7 @@ static void policyFunc(const mluOpHandle_t handle, const int mask_cnt,
   k_dim->y = (task_dim / core_limit) > cluster_limit ? cluster_limit
                                                      : (task_dim / core_limit);
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
 }
 
 static mluOpStatus_t maskedIm2colForwardPreCheck(

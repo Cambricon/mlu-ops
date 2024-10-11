@@ -60,10 +60,10 @@ class border_align_backward_general
             grad_output_params.get_dim_stride().data()));
       }
       if (mluOpGetTensorElementNum(grad_output_desc_) >= LARGE_TENSOR_NUM) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_output_, 2 * 16));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_output_, 2 * 16));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_output_,
                        mluOpDataTypeBytes(grad_output_params.get_dtype()) *
                            mluOpGetTensorElementNum(grad_output_desc_)));
@@ -82,10 +82,10 @@ class border_align_backward_general
             boxes_params.get_dim_stride().data()));
       }
       if (mluOpGetTensorElementNum(boxes_desc_) >= LARGE_TENSOR_NUM) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&boxes_, 2 * 16));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&boxes_, 2 * 16));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&boxes_, mluOpDataTypeBytes(boxes_params.get_dtype()) *
                                     mluOpGetTensorElementNum(boxes_desc_)));
       }
@@ -105,10 +105,10 @@ class border_align_backward_general
             argmax_idx_params.get_dim_stride().data()));
       }
       if (mluOpGetTensorElementNum(argmax_idx_desc_) >= LARGE_TENSOR_NUM) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&argmax_idx_, (2 * 16)));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&argmax_idx_, (2 * 16)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&argmax_idx_,
                        mluOpDataTypeBytes(argmax_idx_params.get_dtype()) *
                            mluOpGetTensorElementNum(argmax_idx_desc_)));
@@ -130,10 +130,10 @@ class border_align_backward_general
       }
 
       if (mluOpGetTensorElementNum(grad_input_desc_) >= LARGE_TENSOR_NUM) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_input_, 2 * 16));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_input_, 2 * 16));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_input_,
                        mluOpDataTypeBytes(grad_input_params.get_dtype()) *
                            mluOpGetTensorElementNum(grad_input_desc_)));
@@ -176,7 +176,7 @@ class border_align_backward_general
       }
       if (grad_output_) {
         VLOG(4) << "Destroy grad_output_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_output_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(grad_output_));
         grad_output_ = nullptr;
       }
       if (boxes_desc_) {
@@ -186,7 +186,7 @@ class border_align_backward_general
       }
       if (boxes_) {
         VLOG(4) << "Destroy boxes_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(boxes_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(boxes_));
         boxes_ = nullptr;
       }
       if (argmax_idx_desc_) {
@@ -196,7 +196,7 @@ class border_align_backward_general
       }
       if (argmax_idx_) {
         VLOG(4) << "Destroy argmax_idx_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(argmax_idx_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(argmax_idx_));
         argmax_idx_ = nullptr;
       }
       if (grad_input_desc_) {
@@ -206,7 +206,7 @@ class border_align_backward_general
       }
       if (grad_input_) {
         VLOG(4) << "Destroy grad_input_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_input_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(grad_input_));
         grad_input_ = nullptr;
       }
     } catch (const std::exception &e) {

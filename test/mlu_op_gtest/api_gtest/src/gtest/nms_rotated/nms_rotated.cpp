@@ -51,7 +51,7 @@ class nms_rotated : public testing::Test {
       size_t b_ele_num = 2 * 5;
       size_t b_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t b_bytes = b_ele_num * b_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&boxes_, b_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&boxes_, b_bytes));
     }
     if (scores_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&scores_desc_));
@@ -64,10 +64,10 @@ class nms_rotated : public testing::Test {
       size_t s_ele_num = 2;
       size_t s_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t s_bytes = s_ele_num * s_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&scores_, s_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&scores_, s_bytes));
     }
     if (workspace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
     }
     if (output_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
@@ -80,11 +80,11 @@ class nms_rotated : public testing::Test {
       size_t o_ele_num = 2;
       size_t o_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t o_bytes = o_ele_num * o_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, o_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_, o_bytes));
     }
     if (result_num) {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&result_num_, mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
     }
   }
@@ -110,7 +110,7 @@ class nms_rotated : public testing::Test {
       boxes_desc_ = NULL;
     }
     if (boxes_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(boxes_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(boxes_));
       boxes_ = NULL;
     }
     if (scores_desc_) {
@@ -118,11 +118,11 @@ class nms_rotated : public testing::Test {
       scores_desc_ = NULL;
     }
     if (scores_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(scores_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(scores_));
       scores_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = NULL;
     }
     if (output_desc_) {
@@ -130,11 +130,11 @@ class nms_rotated : public testing::Test {
       output_desc_ = NULL;
     }
     if (output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       output_ = NULL;
     }
     if (result_num_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(result_num_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(result_num_));
       result_num_ = NULL;
     }
   }

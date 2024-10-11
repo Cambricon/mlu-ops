@@ -85,11 +85,11 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
     uint64_t indices_ele_num = mluOpGetTensorElementNum(indices_desc_);
     if (indices_ele_num > 0) {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&indices_, mluOpGetTensorElementNum(indices_desc_) *
                                     mluOpDataTypeBytes(indices_dtype)))
     } else {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&indices_, 4 * mluOpDataTypeBytes(indices_dtype)));
     }
 
@@ -105,12 +105,12 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
     uint64_t indice_pairs_ele_num =
         mluOpGetTensorElementNum(indice_pairs_desc_);
     if (indice_pairs_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&indice_pairs_,
                              mluOpGetTensorElementNum(indice_pairs_desc_) *
                                  mluOpDataTypeBytes(indice_pairs_dtype)));
     } else {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&indice_pairs_,
                              54 * mluOpDataTypeBytes(indice_pairs_dtype)));
     }
@@ -126,12 +126,12 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
                                          out_indices_shape.data()));
     uint64_t out_indices_ele_num = mluOpGetTensorElementNum(out_indices_desc_);
     if (out_indices_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&out_indices_,
                              mluOpGetTensorElementNum(out_indices_desc_) *
                                  mluOpDataTypeBytes(out_indices_dtype)));
     } else {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&out_indices_,
                              108 * mluOpDataTypeBytes(out_indices_dtype)));
     }
@@ -148,12 +148,12 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
     uint64_t indice_num_ele_num = mluOpGetTensorElementNum(indice_num_desc_);
     if (indice_num_ele_num > 0) {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&indice_num_, mluOpGetTensorElementNum(indice_num_desc_) *
                                        mluOpDataTypeBytes(indice_num_dtype)));
     } else {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&indice_num_, 27 * mluOpDataTypeBytes(indice_num_dtype)));
     }
   }
@@ -186,7 +186,7 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
       destroy();
       return expected_status_ == status;
     }
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+    GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
 
     status = mluOpGetIndicePairs(
         handle_, sparse_conv_desc_, indices_desc_, indices_, workspace_,
@@ -213,11 +213,11 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
       indices_desc_ = NULL;
     }
     if (indices_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indices_));
       indices_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
     if (indice_pairs_desc_) {
@@ -225,7 +225,7 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
       indice_pairs_desc_ = NULL;
     }
     if (indice_pairs_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indice_pairs_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indice_pairs_));
       indice_pairs_ = NULL;
     }
     if (out_indices_desc_) {
@@ -233,7 +233,7 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
       out_indices_desc_ = NULL;
     }
     if (out_indices_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(out_indices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(out_indices_));
       out_indices_ = NULL;
     }
     if (indice_num_desc_) {
@@ -241,7 +241,7 @@ class get_indice_pairs_general : public testing::TestWithParam<GetIndicePairs> {
       indice_num_desc_ = NULL;
     }
     if (indice_num_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indice_num_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indice_num_));
       indice_num_ = NULL;
     }
   }

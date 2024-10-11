@@ -53,12 +53,12 @@ class indice_convolution_backward_filter : public testing::Test {
     if (features) {
       if (features_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&features_, mluOpGetTensorElementNum(features_desc_) *
                                        mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&features_, 64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
     }
@@ -73,12 +73,12 @@ class indice_convolution_backward_filter : public testing::Test {
 
     if (output_grad) {
       if (output_grad_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&output_grad_,
                                mluOpGetTensorElementNum(output_grad_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&output_grad_,
                                64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
@@ -94,12 +94,12 @@ class indice_convolution_backward_filter : public testing::Test {
 
     if (indice_pairs) {
       if (indice_pairs_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&indice_pairs_,
                                mluOpGetTensorElementNum(indice_pairs_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&indice_pairs_,
                                64 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
@@ -115,12 +115,12 @@ class indice_convolution_backward_filter : public testing::Test {
 
     if (filters_grad) {
       if (filters_grad_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&filters_grad_,
                                mluOpGetTensorElementNum(filters_grad_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&filters_grad_,
                                64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
@@ -134,7 +134,7 @@ class indice_convolution_backward_filter : public testing::Test {
     }
 
     if (worksapce) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
     }
   }
   mluOpStatus_t compute() {
@@ -163,7 +163,7 @@ class indice_convolution_backward_filter : public testing::Test {
 
     if (features_) {
       VLOG(4) << "Destroy features";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(features_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(features_));
       features_ = nullptr;
     }
 
@@ -175,7 +175,7 @@ class indice_convolution_backward_filter : public testing::Test {
 
     if (output_grad_) {
       VLOG(4) << "Destroy output_grad";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_grad_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_grad_));
       output_grad_ = nullptr;
     }
 
@@ -187,13 +187,13 @@ class indice_convolution_backward_filter : public testing::Test {
 
     if (indice_pairs_) {
       VLOG(4) << "Destroy indice_pairs";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indice_pairs_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indice_pairs_));
       indice_pairs_ = nullptr;
     }
 
     if (workspace_) {
       VLOG(4) << "Destroy workspace";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
 
@@ -205,7 +205,7 @@ class indice_convolution_backward_filter : public testing::Test {
 
     if (filters_grad_) {
       VLOG(4) << "Destroy filters_grad";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(filters_grad_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(filters_grad_));
       filters_grad_ = nullptr;
     }
   }

@@ -80,12 +80,12 @@ void NmsExecutor::workspaceMalloc() {
        parser_->getMetaTensor("input1").size_in_bytes == 0) &&
       output_size > 0) {
     void *output_ptr = parser_->getMetaTensor("output1").dev_origin_ptr;
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(output_ptr, 0, output_size));
+    GTEST_CHECK(cnrtSuccess == cnrtMemset(output_ptr, 0, output_size));
   }
 
   void *output2_ptr = parser_->getMetaTensor("output2").dev_origin_ptr;
   size_t output2_size = parser_->getMetaTensor("output2").size_in_bytes;
-  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(output2_ptr, 0, output2_size));
+  GTEST_CHECK(cnrtSuccess == cnrtMemset(output2_ptr, 0, output2_size));
 
   eva_->setMluWorkspaceSize(workspace_size_);
 }

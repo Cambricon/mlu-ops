@@ -319,7 +319,7 @@ KERNEL_CHECK((KernelMaskFillCoorsForward(
   
   CALL_CNNL(cnnlDestroyUniqueDescriptor(unique_desc));
   int32_t num_voxels = 0;
-  cnrtMemcpy(&num_voxels, voxel_num, sizeof(int), CNRT_MEM_TRANS_DIR_DEV2HOST);
+  cnrtMemcpy(&num_voxels, voxel_num, sizeof(int), cnrtMemcpyDevToHost);
 ```
 - kernel3: KernelRemoveFirstForward
 

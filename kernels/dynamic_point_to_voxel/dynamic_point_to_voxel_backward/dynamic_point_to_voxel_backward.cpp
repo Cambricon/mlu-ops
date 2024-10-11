@@ -192,19 +192,19 @@ static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
   } else {
     if (N <= 4) {
       k_dim->x = core_num * 1;
-      *k_type = CNRT_FUNC_TYPE_UNION1;
+      *k_type = cnrtFuncTypeUnion1;
     } else if (N <= 8) {
       k_dim->x = core_num * 2;
-      *k_type = CNRT_FUNC_TYPE_UNION2;
+      *k_type = cnrtFuncTypeUnion2;
     } else if (N <= 16) {
       k_dim->x = core_num * 4;
-      *k_type = CNRT_FUNC_TYPE_UNION4;
+      *k_type = cnrtFuncTypeUnion4;
     } else if (N <= 32) {
       k_dim->x = core_num * 8;
-      *k_type = CNRT_FUNC_TYPE_UNION8;
+      *k_type = cnrtFuncTypeUnion8;
     } else if (N <= 64) {
       k_dim->x = core_num * 16;
-      *k_type = CNRT_FUNC_TYPE_UNION16;
+      *k_type = cnrtFuncTypeUnion16;
     } else {
       LOG(ERROR)
           << "[mluOpDynamicPointToVoxelBackward]: failed to choose kernel "

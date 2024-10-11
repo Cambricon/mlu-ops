@@ -40,7 +40,7 @@ static void policyFuncDefault(const mluOpHandle_t handle,
       std::min((num_points + k_dim->x - 1) / k_dim->x,
                (size_t)mluop::runtime::getClusterLimitCapability(handle));
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
 }
 
 static void policyFuncCalcPointsPerVoxel(const mluOpHandle_t handle,
@@ -50,7 +50,7 @@ static void policyFuncCalcPointsPerVoxel(const mluOpHandle_t handle,
   k_dim->x = 1;
   k_dim->y = 1;
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
+  *k_type = cnrtFuncTypeBlock;
 }
 
 mluOpStatus_t voxelizationParamCheck(

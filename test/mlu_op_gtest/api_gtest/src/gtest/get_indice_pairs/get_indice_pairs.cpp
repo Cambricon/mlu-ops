@@ -64,17 +64,17 @@ class get_indice_pairs : public testing::Test {
     if (indices) {
       if (indices_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&indices_, mluOpGetTensorElementNum(indices_desc_) *
                                       mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&indices_, 4 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
     }
     if (workspace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
     }
     if (indice_pairs_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&indice_pairs_desc_));
@@ -85,12 +85,12 @@ class get_indice_pairs : public testing::Test {
     }
     if (indice_pairs) {
       if (indice_pairs_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&indice_pairs_,
                                mluOpGetTensorElementNum(indice_pairs_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&indice_pairs_,
                                54 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
@@ -104,12 +104,12 @@ class get_indice_pairs : public testing::Test {
     }
     if (out_indices) {
       if (out_indices_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&out_indices_,
                                mluOpGetTensorElementNum(out_indices_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&out_indices_,
                                180 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
@@ -123,12 +123,12 @@ class get_indice_pairs : public testing::Test {
     }
     if (indice_num) {
       if (indice_num_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&indice_num_,
                                mluOpGetTensorElementNum(indice_num_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&indice_num_,
                                27 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
@@ -161,11 +161,11 @@ class get_indice_pairs : public testing::Test {
       indices_desc_ = NULL;
     }
     if (indices_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indices_));
       indices_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
     if (indice_pairs_desc_) {
@@ -173,7 +173,7 @@ class get_indice_pairs : public testing::Test {
       indice_pairs_desc_ = NULL;
     }
     if (indice_pairs_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indice_pairs_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indice_pairs_));
       indice_pairs_ = NULL;
     }
     if (out_indices_desc_) {
@@ -181,7 +181,7 @@ class get_indice_pairs : public testing::Test {
       out_indices_desc_ = NULL;
     }
     if (out_indices_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(out_indices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(out_indices_));
       out_indices_ = NULL;
     }
     if (indice_num_desc_) {
@@ -189,7 +189,7 @@ class get_indice_pairs : public testing::Test {
       indice_num_desc_ = NULL;
     }
     if (indice_num_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indice_num_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indice_num_));
       indice_num_ = NULL;
     }
   }

@@ -53,12 +53,12 @@ class dynamic_point_to_voxel_forward_general
           feats_params.get_dim_nb(), feats_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(feats_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&feats_,
                        mluOpDataTypeBytes(feats_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&feats_, mluOpDataTypeBytes(feats_params.get_dtype()) *
                                     mluOpGetTensorElementNum(feats_desc_)));
       }
@@ -70,12 +70,12 @@ class dynamic_point_to_voxel_forward_general
           coors_params.get_dim_nb(), coors_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(coors_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&coors_,
                        mluOpDataTypeBytes(coors_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&coors_, mluOpDataTypeBytes(coors_params.get_dtype()) *
                                     mluOpGetTensorElementNum(coors_desc_)));
       }
@@ -88,12 +88,12 @@ class dynamic_point_to_voxel_forward_general
           voxel_feats_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(voxel_feats_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&voxel_feats_,
                        mluOpDataTypeBytes(voxel_feats_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&voxel_feats_,
                        mluOpDataTypeBytes(voxel_feats_params.get_dtype()) *
                            mluOpGetTensorElementNum(voxel_feats_desc_)));
@@ -107,12 +107,12 @@ class dynamic_point_to_voxel_forward_general
           voxel_coors_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(voxel_coors_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&voxel_coors_,
                        mluOpDataTypeBytes(voxel_coors_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&voxel_coors_,
                        mluOpDataTypeBytes(voxel_coors_params.get_dtype()) *
                            mluOpGetTensorElementNum(voxel_coors_desc_)));
@@ -127,13 +127,13 @@ class dynamic_point_to_voxel_forward_general
           point2voxel_map_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(point2voxel_map_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &point2voxel_map_,
                 mluOpDataTypeBytes(point2voxel_map_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&point2voxel_map_,
                        mluOpDataTypeBytes(point2voxel_map_params.get_dtype()) *
                            mluOpGetTensorElementNum(point2voxel_map_desc_)));
@@ -149,13 +149,13 @@ class dynamic_point_to_voxel_forward_general
       if (mluOpGetTensorElementNum(voxel_points_count_desc_) >=
           LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &voxel_points_count_,
                 mluOpDataTypeBytes(voxel_points_count_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &voxel_points_count_,
                 mluOpDataTypeBytes(voxel_points_count_params.get_dtype()) *
@@ -170,12 +170,12 @@ class dynamic_point_to_voxel_forward_general
           voxel_num_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(voxel_num_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&voxel_num_,
                        mluOpDataTypeBytes(voxel_num_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&voxel_num_,
                        mluOpDataTypeBytes(voxel_num_params.get_dtype()) *
                            mluOpGetTensorElementNum(voxel_num_desc_)));
@@ -185,7 +185,7 @@ class dynamic_point_to_voxel_forward_general
       target_device_ = std::get<8>(GetParam());
       expected_status_ = std::get<9>(GetParam());
 
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&workspace_, MLUOP_DTYPE_FLOAT * workspace_size_));
     } catch (const std::exception &e) {
       FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -225,7 +225,7 @@ class dynamic_point_to_voxel_forward_general
 
     if (feats_) {
       VLOG(4) << "Destroy feats_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(feats_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(feats_));
       feats_ = nullptr;
     }
 
@@ -237,7 +237,7 @@ class dynamic_point_to_voxel_forward_general
 
     if (coors_) {
       VLOG(4) << "Destroy coors_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(coors_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(coors_));
       coors_ = nullptr;
     }
 
@@ -249,7 +249,7 @@ class dynamic_point_to_voxel_forward_general
 
     if (voxel_feats_) {
       VLOG(4) << "Destroy voxel_feats_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxel_feats_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxel_feats_));
       voxel_feats_ = nullptr;
     }
 
@@ -261,7 +261,7 @@ class dynamic_point_to_voxel_forward_general
 
     if (voxel_coors_) {
       VLOG(4) << "Destroy voxel_coors_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxel_coors_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxel_coors_));
       voxel_coors_ = nullptr;
     }
 
@@ -273,7 +273,7 @@ class dynamic_point_to_voxel_forward_general
 
     if (point2voxel_map_) {
       VLOG(4) << "Destroy point2voxel_map_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(point2voxel_map_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(point2voxel_map_));
       point2voxel_map_ = nullptr;
     }
 
@@ -285,7 +285,7 @@ class dynamic_point_to_voxel_forward_general
 
     if (voxel_points_count_) {
       VLOG(4) << "Destroy voxel_points_count_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxel_points_count_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxel_points_count_));
       voxel_points_count_ = nullptr;
     }
 
@@ -297,13 +297,13 @@ class dynamic_point_to_voxel_forward_general
 
     if (voxel_num_) {
       VLOG(4) << "Destroy voxel_num_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxel_num_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxel_num_));
       voxel_num_ = nullptr;
     }
 
     if (workspace_) {
       VLOG(4) << "Destroy workspace_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
   }

@@ -65,12 +65,12 @@ class roipoint_pool3d_general
           points_params.get_dim_nb(), points_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(points_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&points_,
                        mluOpDataTypeBytes(points_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&points_, mluOpDataTypeBytes(points_params.get_dtype()) *
                                      mluOpGetTensorElementNum(points_desc_)));
       }
@@ -83,13 +83,13 @@ class roipoint_pool3d_general
           point_features_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(point_features_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &point_features_,
                 mluOpDataTypeBytes(point_features_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&point_features_,
                        mluOpDataTypeBytes(point_features_params.get_dtype()) *
                            mluOpGetTensorElementNum(point_features_desc_)));
@@ -104,11 +104,11 @@ class roipoint_pool3d_general
 
       if (mluOpGetTensorElementNum(boxes3d_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&boxes3d_,
                        mluOpDataTypeBytes(boxes3d_params.get_dtype()) * 10));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&boxes3d_,
                                mluOpDataTypeBytes(boxes3d_params.get_dtype()) *
                                    mluOpGetTensorElementNum(boxes3d_desc_)));
@@ -123,13 +123,13 @@ class roipoint_pool3d_general
           pooled_features_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(pooled_features_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &pooled_features_,
                 mluOpDataTypeBytes(pooled_features_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&pooled_features_,
                        mluOpDataTypeBytes(pooled_features_params.get_dtype()) *
                            mluOpGetTensorElementNum(pooled_features_desc_)));
@@ -145,13 +145,13 @@ class roipoint_pool3d_general
       if (mluOpGetTensorElementNum(pooled_empty_flag_desc_) >=
           LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &pooled_empty_flag_,
                 mluOpDataTypeBytes(pooled_empty_flag_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &pooled_empty_flag_,
                 mluOpDataTypeBytes(pooled_empty_flag_params.get_dtype()) *
@@ -178,7 +178,7 @@ class roipoint_pool3d_general
       destroy();
       return expected_status_ == status;
     }
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+    GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
 
     status = mluOpRoiPointPool3d(
         handle_, batch_size_, pts_num_, boxes_num_, feature_in_len_,
@@ -204,7 +204,7 @@ class roipoint_pool3d_general
 
     if (points_) {
       VLOG(4) << "Destroy points_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(points_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(points_));
       points_ = nullptr;
     }
 
@@ -216,7 +216,7 @@ class roipoint_pool3d_general
 
     if (point_features_) {
       VLOG(4) << "Destroy point_features_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(point_features_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(point_features_));
       point_features_ = nullptr;
     }
 
@@ -228,7 +228,7 @@ class roipoint_pool3d_general
 
     if (boxes3d_) {
       VLOG(4) << "Destroy boxes3d_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(boxes3d_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(boxes3d_));
       boxes3d_ = nullptr;
     }
 
@@ -240,7 +240,7 @@ class roipoint_pool3d_general
 
     if (pooled_features_) {
       VLOG(4) << "Destroy pooled_features_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(pooled_features_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(pooled_features_));
       pooled_features_ = nullptr;
     }
 
@@ -252,7 +252,7 @@ class roipoint_pool3d_general
 
     if (pooled_empty_flag_) {
       VLOG(4) << "Destroy pooled_empty_flag_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(pooled_empty_flag_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(pooled_empty_flag_));
       pooled_empty_flag_ = nullptr;
     }
   }

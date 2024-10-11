@@ -294,9 +294,9 @@ void Executor::launch() {
 bool Executor::ready() {
   auto ret = cnrtQueueWaitNotifier(exe_context_->hw_notifier->n_stop,
                                    exe_context_->queue, 0);
-  if (CNRT_RET_ERR_NOT_READY == ret) {
+  if (cnrtErrorNotReady == ret) {
     return false;
-  } else if (CNRT_RET_SUCCESS == ret) {
+  } else if (cnrtSuccess == ret) {
     return true;
   } else {
     GTEST_CHECK(false,
@@ -386,7 +386,7 @@ void Executor::setupForPerfIter(int repeat, int iter, int iter_start) {
             void *src_data = getPerfSrcData(db);
             GTEST_CHECK(cnrtMemcpy(db->device_perf_ptr, src_data, db->size,
                                    CNRT_MEM_TRANS_DIR_DEV2DEV) ==
-                        CNRT_RET_SUCCESS);
+                        cnrtSuccess);
             oss << "copy data from " << src_data;
           } else {
             oss << "random data is fed to MLU kernel, if it should be real "
@@ -465,7 +465,7 @@ void Executor::setupForPerfIter(int repeat, int iter, int iter_start) {
       if (skipMallocDevice(db.getMetaTensor())) continue;
       void *src_data = getPerfSrcData(&db);
       GTEST_CHECK(cnrtMemcpy(db.device_perf_ptr, src_data, db.size,
-                             CNRT_MEM_TRANS_DIR_DEV2DEV) == CNRT_RET_SUCCESS);
+                             CNRT_MEM_TRANS_DIR_DEV2DEV) == cnrtSuccess);
     }
   }
 }
@@ -534,10 +534,10 @@ std::tuple<size_t, float> Executor::callBackKernelSyncAndGetTime(
   float hwtime = 0;
   cnrtNotifier_t n_start = notifier->n_start;
   cnrtNotifier_t n_stop = notifier->n_stop;
-  GTEST_CHECK(CNRT_RET_SUCCESS ==
+  GTEST_CHECK(cnrtSuccess ==
               cnrtPlaceNotifier(n_start, exe_context_->queue));
   launch_kernel();
-  GTEST_CHECK(CNRT_RET_SUCCESS ==
+  GTEST_CHECK(cnrtSuccess ==
               cnrtPlaceNotifier(n_stop, exe_context_->queue));
   GTEST_CHECK(cnrtSuccess == cnrtQueueSync(exe_context_->queue));
   size_t tp = MONITOR_CLOCK::now().time_since_epoch().count();
@@ -920,7 +920,7 @@ bool Executor::checkBaseline() {
 
 double Executor::getBandWidthByDev() {
   int card = -1;
-  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtGetDevice(&card));
+  GTEST_CHECK(cnrtSuccess == cnrtGetDevice(&card));
   GTEST_CHECK(cndevInit(0) == CNDEV_SUCCESS);
   cndevDDRInfo_t ddrinfo;
   ddrinfo.version = CNDEV_VERSION_5;
@@ -937,7 +937,7 @@ double Executor::getBandWidthByDev() {
 int Executor::getIpuFrequency() {
   int ordinal = -1;
   int ipu_frequency = -1;
-  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtGetDevice(&ordinal));
+  GTEST_CHECK(cnrtSuccess == cnrtGetDevice(&ordinal));
   GTEST_CHECK(cndevInit(0) == CNDEV_SUCCESS);
   cndevFrequencyInfo_t freqInfo;
   freqInfo.version = CNDEV_VERSION_5;
@@ -1700,15 +1700,15 @@ void Executor::deviceFree() noexcept {
     // TODO(None): group those device ptrs into a vector?
     if (data_vector_[i].device_origin_ptr != nullptr) {
       EXPECT_EQ(mlu_runtime_.deallocate(data_vector_[i].device_origin_ptr),
-                CNRT_RET_SUCCESS);
+                cnrtSuccess);
     }
     if (data_vector_[i].device_perf_ptr != nullptr && needDevPerfSpace()) {
       EXPECT_EQ(mlu_runtime_.deallocate(data_vector_[i].device_perf_ptr),
-                CNRT_RET_SUCCESS);
+                cnrtSuccess);
     }
     if (data_vector_[i].device_perf_data_ptr != nullptr) {
       EXPECT_EQ(mlu_runtime_.deallocate(data_vector_[i].device_perf_data_ptr),
-                CNRT_RET_SUCCESS);
+                cnrtSuccess);
     }
   }
   if (needDevRandomSpace()) {
@@ -1725,7 +1725,7 @@ void Executor::deviceFree() noexcept {
         << "MLU Memory leaked that should be deallocate by user explicitly"
         << "(case: " << eva_res_.case_path << ")";
   }
-  EXPECT_EQ(mlu_runtime_.destroy(), CNRT_RET_SUCCESS);
+  EXPECT_EQ(mlu_runtime_.destroy(), cnrtSuccess);
 }
 
 void Executor::freeLLC() {
@@ -1882,17 +1882,24 @@ void Executor::cnrtCastDataTypeWrap(void *src_data,
   size_t count_remain = count % INT_MAX;
   char *src = reinterpret_cast<char *>(src_data);
   char *dst = reinterpret_cast<char *>(dst_data);
+  cnrtRoundingMode_t round_mode = (dst_dtype == MLUOP_DTYPE_HALF ||
+                                   dst_dtype == MLUOP_DTYPE_FLOAT ||
+                                   dst_dtype == MLUOP_DTYPE_BFLOAT16 ||
+                                   dst_dtype == MLUOP_DTYPE_DOUBLE ||
+                                   dst_dtype == MLUOP_DTYPE_COMPLEX_HALF ||
+                                   dst_dtype == MLUOP_DTYPE_COMPLEX_FLOAT) ?
+                                   cnrtRounding_rn : cnrtRounding_rz;
   for (size_t i = 0; i < count_repeat; ++i) {
-    GTEST_CHECK(CNRT_RET_SUCCESS ==
+    GTEST_CHECK(cnrtSuccess ==
                 cnrtCastDataType_V2(src, in_dtype, dst, out_dtype, INT_MAX,
-                                    quant_param, cnrtRounding_rm));
+                                    quant_param, round_mode));
     src += INT_MAX * mluop::getSizeOfDataType(src_dtype);
     dst += INT_MAX * mluop::getSizeOfDataType(dst_dtype);
   }
   if (count_remain) {
-    GTEST_CHECK(CNRT_RET_SUCCESS ==
+    GTEST_CHECK(cnrtSuccess ==
                 cnrtCastDataType_V2(src, in_dtype, dst, out_dtype, count_remain,
-                                    quant_param, cnrtRounding_rm));
+                                    quant_param, round_mode));
   }
 }
 
@@ -1923,11 +1930,11 @@ void Executor::castDataOut(void *src_data, mluOpDataType_t src_dtype,
     // need quant
     if (flag_quant_mode_ != POS_SCALE_OFFSET) {
       cnrtQuantizedParam_t quant_param = nullptr;
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtCreateQuantizedParam(&quant_param, pos, scale, offset));
       cnrtCastDataTypeWrap(src_data, src_dtype, dst_data, dst_dtype, count,
                            quant_param);
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtDestroyQuantizedParam(quant_param));
+      GTEST_CHECK(cnrtSuccess == cnrtDestroyQuantizedParam(quant_param));
     } else {
       if (src_dtype == MLUOP_DTYPE_INT8) {
         MLUOP_CHECK(mluop::castFixedToFloat32((int8_t *)src_data, dst_data,
@@ -2118,16 +2125,16 @@ void Executor::copyIn() {
     // copy in the same queue memcpy host to dev
     if (zero_input_) {
       VLOG(4) << "set device_origin_ptr space to 0";
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMemset(db->device_origin_ptr, 0, db->size));
     } else if (mlu_need_host_data) {
       // use_real_data: a) compute diff; b) data_dependent (otherwise maybe
       // runtime error )
       auto t_a = std::chrono::system_clock::now();
       // host to dev for compute
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemcpy(db->device_origin_ptr,
+      GTEST_CHECK(cnrtSuccess == cnrtMemcpy(db->device_origin_ptr,
                                                  db->host_ptr, db->size,
-                                                 CNRT_MEM_TRANS_DIR_HOST2DEV));
+                                                 cnrtMemcpyHostToDev));
       auto t_b = std::chrono::system_clock::now();
       auto dur =
           std::chrono::duration_cast<std::chrono::microseconds>(t_b - t_a);
@@ -2135,7 +2142,7 @@ void Executor::copyIn() {
     }
     if (needDevPerfDataSpace()) {
       VLOG(4) << "copy from device_origin_ptr to device_perf_data_ptr";
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMemcpy(db->device_perf_data_ptr, db->device_origin_ptr,
                              db->size, CNRT_MEM_TRANS_DIR_DEV2DEV));
     }
@@ -2159,7 +2166,7 @@ void Executor::copyIn() {
       }
       // set zeros to dev
       auto t_a = std::chrono::system_clock::now();
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMemset(db->device_origin_ptr, 0, db->size));
       auto t_b = std::chrono::system_clock::now();
       auto dur =
@@ -2170,7 +2177,7 @@ void Executor::copyIn() {
       // set to 0
       if (needDevPerfDataSpace()) {
         // set zeros to dev for perf test
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMemset(db->device_perf_data_ptr, 0, db->size));
       }
     }
@@ -2191,9 +2198,9 @@ void Executor::copyOut() {
 
     // memcpy dev to host
     auto t_a = std::chrono::system_clock::now();
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemcpy(db->host_ptr,
+    GTEST_CHECK(cnrtSuccess == cnrtMemcpy(db->host_ptr,
                                                db->device_origin_ptr, db->size,
-                                               CNRT_MEM_TRANS_DIR_DEV2HOST));
+                                               cnrtMemcpyDevToHost));
     auto t_b = std::chrono::system_clock::now();
     auto dur = std::chrono::duration_cast<std::chrono::microseconds>(t_b - t_a);
     eva_res_.mlu.d2h_time += dur.count();

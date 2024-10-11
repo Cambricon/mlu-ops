@@ -51,7 +51,7 @@ class ball_query : public testing::Test {
       size_t new_xyz_ele_num = 2 * 16 * 3;
       size_t new_xyz_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t new_xyz_bytes = new_xyz_ele_num * new_xyz_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&new_xyz_, new_xyz_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&new_xyz_, new_xyz_bytes));
     }
     if (xyz_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&xyz_desc_));
@@ -64,7 +64,7 @@ class ball_query : public testing::Test {
       size_t xyz_ele_num = 2 * 4 * 3;
       size_t xyz_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t xyz_bytes = xyz_ele_num * xyz_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&xyz_, xyz_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&xyz_, xyz_bytes));
     }
     if (idx_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&idx_desc_));
@@ -77,7 +77,7 @@ class ball_query : public testing::Test {
       size_t idx_ele_num = 2 * 4 * 32;
       size_t idx_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t idx_bytes = idx_ele_num * idx_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&idx_, idx_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&idx_, idx_bytes));
     }
   }
 
@@ -101,7 +101,7 @@ class ball_query : public testing::Test {
       new_xyz_desc_ = NULL;
     }
     if (new_xyz_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(new_xyz_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(new_xyz_));
       new_xyz_ = NULL;
     }
     if (xyz_desc_) {
@@ -109,7 +109,7 @@ class ball_query : public testing::Test {
       xyz_desc_ = NULL;
     }
     if (xyz_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(xyz_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(xyz_));
       xyz_ = NULL;
     }
     if (idx_desc_) {
@@ -117,7 +117,7 @@ class ball_query : public testing::Test {
       idx_desc_ = NULL;
     }
     if (idx_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(idx_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(idx_));
       idx_ = NULL;
     }
   }

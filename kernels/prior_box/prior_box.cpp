@@ -34,7 +34,7 @@
 // policy function
 static void policyFuncPriorBox(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
                                cnrtFunctionType_t *k_type, const int count) {
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
+  *k_type = cnrtFuncTypeBlock;
   uint32_t cluster_max = mluop::runtime::getClusterLimitCapability(handle);
   uint32_t core_num_per_cluster =
       mluop::runtime::getCoreNumOfEachUnionCapability(handle);

@@ -154,7 +154,7 @@ static bool isPointsInBoxes(const mluOpHandle_t handle, cnrtDim3_t &k_dim,
   uint32_t core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   uint32_t cluster_used = PAD_UP(points_desc->dims[1], core_dim) / core_dim;
   cluster_used = cluster_used > cluster_num ? cluster_num : cluster_used;
-  k_type = CNRT_FUNC_TYPE_BLOCK;
+  k_type = cnrtFuncTypeBlock;
   k_dim.x = 1;
   k_dim.y = cluster_used * core_dim;
   k_dim.z = 1;

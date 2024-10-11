@@ -71,27 +71,27 @@ class three_interprolate_backward : public testing::Test {
       size_t grad_output_ele_num = 1 * 2 * 4;
       size_t grad_output_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t grad_output_bytes = grad_output_ele_num * grad_output_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&grad_output_, grad_output_bytes));
     }
     if (indices) {
       size_t indices_ele_num = 1 * 4 * 3;
       size_t indices_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t indices_bytes = indices_ele_num * indices_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&indices_, indices_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&indices_, indices_bytes));
     }
     if (weight) {
       size_t weight_ele_num = 1 * 4 * 3;
       size_t weight_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t weight_bytes = weight_ele_num * weight_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&weight_, weight_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&weight_, weight_bytes));
     }
     if (grad_features) {
       size_t grad_features_ele_num = 1 * 2 * 4;
       size_t grad_features_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t grad_features_bytes =
           grad_features_ele_num * grad_features_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&grad_features_, grad_features_bytes));
     }
   }
@@ -129,19 +129,19 @@ class three_interprolate_backward : public testing::Test {
       grad_features_desc_ = NULL;
     }
     if (grad_output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_output_));
       grad_output_ = NULL;
     }
     if (indices_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indices_));
       indices_ = NULL;
     }
     if (weight_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(weight_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(weight_));
       weight_ = NULL;
     }
     if (grad_features_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_features_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_features_));
       grad_features_ = NULL;
     }
   }

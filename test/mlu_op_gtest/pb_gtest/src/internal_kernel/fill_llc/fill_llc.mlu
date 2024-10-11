@@ -30,7 +30,7 @@ mluOpStatus_t mluOpFillLLC(mluOpHandle_t handle, void *const_addr,
     return MLUOP_STATUS_SUCCESS;
   }
   cnrtDim3_t k_dim{1, 1, 1};
-  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_BLOCK;
+  cnrtFunctionType_t k_type = cnrtFuncTypeBlock;
   KERNEL_CHECK(
       (flushLLC<<<k_dim, k_type, handle->queue>>>(const_addr, llc_size)));
   return MLUOP_STATUS_SUCCESS;

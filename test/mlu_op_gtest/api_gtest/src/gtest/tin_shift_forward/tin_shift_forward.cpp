@@ -49,11 +49,11 @@ class tin_shift_forward : public testing::Test {
     if (input) {
       if (input_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&input_, MLUOP_DTYPE_FLOAT *
                                     mluOpGetTensorElementNum(input_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&input_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -67,11 +67,11 @@ class tin_shift_forward : public testing::Test {
     if (shifts) {
       if (shifts_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&shifts_, MLUOP_DTYPE_INT32 *
                                      mluOpGetTensorElementNum(shifts_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&shifts_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -85,11 +85,11 @@ class tin_shift_forward : public testing::Test {
     if (output) {
       if (output_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&output_, MLUOP_DTYPE_FLOAT *
                                      mluOpGetTensorElementNum(output_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&output_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -124,15 +124,15 @@ class tin_shift_forward : public testing::Test {
       output_desc_ = NULL;
     }
     if (input_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
       input_ = NULL;
     }
     if (shifts_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(shifts_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(shifts_));
       shifts_ = NULL;
     }
     if (output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       output_ = NULL;
     }
   }

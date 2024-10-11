@@ -54,11 +54,11 @@ class indice_convolution_forward_general
           features_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(features_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&features_,
                        mluOpDataTypeBytes(features_params.get_dtype()) * 10));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&features_,
                                mluOpDataTypeBytes(features_params.get_dtype()) *
                                    mluOpGetTensorElementNum(features_desc_)));
@@ -72,11 +72,11 @@ class indice_convolution_forward_general
           filters_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(filters_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&filters_,
                        mluOpDataTypeBytes(filters_params.get_dtype()) * 10));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&filters_,
                                mluOpDataTypeBytes(filters_params.get_dtype()) *
                                    mluOpGetTensorElementNum(filters_desc_)));
@@ -90,13 +90,13 @@ class indice_convolution_forward_general
           indice_pairs_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(indice_pairs_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &indice_pairs_,
                 mluOpDataTypeBytes(indice_pairs_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&indice_pairs_,
                        mluOpDataTypeBytes(indice_pairs_params.get_dtype()) *
                            mluOpGetTensorElementNum(indice_pairs_desc_)));
@@ -110,13 +110,13 @@ class indice_convolution_forward_general
           features_out_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(features_out_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &features_out_,
                 mluOpDataTypeBytes(features_out_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&features_out_,
                        mluOpDataTypeBytes(features_out_params.get_dtype()) *
                            mluOpGetTensorElementNum(features_out_desc_)));
@@ -149,7 +149,7 @@ class indice_convolution_forward_general
       destroy();
       return expected_status_ == status;
     }
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+    GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
 
     status = mluOpIndiceConvolutionForward(
         handle_, features_desc_, features_, filters_desc_, filters_,
@@ -176,7 +176,7 @@ class indice_convolution_forward_general
 
       if (features_) {
         VLOG(4) << "Destroy features";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(features_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(features_));
         features_ = nullptr;
       }
 
@@ -188,7 +188,7 @@ class indice_convolution_forward_general
 
       if (filters_) {
         VLOG(4) << "Destroy filters";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(filters_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(filters_));
         filters_ = nullptr;
       }
 
@@ -200,7 +200,7 @@ class indice_convolution_forward_general
 
       if (indice_pairs_) {
         VLOG(4) << "Destroy indice_pairs";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indice_pairs_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(indice_pairs_));
         indice_pairs_ = nullptr;
       }
 
@@ -212,7 +212,7 @@ class indice_convolution_forward_general
 
       if (features_out_) {
         VLOG(4) << "Destroy features_out";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(features_out_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(features_out_));
         features_out_ = nullptr;
       }
     } catch (const std::exception &e) {

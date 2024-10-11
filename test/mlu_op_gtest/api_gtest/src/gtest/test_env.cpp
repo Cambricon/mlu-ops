@@ -28,7 +28,7 @@ void TestEnvironment::SetUp() {
 
   // 2. get device num
   unsigned int dev_num = 0;
-  ASSERT_EQ(cnrtGetDeviceCount(&dev_num), CNRT_RET_SUCCESS);
+  ASSERT_EQ(cnrtGetDeviceCount(&dev_num), cnrtSuccess);
   if (dev_num <= 0) {  // dev_num_ should > 0
     FAIL() << "Can't find device";
   } else {
@@ -43,8 +43,8 @@ void TestEnvironment::SetUp() {
   // cnrt set current device using CNRT_DEFAULT_DEVICE
   // in cnrtGetDevice() CNRT_DEFAULT_DEVICE > id
   VLOG(4) << "Set current device as device: " << dev_id;
-  ASSERT_EQ(cnrtGetDevice(&dev_id), CNRT_RET_SUCCESS);
-  ASSERT_EQ(cnrtSetDevice(dev_id), CNRT_RET_SUCCESS);
+  ASSERT_EQ(cnrtGetDevice(&dev_id), cnrtSuccess);
+  ASSERT_EQ(cnrtSetDevice(dev_id), cnrtSuccess);
 }
 
 void TestEnvironment::TearDown() {

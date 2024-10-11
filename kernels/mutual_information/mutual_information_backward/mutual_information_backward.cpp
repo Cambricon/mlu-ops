@@ -452,7 +452,7 @@ static void policyFunc3Pipeline(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
                                 cnrtFunctionType_t *k_type, int batch_size) {
   int core_num = mluop::runtime::getClusterLimitCapability(handle) *
                  mluop::runtime::getCoreNumOfEachUnionCapability(handle);
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
+  *k_type = cnrtFuncTypeBlock;
   k_dim->x = 1;
   k_dim->y = batch_size < core_num ? batch_size : core_num;
   k_dim->z = 1;
@@ -776,7 +776,7 @@ static mluOpStatus_t launchMutualInformationBackwardDefaultKernel(
   int max_s_t_block_num = std::max(s_block_num, t_block_num);
   int min_s_t_block_num = std::min(s_block_num, t_block_num);
 
-  k_type = CNRT_FUNC_TYPE_BLOCK;
+  k_type = cnrtFuncTypeBlock;
   k_dim.y = 1;
   k_dim.z = 1;
   // Get current arch support max dim_x value

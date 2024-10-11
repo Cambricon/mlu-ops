@@ -48,7 +48,7 @@ class deform_roi_pooling_backward : public testing::Test {
           std::vector<int>({3, 3, 3, 1}).data()));
     }
     if (grad_output) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_output_, 10));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_output_, 10));
     }
     if (input_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_desc_));
@@ -57,7 +57,7 @@ class deform_roi_pooling_backward : public testing::Test {
           std::vector<int>({1, 5, 5, 1}).data()));
     }
     if (input) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&input_, 10));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&input_, 10));
     }
     if (rois_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&rois_desc_));
@@ -66,7 +66,7 @@ class deform_roi_pooling_backward : public testing::Test {
                                            std::vector<int>({3, 5}).data()));
     }
     if (rois) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&rois_, 5));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&rois_, 5));
     }
     if (offset_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&offset_desc_));
@@ -75,7 +75,7 @@ class deform_roi_pooling_backward : public testing::Test {
           std::vector<int>({3, 2, 3, 3}).data()));
     }
     if (offset) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&offset_, 5));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&offset_, 5));
     }
     if (grad_input_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&grad_input_desc_));
@@ -84,7 +84,7 @@ class deform_roi_pooling_backward : public testing::Test {
           std::vector<int>({1, 5, 5, 1}).data()));
     }
     if (grad_input_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_input_, 10));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_input_, 10));
     }
     if (grad_offset_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&grad_offset_desc_));
@@ -93,7 +93,7 @@ class deform_roi_pooling_backward : public testing::Test {
           std::vector<int>({3, 2, 3, 3}).data()));
     }
     if (grad_offset) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_offset_, 10));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_offset_, 10));
     }
   }
   mluOpStatus_t compute() {
@@ -135,7 +135,7 @@ class deform_roi_pooling_backward : public testing::Test {
     }
     if (grad_output_) {
       VLOG(4) << "Destroy grad_output";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_output_));
       grad_output_ = nullptr;
     }
     if (input_desc_) {
@@ -144,7 +144,7 @@ class deform_roi_pooling_backward : public testing::Test {
     }
     if (input_) {
       VLOG(4) << "Destroy input";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
       input_ = nullptr;
     }
     if (rois_desc_) {
@@ -153,7 +153,7 @@ class deform_roi_pooling_backward : public testing::Test {
     }
     if (rois_) {
       VLOG(4) << "Destroy rois";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rois_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(rois_));
       rois_ = nullptr;
     }
     if (offset_desc_) {
@@ -162,7 +162,7 @@ class deform_roi_pooling_backward : public testing::Test {
     }
     if (offset_) {
       VLOG(4) << "Destroy offset";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(offset_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(offset_));
       offset_ = nullptr;
     }
     if (grad_input_desc_) {
@@ -171,7 +171,7 @@ class deform_roi_pooling_backward : public testing::Test {
     }
     if (grad_input_) {
       VLOG(4) << "Destroy grad_input";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_input_));
       grad_input_ = nullptr;
     }
     if (grad_offset_desc_) {
@@ -180,7 +180,7 @@ class deform_roi_pooling_backward : public testing::Test {
     }
     if (grad_offset_) {
       VLOG(4) << "Destroy grad_offset";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_offset_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_offset_));
       grad_offset_ = nullptr;
     }
   }

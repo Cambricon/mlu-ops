@@ -261,7 +261,7 @@ mluOpStatus_t mluOpPsamaskForward(mluOpHandle_t handle, const int psa_type,
   // generate mluOpPsamaskForward prototxt end!
 
   mluOpStatus_t ret = MLUOP_STATUS_SUCCESS;
-  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
+  cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
   cnrtDim3_t k_dim;
   PartitionSeg partition_info;
   policyFunc(handle, &k_dim, &k_type, &partition_info, n, h_feature);
@@ -331,7 +331,7 @@ mluOpStatus_t mluOpPsamaskBackward(mluOpHandle_t handle, const int psa_type,
   // generate mluOpPsamaskBackward prototxt end!
 
   mluOpStatus_t ret = MLUOP_STATUS_SUCCESS;
-  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
+  cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
   cnrtDim3_t k_dim;
   PartitionSeg partition_info;
   policyFunc(handle, &k_dim, &k_type, &partition_info, n, h_feature);

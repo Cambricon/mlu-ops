@@ -63,7 +63,7 @@ class border_align_forward_general
       int input_elenum = mluOpGetTensorElementNum(input_desc_);
       if (input_elenum > 0) {
         VLOG(4) << "malloc input_";
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&input_,
                                input_elenum * mluOpDataTypeBytes(input_dtype)));
       }
@@ -86,7 +86,7 @@ class border_align_forward_general
       }
       int boxes_elenum = mluOpGetTensorElementNum(boxes_desc_);
       if (boxes_elenum > 0) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&boxes_,
                                boxes_elenum * mluOpDataTypeBytes(boxes_dtype)));
       }
@@ -109,7 +109,7 @@ class border_align_forward_general
       }
       int output_elenum = mluOpGetTensorElementNum(output_desc_);
       if (output_elenum > 0) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&output_, output_elenum *
                                              mluOpDataTypeBytes(output_dtype)));
       }
@@ -134,7 +134,7 @@ class border_align_forward_general
       int argmax_idx_elenum = mluOpGetTensorElementNum(argmax_idx_desc_);
       if (argmax_idx_elenum > 0) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&argmax_idx_, argmax_idx_elenum *
                                          mluOpDataTypeBytes(argmax_idx_dtype)));
       }
@@ -174,7 +174,7 @@ class border_align_forward_general
       }
       if (input_) {
         VLOG(4) << "Destroy input_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
       }
       if (boxes_desc_) {
         VLOG(4) << "Destroy boxes_desc_";
@@ -182,7 +182,7 @@ class border_align_forward_general
       }
       if (boxes_) {
         VLOG(4) << "Destroy boxes_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(boxes_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(boxes_));
       }
       if (output_desc_) {
         VLOG(4) << "Destroy output_desc_";
@@ -190,7 +190,7 @@ class border_align_forward_general
       }
       if (output_) {
         VLOG(4) << "Destroy output_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       }
       if (argmax_idx_desc_) {
         VLOG(4) << "Destroy argmax_idx_desc_";
@@ -198,7 +198,7 @@ class border_align_forward_general
       }
       if (argmax_idx_) {
         VLOG(4) << "Destroy argmax_idx_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(argmax_idx_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(argmax_idx_));
       }
     } catch (const std::exception &e) {
       FAIL() << "MLUOPAPIGTEST: catched " << e.what()

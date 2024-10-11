@@ -350,21 +350,21 @@ void saveHexDataToFile(const std::string &file, void *data,
 cnrtDataType_t cvtMluOpDtypeToCnrt(mluOpDataType_t dtype) {
   switch (dtype) {
     case MLUOP_DTYPE_HALF:
-      return CNRT_FLOAT16;
+      return cnrtFloat16;
     case MLUOP_DTYPE_FLOAT:
-      return CNRT_FLOAT32;
+      return cnrtFloat32;
     case MLUOP_DTYPE_DOUBLE:
-      return CNRT_FLOAT64;
+      return cnrtFloat64;
     case MLUOP_DTYPE_INT8:
-      return CNRT_INT8;
+      return cnrtInt8;
     case MLUOP_DTYPE_INT16:
-      return CNRT_INT16;
+      return cnrtInt16;
     case MLUOP_DTYPE_INT32:
-      return CNRT_INT32;
+      return cnrtInt32;
     case MLUOP_DTYPE_INT64:
-      return CNRT_INT64;
+      return cnrtInt64;
     case MLUOP_DTYPE_BOOL:
-      return CNRT_BOOL;
+      return cnrtBool;
     case MLUOP_DTYPE_UINT8:
       return CNRT_UINT8;
     case MLUOP_DTYPE_UINT16:
