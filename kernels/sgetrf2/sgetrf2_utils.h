@@ -20,7 +20,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#ifndef KERNELS_SGETRF2_SGETRF2_UTILS_H
+#define KERNELS_SGETRF2_SGETRF2_UTILS_H
 #include "mlu_op.h"
 
 __nram__ float NRAM_BUFFER[MAX_NRAM_SIZE / 4];
 __mlu_shared__ float SRAM_BUFFER[MAX_SRAM_SIZE / 4];
+
+#endif

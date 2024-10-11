@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#ifndef KERNELS_SGETRF2_SGETRF2_H
+#define KERNELS_SGETRF2_SGETRF2_H
 #include "mlu_op.h"
 #include "kernels/kernel.h"
 
@@ -129,3 +131,4 @@ int sgetrf2_native(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
 int sgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
                int n, float *dA, float *d_rA, float *d_iA, int ldda, int *ipiv,
                int *info, int mode, void *workspace);
+#endif  // KERNELS_SGETRF2_SGETRF2_H
