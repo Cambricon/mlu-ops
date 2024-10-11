@@ -30,21 +30,39 @@
 #define MAX_N_SIZE_COMPLEX 1024
 #define NB 32
 #define MAX_SIZE 1024 * 127
-#define CEILDIV(x, y) ((x + y - 1) / y)
 
-__mlu_global__ void MLUKernelCSwap(int batch, int M_size, int N_size, int ib,
-                                   int J, int m, int n, int step, float *d_rA,
-                                   float *d_iA, int lda, int stride_a,
-                                   int *dipiv, int *dipiv2, int *info,
-                                   int gbstep) {
-  int id, batch_id, tx, taskdim;
+__mlu_func__ void cpolicyFunc(
+int batch, int stride_a, 
+int &tx, int &taskdim, 
+float *&d_rA, float *&d_iA) {
+  int id, batch_id;
+  if (batch > 1) {
+      id = taskId;
+      batch_id = id / 4;
+      if (batch_id >= batch) return;
+      tx = taskId % 4;
+      d_rA += batch_id * stride_a;
+      d_iA += batch_id * stride_a;
+      taskdim = TaskUnion1;
+  } else {
+      id = taskId;
+      batch_id = 0;
+      taskdim = taskDim;
+      tx = taskId;
+  }
+}
+
+__mlu_func__ void policyFunc(
+int batch, int stride_a, 
+int &tx, int &taskdim, 
+float *&dA) {
+  int id, batch_id;
   if (batch > 1) {
     id = taskId;
     batch_id = id / 4;
     if (batch_id >= batch) return;
     tx = taskId % 4;
-    d_rA += batch_id * stride_a;
-    d_iA += batch_id * stride_a;
+    dA += batch_id * stride_a;
     taskdim = TaskUnion1;
   } else {
     id = taskId;
@@ -52,6 +70,18 @@ __mlu_global__ void MLUKernelCSwap(int batch, int M_size, int N_size, int ib,
     taskdim = taskDim;
     tx = taskId;
   }
+}
+
+
+__mlu_global__ void MLUKernelCSwap(int batch, int M_size, int N_size, int ib,
+                                   int J, int m, int n, int step, float *d_rA,
+                                   float *d_iA, int lda, int stride_a,
+                                   int *dipiv, int *dipiv2, int *info,
+                                   int gbstep) {
+  int tx, taskdim;
+  cpolicyFunc(batch, stride_a, 
+              tx, taskdim,
+              d_rA,d_iA);
   const int NRAM_SIZE = MAX_NRAM_SIZE >> 4;
   const int SRAM_SIZE = (MAX_SRAM_SIZE >> 2);
   float *r_src_nram = NRAM_BUFFER;
@@ -100,22 +130,21 @@ __mlu_global__ void MLUKernelCSwap(int batch, int M_size, int N_size, int ib,
             cnt++;
           }
         } else {
-          if (gbstep + J == 0) {
-            if (dipiv[i + tx * mp_] != i + tx * mp_) {
-              if (n_per_seg > 0) {
-                __memcpy(
-                    r_src_nram + cnt * n_per_seg,
-                    rA + (dipiv[i + tx * mp_]) * lda + k * MAX_N_SIZE_COMPLEX,
-                    n_per_seg * sizeof(float), GDRAM2NRAM);
-                __memcpy(
-                    i_src_nram + cnt * n_per_seg,
-                    iA + (dipiv[i + tx * mp_]) * lda + k * MAX_N_SIZE_COMPLEX,
-                    n_per_seg * sizeof(float), GDRAM2NRAM);
-              }
-              idx[cnt] = i;
-              cnt++;
+          if ((dipiv[i + tx * mp_] != i + tx * mp_)&&(gbstep + J == 0)) {
+            if (n_per_seg > 0) {
+              __memcpy(
+                  r_src_nram + cnt * n_per_seg,
+                  rA + (dipiv[i + tx * mp_]) * lda + k * MAX_N_SIZE_COMPLEX,
+                  n_per_seg * sizeof(float), GDRAM2NRAM);
+              __memcpy(
+                  i_src_nram + cnt * n_per_seg,
+                  iA + (dipiv[i + tx * mp_]) * lda + k * MAX_N_SIZE_COMPLEX,
+                  n_per_seg * sizeof(float), GDRAM2NRAM);
             }
-          } else {
+            idx[cnt] = i;
+            cnt++;
+          }
+           else {
             if (dipiv2[i + tx * mp_] != i + tx * mp_) {
               if (n_per_seg > 0) {
                 __memcpy(
@@ -155,20 +184,10 @@ __mlu_entry__ void MLUKernelSwap(int batch, int M_size, int N_size, int ib,
                                  int J, int m, int n, int step, float *dA,
                                  int lda, int stride_a, int *dipiv, int *dipiv2,
                                  int *info, int gbstep) {
-  int id, batch_id, tx, taskdim;
-  if (batch > 1) {
-    id = taskId;
-    batch_id = id / 4;
-    if (batch_id >= batch) return;
-    tx = taskId % 4;
-    dA += batch_id * stride_a;
-    taskdim = TaskUnion1;
-  } else {
-    id = taskId;
-    batch_id = 0;
-    taskdim = taskDim;
-    tx = taskId;
-  }
+  int tx, taskdim;
+  policyFunc(batch, stride_a, 
+              tx, taskdim,
+              dA);
   const int SRAM_SIZE = (MAX_SRAM_SIZE >> 2);
   float *src_nram = NRAM_BUFFER;
   int *sram_ipiv2 = (int *)SRAM_BUFFER;
@@ -208,8 +227,7 @@ __mlu_entry__ void MLUKernelSwap(int batch, int M_size, int N_size, int ib,
             cnt++;
           }
         } else {
-          if (gbstep + J == 0) {
-            if (dipiv[i + tx * mp_] != i + tx * mp_) {
+            if ((dipiv[i + tx * mp_] != i + tx * mp_)&&(gbstep + J == 0)) {
               if (n_per_seg > 0) {
                 __memcpy(src_nram + cnt * n_per_seg,
                          A + (dipiv[i + tx * mp_]) * lda + k * MAX_N_SIZE,
@@ -218,7 +236,7 @@ __mlu_entry__ void MLUKernelSwap(int batch, int M_size, int N_size, int ib,
               idx[cnt] = i;
               cnt++;
             }
-          } else {
+           else {
             if (dipiv2[i + tx * mp_] != i + tx * mp_) {
               if (n_per_seg > 0) {
                 __memcpy(src_nram + cnt * n_per_seg,

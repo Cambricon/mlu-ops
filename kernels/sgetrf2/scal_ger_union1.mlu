@@ -58,7 +58,7 @@ __mlu_func__ void findMax(float arr[], int index[], int gbindex[],
   max_core_pos = 0;
 
   for (int i = 1; i < length; ++i) {
-    if ((fabs(arr[i]) > fabs(max_value)) && (i < length)) {
+    if ((fabs(arr[i]) > fabs(max_value))) {
       max_value = arr[i];
       max_index = index[i];
       max_gb_index = gbindex[i];
@@ -1725,10 +1725,10 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
     int mp = m / taskdim;
     const int mp_ = mp;
     mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
-    int seg = CEILDIV(mp, MAX_M_SIZE_COMPLEX_PIVOT);
-    seg = seg == 0 ? 1 : 1;
-
-    for (int k = 0; k < seg; k++) {
+    // int seg = CEILDIV(mp, MAX_M_SIZE_COMPLEX_PIVOT);
+    // seg = seg == 0 ? 1 : 1;
+    int k=0;
+    if (mp>0) {
       int m_per_core = mp;
       const int m_per_core_ = m_per_core;
 
