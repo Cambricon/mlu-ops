@@ -282,7 +282,7 @@ mluOpStatus_t launchDefaultKernel1(
   int core_num_l = (nram_size - 4 * 4096 * 3) / nums / sizeof(int);
   int jobs = (input_active_site + core_num_l - 1) / core_num_l;
   int job_num = jobs > core_nums ? core_nums : jobs;
-  func_type = CNRT_FUNC_TYPE_BLOCK;
+  func_type = cnrtFuncTypeBlock;
   kDim3.x = 1;
   kDim3.y = job_num;
   kDim3.z = 1;
@@ -348,7 +348,7 @@ mluOpStatus_t launchSubmKernel1(
   int least_jobs = (input_active_site * sizeof(int) + 1024 - 1) / 1024;
   jobs = std::max(jobs, least_jobs);
   int job_num = jobs > core_nums ? core_nums : jobs;
-  func_type = CNRT_FUNC_TYPE_BLOCK;
+  func_type = cnrtFuncTypeBlock;
   kDim3.x = 1;
   kDim3.y = job_num;
   kDim3.z = 1;
@@ -416,7 +416,7 @@ mluOpStatus_t launchSubmKernel2(mluOpHandle_t handle, const void *indices,
   int least_jobs = std::max(least_job_one, least_job_two);
   int jobs = std::max(std::max(jobs_one, jobs_two), least_jobs);
   int job_num = jobs > core_nums ? core_nums : jobs;
-  func_type = CNRT_FUNC_TYPE_BLOCK;
+  func_type = cnrtFuncTypeBlock;
   kDim3.x = 1;
   kDim3.y = job_num;
   kDim3.z = 1;
@@ -529,7 +529,7 @@ mluOpStatus_t launchUniqueOp(mluOpHandle_t handle,
   }
   cnrtQueueSync(handle->queue);
   cnrtMemcpy(return_num_act, unique_output_num_addr, sizeof(float),
-             CNRT_MEM_TRANS_DIR_DEV2HOST);
+             cnrtMemcpyDevToHost);
   CHECK_RETURN(interface_name, mluOpDestroyTensorDescriptor(unique_input_desc));
   CHECK_RETURN(interface_name,
                mluOpDestroyTensorDescriptor(unique_output_desc));
@@ -554,7 +554,7 @@ mluOpStatus_t launchDefaultKernel2(mluOpHandle_t handle,
   int core_num_l = (nram_size - 4 * 4096 * 3) / sizeof(int);
   int jobs = (num_act_out + core_num_l - 1) / core_num_l;
   int job_num = jobs > core_nums ? core_nums : jobs;
-  func_type = CNRT_FUNC_TYPE_BLOCK;
+  func_type = cnrtFuncTypeBlock;
   kDim3.x = 1;
   kDim3.y = job_num;
   kDim3.z = 1;
@@ -592,7 +592,7 @@ mluOpStatus_t launchBalanceKernel(mluOpHandle_t handle,
   int core_num_l = (nram_size - 4 * 4096 * 3) / 8 / sizeof(int);
   int jobs = (input_active_site * kernel_volume + core_num_l - 1) / core_num_l;
   int job_num = jobs > core_nums ? core_nums : jobs;
-  func_type = CNRT_FUNC_TYPE_BLOCK;
+  func_type = cnrtFuncTypeBlock;
   kDim3.x = 1;
   kDim3.y = job_num;
   kDim3.z = 1;
@@ -767,7 +767,7 @@ mluOpStatus_t launchDefaultKernel3(mluOpHandle_t handle, void *output_addr,
   int core_num_l = (nram_size - 4 * 4096 * 3) / 4 / sizeof(int);
   int jobs = 2 * kernel_volume;
   int job_num = jobs > core_nums ? core_nums : jobs;
-  func_type = CNRT_FUNC_TYPE_BLOCK;
+  func_type = cnrtFuncTypeBlock;
   kDim3.x = 1;
   kDim3.y = job_num;
   kDim3.z = 1;
@@ -807,7 +807,7 @@ mluOpStatus_t launchDefaultKernel4(
   int core_num_l = (nram_size - 4 * 4096 * 3) / core_num_split / sizeof(int);
   int jobs = (num_act_out + core_num_l - 1) / core_num_l;
   int job_num = jobs > core_nums ? core_nums : jobs;
-  func_type = CNRT_FUNC_TYPE_BLOCK;
+  func_type = cnrtFuncTypeBlock;
   kDim3.x = 1;
   kDim3.y = job_num;
   kDim3.z = 1;

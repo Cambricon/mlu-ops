@@ -40,7 +40,7 @@
 //
 //   int dev        = 0;  // not ptr, it's long unsigned int
 //   unsigned int dev_num = 0;
-//   ASSERT_TRUE(CNRT_RET_SUCCESS == cnrtGetDeviceCount(&dev_num));
+//   ASSERT_TRUE(cnrtSuccess == cnrtGetDeviceCount(&dev_num));
 //   ASSERT_GT(dev_num, 0);  // dev_num > 0
 //
 //   ASSERT_TRUE(cnrtSuccess == cnrtGetDevice(&dev));  // use device: 0
@@ -83,7 +83,7 @@
 
 TEST(DISABLED_CNRT, cnrtMemGetInfo) {
   unsigned int dev_num = 0;
-  ASSERT_TRUE(CNRT_RET_SUCCESS == cnrtGetDeviceCount(&dev_num));
+  ASSERT_TRUE(cnrtSuccess == cnrtGetDeviceCount(&dev_num));
   ASSERT_GT(dev_num, 0);  // dev_num > 0
 
   int dev_id;
@@ -100,18 +100,18 @@ TEST(DISABLED_CNRT, cnrtMemGetInfo) {
 
 // example,
 // this test is useless
-// test cnrtNotifier:
+// test cnrtNotifier_t:
 // 1.create notifier
 // 2.place notifier
 // 3.get duration
 // 4.destroy notifier
 // multi-thread create and place notifier to 1 queue.
 // and multi-thread destroy these notifier
-TEST(DISABLED_CNRT, cnrtNotifier) {
+TEST(DISABLED_CNRT, cnrtNotifier_t) {
   const size_t thread_num = 4;
 
   unsigned int dev_num = 0;
-  ASSERT_TRUE(CNRT_RET_SUCCESS == cnrtGetDeviceCount(&dev_num));
+  ASSERT_TRUE(cnrtSuccess == cnrtGetDeviceCount(&dev_num));
   ASSERT_GT(dev_num, 0);
 
   int dev_id;
@@ -130,15 +130,15 @@ TEST(DISABLED_CNRT, cnrtNotifier) {
   auto task_part1 = [&queue, &ctxs](int idx) {
     ASSERT_TRUE(cnrtSuccess == cnrtNotifierCreate(&(ctxs.at(idx).na)));
     ASSERT_TRUE(cnrtSuccess == cnrtNotifierCreate(&(ctxs.at(idx).nb)));
-    ASSERT_TRUE(CNRT_RET_SUCCESS == cnrtPlaceNotifier(ctxs.at(idx).na, queue));
-    ASSERT_TRUE(CNRT_RET_SUCCESS == cnrtPlaceNotifier(ctxs.at(idx).nb, queue));
+    ASSERT_TRUE(cnrtSuccess == cnrtPlaceNotifier(ctxs.at(idx).na, queue));
+    ASSERT_TRUE(cnrtSuccess == cnrtPlaceNotifier(ctxs.at(idx).nb, queue));
   };
 
   auto task_part2 = [&queue, &ctxs](int idx) {
     ASSERT_TRUE(cnrtSuccess == cnrtQueueSync(queue));
 
     float hwt = -1.0f;
-    ASSERT_TRUE(CNRT_RET_SUCCESS ==
+    ASSERT_TRUE(cnrtSuccess ==
                 cnrtNotifierDuration(ctxs.at(idx).na, ctxs.at(idx).nb, &hwt));
     ASSERT_EQ(0.0f, hwt);
 

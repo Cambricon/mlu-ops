@@ -389,7 +389,7 @@ bool TestEnvironment::getBusId(int device_id, std::string &bus_id_str) {
     VLOG(4) << "Device " << device_id << "'s mlu id=" << str;
   } else {
     cnrtRet_t ret = cnrtDeviceGetPCIBusId(str, 100, device_id);
-    if (ret != CNRT_RET_SUCCESS) {
+    if (ret != cnrtSuccess) {
       LOG(WARNING) << "Fail to get device " << device_id << "'s bus id.";
       return false;
     } else {
@@ -444,7 +444,7 @@ bool TestEnvironment::getComputeMode(std::string bus_id_str, char &mode) {
 void TestEnvironment::setDevice() {
   // 1.get device num
   unsigned int dev_num = 0;
-  ASSERT_EQ(cnrtGetDeviceCount(&dev_num), CNRT_RET_SUCCESS);
+  ASSERT_EQ(cnrtGetDeviceCount(&dev_num), cnrtSuccess);
   if (dev_num <= 0) {  // dev_num_ should > 0
     FAIL() << "Can't find device.";
   } else {

@@ -38,7 +38,7 @@ static void policyFuncPsRoiPool(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
                                 cnrtFunctionType_t *k_type, const int nums) {
   size_t union_number = mluop::runtime::getClusterLimitCapability(handle);
   size_t core_in_cluster = handle->core_num_per_cluster;
-  *k_type = CNRT_FUNC_TYPE_UNION1;  // default func type
+  *k_type = cnrtFuncTypeUnion1;  // default func type
   k_dim->x = core_in_cluster;
   uint32_t use_cluster = (nums + core_in_cluster - 1) / core_in_cluster;
   k_dim->y = use_cluster > union_number ? union_number : use_cluster;

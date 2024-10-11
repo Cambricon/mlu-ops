@@ -57,7 +57,7 @@ class three_nn_forward_general
       size_t u_dtype_size;
       MLUOP_CHECK(mluOpGetSizeOfDataType(u_dtype, &u_dtype_size));
       uint64_t u_bytes = u_dtype_size * mluOpGetTensorElementNum(unknown_desc_);
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&unknown_, u_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&unknown_, u_bytes))
     }
 
     MLUOpTensorParam k_params = std::get<1>(GetParam());
@@ -70,7 +70,7 @@ class three_nn_forward_general
       size_t k_dtype_size;
       MLUOP_CHECK(mluOpGetSizeOfDataType(k_dtype, &k_dtype_size));
       uint64_t k_bytes = k_dtype_size * mluOpGetTensorElementNum(known_desc_);
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&known_, k_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&known_, k_bytes))
     }
 
     MLUOpTensorParam d_params = std::get<2>(GetParam());
@@ -83,7 +83,7 @@ class three_nn_forward_general
       size_t d_dtype_size;
       MLUOP_CHECK(mluOpGetSizeOfDataType(d_dtype, &d_dtype_size));
       uint64_t d_bytes = d_dtype_size * mluOpGetTensorElementNum(dist2_desc_);
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&dist2_, d_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&dist2_, d_bytes))
     }
 
     MLUOpTensorParam id_params = std::get<3>(GetParam());
@@ -96,7 +96,7 @@ class three_nn_forward_general
       size_t id_dtype_size;
       MLUOP_CHECK(mluOpGetSizeOfDataType(id_dtype, &id_dtype_size));
       uint64_t id_bytes = id_dtype_size * mluOpGetTensorElementNum(dist2_desc_);
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&idx_, id_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&idx_, id_bytes))
     }
   }
   bool compute() {
@@ -111,7 +111,7 @@ class three_nn_forward_general
       destroy();
       return expected_status_ == status;
     }
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_))
+    GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_))
     status = mluOpThreeNNForward(handle_, unknown_desc_, unknown_, known_desc_,
                                  known_, workspace_, workspace_size_,
                                  dist2_desc_, dist2_, idx_desc_, idx_);
@@ -131,7 +131,7 @@ class three_nn_forward_general
       unknown_desc_ = NULL;
     }
     if (unknown_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(unknown_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(unknown_));
       unknown_ = NULL;
     }
     if (known_desc_) {
@@ -139,11 +139,11 @@ class three_nn_forward_general
       known_desc_ = NULL;
     }
     if (known_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(known_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(known_));
       known_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = NULL;
     }
     if (dist2_desc_) {
@@ -151,7 +151,7 @@ class three_nn_forward_general
       dist2_desc_ = NULL;
     }
     if (dist2_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(dist2_))
+      GTEST_CHECK(cnrtSuccess == cnrtFree(dist2_))
       dist2_ = NULL;
     }
     if (idx_desc_) {
@@ -159,7 +159,7 @@ class three_nn_forward_general
       idx_desc_ = NULL;
     }
     if (idx_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(idx_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(idx_));
       idx_ = NULL;
     }
   }

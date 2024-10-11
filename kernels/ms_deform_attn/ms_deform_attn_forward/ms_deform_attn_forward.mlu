@@ -56,7 +56,7 @@ MsDeformAttnForwardPolicy msDeformAttnForwardPolicyFunc(
           mluop::runtime::getClusterLimitCapability(handle));
   k_dims->z = 1;
 
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
 
   int32_t nlp = num_levels * num_points;
   int32_t nlpc = num_levels * num_points * channels;
@@ -274,7 +274,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
           VLOG(5) << "Not Implemented";
           break;
         }
-        case CNRT_FUNC_TYPE_BLOCK: {
+        case cnrtFuncTypeBlock: {
           VLOG(5)
               << "Launch Kernel MLUKernelMsDeformAttnForwardDefault<<<Block, "
               << k_dims.x << ", " << k_dims.y << ", " << k_dims.z << ">>>";
@@ -288,7 +288,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
                    num_queries, num_points, (int8_t *)data_col)));
           break;
         }
-        case CNRT_FUNC_TYPE_UNION1: {
+        case cnrtFuncTypeUnion1: {
           VLOG(5) << "Launch Kernel MLUKernelMsDeformAttnForwardDefault<<<Union"
                   << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y
                   << ", " << k_dims.z << ">>>";
@@ -311,7 +311,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
           VLOG(5) << "Not Implemented";
           break;
         }
-        case CNRT_FUNC_TYPE_BLOCK: {
+        case cnrtFuncTypeBlock: {
           VLOG(5) << "Launch Kernel "
                      "MLUKernelMsDeformAttnForwardSmallChannel<<<Block, "
                   << k_dims.x << ", " << k_dims.y << ", " << k_dims.z << ">>>";
@@ -325,7 +325,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
                    num_queries, num_points, (int8_t *)data_col)));
           break;
         }
-        case CNRT_FUNC_TYPE_UNION1: {
+        case cnrtFuncTypeUnion1: {
           VLOG(5) << "Launch Kernel "
                      "MLUKernelMsDeformAttnForwardSmallChannel<<<Union"
                   << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y

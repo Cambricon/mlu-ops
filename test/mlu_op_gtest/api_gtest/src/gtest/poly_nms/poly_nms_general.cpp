@@ -56,7 +56,7 @@ class poly_nms_general : public testing::TestWithParam<PolyNmsParam> {
     uint64_t b_ele_num = mluOpGetTensorElementNum(boxes_desc_);
     uint64_t b_bytes = mluOpDataTypeBytes(b_dtype) * b_ele_num;
     if (b_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&boxes_, b_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&boxes_, b_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
@@ -70,10 +70,10 @@ class poly_nms_general : public testing::TestWithParam<PolyNmsParam> {
     uint64_t o_ele_num = mluOpGetTensorElementNum(output_desc_);
     uint64_t o_bytes = mluOpDataTypeBytes(o_dtype) * o_ele_num;
     if (o_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, o_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_, o_bytes));
     }
     GTEST_CHECK(
-        CNRT_RET_SUCCESS ==
+        cnrtSuccess ==
         cnrtMalloc(&result_num_, mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
   }
 
@@ -89,7 +89,7 @@ class poly_nms_general : public testing::TestWithParam<PolyNmsParam> {
       destroy();
       return status == expected_status_;
     }
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+    GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
     status =
         mluOpPolyNms(handle_, boxes_desc_, boxes_, iou_threshold_, workspace_,
                      workspace_size_, output_desc_, output_, result_num_);
@@ -109,11 +109,11 @@ class poly_nms_general : public testing::TestWithParam<PolyNmsParam> {
       boxes_desc_ = NULL;
     }
     if (boxes_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(boxes_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(boxes_));
       boxes_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = NULL;
     }
     if (output_desc_) {
@@ -121,11 +121,11 @@ class poly_nms_general : public testing::TestWithParam<PolyNmsParam> {
       output_desc_ = NULL;
     }
     if (output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       output_ = NULL;
     }
     if (result_num_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(result_num_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(result_num_));
       result_num_ = NULL;
     }
   }

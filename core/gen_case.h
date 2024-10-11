@@ -472,9 +472,9 @@ class PbNode {
     void *data = malloc(data_size);
     auto memcpy_dir =
         (tensors[index].desc->pointer_mode == MLUOP_POINTER_MODE_HOST
-             ? CNRT_MEM_TRANS_DIR_HOST2HOST
-             : CNRT_MEM_TRANS_DIR_DEV2HOST);
-    if (CNRT_RET_SUCCESS ==
+             ? cnrtMemcpyHostToHost
+             : cnrtMemcpyDevToHost);
+    if (cnrtSuccess ==
         cnrtMemcpy(data, const_cast<void *>(tensors[index].device_ptr),
                    data_size, memcpy_dir)) {
       return data;
@@ -538,9 +538,9 @@ inline void PbNode::appendOpParam<const void *>(std::string param_name,
   int data_width = mluop::getSizeOfDataType(dtype);
   if (attr.type == cnrtMemTypeDevice) {
     void *data = malloc(data_width);
-    if (CNRT_RET_SUCCESS == cnrtMemcpy(data, const_cast<void *>(param_value),
+    if (cnrtSuccess == cnrtMemcpy(data, const_cast<void *>(param_value),
                                        data_width,
-                                       CNRT_MEM_TRANS_DIR_DEV2HOST)) {
+                                       cnrtMemcpyDevToHost)) {
       op_param.params.push_back({param_name, get_data_string(dtype, data, 0)});
     } else {
       LOG(ERROR) << "[gen_case] dump op param failed, param_name is "

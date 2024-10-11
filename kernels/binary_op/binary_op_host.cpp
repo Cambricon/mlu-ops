@@ -49,7 +49,7 @@ void binaryOpPolicyFunc(mluOpHandle_t handle, const int pad_up_size,
   size = PAD_UP(size, pad_up_size);
 
   // Union1 policyFunc
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   k_dim->x = core_dim;
   const uint64_t maximum_partitions = PAD_UP(size / pad_up_size, core_dim);
   if (maximum_partitions < core_number) {
@@ -66,7 +66,7 @@ void binaryOpBlockPolicyFunc(mluOpHandle_t handle,
                              cnrtFunctionType_t &k_type,
                              size_t &normal_core_elem_num,
                              size_t &tail_core_elem_num) {
-  k_type = CNRT_FUNC_TYPE_BLOCK;
+  k_type = cnrtFuncTypeBlock;
   const uint32_t core_number =
       mluop::runtime::getMaxParallelJobNum(handle, k_type);
   const size_t element_num = mluOpGetTensorElementNum(desc);

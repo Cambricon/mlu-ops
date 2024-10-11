@@ -390,7 +390,7 @@ if(deal_offset > 3) {
   k_dims.x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   k_dims.y = mluop::runtime::getClusterLimitCapability(handle);
   k_dims.z = 1;
-  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
+  cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
 ```
 数据拆分如图所示：
 

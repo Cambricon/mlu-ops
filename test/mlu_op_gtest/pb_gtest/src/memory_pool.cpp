@@ -276,7 +276,7 @@ void *MLUMemoryPool::allocate(size_t num_bytes, const std::string &name) {
 #endif
     while (maxFreeSize > 0) {
       auto result = cnrtMalloc(&ptr, maxFreeSize);
-      if (CNRT_RET_SUCCESS == result) {
+      if (cnrtSuccess == result) {
         cnGetMemAttribute((void *)&is_linear, CN_MEM_ATTRIBUTE_ISLINEAR,
                           (CNaddr)ptr);
         if (is_linear)
@@ -288,7 +288,7 @@ void *MLUMemoryPool::allocate(size_t num_bytes, const std::string &name) {
     }
     num_bytes = maxFreeSize;
   } else {
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&ptr, num_bytes));
+    GTEST_CHECK(cnrtSuccess == cnrtMalloc(&ptr, num_bytes));
   }
 
   ctx_->chunks.emplace_back(Chunk(num_bytes, num_bytes, ptr));
@@ -300,7 +300,7 @@ void *MLUMemoryPool::allocate(size_t num_bytes, const std::string &name) {
 void MLUMemoryPool::deallocate(void *ptr) {
   for (auto it = ctx_->chunks.begin(); it != ctx_->chunks.end(); ++it) {
     if ((*it).ptr == ptr) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(ptr));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(ptr));
       ctx_->total_allocated_size -= (*it).allocated_size;
       it = ctx_->chunks.erase(it);
       return;
@@ -311,7 +311,7 @@ void MLUMemoryPool::deallocate(void *ptr) {
 void MLUMemoryPool::destroy() {
   for (auto it = ctx_->chunks.begin(); it != ctx_->chunks.end(); ++it) {
     if (it->ptr != nullptr) {
-      GTEST_WARNING(CNRT_RET_SUCCESS == cnrtFree(it->ptr));
+      GTEST_WARNING(cnrtSuccess == cnrtFree(it->ptr));
       it->ptr = nullptr;
       ctx_->total_allocated_size -= it->allocated_size;
     }

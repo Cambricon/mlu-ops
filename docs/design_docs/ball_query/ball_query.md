@@ -434,7 +434,7 @@ vec_idx_num[k] += selected_num;
   k_dim->y =
       needed_cluster_num > cluster_num ? cluster_num : needed_cluster_num;
   k_dim->z = 1;
-  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
+  cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
 ```
 ![image](ballquery_split.jpg)
 

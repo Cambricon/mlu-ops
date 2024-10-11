@@ -50,7 +50,7 @@ class prior_box : public testing::Test {
                                            dim_size.data()));
     }
     if (min) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&min_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&min_, 8));
     }
     if (aspect_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&aspect_ratios_desc_));
@@ -60,7 +60,7 @@ class prior_box : public testing::Test {
                                    MLUOP_DTYPE_FLOAT, 1, dim_size.data()));
     }
     if (aspect) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&aspect_ratios_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&aspect_ratios_, 8));
     }
     if (variance_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&variance_desc_));
@@ -70,7 +70,7 @@ class prior_box : public testing::Test {
                                            dim_size.data()));
     }
     if (variance) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&variance_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&variance_, 8));
     }
     if (max_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&max_desc_));
@@ -80,7 +80,7 @@ class prior_box : public testing::Test {
                                            dim_size.data()));
     }
     if (max) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&max_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&max_, 8));
     }
     if (output_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
@@ -90,7 +90,7 @@ class prior_box : public testing::Test {
                                            dim_size.data()));
     }
     if (output) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_, 8));
     }
     if (var_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&var_desc_));
@@ -100,7 +100,7 @@ class prior_box : public testing::Test {
                                            dim_size.data()));
     }
     if (var) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&var_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&var_, 8));
     }
   }
 
@@ -147,27 +147,27 @@ class prior_box : public testing::Test {
       var_desc_ = NULL;
     }
     if (min_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(min_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(min_));
       min_ = NULL;
     }
     if (aspect_ratios_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(aspect_ratios_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(aspect_ratios_));
       aspect_ratios_ = NULL;
     }
     if (variance_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(variance_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(variance_));
       variance_ = NULL;
     }
     if (max_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(max_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(max_));
       max_ = NULL;
     }
     if (output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       output_ = NULL;
     }
     if (var_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(var_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(var_));
       var_ = NULL;
     }
   }

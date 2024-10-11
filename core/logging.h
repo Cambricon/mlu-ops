@@ -95,7 +95,7 @@
     cnrtGetLastError();                                            \
     kernel;                                                        \
     cnrtRet_t ret = cnrtPeekAtLastError();                         \
-    if (MLUOP_PREDICT_FALSE(CNRT_RET_SUCCESS != ret)) {            \
+    if (MLUOP_PREDICT_FALSE(cnrtSuccess != ret)) {            \
       LOG(ERROR) << "Check failed: Found " << cnrtGetErrorStr(ret) \
                  << " after invoke kernel " #kernel;               \
       return MLUOP_STATUS_EXECUTION_FAILED;                        \

@@ -51,9 +51,9 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   k_dim->z = 1;
   if (job < 4) {
     k_dim->x = 1;
-    *k_type = CNRT_FUNC_TYPE_BLOCK;
+    *k_type = cnrtFuncTypeBlock;
   } else {
-    *k_type = CNRT_FUNC_TYPE_UNION1;
+    *k_type = cnrtFuncTypeUnion1;
     k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   }
   return;
@@ -429,7 +429,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
   VLOG(5) << "N : " << n;
   const size_t hwa = h * w * a;
   cnrtDim3_t k_dim;
-  cnrtJobType_t k_type;
+  cnrtFunctionType_t k_type;
   policyFunc(handle, &k_dim, &k_type, hwa);
   VLOG(5) << "Launch Kernel KernelGenerateProposalsV2 <<<k_dim: " << k_type
           << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";

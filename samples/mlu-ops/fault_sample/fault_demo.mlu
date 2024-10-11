@@ -91,12 +91,12 @@ int main(int argc, char *argv[]) {
 
   printf("memcpy input data from host to device\n");
   CNRT_CHECK(cnrtMemcpy(device_ptrs[0], host_ptrs[0], data_size,
-                        CNRT_MEM_TRANS_DIR_HOST2DEV));
+                        cnrtMemcpyHostToDev));
 
   printf("call device kernel\n");
   // set function type and task dim
   cnrtDim3_t k_dim = {4, 1, 1};
-  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
+  cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
   // call device kernel function.
   MLUUnfinishedExampleKernel<<<k_dim, k_type, queue>>>(
       device_ptrs[0], device_ptrs[1], element_num);
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
 
   printf("copy result from device to host\n");
   CNRT_CHECK(cnrtMemcpy(host_ptrs[1], device_ptrs[1], data_size,
-                        CNRT_MEM_TRANS_DIR_DEV2HOST));
+                        cnrtMemcpyDevToHost));
 
   printf("free resources\n");
   for (size_t i = 0; i < TENSOR_NUM; ++i) {

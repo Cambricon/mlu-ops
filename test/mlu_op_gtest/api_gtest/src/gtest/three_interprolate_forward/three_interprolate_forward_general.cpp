@@ -59,7 +59,7 @@ class three_interprolate_forward_general
                                          f_dim, f_shape.data()));
     uint64_t f_ele_num = mluOpGetTensorElementNum(features_desc_);
     if (f_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&features_, 8))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&features_, 8))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&indices_desc_));
@@ -72,7 +72,7 @@ class three_interprolate_forward_general
                                          i_dim, i_shape.data()));
     uint64_t i_ele_num = mluOpGetTensorElementNum(indices_desc_);
     if (i_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&indices_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&indices_, 8));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&weight_desc_));
@@ -85,7 +85,7 @@ class three_interprolate_forward_general
                                          w_shape.data()));
     uint64_t w_ele_num = mluOpGetTensorElementNum(weight_desc_);
     if (w_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&weight_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&weight_, 8));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
@@ -98,7 +98,7 @@ class three_interprolate_forward_general
                                          o_shape.data()));
     uint64_t o_ele_num = mluOpGetTensorElementNum(output_desc_);
     if (o_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_, 8));
     }
   }
 
@@ -140,19 +140,19 @@ class three_interprolate_forward_general
       output_desc_ = NULL;
     }
     if (features_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(features_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(features_));
       features_ = NULL;
     }
     if (indices_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indices_));
       indices_ = NULL;
     }
     if (weight_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(weight_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(weight_));
       weight_ = NULL;
     }
     if (output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       output_ = NULL;
     }
   }

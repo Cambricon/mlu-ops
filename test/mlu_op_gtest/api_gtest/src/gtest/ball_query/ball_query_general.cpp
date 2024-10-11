@@ -64,7 +64,7 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
     uint64_t xyz_ele_num = mluOpGetTensorElementNum(xyz_desc_);
     uint64_t xyz_bytes = mluOpDataTypeBytes(xyz_dtype) * xyz_ele_num;
     if (xyz_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&xyz_, xyz_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&xyz_, xyz_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&new_xyz_desc_));
@@ -88,7 +88,7 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
     uint64_t new_xyz_bytes =
         mluOpDataTypeBytes(new_xyz_dtype) * new_xyz_ele_num;
     if (new_xyz_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&new_xyz_, new_xyz_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&new_xyz_, new_xyz_bytes))
     }
 
     min_radius_ = std::get<2>(GetParam());
@@ -113,7 +113,7 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
     uint64_t idx_ele_num = mluOpGetTensorElementNum(idx_desc_);
     uint64_t idx_bytes = mluOpDataTypeBytes(idx_dtype) * idx_ele_num;
     if (idx_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&idx_, idx_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&idx_, idx_bytes))
     }
 
     PublicParam publicParam = std::get<6>(GetParam());
@@ -145,7 +145,7 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
       new_xyz_desc_ = NULL;
     }
     if (new_xyz_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(new_xyz_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(new_xyz_));
       new_xyz_ = NULL;
     }
     if (xyz_desc_) {
@@ -153,7 +153,7 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
       xyz_desc_ = NULL;
     }
     if (xyz_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(xyz_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(xyz_));
       xyz_ = NULL;
     }
     if (idx_desc_) {
@@ -161,7 +161,7 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
       idx_desc_ = NULL;
     }
     if (idx_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(idx_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(idx_));
       idx_ = NULL;
     }
   }

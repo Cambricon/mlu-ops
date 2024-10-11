@@ -61,7 +61,7 @@ class yolo_box_general : public testing::TestWithParam<YoloBoxParam> {
     uint64_t x_ele_num = mluOpGetTensorElementNum(x_desc_);
     uint64_t x_bytes = mluOpDataTypeBytes(x_dtype) * x_ele_num;
     if (x_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&x_, x_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&x_, x_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&img_size_desc_));
@@ -75,7 +75,7 @@ class yolo_box_general : public testing::TestWithParam<YoloBoxParam> {
     uint64_t img_ele_num = mluOpGetTensorElementNum(img_size_desc_);
     uint64_t img_bytes = mluOpDataTypeBytes(img_dtype) * img_ele_num;
     if (img_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&img_size_, img_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&img_size_, img_bytes));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&anchors_desc_));
@@ -89,7 +89,7 @@ class yolo_box_general : public testing::TestWithParam<YoloBoxParam> {
     uint64_t an_ele_num = mluOpGetTensorElementNum(anchors_desc_);
     uint64_t an_bytes = mluOpDataTypeBytes(an_dtype) * an_ele_num;
     if (an_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&anchors_, an_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&anchors_, an_bytes));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&boxes_desc_));
@@ -103,7 +103,7 @@ class yolo_box_general : public testing::TestWithParam<YoloBoxParam> {
     uint64_t b_ele_num = mluOpGetTensorElementNum(boxes_desc_);
     uint64_t b_bytes = mluOpDataTypeBytes(b_dtype) * b_ele_num;
     if (b_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&boxes_, b_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&boxes_, b_bytes));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&scores_desc_));
@@ -117,7 +117,7 @@ class yolo_box_general : public testing::TestWithParam<YoloBoxParam> {
     uint64_t s_ele_num = mluOpGetTensorElementNum(scores_desc_);
     uint64_t s_bytes = mluOpDataTypeBytes(s_dtype) * s_ele_num;
     if (s_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&scores_, s_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&scores_, s_bytes));
     }
 
     YoloBoxDescParam params = std::get<5>(GetParam());
@@ -169,23 +169,23 @@ class yolo_box_general : public testing::TestWithParam<YoloBoxParam> {
       scores_desc_ = NULL;
     }
     if (x_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(x_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(x_));
       x_ = NULL;
     }
     if (img_size_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(img_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(img_size_));
       img_size_ = NULL;
     }
     if (anchors_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(anchors_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(anchors_));
       anchors_ = NULL;
     }
     if (boxes_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(boxes_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(boxes_));
       boxes_ = NULL;
     }
     if (scores_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(scores_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(scores_));
       scores_ = NULL;
     }
   }
