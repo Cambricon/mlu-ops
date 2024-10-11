@@ -32,12 +32,10 @@ void RoiAlignBackwardExecutor::paramCheck() {
   GTEST_CHECK(parser_->getProtoNode()->has_roi_align_backward_param(),
               "mluOpRoiAlignBackward: lose param. ");
 
-  GTEST_CHECK(
-      parser_->getInputNum() == 2 || parser_->getInputNum() == 4,
-        "mluOpRoiAlignBackward: tensor input number is wrong.");
-  GTEST_CHECK(
-      parser_->getOutputNum() == 1,
-        "mluOpRoiAlignBackward: tensor output number is wrong.");
+  GTEST_CHECK(parser_->getInputNum() == 2 || parser_->getInputNum() == 4,
+              "mluOpRoiAlignBackward: tensor input number is wrong.");
+  GTEST_CHECK(parser_->getOutputNum() == 1,
+              "mluOpRoiAlignBackward: tensor output number is wrong.");
 }
 
 void RoiAlignBackwardExecutor::compute() {
@@ -316,8 +314,21 @@ void RoiAlignBackwardExecutor::cpuCompute() {
 
 int64_t RoiAlignBackwardExecutor::getTheoryOps() {
   int64_t theory_ops = 0;
-
-  auto boxes = parser_->getMetaTensor(1).cpu_ptr;
+  float *host_boxes = nullptr;
+  Device device = parser_->device();
+  if (device != Device::CPU) {
+    auto boxes_desc = tensor_desc_[1].tensor;
+    auto boxes_dtype = boxes_desc->dtype;
+    size_t boxes_num = parser_->getInputDataCount(1);
+    float *boxes_ptr =
+        (float *)cpu_runtime_.allocate(boxes_num * sizeof(float));
+    castDataOut(data_vector_[1].host_ptr, boxes_dtype, (float *)boxes_ptr,
+                MLUOP_DTYPE_FLOAT, boxes_num, NO_QUANT, 0, 1, 0);
+    host_boxes = boxes_ptr;
+  } else {
+    host_boxes = cpu_fp32_input_[1];
+  }
+  auto boxes = host_boxes;
   auto input_desc = parser_->getMetaTensor(0).tensor;
   float spatial_scale =
       parser_->getProtoNode()->roi_align_backward_param().spatial_scale();
