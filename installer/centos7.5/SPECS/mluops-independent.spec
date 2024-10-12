@@ -5,7 +5,7 @@
 
 Name: mluops
 Summary: The Machine Lerning Unit OPerators
-Version: 1.3.0
+Version: 1.3.1
 Release: 1%{?dist}
 License: Cambricon Release License
 Vendor: Cambricon Inc.
@@ -19,7 +19,6 @@ BuildRequires: glibc-devel
 BuildRequires: binutils >= 2.27
 BuildRequires: readline-devel >= 6.2-4
 BuildRequires: rpm-devel
-BuildRequires: texinfo-tex
 BuildRequires: /usr/bin/pod2man
 BuildRequires: texlive-ec texlive-cm-super
 BuildRequires: systemtap-sdt-devel
@@ -65,7 +64,9 @@ cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 %postun -p /sbin/ldconfig
 
 %changelog
-* Thu Sep 6 2024 Cambricon Software Team <service@cambricon.com>
+* Thu Oct 10 2024 Cambricon Software Team <service@cambricon.com>
+- release mluops v1.3.1
+* Fri Sep 6 2024 Cambricon Software Team <service@cambricon.com>
 - release mluops v1.3.0
 * Thu Aug 15 2024 Cambricon Software Team <service@cambricon.com>
 - release mluops v1.2.4
@@ -73,11 +74,11 @@ cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 - release mluops v1.2.3
 * Thu Jul 25 2024 Cambricon Software Team <service@cambricon.com>
 - release mluops v1.2.2
-* Thu Jun 28 2024 Cambricon Software Team <service@cambricon.com>
+* Fri Jun 28 2024 Cambricon Software Team <service@cambricon.com>
 - release mluops v1.2.1
-* Thu May 27 2024 Cambricon Software Team <service@cambricon.com>
+* Mon May 27 2024 Cambricon Software Team <service@cambricon.com>
 - release mluops v1.2.0
-* Thu Apr 12 2024 Cambricon Software Team <service@cambricon.com>
+* Fri Apr 12 2024 Cambricon Software Team <service@cambricon.com>
 - release mluops v1.1.1
 * Thu Mar 28 2024 Cambricon Software Team <service@cambricon.com>
 - release mluops v1.1.0
@@ -89,17 +90,17 @@ cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 - release mluops v0.10.0
 * Mon Oct 16 2023 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.9.0
-* Tue Aug 31 2023 Cambricon Software Team <service@cambricon.com>
+* Thu Aug 31 2023 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.8.1
-* Tue Aug 09 2023 Cambricon Software Team <service@cambricon.com>
+* Wed Aug 09 2023 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.8.0
-* Tue Jun 16 2023 Cambricon Software Team <service@cambricon.com>
+* Fri Jun 16 2023 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.7.1
-* Tue Jun 02 2023 Cambricon Software Team <service@cambricon.com>
+* Fri Jun 02 2023 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.7.0
-* Tue Apr 14 2023 Cambricon Software Team <service@cambricon.com>
+* Fri Apr 14 2023 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.6.0
-* Tue Mar 20 2023 Cambricon Software Team <service@cambricon.com>
+* Mon Mar 20 2023 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.5.1
 * Mon Mar 06 2023 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.4.2
@@ -111,7 +112,7 @@ cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 - release mluops v0.4.0
 * Fri Oct 14 2022 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.3.0
-* Tue Sep 22 2022 Cambricon Software Team <service@cambricon.com>
+* Thu Sep 22 2022 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.2.0
 * Wed Aug 31 2022 Cambricon Software Team <service@cambricon.com>
 - release mluops v0.1.1
