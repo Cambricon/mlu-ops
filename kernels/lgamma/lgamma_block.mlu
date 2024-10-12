@@ -253,7 +253,7 @@ UNARY_OP_KERNEL_3PIPELINE_WITH_STRIDE_IMPLE(Lgamma, Half);
 mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineLgamma(
     const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
     const cnrtQueue_t queue, const mluOpDataType_t d_type, const void *x,
-    void *y, const int32_t num) {
+    void *y, const size_t num) {
   if (d_type == MLUOP_DTYPE_FLOAT) {
     KERNEL_CHECK(MLUBlockKernel3StagePipelineLgammaFloat<float, float>
                  <<<k_dim, k_type, queue>>>((char *)x, (char *)y, num););

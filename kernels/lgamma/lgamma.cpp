@@ -63,7 +63,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
   VLOG(5) << "[mluOpLgamma] launch kernel policyFUnc[" << k_dim.x << ", "
           << k_dim.y << ", " << k_dim.z << "]";
 
-  int element_num = mluOpGetTensorElementNum(x_desc);
+  size_t element_num = mluOpGetTensorElementNum(x_desc);
   if (handle->arch < MLUOP_MLU370) {
     LOG(ERROR) << "[mluOpLgamma] now only support ARCH >= <MLU370>\n";
     return MLUOP_STATUS_ARCH_MISMATCH;
