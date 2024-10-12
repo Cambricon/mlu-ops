@@ -65,7 +65,7 @@ __mlu_func__ void isInf(float *dst, float *src, uint32_t sz) {
 }
 
 __mlu_func__ void logHp(float *dst, float *src, uint32_t sz) {
-  __bang_log(dst, src, sz);
+  __bang_log2(dst, src, sz);
   __bang_mul_scalar(dst, dst, log_e_2, sz);
 }
 

@@ -398,15 +398,14 @@ __mlu_func__ void getIntersectionPoints(
       if (sizeof(T) == sizeof(float)) {
         __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                            actual_compute_box_num, 0);
-        __bang_lut_s32((int32_t *)temp2_ram, (int32_t *)temp2_ram,
-                       (int32_t *)table_float, actual_compute_box_num,
-                       TABLE_LENGTH);
+        __bang_lut((int32_t *)temp2_ram, (uint32_t *)temp2_ram,
+                   (int32_t *)table_float, actual_compute_box_num,
+                   TABLE_LENGTH);
       } else {
         __bang_half2int16_rd((int16_t *)temp2_ram, (half *)temp2_ram,
                              actual_compute_box_num, 0);
-        __bang_lut_s16((int16_t *)temp2_ram, (int16_t *)temp2_ram,
-                       (int16_t *)table_half, actual_compute_box_num,
-                       TABLE_LENGTH);
+        __bang_lut((int16_t *)temp2_ram, (uint16_t *)temp2_ram,
+                   (int16_t *)table_half, actual_compute_box_num, TABLE_LENGTH);
       }
       __bang_band(
           (char *)((T *)intersect_pts_x + (4 * i + j) * actual_compute_box_num),
@@ -486,15 +485,13 @@ __mlu_func__ void getIntersectionPoints(
     if (sizeof(T) == sizeof(float)) {
       __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                          actual_compute_box_num, 0);
-      __bang_lut_s32((int32_t *)temp2_ram, (int32_t *)temp2_ram,
-                     (int32_t *)table_float, actual_compute_box_num,
-                     TABLE_LENGTH);
+      __bang_lut((int32_t *)temp2_ram, (uint32_t *)temp2_ram,
+                 (int32_t *)table_float, actual_compute_box_num, TABLE_LENGTH);
     } else {
       __bang_half2int16_rd((int16_t *)temp2_ram, (half *)temp1_ram,
                            actual_compute_box_num, 0);
-      __bang_lut_s16((int16_t *)temp2_ram, (int16_t *)temp2_ram,
-                     (int16_t *)table_half, actual_compute_box_num,
-                     TABLE_LENGTH);
+      __bang_lut((int16_t *)temp2_ram, (uint16_t *)temp2_ram,
+                 (int16_t *)table_half, actual_compute_box_num, TABLE_LENGTH);
     }
     __bang_band(
         (char *)((T *)intersect_pts_x + (16 + i) * actual_compute_box_num),
@@ -562,15 +559,13 @@ __mlu_func__ void getIntersectionPoints(
     if (sizeof(T) == sizeof(float)) {
       __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                          actual_compute_box_num, 0);
-      __bang_lut_s32((int32_t *)temp2_ram, (int32_t *)temp2_ram,
-                     (int32_t *)table_float, actual_compute_box_num,
-                     TABLE_LENGTH);
+      __bang_lut((int32_t *)temp2_ram, (uint32_t *)temp2_ram,
+                 (int32_t *)table_float, actual_compute_box_num, TABLE_LENGTH);
     } else {
       __bang_half2int16_rd((int16_t *)temp2_ram, (half *)temp1_ram,
                            actual_compute_box_num, 0);
-      __bang_lut_s16((int16_t *)temp2_ram, (int16_t *)temp2_ram,
-                     (int16_t *)table_half, actual_compute_box_num,
-                     TABLE_LENGTH);
+      __bang_lut((int16_t *)temp2_ram, (uint16_t *)temp2_ram,
+                 (int16_t *)table_half, actual_compute_box_num, TABLE_LENGTH);
     }
     __bang_band(
         (char *)((T *)intersect_pts_x + (20 + i) * actual_compute_box_num),

@@ -115,11 +115,9 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
     }                                                                          \
     for (int i = 0; i < repeat - 2; i++) {                                     \
       int ping_flag = i % 2, pong_flag = (i + 1) % 2;                          \
-      pvLock();                                                                \
       __memcpy_async(store_start + i * cluster_store_size + sram_store_offset, \
                      ping_output + ping_flag * ping_pong_gap, core_store_size, \
                      NRAM2GDRAM);                                              \
-      pvUnlock();                                                              \
       __memcpy_async(sram_ping + ping_flag * sram_pong_gap,                    \
                      load_start + (i + 2) * cluster_load_size,                 \
                      cluster_load_size, GDRAM2SRAM);                           \
@@ -134,12 +132,10 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
       __sync_cluster();                                                        \
     }                                                                          \
     if (repeat > 1) {                                                          \
-      pvLock();                                                                \
       __memcpy_async(                                                          \
           store_start + (repeat - 2) * cluster_store_size + sram_store_offset, \
           ping_output + ((repeat - 2) % 2) * ping_pong_gap, core_store_size,   \
           NRAM2GDRAM);                                                         \
-      pvUnlock();                                                              \
     }                                                                          \
     if (cluster_remain > 0) {                                                  \
       __memcpy_async(sram_ping + (repeat % 2) * sram_pong_gap,                 \
@@ -160,12 +156,10 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
     }                                                                          \
     __sync_cluster();                                                          \
     if (repeat > 0) {                                                          \
-      pvLock();                                                                \
       __memcpy_async(                                                          \
           store_start + (repeat - 1) * cluster_store_size + sram_store_offset, \
           ping_output + ((repeat - 1) % 2) * ping_pong_gap, core_store_size,   \
           NRAM2GDRAM);                                                         \
-      pvUnlock();                                                              \
     }                                                                          \
     if (core_remain_num_deal > 0) {                                            \
       int ping_pong_flag = repeat % 2;                                         \
@@ -179,12 +173,10 @@ __mlu_func__ void strategyOfPartitionCore(size_t remain_num,
           ping_input + ping_pong_flag * ping_pong_gap, auxiliary_a,            \
           auxiliary_b, align_remain_num, core_remain_num_deal, args...);       \
       __asm__ volatile("sync;");                                               \
-      pvLock();                                                                \
       __memcpy_async(store_start + repeat * cluster_store_size +               \
                          core_remain_offset * sizeof(DType_out),               \
                      ping_output + ping_pong_flag * ping_pong_gap,             \
                      core_remain_num_deal * sizeof(DType_out), NRAM2GDRAM);    \
-      pvUnlock();                                                              \
     }                                                                          \
   }
 #else

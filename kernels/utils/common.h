@@ -257,14 +257,14 @@ __mlu_func__ void __mluop_log(T *nram_dst, T *nram_src, void *nram_addition,
   if (sizeof(T) == sizeof(float)) {
     int x2d = 0x3f317217;
     float rlog2e = *(float *)&x2d;
-    __bang_log((float *)nram_dst, (float *)nram_src, deal_num);
+    __bang_log2((float *)nram_dst, (float *)nram_src, deal_num);
     __bang_mul_scalar((float *)nram_dst, (float *)nram_dst, (float)rlog2e,
                       deal_num);
   } else if (sizeof(T) == sizeof(half)) {
     int x2d = 0x3f317217;
     float rlog2e = *(float *)&x2d;
     __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
-    __bang_log((float *)nram_addition, (float *)nram_addition, deal_num);
+    __bang_log2((float *)nram_addition, (float *)nram_addition, deal_num);
     __mluop_float2half((half *)nram_dst, (float *)nram_addition, deal_num);
     __bang_mul_scalar((half *)nram_dst, (half *)nram_dst, (half)rlog2e,
                       deal_num);
@@ -504,22 +504,6 @@ __mlu_func__ void __mluop_float2int32(int32_t *dst, float *dst_addition,
   __bang_mul_scalar((float *)dst, (float *)dst, -2.0, src_count);
   __bang_bor((char *)dst, (char *)dst, (char *)dst_addition,
              src_count * floatDchar);
-#endif
-}
-
-__mlu_func__ void pvLock() {
-#if __BANG_ARCH__ == 270
-  if (__is_ipu()) {
-    __bang_lock(0, 0);
-  }
-#endif
-}
-
-__mlu_func__ void pvUnlock() {
-#if __BANG_ARCH__ == 270
-  if (__is_ipu()) {
-    __bang_unlock(0, 0);
-  }
 #endif
 }
 

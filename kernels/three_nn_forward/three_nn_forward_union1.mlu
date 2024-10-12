@@ -58,8 +58,7 @@ __mlu_func__ void auxArgmin(T *nram_dst, T *nram_src, const int num_deal,
   *value = nram_dst[0];
   __bang_write_value(nram_dst, num_deal, *value);
   __bang_eq(nram_dst, nram_src, nram_dst, num_deal);
-  __bang_findfirst1((uint32_t *)nram_dst, nram_dst, num_deal);
-  *index = *((int *)nram_dst);
+  *index = (uint32_t)__bang_findfirst1(nram_dst, num_deal);
 }
 
 template <typename T>
