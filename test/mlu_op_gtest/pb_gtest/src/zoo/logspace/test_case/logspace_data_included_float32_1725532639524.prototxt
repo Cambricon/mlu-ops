@@ -1,0 +1,163 @@
+device: GPU
+op_name: "logspace"
+input {
+  id: "NULL"
+  shape {
+    dims: 0
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+output {
+  id: "output1"
+  shape {
+    dims: 128
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_i: 1092616192
+  value_i: 1093003396
+  value_i: 1093404898
+  value_i: 1093821226
+  value_i: 1094252928
+  value_i: 1094700571
+  value_i: 1095164744
+  value_i: 1095646057
+  value_i: 1096145144
+  value_i: 1096662660
+  value_i: 1097199286
+  value_i: 1097755728
+  value_i: 1098332718
+  value_i: 1098919331
+  value_i: 1099229525
+  value_i: 1099551174
+  value_i: 1099884701
+  value_i: 1100230543
+  value_i: 1100589156
+  value_i: 1100961012
+  value_i: 1101346599
+  value_i: 1101746424
+  value_i: 1102161014
+  value_i: 1102590913
+  value_i: 1103036686
+  value_i: 1103498921
+  value_i: 1103978224
+  value_i: 1104475227
+  value_i: 1104990582
+  value_i: 1105524967
+  value_i: 1106079085
+  value_i: 1106653666
+  value_i: 1107249463
+  value_i: 1107581759
+  value_i: 1107902064
+  value_i: 1108234198
+  value_i: 1108578596
+  value_i: 1108935712
+  value_i: 1109306014
+  value_i: 1109689991
+  value_i: 1110088147
+  value_i: 1110501005
+  value_i: 1110929109
+  value_i: 1111373021
+  value_i: 1111833325
+  value_i: 1112310627
+  value_i: 1112805554
+  value_i: 1113318757
+  value_i: 1113850911
+  value_i: 1114402715
+  value_i: 1114974896
+  value_i: 1115568205
+  value_i: 1115934144
+  value_i: 1116253112
+  value_i: 1116583859
+  value_i: 1116926819
+  value_i: 1117282443
+  value_i: 1117651199
+  value_i: 1118033572
+  value_i: 1118430065
+  value_i: 1118841200
+  value_i: 1119267516
+  value_i: 1119709574
+  value_i: 1120167956
+  value_i: 1120643265
+  value_i: 1121136125
+  value_i: 1121647185
+  value_i: 1122177116
+  value_i: 1122726616
+  value_i: 1123296408
+  value_i: 1123887239
+  value_i: 1124286680
+  value_i: 1124604317
+  value_i: 1124933682
+  value_i: 1125275210
+  value_i: 1125629349
+  value_i: 1125996565
+  value_i: 1126377342
+  value_i: 1126772179
+  value_i: 1127181596
+  value_i: 1127606132
+  value_i: 1128046344
+  value_i: 1128502812
+  value_i: 1128976136
+  value_i: 1129466938
+  value_i: 1129975864
+  value_i: 1130503582
+  value_i: 1131050788
+  value_i: 1131618200
+  value_i: 1132206564
+  value_i: 1132639367
+  value_i: 1132955677
+  value_i: 1133283667
+  value_i: 1133623769
+  value_i: 1133976429
+  value_i: 1134342112
+  value_i: 1134721298
+  value_i: 1135114487
+  value_i: 1135522194
+  value_i: 1135944957
+  value_i: 1136383331
+  value_i: 1136837893
+  value_i: 1137309240
+  value_i: 1137797992
+  value_i: 1138304793
+  value_i: 1138830308
+  value_i: 1139375228
+  value_i: 1139940270
+  value_i: 1140526178
+  value_i: 1140992205
+  value_i: 1141307193
+  value_i: 1141633814
+  value_i: 1141972495
+  value_i: 1142323683
+  value_i: 1142687838
+  value_i: 1143065441
+  value_i: 1143456988
+  value_i: 1143862993
+  value_i: 1144283990
+  value_i: 1144720534
+  value_i: 1145173197
+  value_i: 1145642576
+  value_i: 1146129287
+  value_i: 1146633971
+  value_i: 1147157292
+  value_i: 1147699936
+  value_i: 1148262619
+  value_i: 1148846080
+  thresholds {
+    evaluation_threshold: 1e-05
+    evaluation_threshold: 1e-05
+    evaluation_threshold_imag: -1
+    evaluation_threshold_imag: -1
+  }
+}
+evaluation_criterion: DIFF1
+evaluation_criterion: DIFF2
+handle_param {
+  round_mode: ROUND_OFF_ZERO
+}
+logspace_param {
+  start: 1
+  end: 3
+  steps: 128
+  base: 10
+}
