@@ -116,7 +116,7 @@ void DivExecutor::expand_compute_cpu(std::vector<int> shape_a,
   }
 
   bool can_broadcast = canBroadCast(shape_a, shape_b);
-  assert(can_broadcast == 1);
+  GTEST_CHECK(can_broadcast);
 
   uint64_t sizeA = 1;
   uint64_t sizeB = 1;

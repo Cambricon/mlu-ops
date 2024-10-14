@@ -351,6 +351,7 @@ void DcnForwardExecutor::transpose(float *input, float *output,
   if (dim_desc > 8 || dim_desc <= 0) {
     LOG(ERROR) << "dim_desc is " << dim_desc
                << ", it shoule less than 8 and greater than 0";
+    return;
   }
   { std::vector<int>().swap(permute_desc); }
   for (int i = 0; i < dim_num; i++) {
@@ -382,7 +383,7 @@ static void BatchMatMul(const int &g, const int &m, const int &k, const int &n,
                         const bool is_transa, const bool is_transb) {
   const int batch_size = g;
 
-  assert(batch_size >= 1);
+  GTEST_CHECK(batch_size >= 1);
 #if USE_OPENBLAS
   const CBLAS_ORDER Order = CblasRowMajor;
   const CBLAS_TRANSPOSE TransA = is_transa ? CblasTrans : CblasNoTrans;
