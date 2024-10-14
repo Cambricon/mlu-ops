@@ -280,10 +280,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
   void *points_xyz = workspace;
   // point_features : [B, C, N]
   void *point_features_transpose =
-      (char *)workspace +
+      (int8_t *)workspace +
       points_element_num * mluop::getSizeOfDataType(points_desc->dtype);
   void *transpose_workspace =
-      (char *)point_features_transpose +
+      (int8_t *)point_features_transpose +
       point_features_element_num *
           mluop::getSizeOfDataType(point_features_desc->dtype);
   size_t transpose_workspace_size = 0;
@@ -380,9 +380,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
                  KernelRoipointPool3d(
                      k_dims, k_type, handle->queue, points_desc->dtype,
                      batch_size, pts_num, boxes_num, feature_in_len,
-                     sampled_pts_num, (char *)points_xyz,
-                     (char *)point_features_transpose, (char *)boxes3d,
-                     (char *)pooled_features, (char *)pooled_empty_flag));
+                     sampled_pts_num, (int8_t *)points_xyz,
+                     (int8_t *)point_features_transpose, (int8_t *)boxes3d,
+                     (int8_t *)pooled_features, (int8_t *)pooled_empty_flag));
   } else {
     VLOG(5) << "Launch Kernel KernelRoipointPool3dLargeBoxesNum<<<Union"
             << k_type / CORE_DIM << ", " << k_dims.x << ", " << k_dims.y << ", "
@@ -391,9 +391,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
                  KernelRoipointPool3dLargeBoxesNum(
                      k_dims, k_type, handle->queue, points_desc->dtype,
                      batch_size, pts_num, boxes_num, feature_in_len,
-                     sampled_pts_num, (char *)points_xyz,
-                     (char *)point_features_transpose, (char *)boxes3d,
-                     (char *)pooled_features, (char *)pooled_empty_flag));
+                     sampled_pts_num, (int8_t *)points_xyz,
+                     (int8_t *)point_features_transpose, (int8_t *)boxes3d,
+                     (int8_t *)pooled_features, (int8_t *)pooled_empty_flag));
   }
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

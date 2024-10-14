@@ -346,9 +346,9 @@ static mluOpStatus_t internalIndiceConvBackwardFilter(
       filters_grad_need_trans ? filters_grad_desc->total_tensor_size : 0;
 
   void *filters_grad_temp = filters_grad_need_trans ? workspace : filters_grad;
-  void *input_temp = (char *)workspace + filters_grad_trans_size;
-  void *diffy_temp = (char *)input_temp + max_input_size;
-  void *matmul_ws = (char *)diffy_temp + max_diffy_size;
+  void *input_temp = (int8_t *)workspace + filters_grad_trans_size;
+  void *diffy_temp = (int8_t *)input_temp + max_input_size;
+  void *matmul_ws = (int8_t *)diffy_temp + max_diffy_size;
 
   // create temp tensor for gather and matmul
   mluOpTensorDescriptor_t active_indice_desc;
@@ -433,10 +433,11 @@ static mluOpStatus_t internalIndiceConvBackwardFilter(
       matmul_ws_size =
           temp_matmul_size > matmul_ws_size ? temp_matmul_size : matmul_ws_size;
     } else {
-      void *filters_grad_buffer = (char *)filters_grad_temp + i * cico_size;
-      void *gather_input_indice = (char *)indice_pairs + i * 2 * pair_low_size;
+      void *filters_grad_buffer = (int8_t *)filters_grad_temp + i * cico_size;
+      void *gather_input_indice =
+          (int8_t *)indice_pairs + i * 2 * pair_low_size;
       void *gather_output_grad =
-          (char *)indice_pairs + i * 2 * pair_low_size + pair_low_size;
+          (int8_t *)indice_pairs + i * 2 * pair_low_size + pair_low_size;
       // gather activate input data [n, ci]
       {
         DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);

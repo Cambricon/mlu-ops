@@ -30,7 +30,7 @@
 
 #define PAD_SIZE 64
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 /*
   convert function

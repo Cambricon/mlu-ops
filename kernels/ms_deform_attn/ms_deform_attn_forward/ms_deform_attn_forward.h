@@ -31,29 +31,29 @@
 
 template <typename T>
 __mlu_global__ void MLUKernelMsDeformAttnForwardDefault(
-    const char *data_value_gdram, const char *data_spatial_shapes_gdram,
-    const char *data_level_start_index_gdram,
-    const char *data_sampling_loc_gdram, const char *data_attn_weight_gdram,
+    const int8_t *data_value_gdram, const int8_t *data_spatial_shapes_gdram,
+    const int8_t *data_level_start_index_gdram,
+    const int8_t *data_sampling_loc_gdram, const int8_t *data_attn_weight_gdram,
     const int batch_size, const int num_keys, const int num_heads,
     const int channels, const int num_levels, const int num_queries,
-    const int num_points, char *data_col_gdram);
+    const int num_points, int8_t *data_col_gdram);
 
 template <typename T>
 __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
-    const char *data_value_gdram, const char *data_spatial_shapes_gdram,
-    const char *data_level_start_index_gdram,
-    const char *data_sampling_loc_gdram, const char *data_attn_weight_gdram,
+    const int8_t *data_value_gdram, const int8_t *data_spatial_shapes_gdram,
+    const int8_t *data_level_start_index_gdram,
+    const int8_t *data_sampling_loc_gdram, const int8_t *data_attn_weight_gdram,
     const int batch_size, const int num_keys, const int num_heads,
     const int channels, const int num_levels, const int num_queries,
-    const int num_points, char *data_col_gdram);
+    const int num_points, int8_t *data_col_gdram);
 
 template <typename T>
 __mlu_global__ void MLUKernelMsDeformAttnForwardFast(
-    const char *data_value_gdram, const char *data_spatial_shapes_gdram,
-    const char *data_level_start_index_gdram,
-    const char *data_sampling_loc_gdram, const char *data_attn_weight_gdram,
+    const int8_t *data_value_gdram, const int8_t *data_spatial_shapes_gdram,
+    const int8_t *data_level_start_index_gdram,
+    const int8_t *data_sampling_loc_gdram, const int8_t *data_attn_weight_gdram,
     const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels, const int32_t num_queries,
-    const int32_t num_points, char *data_col_gdram);
+    const int32_t num_points, int8_t *data_col_gdram);
 
 #endif  // KERNELS_MS_DEFORM_ATTN_FORWARD_MS_DEFORM_ATTN_FORWARD_H_

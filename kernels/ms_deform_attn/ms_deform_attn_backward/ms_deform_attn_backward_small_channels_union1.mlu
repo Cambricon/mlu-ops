@@ -26,7 +26,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 #define ALIGN_NUM 32
 
@@ -385,8 +385,8 @@ void __mlu_func__ loadValue(
                    num_deal_grid);
   __sync_io_move_compute();
 
-  __bang_band((char *)nram_grad_output_tl, (char *)nram_grad_output_tl,
-              (char *)grad_temp3,
+  __bang_band((int8_t *)nram_grad_output_tl, (int8_t *)nram_grad_output_tl,
+              (int8_t *)grad_temp3,
               num_deal_grid * deal_num_real * sizeof(float));
   __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
 
@@ -394,8 +394,8 @@ void __mlu_func__ loadValue(
                      num_deal_grid * deal_num_real, 0);
   __bang_lut((int32_t *)grad_temp3, (uint32_t *)grad_temp3, (int32_t *)table,
              num_deal_grid * deal_num_real, 64);
-  __bang_band((char *)nram_grad_output_tr, (char *)nram_grad_output_tr,
-              (char *)grad_temp3,
+  __bang_band((int8_t *)nram_grad_output_tr, (int8_t *)nram_grad_output_tr,
+              (int8_t *)grad_temp3,
               num_deal_grid * deal_num_real * sizeof(float));
 
   __bang_write_zero(grad_temp1, deal_num_real * num_deal_grid);
@@ -407,8 +407,8 @@ void __mlu_func__ loadValue(
                      num_deal_grid * deal_num_real, 0);
   __bang_lut((int32_t *)grad_temp3, (uint32_t *)grad_temp3, (int32_t *)table,
              num_deal_grid * deal_num_real, 64);
-  __bang_band((char *)nram_grad_output_bl, (char *)nram_grad_output_bl,
-              (char *)grad_temp3,
+  __bang_band((int8_t *)nram_grad_output_bl, (int8_t *)nram_grad_output_bl,
+              (int8_t *)grad_temp3,
               num_deal_grid * deal_num_real * sizeof(float));
 
   __bang_write_zero(grad_temp1, deal_num_real * num_deal_grid);
@@ -420,8 +420,8 @@ void __mlu_func__ loadValue(
                      num_deal_grid * deal_num_real, 0);
   __bang_lut((int32_t *)grad_temp3, (uint32_t *)grad_temp3, (int32_t *)table,
              num_deal_grid * deal_num_real, 64);
-  __bang_band((char *)nram_grad_output_br, (char *)nram_grad_output_br,
-              (char *)grad_temp3,
+  __bang_band((int8_t *)nram_grad_output_br, (int8_t *)nram_grad_output_br,
+              (int8_t *)grad_temp3,
               num_deal_grid * deal_num_real * sizeof(float));
 #endif
 }
@@ -692,8 +692,8 @@ void __mlu_func__ computeGradAttnWeight(
   __nram__ int32_t table[64] = {0, (int32_t)0xffffffff};
   __bang_lut((int32_t *)nram_h_high_temp, (uint32_t *)nram_h_high_temp,
              (int32_t *)table, num_deal_grid, 64);
-  __bang_band((char *)nram_grad_output_tr, (char *)nram_grad_output_tr,
-              (char *)nram_h_high_temp, num_deal_grid * sizeof(float));
+  __bang_band((int8_t *)nram_grad_output_tr, (int8_t *)nram_grad_output_tr,
+              (int8_t *)nram_h_high_temp, num_deal_grid * sizeof(float));
   __bang_atomic_reduce_add((float *)grad_attn_weight + grid_offset,
                            (float *)nram_grad_output_tr, num_deal_grid);
 #endif
@@ -748,8 +748,8 @@ void __mlu_func__ computeGradSampingLoc(
   __nram__ int32_t table[64] = {0, (int32_t)0xffffffff};
   __bang_lut((int32_t *)nram_h_high_temp, (uint32_t *)nram_h_high_temp,
              (int32_t *)table, num_deal_grid, 64);
-  __bang_band((char *)grad_h_weight, (char *)grad_h_weight,
-              (char *)nram_h_high_temp, num_deal_grid * sizeof(float));
+  __bang_band((int8_t *)grad_h_weight, (int8_t *)grad_h_weight,
+              (int8_t *)nram_h_high_temp, num_deal_grid * sizeof(float));
 
   __bang_transpose(nram_grad_output_tl, grad_w_weight,
                    num_per_time_real * num_heads * num_levels * deal_num_real,
@@ -771,8 +771,8 @@ void __mlu_func__ computeGradSampingLoc(
                              ALIGN_NUM);
   __bang_lut((int32_t *)nram_h_high_temp, (uint32_t *)nram_h_high_temp,
              (int32_t *)table, num_deal_grid, 64);
-  __bang_band((char *)grad_w_weight, (char *)grad_w_weight,
-              (char *)nram_h_high_temp, num_deal_grid * sizeof(float));
+  __bang_band((int8_t *)grad_w_weight, (int8_t *)grad_w_weight,
+              (int8_t *)nram_h_high_temp, num_deal_grid * sizeof(float));
 
   __memcpy_async(grad_w_weight + num_deal_grid, grad_h_weight,
                  num_deal_grid * sizeof(float), NRAM2NRAM);

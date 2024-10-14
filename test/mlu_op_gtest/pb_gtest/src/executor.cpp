@@ -746,10 +746,9 @@ void Executor::getMluPerfInfo(PerfInfo *res) {
 
   // compute
   res->compute_force = getPeakComputeForce();
+  res->theory_ops = getTheoryOps();
   if (parser_->node()->has_theory_compute_ops()) {
     res->theory_ops = parser_->node()->theory_compute_ops();
-  } else {
-    res->theory_ops = getTheoryOps();
   }
 
   // op / ( (latency(us) / 1000 / 1000) * PEAK_COMPUTE_FORCE(op/s) )

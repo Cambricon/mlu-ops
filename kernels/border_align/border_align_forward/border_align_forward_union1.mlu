@@ -29,7 +29,7 @@
 
 #define BORDER_NUM 4
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void bilinearInterpolate(const int32_t input_height,
@@ -303,7 +303,7 @@ __mlu_global__ void MLUKernelBorderAlignForward(
   T *input_ping_nram = (T *)nram_buffer;
   T *output_nram = input_ping_nram + pingpong_split_num * deal_num;
   T *boxes_nram = output_nram + deal_num;
-  int32_t *argmax_idx_nram = (int32_t *)((char *)boxes_nram + NFU_ALIGN_SIZE);
+  int32_t *argmax_idx_nram = (int32_t *)((int8_t *)boxes_nram + NFU_ALIGN_SIZE);
 
   /*
    * input.shape      = [origin_n, origin_h, origin_w, border_num * origin_c]

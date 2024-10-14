@@ -32,7 +32,7 @@
 #define INFINITY (340282346638528859811704183484516925440.000000)
 #endif
 
-__mlu_shared__ char sram_buffer[SIZE_SRAM_BUF];
+__mlu_shared__ int8_t sram_buffer[SIZE_SRAM_BUF];
 
 template <typename IN_DT, typename OUT_DT>
 __mlu_func__ void nms_detection(
@@ -137,7 +137,7 @@ __mlu_func__ void nms_detection(
       (IN_DT *)((float *)box2 + SINGLE_BOX_DIM * max_seg_iou_pad);
 
   // reuse memory from dist_ram
-  void *rotated_pts1_x = (char *)dist_ram;
+  void *rotated_pts1_x = (int8_t *)dist_ram;
   void *rotated_pts1_y = (float *)rotated_pts1_x + 4 * max_seg_iou_pad;
   void *rotated_pts2_x = (float *)rotated_pts1_y + 4 * max_seg_iou_pad;
   void *rotated_pts2_y = (float *)rotated_pts2_x + 4 * max_seg_iou_pad;
@@ -148,7 +148,7 @@ __mlu_func__ void nms_detection(
   void *vec2_y = (float *)vec2_x + 4 * max_seg_iou_pad;
 
   // First, initialize ram with all 0, or could cause nan/inf unexcepted results
-  __bang_write_zero((unsigned char *)score, copies_of_nram * max_seg_iou_pad);
+  __bang_write_zero((uint8_t *)score, copies_of_nram * max_seg_iou_pad);
 
   for (int keep = 0; keep < input_box_num; keep++) {
     __sync_cluster();
@@ -370,7 +370,7 @@ __mlu_func__ void nms_detection(
       __bang_float2int32((int32_t *)temp9_ram, (float *)temp9_ram, seg_len, 0);
       __bang_lut((int32_t *)temp9_ram, (uint32_t *)temp9_ram,
                  (int32_t *)table_float, seg_len, TABLE_LENGTH);
-      __bang_band((char *)temp2_ram, (char *)temp2_ram, (char *)temp9_ram,
+      __bang_band((int8_t *)temp2_ram, (int8_t *)temp2_ram, (int8_t *)temp9_ram,
                   seg_len * sizeof(float));
       // temp1: 1 = area_I / area_U > iou_threshold, 0 = else
       __bang_gt_scalar((float *)temp1_ram, (float *)temp2_ram, iou_threshold,

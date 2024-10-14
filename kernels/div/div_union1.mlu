@@ -33,9 +33,9 @@
 #define SCALE 1e-5
 #define LOW_SCALE 1e10
 
-__nram__ char nram_buffer[BINARY_NRAM_SIZE];
+__nram__ int8_t nram_buffer[BINARY_NRAM_SIZE];
 #if __BANG_ARCH__ != 520
-__mlu_shared__ char sram_buffer[BINARY_SRAM_SIZE];
+__mlu_shared__ int8_t sram_buffer[BINARY_SRAM_SIZE];
 #endif
 
 template <typename DType_in1, typename DType_in2 = DType_in1,
@@ -115,10 +115,10 @@ __mlu_func__ void auxFunc5DivHalf(size_t &span_num_deal,
  */
 template <typename DType_in1, typename DType_in2 = DType_in1,
           typename DType_out = DType_in1>
-__mlu_func__ void computeDivFloat(char *nram_z, char *nram_x, char *nram_y,
-                                  char *nram_temp1, char *nram_temp2,
-                                  char *nram_aux3, int32_t deal_num,
-                                  int32_t actual_num) {
+__mlu_func__ void computeDivFloat(int8_t *nram_z, int8_t *nram_x,
+                                  int8_t *nram_y, int8_t *nram_temp1,
+                                  int8_t *nram_temp2, int8_t *nram_aux3,
+                                  int32_t deal_num, int32_t actual_num) {
 #if __BANG_ARCH__ > 500
   __bang_div((float *)nram_x, (float *)nram_x, (DType_in2 *)nram_y, actual_num);
 #else
@@ -140,9 +140,9 @@ __mlu_func__ void computeDivFloat(char *nram_z, char *nram_x, char *nram_y,
  */
 template <typename DType_in1, typename DType_in2 = DType_in1,
           typename DType_out = DType_in1>
-__mlu_func__ void computeDivHalf(char *nram_z, char *nram_x, char *nram_y,
-                                 char *nram_temp1, char *nram_temp2,
-                                 char *nram_aux3, int32_t deal_num,
+__mlu_func__ void computeDivHalf(int8_t *nram_z, int8_t *nram_x, int8_t *nram_y,
+                                 int8_t *nram_temp1, int8_t *nram_temp2,
+                                 int8_t *nram_aux3, int32_t deal_num,
                                  int32_t actual_num) {
 #if __BANG_ARCH__ > 500
   __bang_div((half *)nram_z, (half *)nram_x, (half *)nram_y, actual_num);
@@ -174,14 +174,14 @@ mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineDiv(
     /* Only float and half data types are supported
        in host-side CPP file fool-proof processing. */
     case MLUOP_DTYPE_FLOAT: {
-      KERNEL_CHECK(
-          MLUBlockKernel3StagePipelineDivFloat<float, float, float>
-          <<<k_dim, k_type, queue>>>((char *)x, (char *)y, (char *)z, num));
+      KERNEL_CHECK(MLUBlockKernel3StagePipelineDivFloat<float, float, float>
+                   <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y,
+                                              (int8_t *)z, num));
     }; break;
     case MLUOP_DTYPE_HALF: {
-      KERNEL_CHECK(
-          MLUBlockKernel3StagePipelineDivHalf<half, half, half>
-          <<<k_dim, k_type, queue>>>((char *)x, (char *)y, (char *)z, num));
+      KERNEL_CHECK(MLUBlockKernel3StagePipelineDivHalf<half, half, half>
+                   <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y,
+                                              (int8_t *)z, num));
     }; break;
     default:
       break;
@@ -197,14 +197,14 @@ mluOpStatus_t MLUOP_WIN_API Kernel5StagePipelineDiv(
     /* Only float and half data types are supported
        in host-side CPP file fool-proof processing. */
     case MLUOP_DTYPE_FLOAT: {
-      KERNEL_CHECK(
-          MLUBlockKernel5StagePipelineDivFloat<float, float, float>
-          <<<k_dim, k_type, queue>>>((char *)x, (char *)y, (char *)z, num));
+      KERNEL_CHECK(MLUBlockKernel5StagePipelineDivFloat<float, float, float>
+                   <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y,
+                                              (int8_t *)z, num));
     }; break;
     case MLUOP_DTYPE_HALF: {
-      KERNEL_CHECK(
-          MLUBlockKernel5StagePipelineDivHalf<half, half, half>
-          <<<k_dim, k_type, queue>>>((char *)x, (char *)y, (char *)z, num));
+      KERNEL_CHECK(MLUBlockKernel5StagePipelineDivHalf<half, half, half>
+                   <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y,
+                                              (int8_t *)z, num));
     }; break;
     default:
       break;

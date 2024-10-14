@@ -29,7 +29,7 @@
 #define SEG_NUM 10
 #define BBOXES_ALIGN 64
 
-__nram__ char data_nram[MAX_NRAM_SIZE];
+__nram__ int8_t data_nram[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void swap_ptr(T &a, T &b) {

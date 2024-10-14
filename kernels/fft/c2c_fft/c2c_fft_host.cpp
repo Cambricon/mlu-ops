@@ -1242,13 +1242,13 @@ static mluOpStatus_t padFFT1dContiguousInput(mluOpHandle_t handle,
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(padded_input_desc,
                                                  cnnl_padded_input_desc);
-    CALL_CNNL(cnnlPad(
-        cnnl_handle, cnnl_input_desc,
-        fft_plan->prime ? fft_plan->matmul_addrs.input_contiguous_addr
-                        : fft_plan->mlu_addrs.input,
-        paddings, &padding_value, cnnl_padded_input_desc,
-        fft_plan->prime ? fft_plan->matmul_addrs.input_pad_addr
-                        : fft_plan->mlu_addrs.input_pad_addr));
+    CALL_CNNL(cnnlPad(cnnl_handle, cnnl_input_desc,
+                      fft_plan->prime
+                          ? fft_plan->matmul_addrs.input_contiguous_addr
+                          : fft_plan->mlu_addrs.input,
+                      paddings, &padding_value, cnnl_padded_input_desc,
+                      fft_plan->prime ? fft_plan->matmul_addrs.input_pad_addr
+                                      : fft_plan->mlu_addrs.input_pad_addr));
 
     // destroy cnnl descriptor
     VLOG(5) << "c2cfft cnnlOpPad end";

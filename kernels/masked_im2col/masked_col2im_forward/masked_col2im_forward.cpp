@@ -269,8 +269,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMaskedCol2imForward(
   // generate mluOpMaskedCol2imForward prototxt end!
   mluOpDataType_t input_dtype = col_desc->dtype;
   void *col_workspace = workspace;
-  void *im_workspace = (char *)workspace + col_desc->total_tensor_size;
-  void *transpose_workspace = (char *)im_workspace + im_desc->total_tensor_size;
+  void *im_workspace = (int8_t *)workspace + col_desc->total_tensor_size;
+  void *transpose_workspace =
+      (int8_t *)im_workspace + im_desc->total_tensor_size;
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;

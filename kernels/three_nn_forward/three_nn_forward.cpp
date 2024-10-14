@@ -224,7 +224,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
   mluOpDataType_t input_dtype = unknown_desc->dtype;
   void *known_workspace = workspace;
   void *transpose_workspace =
-      (char *)known_workspace + known_desc->total_tensor_size;
+      (int8_t *)known_workspace + known_desc->total_tensor_size;
 
   // start U1 task, occupy all available clusters
   cnrtDim3_t k_dims;

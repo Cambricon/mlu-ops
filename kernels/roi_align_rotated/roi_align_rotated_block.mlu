@@ -35,7 +35,7 @@
 #define ROI_OFFSET 6
 #define SAMPLING_NUM 4
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void swap(T &a, T &b) {

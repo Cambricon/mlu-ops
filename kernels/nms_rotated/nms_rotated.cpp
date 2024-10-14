@@ -148,8 +148,8 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   policyFunc(handle, &k_dim, &k_type, box_num);
 
   // transpose box [N, box_dim] -> [box_dim, N]
-  char *box_workspace = (char *)workspace;
-  char *scores_workspace =
+  int8_t *box_workspace = (int8_t *)workspace;
+  int8_t *scores_workspace =
       box_workspace +
       mluop::getSizeOfDataType(boxes_desc->dtype) * box_num * box_dim;
 
