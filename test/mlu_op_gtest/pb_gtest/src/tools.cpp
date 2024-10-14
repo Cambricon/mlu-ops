@@ -366,11 +366,11 @@ cnrtDataType_t cvtMluOpDtypeToCnrt(mluOpDataType_t dtype) {
     case MLUOP_DTYPE_BOOL:
       return cnrtBool;
     case MLUOP_DTYPE_UINT8:
-      return CNRT_UINT8;
+      return cnrtUchar;
     case MLUOP_DTYPE_UINT16:
-      return CNRT_UINT16;
+      return cnrtUshort;
     case MLUOP_DTYPE_UINT32:
-      return CNRT_UINT32;
+      return cnrtUint;
     default:
       LOG(ERROR) << "NOT support this dtype yet";
       throw std::invalid_argument(std::string(__FILE__) + " +" +
