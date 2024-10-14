@@ -1882,24 +1882,17 @@ void Executor::cnrtCastDataTypeWrap(void *src_data,
   size_t count_remain = count % INT_MAX;
   char *src = reinterpret_cast<char *>(src_data);
   char *dst = reinterpret_cast<char *>(dst_data);
-  cnrtRoundingMode_t round_mode = (dst_dtype == MLUOP_DTYPE_HALF ||
-                                   dst_dtype == MLUOP_DTYPE_FLOAT ||
-                                   dst_dtype == MLUOP_DTYPE_BFLOAT16 ||
-                                   dst_dtype == MLUOP_DTYPE_DOUBLE ||
-                                   dst_dtype == MLUOP_DTYPE_COMPLEX_HALF ||
-                                   dst_dtype == MLUOP_DTYPE_COMPLEX_FLOAT) ?
-                                   cnrtRounding_rn : cnrtRounding_rz;
   for (size_t i = 0; i < count_repeat; ++i) {
     GTEST_CHECK(cnrtSuccess ==
                 cnrtCastDataType_V2(src, in_dtype, dst, out_dtype, INT_MAX,
-                                    quant_param, round_mode));
+                                    quant_param, cnrtRounding_rm));
     src += INT_MAX * mluop::getSizeOfDataType(src_dtype);
     dst += INT_MAX * mluop::getSizeOfDataType(dst_dtype);
   }
   if (count_remain) {
     GTEST_CHECK(cnrtSuccess ==
                 cnrtCastDataType_V2(src, in_dtype, dst, out_dtype, count_remain,
-                                    quant_param, round_mode));
+                                    quant_param, cnrtRounding_rm));
   }
 }
 
