@@ -144,13 +144,17 @@ lgamma 算子是 element wise 类型的算子，因此只需要按照输入数�
 
 - step3 使用 [Spouge's approximation](https://en.wikipedia.org/wiki/Spouge%27s_approximation) 算法进行计算，考虑到精度，half 需升格为 float 完成计算再转换回 half
 
-    $$ \Gamma \left(z + 1\right)  = (z + a)^{z + 0.5}e^{ - z - a}\left(c_{0} + \sum \limits_{k = 1}^{a - 1}\frac{c_{k}}{z + k} + \varepsilon _{a}\left(z\right)\right) $$
+$$
+\Gamma \left(z + 1\right)  = (z + a)^{z + 0.5}e^{ - z - a}\left(c_{0} + \sum \limits_{k = 1}^{a - 1}\frac{c_{k}}{z + k} + \varepsilon _{a}\left(z\right)\right)
+$$
 
   其中整数 a 的取值决定了 $c_{i}$ 的值，具体计算参考链接网页；且要求 $z > 0$
 
   计算 Lgamma 函数则是在 Gamma 函数数值逼近算法上取 Log 后，先进行公式上的化简再计算值。同时考虑到以上 Gamma 函数的逼近算法只对输入大于 0 的情况有效，需要通过 [Euler's reflection formula](https://en.wikipedia.org/wiki/Reflection_formula) 计算 $z <= 0$ 的情况：
 
-   $$ \Gamma(1-z) \Gamma(z) = \frac{\pi}{sin(\pi z)}$ => $ \Gamma(z) = \frac{\pi}{sin(\pi z) \Gamma(1-z) }$$
+$$ 
+\Gamma(1-z) \Gamma(z) = \frac{\pi}{sin(\pi z)} =>  \Gamma(z) = \frac{\pi}{sin(\pi z) \Gamma(1-z) }
+$$
 
 ### 3.2 伪代码实现
 ```
