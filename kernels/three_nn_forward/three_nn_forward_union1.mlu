@@ -34,7 +34,7 @@ __nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 #if __BANG_ARCH__ >= 322
 /**
  * returns the index of ret, which is stored at the 1st position of the `ret`,
- * used after bang_min
+ * used after bang_argmin
  */
 __mlu_func__ uint32_t getIndice(half *ret) {
   uint32_t indice = *((uint32_t *)((uint16_t *)ret + 1));
@@ -43,7 +43,7 @@ __mlu_func__ uint32_t getIndice(half *ret) {
 
 /**
  * returns the index of ret, which is stored at the 1st position of the `ret`,
- * used after bang_min
+ * used after bang_argmin
  */
 __mlu_func__ uint32_t getIndice(float *ret) {
   uint32_t indice = ((uint32_t *)ret)[1];
@@ -54,7 +54,7 @@ __mlu_func__ uint32_t getIndice(float *ret) {
 template <typename T>
 __mlu_func__ void auxArgmin(T *nram_dst, T *nram_src, const int num_deal,
                             T *value, int *index) {
-  __bang_min(nram_dst, nram_src, num_deal);
+  __bang_argmin(nram_dst, nram_src, num_deal);
   *value = nram_dst[0];
   __bang_write_value(nram_dst, num_deal, *value);
   __bang_eq(nram_dst, nram_src, nram_dst, num_deal);
