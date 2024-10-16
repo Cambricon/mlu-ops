@@ -1556,26 +1556,67 @@ mluOpStatus_t execRFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
       fft_plan->mlu_addrs.input = fft_plan->mlu_addrs.input_pad_addr;
     }
 
-    for (int batch_id = 0; batch_id < fft_plan->batch; batch_id++) {
-      status = kernelRFFT2dButterflyRow(k_dim, k_type, handle->queue, fft_plan,
-                                        RFFT);
-
+    if (fft_plan->n[0] == 1 && fft_plan->n[1] == 1) {
+      mluOpTensorDescriptor_t input_desc, padded_output_desc;
+      status = mluOpCreateTensorDescriptor(&input_desc);
+      INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+      status = mluOpCreateTensorDescriptor(&padded_output_desc);
       INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-      status = kernelRFFT2dButterflyColumn(k_dim, k_type, handle->queue,
-                                           fft_plan, FFT_IFFT);
+      const int in_dim_num = 2;
+      int64_t dims[in_dim_num] = {fft_plan->batch,
+                                  fft_plan->n[0] * fft_plan->n[1]};
+      status = mluOpSetTensorDescriptor_v2(input_desc, MLUOP_LAYOUT_ARRAY,
+                                           MLUOP_DTYPE_FLOAT, in_dim_num, dims);
       INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
+      int64_t padded_dims[in_dim_num] = {fft_plan->batch,
+                                         fft_plan->n[0] * fft_plan->n[1] * 2};
+      status = mluOpSetTensorDescriptor_v2(
+          padded_output_desc, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, in_dim_num,
+          padded_dims);
+      INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
+      const int pad_dim_num = 4;
+      int paddings[pad_dim_num] = {0, 0, 0, 1};
+      uint64_t padding_value = 0x00000000;
+      DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
+                                        cnnl_handle);  // convert to cnnl_handle
+
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
+      DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(padded_output_desc,
+                                                   cnnl_padded_output_desc);
+      CALL_CNNL(cnnlPad(cnnl_handle, cnnl_input_desc, fft_plan->mlu_addrs.input,
+                        paddings, &padding_value, cnnl_padded_output_desc,
+                        fft_plan->mlu_addrs.output));
+
+      DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
+      DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_padded_output_desc);
+
+      DESTROY_CNNL_HANDLE(cnnl_handle);
+    } else {
+      for (int batch_id = 0; batch_id < fft_plan->batch; batch_id++) {
+        status = kernelRFFT2dButterflyRow(k_dim, k_type, handle->queue,
+                                          fft_plan, RFFT);
+
+        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
+        status = kernelRFFT2dButterflyColumn(k_dim, k_type, handle->queue,
+                                             fft_plan, FFT_IFFT);
+        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
+        fft_plan->mlu_addrs.input =
+            (void *)((uint64_t)(fft_plan->mlu_addrs.input) + idist);
+        fft_plan->mlu_addrs.output =
+            (void *)((uint64_t)(fft_plan->mlu_addrs.output) + odist);
+      }
       fft_plan->mlu_addrs.input =
-          (void *)((uint64_t)(fft_plan->mlu_addrs.input) + idist);
+          (void *)((uint64_t)(fft_plan->mlu_addrs.input) -
+                   fft_plan->batch * idist);
       fft_plan->mlu_addrs.output =
-          (void *)((uint64_t)(fft_plan->mlu_addrs.output) + odist);
+          (void *)((uint64_t)(fft_plan->mlu_addrs.output) -
+                   fft_plan->batch * odist);
     }
-    fft_plan->mlu_addrs.input = (void *)((uint64_t)(fft_plan->mlu_addrs.input) -
-                                         fft_plan->batch * idist);
-    fft_plan->mlu_addrs.output =
-        (void *)((uint64_t)(fft_plan->mlu_addrs.output) -
-                 fft_plan->batch * odist);
 
     if (scale_factor != 1.0) {
       const float alpha[2] = {scale_factor, 0.0};
