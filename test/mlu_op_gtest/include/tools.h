@@ -67,7 +67,6 @@ size_t shapeStrideCount(const Shape *shape);
 // not include stride
 size_t shapeElementCount(const Shape *shape);
 
-cnrtDataType_t cvtMluOpDtypeToCnrt(mluOpDataType_t dtype);
 cnrtDataType_V2_t cvtMluOpDtypeToCnrt_V2(mluOpDataType_t dtype);
 mluOpDataType_t cvtProtoDtypeToMluOp(DataType dtype);
 mluOpTensorLayout_t cvtProtoLayoutToMluOp(TensorLayout order);

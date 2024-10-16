@@ -347,37 +347,6 @@ void saveHexDataToFile(const std::string &file, void *data,
   fout.close();
 }
 
-cnrtDataType_t cvtMluOpDtypeToCnrt(mluOpDataType_t dtype) {
-  switch (dtype) {
-    case MLUOP_DTYPE_HALF:
-      return cnrtFloat16;
-    case MLUOP_DTYPE_FLOAT:
-      return cnrtFloat32;
-    case MLUOP_DTYPE_DOUBLE:
-      return cnrtFloat64;
-    case MLUOP_DTYPE_INT8:
-      return cnrtInt8;
-    case MLUOP_DTYPE_INT16:
-      return cnrtInt16;
-    case MLUOP_DTYPE_INT32:
-      return cnrtInt32;
-    case MLUOP_DTYPE_INT64:
-      return cnrtInt64;
-    case MLUOP_DTYPE_BOOL:
-      return cnrtBool;
-    case MLUOP_DTYPE_UINT8:
-      return cnrtUchar;
-    case MLUOP_DTYPE_UINT16:
-      return cnrtUshort;
-    case MLUOP_DTYPE_UINT32:
-      return cnrtUint;
-    default:
-      LOG(ERROR) << "NOT support this dtype yet";
-      throw std::invalid_argument(std::string(__FILE__) + " +" +
-                                  std::to_string(__LINE__));
-  }
-}
-
 cnrtDataType_V2_t cvtMluOpDtypeToCnrt_V2(mluOpDataType_t dtype) {
   switch (dtype) {
     case MLUOP_DTYPE_HALF:
