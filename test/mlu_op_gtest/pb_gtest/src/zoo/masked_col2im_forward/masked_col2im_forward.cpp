@@ -114,7 +114,7 @@ void MaskedCol2imForwardExecutor::cpuCompute() {
 
 int64_t MaskedCol2imForwardExecutor::getTheoryIoSize() {
   int input_size = parser_->getInputDataCount(0);
-  auto dtype = tensor_desc_[0].tensor->dtype;
+  auto dtype = tensor_desc_[0].tensor->getDtype();
   int dsize = 0;
   if (dtype == MLUOP_DTYPE_FLOAT) {
     dsize = 4;
