@@ -147,7 +147,6 @@ __mlu_func__ void compute(T *nram_x, T *nram_y, T *nram_w, T *nram_h,
   T *nram_conf_p = nram_conf + offset;
   T *nram_iou_p = nram_iou + offset;
 
-#if __BANG_ARCH__ >= 322
   // compute mask
   __mluop_sigmoid(nram_conf_p, nram_conf_p, NULL, 0, deal_num);
   if (iou_aware == true) {
@@ -242,118 +241,6 @@ __mlu_func__ void compute(T *nram_x, T *nram_y, T *nram_w, T *nram_h,
               4 * deal_num);
   __bang_band((int8_t *)nram_h_p, (int8_t *)nram_h_p, (int8_t *)nram_mask_int32,
               4 * deal_num);
-#else
-  const int x2d = 0x3fb8aa3b;
-  float log2e = *(float *)&x2d;
-  __bang_mul_scalar(nram_conf_p, nram_conf_p, (float)-1.0, deal_num);
-  __bang_mul_scalar(nram_conf_p, nram_conf_p, log2e, deal_num);
-  if (iou_aware == true) {
-    __bang_mul_scalar(nram_iou_p, nram_iou_p, (float)-1.0, deal_num);
-    __bang_mul_scalar(nram_iou_p, nram_iou_p, log2e, deal_num);
-  }
-  __bang_mul_scalar(nram_x_p, nram_x_p, (float)-1.0, deal_num);
-  __bang_mul_scalar(nram_x_p, nram_x_p, log2e, deal_num);
-  __bang_mul_scalar(nram_y_p, nram_y_p, (float)-1.0, deal_num);
-  __bang_mul_scalar(nram_y_p, nram_y_p, log2e, deal_num);
-  __bang_mul_scalar(nram_w_p, nram_w_p, log2e, deal_num);
-  __bang_mul_scalar(nram_h_p, nram_h_p, log2e, deal_num);
-
-  for (int k = 0; k < deal_num; ++k) {
-    // sigmoid(conf)
-    nram_conf_p[k] = powf((T)2.0, nram_conf_p[k]);
-    nram_conf_p[k] = (T)1.0 / ((T)1.0 + nram_conf_p[k]);
-
-    if (iou_aware == true) {
-      // sigmoid(iou)
-      nram_iou_p[k] = powf((T)2.0, nram_iou_p[k]);
-      nram_iou_p[k] = (T)1.0 / ((T)1.0 + nram_iou_p[k]);
-
-      // pow(iou, iou_aware_factor)
-      nram_iou_p[k] = powf(nram_iou_p[k], (T)iou_aware_factor);
-      // pow(iou, 1-iou_aware_factor)
-      nram_conf_p[k] = powf(nram_conf_p[k], (T)1.0 - (T)iou_aware_factor);
-      nram_conf_p[k] = nram_conf_p[k] * nram_iou_p[k];
-    }
-
-    if (nram_conf_p[k] < (T)conf_thresh) {
-      nram_x_p[k] = (T)0.0;
-      nram_y_p[k] = (T)0.0;
-      nram_w_p[k] = (T)0.0;
-      nram_h_p[k] = (T)0.0;
-    } else {
-      // sigmoid(x)
-      nram_x_p[k] = powf((T)2.0, nram_x_p[k]);
-      nram_x_p[k] = (T)1.0 / ((T)1.0 + nram_x_p[k]);
-
-      // sigmoid(y)
-      nram_y_p[k] = powf((T)2.0, nram_y_p[k]);
-      nram_y_p[k] = (T)1.0 / ((T)1.0 + nram_y_p[k]);
-
-      // exp(w) and exp(h)
-      nram_w_p[k] = powf((T)2.0, nram_w_p[k]);
-      nram_h_p[k] = powf((T)2.0, nram_h_p[k]);
-    }
-  }
-
-  __bang_write_value(nram_iou_p, deal_num, (T)conf_thresh);
-  __bang_ge(nram_iou_p, nram_conf_p, nram_iou_p, deal_num);
-
-  // bx0
-  __bang_mul_scalar(nram_x_p, nram_x_p, (T)scale, deal_num);
-  __bang_add_scalar(nram_x_p, nram_x_p, bias, deal_num);
-  __bang_add(nram_x_p, nram_x_p, nram_cx, deal_num);
-  __bang_mul(nram_x_p, nram_x_p, nram_imgw, deal_num);
-  __bang_mul_scalar(nram_x_p, nram_x_p, (T)1.0 / gridw, deal_num);
-
-  // by0
-  __bang_mul_scalar(nram_y_p, nram_y_p, (T)scale, deal_num);
-  __bang_add_scalar(nram_y_p, nram_y_p, bias, deal_num);
-  __bang_add(nram_y_p, nram_y_p, nram_cy, deal_num);
-  __bang_mul(nram_y_p, nram_y_p, nram_imgh, deal_num);
-  __bang_mul_scalar(nram_y_p, nram_y_p, (T)1.0 / gridh, deal_num);
-
-  // bw
-  __bang_mul(nram_w_p, nram_w_p, anchors_w, deal_num);
-  __bang_mul(nram_w_p, nram_w_p, nram_imgw, deal_num);
-  __bang_mul_scalar(nram_w_p, nram_w_p, (T)1.0 / inputw, deal_num);
-
-  // bh
-  __bang_mul(nram_h_p, nram_h_p, anchors_h, deal_num);
-  __bang_mul(nram_h_p, nram_h_p, nram_imgh, deal_num);
-  __bang_mul_scalar(nram_h_p, nram_h_p, (T)1.0 / inputh, deal_num);
-
-  // bx0 = bx - bw/2;
-  // by0 = by - bh/2;
-  // bx1 = bx + bw/2;
-  // by1 = by + bh/2;
-  __bang_mul_scalar(nram_conf_p, nram_w_p, (T)0.5, deal_num);
-  __bang_add(nram_w_p, nram_x_p, nram_conf_p, deal_num);
-  __bang_sub(nram_x_p, nram_x_p, nram_conf_p, deal_num);
-
-  __bang_mul_scalar(nram_conf_p, nram_h_p, (T)0.5, deal_num);
-  __bang_add(nram_h_p, nram_y_p, nram_conf_p, deal_num);
-  __bang_sub(nram_y_p, nram_y_p, nram_conf_p, deal_num);
-
-  for (int k = 0; k < deal_num; k++) {
-    if (clip_bbox == true) {
-      nram_x_p[k] = nram_x_p[k] > (T)0.0 ? nram_x_p[k] : (T)0.0;
-      nram_y_p[k] = nram_y_p[k] > (T)0.0 ? nram_y_p[k] : (T)0.0;
-      nram_w_p[k] = nram_w_p[k] < (nram_imgw[k] - (T)1.0)
-                        ? nram_w_p[k]
-                        : (nram_imgw[k] - (T)1.0);
-      nram_h_p[k] = nram_h_p[k] < (nram_imgh[k] - (T)1.0)
-                        ? nram_h_p[k]
-                        : (nram_imgh[k] - (T)1.0);
-    }
-
-    if (nram_iou_p[k] == (T)0.0) {
-      nram_x_p[k] = (T)0.0;
-      nram_y_p[k] = (T)0.0;
-      nram_w_p[k] = (T)0.0;
-      nram_h_p[k] = (T)0.0;
-    }
-  }
-#endif
 }
 
 template <typename T>
@@ -1144,7 +1031,6 @@ __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
   T *nram_conf_p = nram_conf + offset;
   T *nram_cls_p = nram_cls + offset;
 
-#if __BANG_ARCH__ >= 322
   // compute mask
   __mluop_sigmoid(nram_conf_p, nram_conf_p, NULL, 0, deal_num);
   if (iou_aware == true) {
@@ -1184,60 +1070,6 @@ __mlu_func__ void computeScore(T *nram_iou, T *nram_conf, T *nram_cls,
   __bang_cycle_band((int8_t *)nram_cls_p, (int8_t *)nram_cls_p,
                     (int8_t *)nram_mask_int32, 4 * class_num * deal_num,
                     4 * deal_num);
-#else
-  const int x2d = 0x3fb8aa3b;
-  float log2e = *(float *)&x2d;
-  __bang_mul_scalar(nram_conf_p, nram_conf_p, (float)-1.0, deal_num);
-  __bang_mul_scalar(nram_conf_p, nram_conf_p, log2e, deal_num);
-  if (iou_aware == true) {
-    __bang_mul_scalar(nram_iou_p, nram_iou_p, (float)-1.0, deal_num);
-    __bang_mul_scalar(nram_iou_p, nram_iou_p, log2e, deal_num);
-  }
-  __bang_mul_scalar(nram_cls_p, nram_cls_p, (float)-1.0, class_num * deal_num);
-  __bang_mul_scalar(nram_cls_p, nram_cls_p, log2e, class_num * deal_num);
-
-  int *nram_mask_int32 = (int *)nram_iou_p;
-
-  for (int k = 0; k < deal_num; ++k) {
-    // sigmoid(conf)
-    nram_conf_p[k] = powf((T)2.0, nram_conf_p[k]);
-    nram_conf_p[k] = (T)1.0 / ((T)1.0 + nram_conf_p[k]);
-
-    if (iou_aware == true) {
-      // sigmoid(iou)
-      nram_iou_p[k] = powf((T)2.0, nram_iou_p[k]);
-      nram_iou_p[k] = (T)1.0 / ((T)1.0 + nram_iou_p[k]);
-
-      // pow(iou, iou_aware_factor)
-      nram_iou_p[k] = powf(nram_iou_p[k], (T)iou_aware_factor);
-      // pow(iou, 1-iou_aware_factor)
-      nram_conf_p[k] = powf(nram_conf_p[k], (T)1.0 - (T)iou_aware_factor);
-      nram_conf_p[k] = nram_conf_p[k] * nram_iou_p[k];
-    }
-
-    if (nram_conf_p[k] < (T)conf_thresh) {
-      nram_mask_int32[k] = 0;
-    } else {
-      nram_mask_int32[k] = 0xffffffff;
-    }
-
-    for (int ci = 0; ci < class_num; ++ci) {
-      // sigmoid(cls)
-      nram_cls_p[ci * deal_num + k] =
-          powf((T)2.0, nram_cls_p[ci * deal_num + k]);
-      nram_cls_p[ci * deal_num + k] =
-          (T)1.0 / ((T)1.0 + nram_cls_p[ci * deal_num + k]);
-    }
-  }
-
-  __bang_cycle_mul(nram_cls_p, nram_cls_p, nram_conf_p, class_num * deal_num,
-                   deal_num);
-  // mask, set 0
-  __bang_cycle_band((int8_t *)nram_cls_p, (int8_t *)nram_cls_p,
-                    (int8_t *)nram_mask_int32, 4 * class_num * deal_num,
-                    4 * deal_num);
-
-#endif
 }
 
 template <typename T>

@@ -45,7 +45,7 @@ __mlu_func__ void compute(float *nram_input, int *nram_points_count,
   int offset = (pi % 2) * 2 * deal_num;
   float *nram_input_p = nram_input + offset;
   float *nram_output_p = nram_input + offset + deal_num;
-#if (__BANG_ARCH__ >= 322) && (__BANG_ARCH__ != 372)
+#if __BANG_ARCH__ != 372
   __bang_div(nram_output_p, nram_input_p, (float)(nram_points_count[pi]),
              deal_num);
 #else
@@ -128,7 +128,6 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
     mluOpReduceMode_t reduce_mode, const float *feats, int32_t num_points,
     int32_t num_feats, int32_t *voxel_coors, int32_t *voxel_num,
     int *point2voxel_map, int32_t *voxel_points_count, float *voxel_feats) {
-#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -322,7 +321,6 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
       }
     }
   }
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelDynamicPointToVoxelForward(

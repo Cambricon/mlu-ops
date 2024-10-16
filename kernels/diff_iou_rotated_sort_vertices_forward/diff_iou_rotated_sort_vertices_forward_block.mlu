@@ -29,7 +29,6 @@
 
 __nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
-#if __BANG_ARCH__ >= 372
 template <typename T>
 static __mlu_func__ void load(const T *addr_vertices, const bool *addr_mask,
                               const int *addr_num_valid, int8_t *nram_vertices,
@@ -322,13 +321,11 @@ static __mlu_func__ void lcs(const T *base_vertices, const bool *base_mask,
           repeat_n);
   }
 }
-#endif
 
 template <typename T>
 __mlu_global__ void MLUKernelDiffIouRotatedSortVerticesForward(
     const T *vertices, const bool *mask, const int *num_valid, int *idx,
     const int dim_b, const int dim_n, const int dim_m) {
-#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -384,7 +381,6 @@ __mlu_global__ void MLUKernelDiffIouRotatedSortVerticesForward(
   lcs(vertices, mask, num_valid, idx, nram_vertices, nram_mask, nram_num_valid,
       nram_idx, nram_pub_space, deal_num, repeat_n, rem_num, rem_offset, dim_m,
       pingpong_offset);
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelDiffIouRotatedSortVerticesForward(

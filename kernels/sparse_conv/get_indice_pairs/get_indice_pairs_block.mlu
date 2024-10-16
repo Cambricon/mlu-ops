@@ -44,7 +44,6 @@ __mlu_func__ void computeIndex(int32_t *nram_output, int32_t *nram_input,
                                Dilation dilation, Padding padding,
                                int32_t deal_num, int32_t step_index_start,
                                int32_t k_dhw, int32_t batch) {
-#if __BANG_ARCH__ >= 370
   int32_t len_l_dim = deal_num * (Ndim + 1);
   int32_t deal_num_lk = deal_num * k_dhw;
   int32_t output_size =
@@ -82,7 +81,6 @@ __mlu_func__ void computeIndex(int32_t *nram_output, int32_t *nram_input,
                      output_size);
   __bang_transpose((int32_t *)nram_output + 2 * deal_num_lk,
                    (int32_t *)nram_aux_a + 2 * deal_num_lk, deal_num, k_dhw);
-#endif
 }
 
 __mlu_global__ void MLUBlockDefaultGetIndicePairKernel1(
@@ -91,7 +89,6 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel1(
     InputSpace host_input_space, OutputSpace host_output_space,
     Stride host_stride, Dilation host_dilation, Padding host_padding,
     int32_t core_num_l, int32_t input_active_site, int32_t batch) {
-#if __BANG_ARCH__ >= 370
   /*  nram_space
    |input| mask_all | indice_index_in | indice_out_expand |  4l +  3 k l
    |input| mask_all | indice_index_in | indice_out_expand |  4l +  3 k l
@@ -164,13 +161,11 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel1(
     }
     __sync();
   }
-#endif
 }
 
 __mlu_global__ void MLUBlockDefaultGetIndicePairKernel2(void *index_output_ptr,
                                                         int32_t num_act_out,
                                                         int32_t core_num_l) {
-#if __BANG_ARCH__ >= 370
   int32_t len_job = 0, offset_job = 0;
   assignTask(num_act_out, taskIdY, taskDimY, offset_job, len_job);
   int32_t repeat = (len_job + core_num_l - 1) / core_num_l;
@@ -185,14 +180,12 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel2(void *index_output_ptr,
     __memcpy((int8_t *)output_ptr, nram_input, length * sizeof(int),
              NRAM2GDRAM);
   }
-#endif
 }
 
 __mlu_global__ void MLUBlockBalanceGetIndicePairKernel(
     void *balance_input, void *balance_mask, void *balance_output,
     int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
     int32_t output_size) {
-#if __BANG_ARCH__ >= 370
   int32_t len_job, offset_job = 0;
   assignTask(len_l * kernel_volume, taskIdY, taskDimY, offset_job, len_job);
   int32_t repeat = (len_job + core_num_l - 1) / core_num_l;
@@ -250,13 +243,11 @@ __mlu_global__ void MLUBlockBalanceGetIndicePairKernel(
     }
     __sync();
   }
-#endif
 }
 
 __mlu_global__ void MLUBlockDefaultGetIndicePairKernel3(
     void *indice_pair, void *indice_index_ptr, void *mask_all, int32_t len_l,
     int32_t kernel_volume, int32_t core_num_l) {
-#if __BANG_ARCH__ >= 370
   int32_t len_l_job = 0, offset_l_job = 0;
   assignTask(2 * kernel_volume, taskIdY, taskDimY, offset_l_job, len_l_job);
   float *nram_input = (float *)nbuf_total;
@@ -297,13 +288,11 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel3(
       }
     }
   }
-#endif
 }
 
 __mlu_global__ void MLUBlockDefaultGetIndicePairKernel4(
     void *indice_out, void *input_ptr, OutputSpace host_output_space,
     int32_t len_l, int32_t core_num_l) {
-#if __BANG_ARCH__ >= 370
   OutputSpace output_space = host_output_space;
   int32_t len_l_job = 0, offset_l_job = 0;
   assignTask(len_l, taskIdY, taskDimY, offset_l_job, len_l_job);
@@ -341,7 +330,6 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel4(
     }
     __sync();
   }
-#endif
 }
 
 __mlu_global__ void MLUBlockSubmGetIndicePairKernel1(
@@ -351,7 +339,6 @@ __mlu_global__ void MLUBlockSubmGetIndicePairKernel1(
     OutputSpace host_output_space, Stride host_stride, Dilation host_dilation,
     Padding host_padding, int32_t core_num_l, int32_t input_active_site,
     int32_t batch) {
-#if __BANG_ARCH__ >= 370
   /*  nram_space
   |input| mask_all | indice_index_in |  indice_out_expand | indice_in_expand |
   4l + l + 3kl |input| mask_all | indice_index_in |  indice_out_expand |
@@ -429,14 +416,12 @@ __mlu_global__ void MLUBlockSubmGetIndicePairKernel1(
     }
     __sync();
   }
-#endif
 }
 
 __mlu_global__ void MLUBlockSubmGetIndicePairKernel2(
     void *indice_out, void *mask_all_ptr, void *indice_out_index_ptr,
     void *indices_in, int32_t len_1_one, int32_t len_l_two,
     int32_t core_num_1_one, int32_t core_num_l_two) {
-#if __BANG_ARCH__ >= 370
   int32_t len_job = 0, offset_job = 0;
   assignTask(len_1_one, taskIdY, taskDimY, offset_job, len_job);
   int32_t repeat = (len_job + core_num_1_one - 1) / core_num_1_one;
@@ -478,7 +463,6 @@ __mlu_global__ void MLUBlockSubmGetIndicePairKernel2(
     __memcpy((int8_t *)(mask_all_ptr_offset + offset), (int8_t *)nram_output,
              deal_num * bit_width, NRAM2GDRAM);
   }
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelDefaultGetIndicePairKl1(

@@ -58,7 +58,6 @@ __mlu_func__ void selectIndicesBetweenMinAndMaxWithoutLimit(
     const uint32_t m_min, const uint32_t m_max, const uint32_t index,
     const uint32_t n_limit, const uint32_t c_limit,
     const uint32_t m_limit_org) {
-#if __BANG_ARCH__ >= 370 && __BANG_ARCH__ != 520
   // select the offset between the m_min and m_max
   // judge if less than m_max
   __bang_ge_scalar((int32_t *)nram_indices_transpose_float_addition,
@@ -72,7 +71,6 @@ __mlu_func__ void selectIndicesBetweenMinAndMaxWithoutLimit(
   __bang_and((int32_t *)nram_indices_transpose_addition,
              (int32_t *)nram_indices_transpose_float_addition,
              (int32_t *)nram_indices_transpose_addition, n_limit);
-#if __BANG_ARCH__ >= 322
   // extra process for the nan/inf
   // set weights to be 0 for the indices not in range of [m_min, m_max)
   if (sizeof(T) == sizeof(float)) {
@@ -94,7 +92,6 @@ __mlu_func__ void selectIndicesBetweenMinAndMaxWithoutLimit(
                 (int8_t *)(nram_weights_transpose + index * n_limit),
                 (int8_t *)nram_mask_int16, INT16_MASK_REPEAT_TIMES * n_limit);
   }
-#endif
   // multiply the indices with values in the range of [m_min, m_max)
   __bang_mul((int32_t *)nram_indices_transpose_float,
              nram_indices_transpose + index * n_limit,
@@ -119,7 +116,6 @@ __mlu_func__ void selectIndicesBetweenMinAndMaxWithoutLimit(
   // get the beginning offset by multiply c_limit
   __bang_mul_scalar(nram_indices, (int32_t *)nram_indices_transpose_float,
                     c_limit, n_limit);
-#endif
 }
 
 template <typename T>
@@ -145,7 +141,6 @@ __mlu_func__ void selectIndicesBetweenMinAndMax(
   __bang_and(nram_indices_transpose_addition,
              nram_indices_transpose_float_addition,
              nram_indices_transpose_addition, n_limit);
-#if __BANG_ARCH__ >= 322
   // extra process for the nan/inf
   // set weights to be 0 for the indices not in range of [m_min, m_max)
   if (sizeof(T) == sizeof(float)) {
@@ -167,7 +162,6 @@ __mlu_func__ void selectIndicesBetweenMinAndMax(
                 (int8_t *)(nram_weights_transpose + index * n_limit),
                 (int8_t *)nram_mask_int16, INT16_MASK_REPEAT_TIMES * n_limit);
   }
-#endif
   // multiply the indices with values in the range of [m_min, m_max)
   __bang_mul(nram_indices_transpose_float, nram_indices_transpose_float,
              nram_indices_transpose_addition, n_limit);
@@ -321,12 +315,10 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
                sizeof(T), NRAM2NRAM, sizeof(T),
                INDEX_WEIGHT_LAST_DIM * sizeof(T), actual_n_size - 1);
     }
-#if __BANG_ARCH__ >= 322
     // extra process for the nan/inf
     // backup the weights after transpose
     __memcpy(nram_weights, nram_weights_transpose,
              weights_deal_size * sizeof(T), NRAM2NRAM);
-#endif
 
     uint32_t c_rem = c;
     for (uint32_t j = 0; j < c_repeated_times; ++j) {
@@ -378,13 +370,6 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
           __bang_write_zero(nram_features_selected, output_deal_size);
           // 2.2 select the offset between the m_min and m_max
           // convert indices from int32_t to float
-#if __BANG_ARCH__ < 370 || __BANG_ARCH__ == 520
-          selectIndicesBetweenMinAndMax(
-              nram_indices, nram_indices_transpose,
-              nram_indices_transpose_addition, nram_indices_transpose_float,
-              nram_indices_transpose_float_addition, nram_weights_transpose,
-              m_min, m_max, index, n_limit, c_limit, m_limit_org);
-#else
           if (m <= INT2FLOAT_KEEP_PRECISION_MAX_VALUE) {
             // float compute force is bigger than int
             selectIndicesBetweenMinAndMax(
@@ -401,7 +386,6 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
                 nram_weights_transpose, m_min, m_max, index, n_limit, c_limit,
                 m_limit_org);
           }
-#endif
           // select the features from m*c to n*c
           // 2.3 select the Mo*Co according to the indices
           for (uint32_t s = 0; s < actual_n_size; ++s) {
@@ -421,13 +405,11 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
           // 2.6 add the different index's results
           __bang_add(nram_output, nram_features_selected, nram_output,
                      c_limit * n_limit);
-#if __BANG_ARCH__ >= 322
           // extra process for the nan/inf
           // restore the nram_weights_transpose from nram_weights
           __memcpy(nram_weights_transpose + index * n_limit,
                    nram_weights + index * n_limit, n_limit * sizeof(T),
                    NRAM2NRAM);
-#endif
         }  // index
         c_limit = c_limit_org;
         m_limit = m_limit_org;
@@ -606,12 +588,10 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
                    nram_weights + index, sizeof(T), NRAM2NRAM, sizeof(T),
                    INDEX_WEIGHT_LAST_DIM * sizeof(T), n_slice - 1);
         }
-#if __BANG_ARCH__ >= 322
         // extra process for the nan/inf
         // backup the weights after transpose
         __memcpy(nram_weights, nram_weights_transpose,
                  weights_deal_size * sizeof(T), NRAM2NRAM);
-#endif
         // initial nram_grad_output_transpose with zero
         // and set extra c_limit size that will be selected by the index not in
         // [m_min, m_max)
@@ -622,13 +602,6 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
         for (uint32_t index = 0; index < INDEX_WEIGHT_LAST_DIM; ++index) {
           // select the offset between the m_min and m_max
           // convert indices from int32_t to float
-#if __BANG_ARCH__ < 370 || __BANG_ARCH__ == 520
-          selectIndicesBetweenMinAndMax(
-              nram_indices, nram_indices_transpose,
-              nram_indices_transpose_addition, nram_indices_transpose_float,
-              nram_indices_transpose_float_addition, nram_weights_transpose,
-              m_min, m_max, index, n_limit, c_limit, m_limit_org);
-#else
           if (m <= INT2FLOAT_KEEP_PRECISION_MAX_VALUE) {
             // float compute force is bigger than int
             selectIndicesBetweenMinAndMax(
@@ -645,7 +618,6 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
                 nram_weights_transpose, m_min, m_max, index, n_limit, c_limit,
                 m_limit_org);
           }
-#endif
           // mul the grad_output and weights
           __bang_cycle_mul(nram_grad_features_transpose, nram_grad_output,
                            nram_weights_transpose + index * n_limit,
@@ -660,13 +632,11 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
                        nram_grad_features + selected_index,
                        nram_grad_output_transpose + s * c_limit, c_limit);
           }
-#if __BANG_ARCH__ >= 322
           // extra process for the nan/inf
           // restore the nram_weights_transpose from nram_weights
           __memcpy(nram_weights_transpose + index * n_limit,
                    nram_weights + index * n_limit, n_limit * sizeof(T),
                    NRAM2NRAM);
-#endif
         }  // index
         c_limit = c_limit_org;
         n_limit = n_limit_org;

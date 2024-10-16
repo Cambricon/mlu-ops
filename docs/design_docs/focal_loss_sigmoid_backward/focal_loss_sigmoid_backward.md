@@ -151,7 +151,7 @@ gradInput = FL^{'} *weight* gradOutput =
 | ------------ | ------------------------------------------------------------ |
 | 数据类型限制 | 数据类型需与1.3小节匹配                                      |
 | 布局限制     | 物理布局需与1.3小节匹配                                      |
-| 规模限制     | 1.gamma暂不支持小于等于0的规模<br>2. 当weight为NULL时，target中元素的取值为[0，C]；当weight不为NULL时，target中元素的取值为[0，C-1]<br>3. 此版本优先支持多核之间C维度不拆的case。当weight为NULL时，在MLU200系列板卡中C的范围需在[0, 8154]， MLU370板卡中C的范围需在[0，13615]；当weight不为NULL时，在MLU200系列板卡中C的范围需在[0, 7520]， MLU370板卡中C的范围需在[0，12544]；<br>4. 由于硬件激活指令精度不足，在MLU200系列板块中，gamma的取值范围需在[0, 8]，在MLU370中，gamma的取值范围需在[0, 10000]<br>5. weight 暂不支持包含 inf 和 -inf 的输入 |
+| 规模限制     | 1.gamma暂不支持小于等于0的规模<br>2. 当weight为NULL时，target中元素的取值为[0，C]；当weight不为NULL时，target中元素的取值为[0，C-1]<br>3. 此版本优先支持多核之间C维度不拆的case。当weight为NULL时，MLU370板卡中C的范围需在[0，13615]；当weight不为NULL时，MLU370板卡中C的范围需在[0，12544]；<br>4. 由于硬件激活指令精度不足，在MLU370中，gamma的取值范围需在[0, 10000]<br>5. weight 暂不支持包含 inf 和 -inf 的输入 |
 | 功能限制     | 1. reduction为预留参数，暂不支持None以外的情况<br>2.reduction为预留参数，暂不支持HIGH_PRECISION模式<br>3.此版本暂不支持输入数据为half类型 |
 
 ### 1.5 验收标准

@@ -45,7 +45,6 @@ __mlu_func__ void genWSc1_opt(DT* w_r, DT* w_i, DT* tmp, DT* seq_addr,
   __bang_add_scalar(tmp, seq_addr, inc_value, size_tmp_bytes);
   __bang_mul_scalar(tmp, tmp, scale, size_tmp_bytes);
 
-#if __BANG_ARCH__ >= 372
   __bang_cos((float*)w_r, (float*)tmp, size_tmp_bytes);
   if (n <= 48000) {
     __bang_sin((float*)w_i, (float*)tmp, size_tmp_bytes);
@@ -53,7 +52,6 @@ __mlu_func__ void genWSc1_opt(DT* w_r, DT* w_i, DT* tmp, DT* seq_addr,
     // This function has higher precision, and the actual test determined n.
     __cn_vector_sin_f32(size_tmp_bytes, (float*)w_i, (float*)tmp);
   }
-#endif
 }
 
 // Load input data from GDRAM to NRAM. The data source(src_in) is the

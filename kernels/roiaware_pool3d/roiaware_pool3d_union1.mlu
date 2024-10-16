@@ -41,7 +41,6 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
     const int pool_method, const int boxes_num, const int pts_num,
     const int max_pts_each_voxel, const int out_x, const int out_y,
     const int out_z, const T *rois, const T *pts, int *pts_idx_of_voxels) {
-#if __BANG_ARCH__ >= 322
   if (__is_mpu()) {
     return;
   }
@@ -208,7 +207,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       __bang_add_scalar((T *)local_Y, (T *)local_Y, (T)(dy_2), compute_pts_num);
       // local_Z do not need to add dz/2.0
 
-#if (__BANG_ARCH__ >= 322) && (__BANG_ARCH__ != 372)
+#if __BANG_ARCH__ != 372
       __bang_div((T *)local_X, (T *)local_X, (T)x_res, compute_pts_num);
       __bang_div((T *)local_Y, (T *)local_Y, (T)y_res, compute_pts_num);
       __bang_div((T *)local_Z, (T *)local_Z, (T)z_res, compute_pts_num);
@@ -308,7 +307,6 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
       }
     }
   }
-#endif
 }
 
 template <typename T>
@@ -321,7 +319,6 @@ __mlu_entry__ void MLUMultiKernelRoiawarePool3dForward(
   // pts_idx_of_voxels: (boxes_num, out_x, out_y, out_z, max_pts_each_voxel)
   // argmax: (boxes_num, out_x, out_y, out_z, channels)
   // pooled_features: (boxes_num, out_x, out_y, out_z, channels)
-#if __BANG_ARCH__ >= 322
   if (__is_mpu()) {
     return;
   }
@@ -414,7 +411,6 @@ __mlu_entry__ void MLUMultiKernelRoiawarePool3dForward(
       }
     }
   }
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelPtsIdxOfVoxels(
@@ -480,7 +476,6 @@ __mlu_entry__ void MLUMultiKernelRoiawareMaxPool3dBackward(
   // argmax: (boxes_num, out_x, out_y, out_z, channels)
   // grad_out: (boxes_num, out_x, out_y, out_z, channels)
   // grad_in: (pts_num, channels)
-#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -531,7 +526,6 @@ __mlu_entry__ void MLUMultiKernelRoiawareMaxPool3dBackward(
       }
     }
   }
-#endif
 }
 
 template <typename T>
@@ -542,7 +536,6 @@ __mlu_entry__ void MLUMultiKernelRoiawareAvgPool3dBackward(
   // pts_idx_of_voxels: (boxes_num, out_x, out_y, out_z, max_pts_each_voxel)
   // grad_out: (boxes_num, out_x, out_y, out_z, channels)
   // grad_in: (pts_num, channels)
-#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -614,7 +607,6 @@ __mlu_entry__ void MLUMultiKernelRoiawareAvgPool3dBackward(
       }
     }
   }
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelRoiawarePool3dBackward(

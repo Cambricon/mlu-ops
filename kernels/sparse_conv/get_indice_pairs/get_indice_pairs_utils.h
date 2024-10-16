@@ -29,7 +29,6 @@
 #include "kernels/sparse_conv/get_indice_pairs/normal_get_indice_pairs.h"
 #include "kernels/kernel.h"
 
-#if __BANG_ARCH__ >= 370
 __mlu_func__ void assignTask(const int32_t num_total_task,
                              const int32_t &taskid, const int32_t &taskdim,
                              int32_t &task_offset, int32_t &num_cur_task) {
@@ -344,5 +343,4 @@ __mlu_func__ void genIndiceInExpand(int32_t *nram_output, int32_t *nram_input,
   __bang_add((int32_t *)nram_output, (int32_t *)nram_output,
              (int32_t *)nram_aux + 4 * deal_num, deal_num);
 }
-#endif
 #endif  // KERNELS_GET_INDICE_PAIRS_GET_INDICE_PAIRS_UTILS_H_

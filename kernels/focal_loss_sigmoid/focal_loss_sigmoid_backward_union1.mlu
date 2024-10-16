@@ -54,15 +54,11 @@ __mlu_func__ void sigmoid(T *dst_data, const T *src_data,
 
 __mlu_func__ void computeLogE(float *nram_dst, float *nram_src,
                               const int32_t deal_num) {
-#if __BANG_ARCH__ >= 372
   int x2d = 0x3f317217;
   float rlog2e = *(float *)&x2d;
   __bang_log2((float *)nram_dst, (float *)nram_src, deal_num);
   __bang_mul_scalar((float *)nram_dst, (float *)nram_src, (float)rlog2e,
                     deal_num);
-#else
-  __bang_active_loghp((float *)nram_dst, (float *)nram_src, deal_num);
-#endif
 }
 
 template <typename T>
@@ -160,11 +156,7 @@ __mlu_func__ void coreCompute(int8_t *nram_input, const T *nram_weight,
   __bang_write_value((float *)nram_alpha_t, compute_num, (float)(alpha - 1.0));
 
   // 1. pt = 1 - sigmoid(x)
-#if __BANG_ARCH__ >= 372
   __mluop_sigmoid((float *)nram_pt, (float *)nram_input, NULL, 0, compute_num);
-#else
-  sigmoid((float *)nram_pt, (float *)nram_input, compute_num);
-#endif
   __bang_mul_scalar((float *)nram_pt, (float *)nram_pt, (float)(-1),
                     compute_num);
   __bang_add_scalar((float *)nram_pt, (float *)nram_pt, (float)1, compute_num);

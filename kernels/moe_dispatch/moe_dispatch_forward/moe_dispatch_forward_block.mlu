@@ -35,7 +35,6 @@ __mlu_global__ void MLUKernelMoeDispatchFwd(
     const T *gates, const int *indices, const int *locations, const T *input,
     const int samples, const int capacity, const int hidden,
     const int num_experts, T *dispatch) {
-#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -137,7 +136,6 @@ __mlu_global__ void MLUKernelMoeDispatchFwd(
       }
     }  // deal s
   }    // repeat s
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelMoeDispatchForward(

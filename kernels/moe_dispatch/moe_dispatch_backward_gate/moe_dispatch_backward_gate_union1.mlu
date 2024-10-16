@@ -29,7 +29,6 @@
 
 __nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
-#if __BANG_ARCH__ >= 372
 template <typename T>
 static __mlu_func__ void load(const T *input_addr, const T *dispatch_addr,
                               T *nram_input, T *nram_dispatch,
@@ -118,14 +117,12 @@ static __mlu_func__ void lcs(T *base_input_addr, T *base_dispatch_addr,
     __sync();
   }
 }
-#endif
 
 template <typename T>
 __mlu_global__ void MLUKernelMoeDispatchBwdGate1(
     const int *indices, const int *locations, const T *input, const T *dispatch,
     const int samples, const int capacity, const int hidden,
     const int num_experts, T *workspace, T *grad_gates) {
-#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -208,7 +205,6 @@ __mlu_global__ void MLUKernelMoeDispatchBwdGate1(
     // store
     __memcpy(grad_gates, nram_grad_gates, samples * sizeof(T), NRAM2GDRAM);
   }
-#endif
 }
 
 template <typename T>
@@ -216,7 +212,6 @@ __mlu_global__ void MLUKernelMoeDispatchBwdGate2(
     const int *indices, const int *locations, const T *input, const T *dispatch,
     const int samples, const int capacity, const int hidden,
     const int num_experts, T *grad_gates) {
-#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -354,7 +349,6 @@ __mlu_global__ void MLUKernelMoeDispatchBwdGate2(
     __memcpy(base_grad_gates + s_iter * deal_s, nram_grad_gates,
              deal_s_num * sizeof(T), NRAM2GDRAM);
   }
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelMoeDispatchBwdGate1(

@@ -32,8 +32,6 @@
 #define BIT_COLLECT_PAD (8)
 #define BACKWARD_MAX_NQ_NL_NP (1024)
 
-#if (__BANG_ARCH__ >= 372)
-
 __mlu_func__ void broadcastSpatialHW(
     float* spatial_offset_bd_nram,  // (num_levels, num_points)
     float* spatial_h_bd_nram,       // (num_levels, num_points)
@@ -394,6 +392,4 @@ __mlu_func__ void gatherSync(void* dst, void* src, unsigned int* offset,
   __gather(dst, src, offset, mask, transfer_size, dir, dst_stride,
            transfer_num);
 }
-#endif
-
 #endif

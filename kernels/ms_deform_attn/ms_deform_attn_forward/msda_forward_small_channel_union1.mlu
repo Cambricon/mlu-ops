@@ -29,7 +29,6 @@
 __nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 __mlu_func__ void genMask0101(float *mask_ram, int32_t size) {
-#if __BANG_ARCH__ >= 372
   int32_t align_num = NFU_ALIGN_SIZE / sizeof(float);
   for (int32_t i = 0; i < align_num; ++i) {
     mask_ram[i] = i % 2;
@@ -40,7 +39,6 @@ __mlu_func__ void genMask0101(float *mask_ram, int32_t size) {
   __memcpy(mask_ram + align_num, mask_ram, NFU_ALIGN_SIZE, NRAM2NRAM,
            NFU_ALIGN_SIZE, 0, (size / align_num + (size % align_num > 0)) - 2);
   __sync();
-#endif
 }
 
 template <typename T>
@@ -51,7 +49,6 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
     const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels, const int32_t num_queries,
     const int32_t num_points, int8_t *data_col_gdram) {
-#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -546,7 +543,6 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
   }
   __sync();
   return;
-#endif
 }
 
 template __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel<float>(

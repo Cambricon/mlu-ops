@@ -24,8 +24,6 @@
 
 #pragma bang walign(64)
 
-#if (__BANG_ARCH__ >= 372)
-
 #define MAX_MEMCPY_SEGNUM (65536)
 #define NRAM_REMAIN_SIZE (48 * 1024)
 #define SRAM_REMAIN_SIZE (32 * 1024)
@@ -907,7 +905,6 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
     __sync_cluster();
   }
 }
-#endif
 
 #if (__BANG_ARCH__ == 592)
 
