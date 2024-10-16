@@ -107,16 +107,28 @@ struct alignas(64) mluOpTensorStruct {
   inline bool isSameDims(const mluOpTensorStruct *other) const;
   inline bool isCpuScalar() const;
   public:
-    mluOpTensorLayout_t getLayout() const{ return this->layout; }
-    void setLayout(mluOpDataType_t newLayout) { this->dtype = newLayout; }
+    inline float getOffset() const { return this->offset; }
+    inline void setOffset(float newOffset) { this->offset = newOffset; }
+
+    inline float getScale() const { return this->scale; }
+    inline void setScale(float newScale) { this->scale = newScale; }
+
+    inline mluOpTensorLayout_t getLayout() const{ return this->layout; }
+    inline void setLayout(mluOpTensorLayout_t newLayout) { this->layout = newLayout; }
+
     inline uint64_t getTotalTensorSize() const { return this->total_tensor_size; }
     inline void setTotalTensorSize(uint64_t newSize) { this->total_tensor_size = newSize; }
     inline uint64_t getTotalElementNum() const { return this->total_element_num; }
     inline void setTotalElementNum(uint64_t newNum) { this->total_element_num = newNum; }
+
     inline int getPosition() const { return this->position; }
+    inline void setPosition(int newPosition) { this->position = newPosition; }
     
     inline mluOpDataType_t getDtype() const { return this->dtype; }
     inline void setDtype(mluOpDataType_t newDtype) { this->dtype = newDtype; }
+    inline mluOpDataType_t getOnchipDtype() const { return this->onchip_dtype; }
+    inline void setOnchipDtype(mluOpDataType_t newDtype) { this->onchip_dtype = newDtype; }
+
     inline int getDim() const { return this->dim; }
     inline void setDim(int newDim) {  this->dim = newDim; }
 
@@ -141,7 +153,7 @@ struct alignas(64) mluOpTensorStruct {
         }  
         return (this->strides)[index];  
     }
-    inline void setStridesIndex( size_t index, int64_t newStride ) {
+    inline void setStrideIndex( size_t index, int64_t newStride ) {
       this->strides[index] = newStride;
      }
 
@@ -151,9 +163,11 @@ struct alignas(64) mluOpTensorStruct {
      }
 
     inline mluOpPointerMode_t getPointerMode() const { return this->pointer_mode; }
+    inline void setPointerMode(mluOpPointerMode_t new_pointer_mode) { this->pointer_mode = new_pointer_mode; }
+
     inline int64_t *getNormalDims() { return this->normal_dims; }
     inline int64_t *getNormalStrides() { return this->normal_strides; }
-  private:
+  // private:
     /* Try to pack and align the struct */
     /*  ------------------- 64 Bytes - 1 -------------------*/
     int64_t normal_dims[MLUOP_DIM_MAX];
