@@ -4630,7 +4630,7 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  * - The shape of \b output should be the same with \b var.
  * - The shape[0] of the \b output should be equal to the input height.
  * - The shape[1] of the \b output should be equal to the input width.
- * - The shape[2] of the \b output and \b var must be less than 2900 in MLU300 series.
+ * - The shape[2] of the \b output and \b var must be less than 2900 on MLU300 series.
  * - The shape[2] of \b output and \b var should be equal to
  *   the product of shape[0] of \b min_sizes and \b aspect_ratios
  *   plus shape[0] of \b max_sizes.
@@ -4644,7 +4644,7 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Note
  * - The shape[2] of the \b output and \b var must be
- *   less than 2900 in MLU300 series.
+ *   less than 2900 on MLU300 series.
  *
  * @par Example
  * - None.
