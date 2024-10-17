@@ -471,7 +471,7 @@ class PbNode {
     uint64_t data_size = total_num * mluop::getSizeOfDataType(dtype);
     void *data = malloc(data_size);
     auto memcpy_dir =
-        (tensors[index].desc->pointer_mode == MLUOP_POINTER_MODE_HOST
+        (tensors[index].desc->getPointer_mode() == MLUOP_POINTER_MODE_HOST
              ? CNRT_MEM_TRANS_DIR_HOST2HOST
              : CNRT_MEM_TRANS_DIR_DEV2HOST);
     if (CNRT_RET_SUCCESS ==
