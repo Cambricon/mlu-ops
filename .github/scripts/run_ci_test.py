@@ -7,10 +7,19 @@ local_communication_port = 12547
 
 params = sys.argv
 try:
-    repo = params[1]
-    user = params[2]
-    pr_id = params[3]
-    timestamp = params[4]
+    if len(params) == 5:
+        repo = params[1]
+        user = params[2]
+        pr_id = params[3]
+        timestamp = params[4]
+    elif len(params) == 4:
+        repo = params[1]
+        user = params[2]
+        pr_id = ""
+        timestamp = params[3]
+    else:
+        print("Got some wrong with input params. Test fail.")
+        exit(-1)
 except Exception as e:
     print("Got some wrong with input params. Test fail.")
     exit(-1)
