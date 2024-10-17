@@ -51,12 +51,12 @@ class moe_dispatch_forward : public testing::Test {
     if (gates) {
       if (gates_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&gates_, mluOpGetTensorElementNum(gates_desc_) *
                                     mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&gates_, 2 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
     }
@@ -70,12 +70,12 @@ class moe_dispatch_forward : public testing::Test {
     if (indices) {
       if (indices_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&indices_, mluOpGetTensorElementNum(indices_desc_) *
                                       mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&indices_, 2 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
     }
@@ -89,12 +89,12 @@ class moe_dispatch_forward : public testing::Test {
     if (locations) {
       if (locations_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&locations_, mluOpGetTensorElementNum(locations_desc_) *
                                         mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&locations_, 2 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
     }
@@ -108,12 +108,12 @@ class moe_dispatch_forward : public testing::Test {
     if (input) {
       if (input_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&input_, mluOpGetTensorElementNum(input_desc_) *
                                     mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&input_, 4 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
     }
@@ -127,12 +127,12 @@ class moe_dispatch_forward : public testing::Test {
     if (dispatch) {
       if (dispatch_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&dispatch_, mluOpGetTensorElementNum(dispatch_desc_) *
                                        mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&dispatch_, 8 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
     }
@@ -159,7 +159,7 @@ class moe_dispatch_forward : public testing::Test {
       gates_desc_ = NULL;
     }
     if (gates_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(gates_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(gates_));
       gates_ = NULL;
     }
     if (indices_desc_) {
@@ -167,7 +167,7 @@ class moe_dispatch_forward : public testing::Test {
       indices_desc_ = NULL;
     }
     if (indices_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indices_));
       indices_ = NULL;
     }
     if (locations_desc_) {
@@ -175,7 +175,7 @@ class moe_dispatch_forward : public testing::Test {
       locations_desc_ = NULL;
     }
     if (locations_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(locations_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(locations_));
       locations_ = NULL;
     }
     if (input_desc_) {
@@ -183,7 +183,7 @@ class moe_dispatch_forward : public testing::Test {
       input_desc_ = NULL;
     }
     if (input_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
       input_ = NULL;
     }
     if (dispatch_desc_) {
@@ -191,7 +191,7 @@ class moe_dispatch_forward : public testing::Test {
       dispatch_desc_ = NULL;
     }
     if (dispatch_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(dispatch_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(dispatch_));
       dispatch_ = NULL;
     }
   }

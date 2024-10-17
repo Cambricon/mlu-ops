@@ -51,7 +51,7 @@ static mluOpStatus_t kernelPtsIdxOfVoxelsPolicyFunc(
   k_dim->x = core_limit;
   k_dim->y = (task_dim / core_limit) > 0 ? (task_dim / core_limit) : 1;
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -73,7 +73,7 @@ static mluOpStatus_t kernelRoiawarePool3dForwardPolicyFunc(
   k_dim->x = core_limit;
   k_dim->y = (task_dim / core_limit) > 0 ? (task_dim / core_limit) : 1;
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -94,7 +94,7 @@ static mluOpStatus_t kernelRoiawarePool3dBackwardPolicyFunc(
   k_dim->x = core_limit;
   k_dim->y = (task_dim / core_limit) > 0 ? (task_dim / core_limit) : 1;
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   return MLUOP_STATUS_SUCCESS;
 }
 

@@ -65,19 +65,19 @@ class roi_crop_backward : public testing::Test {
       size_t o_ele_num = 1 * 7 * 7 * 9;
       size_t o_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t o_bytes = o_ele_num * o_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_output_, o_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_output_, o_bytes));
     }
     if (grid) {
       size_t g_ele_num = 1 * 7 * 7 * 2;
       size_t g_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t g_bytes = g_ele_num * g_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grid_, g_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grid_, g_bytes));
     }
     if (grad_input) {
       size_t i_ele_num = 1 * 7 * 7 * 9;
       size_t i_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t i_bytes = i_ele_num * i_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_input_, i_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_input_, i_bytes));
     }
   }
 
@@ -110,15 +110,15 @@ class roi_crop_backward : public testing::Test {
       grad_input_desc_ = NULL;
     }
     if (grad_input_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_input_));
       grad_input_ = NULL;
     }
     if (grid_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grid_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grid_));
       grid_ = NULL;
     }
     if (grad_output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_output_));
       grad_output_ = NULL;
     }
   }

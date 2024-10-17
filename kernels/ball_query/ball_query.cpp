@@ -58,7 +58,7 @@ void policyFuncBallQuery(const mluOpHandle_t &handle,
   // element.
   size_t needed_cluster_num =
       (total_data_num + core_in_cluster - 1) / core_in_cluster;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   k_dim->x = core_in_cluster;
   k_dim->y =
       needed_cluster_num > cluster_num ? cluster_num : needed_cluster_num;

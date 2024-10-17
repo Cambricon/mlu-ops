@@ -515,7 +515,7 @@ mluOpStatus_t setIRFFT1dReserveArea(mluOpHandle_t handle,
         mluop::runtime::getClusterLimitCapability(handle);
     const unsigned int core_dim = handle->core_num_per_cluster;
     cnrtDim3_t k_dim = {core_dim, cluster_number, 1};
-    cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_BLOCK;
+    cnrtFunctionType_t k_type = cnrtFuncTypeBlock;
 
     switch (fft_plan->fft_strategy) {
       case CNFFT_FUNC_MATMUL: {
@@ -1385,7 +1385,7 @@ static mluOpStatus_t computeIRFFT1dMatmulResult(mluOpHandle_t handle,
 
 static mluOpStatus_t policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                                 cnrtFunctionType_t *k_type) {
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   k_dim->x = handle->core_num_per_cluster;
   k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
   k_dim->z = 1;
@@ -1404,7 +1404,7 @@ mluOpStatus_t mergeIRFFT1dOutput(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   VLOG(5) << "launch merge irfft1d output";
   if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY) {
     int core_num = handle->core_num_per_cluster;
-    cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
+    cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
     int task_type = mluop::runtime::getJobLimitCapability(handle);
     int task_num = 1;
 
@@ -1412,16 +1412,16 @@ mluOpStatus_t mergeIRFFT1dOutput(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
       default:
         task_num = core_num;
         break;
-      case (int)CNRT_FUNC_TYPE_UNION2:
+      case (int)cnrtFuncTypeUnion2:
         task_num = core_num * 2;
         break;
-      case (int)CNRT_FUNC_TYPE_UNION4:
+      case (int)cnrtFuncTypeUnion4:
         task_num = core_num * 4;
         break;
-      case (int)CNRT_FUNC_TYPE_UNION8:
+      case (int)cnrtFuncTypeUnion8:
         task_num = core_num * 8;
         break;
-      case (int)CNRT_FUNC_TYPE_UNION16:
+      case (int)cnrtFuncTypeUnion16:
         task_num = core_num * 16;
         break;
     }
@@ -1551,7 +1551,7 @@ mluOpStatus_t execIRFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
       fft_plan->mlu_addrs.input = fft_plan->mlu_addrs.input_pad_addr;
     }
 
-    cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
+    cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
     cnrtDim3_t k_dim;
     k_dim.x = handle->core_num_per_cluster;
     k_dim.y = mluop::runtime::getClusterLimitCapability(handle);

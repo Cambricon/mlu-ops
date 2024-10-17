@@ -56,7 +56,7 @@ class generate_proposals_v2 : public testing::Test {
       size_t scores_ele_num = 1 * 5 * 5 * 9;
       size_t scores_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t scores_bytes = scores_ele_num * scores_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&scores_, scores_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&scores_, scores_bytes));
     }
     if (bbox_deltas_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&bbox_deltas_desc_));
@@ -69,7 +69,7 @@ class generate_proposals_v2 : public testing::Test {
       size_t bbox_deltas_ele_num = 2 * 32 * 16 * 16;
       size_t bbox_deltas_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t bbox_deltas_bytes = bbox_deltas_ele_num * bbox_deltas_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&bbox_deltas_, bbox_deltas_bytes));
     }
     if (im_shape_desc) {
@@ -83,7 +83,7 @@ class generate_proposals_v2 : public testing::Test {
       size_t im_shape_ele_num = 2 * 2;
       size_t im_shape_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t im_shape_bytes = im_shape_ele_num * im_shape_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&im_shape_, im_shape_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&im_shape_, im_shape_bytes));
     }
     if (anchors_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&anchors_desc_));
@@ -96,7 +96,7 @@ class generate_proposals_v2 : public testing::Test {
       size_t anchors_ele_num = 8 * 16 * 16 * 4;
       size_t anchors_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t anchors_bytes = anchors_ele_num * anchors_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&anchors_, anchors_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&anchors_, anchors_bytes));
     }
     if (variances_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&variances_desc_));
@@ -109,13 +109,13 @@ class generate_proposals_v2 : public testing::Test {
       size_t variances_ele_num = 8 * 16 * 16 * 4;
       size_t variances_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t variances_bytes = variances_ele_num * variances_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&variances_, variances_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&variances_, variances_bytes));
     }
     if (workspace) {
       size_t workspace_ele_num = workspace_size_;
       size_t workspace_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t workspace_bytes = workspace_ele_num * workspace_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_bytes));
     }
     if (rpn_rois_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&rpn_rois_desc_));
@@ -128,7 +128,7 @@ class generate_proposals_v2 : public testing::Test {
       size_t rpn_rois_ele_num = 5 * 4;
       size_t rpn_rois_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t rpn_rois_bytes = rpn_rois_ele_num * rpn_rois_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&rpn_rois_, rpn_rois_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&rpn_rois_, rpn_rois_bytes));
     }
     if (rpn_roi_probs_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&rpn_roi_probs_desc_));
@@ -142,7 +142,7 @@ class generate_proposals_v2 : public testing::Test {
       size_t rpn_roi_probs_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t rpn_roi_probs_bytes =
           rpn_roi_probs_ele_num * rpn_roi_probs_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&rpn_roi_probs_, rpn_roi_probs_bytes));
     }
     if (rpn_rois_num_desc) {
@@ -157,7 +157,7 @@ class generate_proposals_v2 : public testing::Test {
       size_t rpn_rois_num_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t rpn_rois_num_bytes =
           rpn_rois_num_ele_num * rpn_rois_num_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&rpn_rois_num_, rpn_rois_num_bytes));
     }
     if (rpn_rois_batch_size) {
@@ -166,7 +166,7 @@ class generate_proposals_v2 : public testing::Test {
           mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t rpn_rois_batch_size_bytes =
           rpn_rois_batch_size_ele_num * rpn_rois_batch_size_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&rpn_rois_batch_size_, rpn_rois_batch_size_bytes));
     }
   }
@@ -195,7 +195,7 @@ class generate_proposals_v2 : public testing::Test {
       scores_desc_ = NULL;
     }
     if (scores_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(scores_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(scores_));
       scores_ = NULL;
     }
     if (bbox_deltas_desc_) {
@@ -203,7 +203,7 @@ class generate_proposals_v2 : public testing::Test {
       bbox_deltas_desc_ = NULL;
     }
     if (bbox_deltas_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(bbox_deltas_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(bbox_deltas_));
       bbox_deltas_ = NULL;
     }
     if (im_shape_desc_) {
@@ -211,7 +211,7 @@ class generate_proposals_v2 : public testing::Test {
       im_shape_desc_ = NULL;
     }
     if (im_shape_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(im_shape_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(im_shape_));
       im_shape_ = NULL;
     }
     if (anchors_desc_) {
@@ -219,7 +219,7 @@ class generate_proposals_v2 : public testing::Test {
       anchors_desc_ = NULL;
     }
     if (anchors_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(anchors_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(anchors_));
       anchors_ = NULL;
     }
     if (variances_desc_) {
@@ -227,11 +227,11 @@ class generate_proposals_v2 : public testing::Test {
       variances_desc_ = NULL;
     }
     if (variances_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(variances_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(variances_));
       variances_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = NULL;
     }
     if (rpn_rois_desc_) {
@@ -239,7 +239,7 @@ class generate_proposals_v2 : public testing::Test {
       rpn_rois_desc_ = NULL;
     }
     if (rpn_rois_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_rois_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(rpn_rois_));
       rpn_rois_ = NULL;
     }
     if (rpn_roi_probs_desc_) {
@@ -247,7 +247,7 @@ class generate_proposals_v2 : public testing::Test {
       rpn_roi_probs_desc_ = NULL;
     }
     if (rpn_roi_probs_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_roi_probs_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(rpn_roi_probs_));
       rpn_roi_probs_ = NULL;
     }
     if (rpn_rois_num_desc_) {
@@ -255,11 +255,11 @@ class generate_proposals_v2 : public testing::Test {
       rpn_rois_num_desc_ = NULL;
     }
     if (rpn_rois_num_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_rois_num_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(rpn_rois_num_));
       rpn_rois_num_ = NULL;
     }
     if (rpn_rois_batch_size_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_rois_batch_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(rpn_rois_batch_size_));
       rpn_rois_batch_size_ = NULL;
     }
   }

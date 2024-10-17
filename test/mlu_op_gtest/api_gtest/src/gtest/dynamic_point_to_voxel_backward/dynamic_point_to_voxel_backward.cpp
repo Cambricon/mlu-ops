@@ -55,12 +55,12 @@ class dynamic_point_to_voxel_backward : public testing::Test {
     if (grad_voxel_feats) {
       if (grad_voxel_feats_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_voxel_feats_,
                        MLUOP_DTYPE_FLOAT *
                            mluOpGetTensorElementNum(grad_voxel_feats_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&grad_voxel_feats_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -76,11 +76,11 @@ class dynamic_point_to_voxel_backward : public testing::Test {
     if (feats) {
       if (feats_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&feats_, MLUOP_DTYPE_FLOAT *
                                     mluOpGetTensorElementNum(feats_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&feats_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -95,12 +95,12 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (voxel_feats) {
       if (voxel_feats_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&voxel_feats_,
                                MLUOP_DTYPE_FLOAT * mluOpGetTensorElementNum(
                                                        voxel_feats_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&voxel_feats_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -115,12 +115,12 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (point2voxel_map) {
       if (point2voxel_map_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&point2voxel_map_,
                                MLUOP_DTYPE_INT32 * mluOpGetTensorElementNum(
                                                        point2voxel_map_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&point2voxel_map_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -136,12 +136,12 @@ class dynamic_point_to_voxel_backward : public testing::Test {
     if (voxel_points_count) {
       if (voxel_points_count_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&voxel_points_count_,
                        MLUOP_DTYPE_INT32 *
                            mluOpGetTensorElementNum(voxel_points_count_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&voxel_points_count_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -156,18 +156,18 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (voxel_num) {
       if (voxel_num_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&voxel_num_,
                                MLUOP_DTYPE_INT32 *
                                    mluOpGetTensorElementNum(voxel_num_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&voxel_num_, MLUOP_DTYPE_INT32 * 1));
       }
     }
 
     if (workspace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&workspace_, MLUOP_DTYPE_INT32 * workspace_size_));
     }
 
@@ -181,12 +181,12 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (grad_feats) {
       if (grad_feats_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&grad_feats_,
                                MLUOP_DTYPE_FLOAT *
                                    mluOpGetTensorElementNum(grad_feats_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&grad_feats_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -220,7 +220,7 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (grad_voxel_feats_) {
       VLOG(4) << "Destroy grad_voxel_feats_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_voxel_feats_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_voxel_feats_));
       grad_voxel_feats_ = nullptr;
     }
 
@@ -232,7 +232,7 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (feats_) {
       VLOG(4) << "Destroy feats_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(feats_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(feats_));
       feats_ = nullptr;
     }
 
@@ -244,7 +244,7 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (voxel_feats_) {
       VLOG(4) << "Destroy voxel_feats_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxel_feats_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxel_feats_));
       voxel_feats_ = nullptr;
     }
 
@@ -256,7 +256,7 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (point2voxel_map_) {
       VLOG(4) << "Destroy point2voxel_map_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(point2voxel_map_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(point2voxel_map_));
       point2voxel_map_ = nullptr;
     }
 
@@ -268,7 +268,7 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (voxel_points_count_) {
       VLOG(4) << "Destroy voxel_points_count_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxel_points_count_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxel_points_count_));
       voxel_points_count_ = nullptr;
     }
 
@@ -280,13 +280,13 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (voxel_num_) {
       VLOG(4) << "Destroy voxel_num_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxel_num_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxel_num_));
       voxel_num_ = nullptr;
     }
 
     if (workspace_) {
       VLOG(4) << "Destroy workspace_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
 
@@ -298,7 +298,7 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (grad_feats_) {
       VLOG(4) << "Destroy grad_feats_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_feats_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_feats_));
       grad_feats_ = nullptr;
     }
   }

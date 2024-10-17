@@ -54,12 +54,12 @@ class ms_deform_attn_forward_general
           data_value_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(data_value_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&data_value_,
                        mluOpDataTypeBytes(data_value_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&data_value_,
                        mluOpDataTypeBytes(data_value_params.get_dtype()) *
                            mluOpGetTensorElementNum(data_value_desc_)));
@@ -75,14 +75,14 @@ class ms_deform_attn_forward_general
 
       if (mluOpGetTensorElementNum(data_spatial_shapes_desc_) >=
           LARGE_TENSOR_NUM) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&data_spatial_shapes_,
                                mluOpDataTypeBytes(
                                    data_spatial_shapes_params.get_dtype()) *
                                    2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &data_spatial_shapes_,
                 mluOpDataTypeBytes(data_spatial_shapes_params.get_dtype()) *
@@ -100,14 +100,14 @@ class ms_deform_attn_forward_general
 
       if (mluOpGetTensorElementNum(data_level_start_index_desc_) >=
           LARGE_TENSOR_NUM) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&data_level_start_index_,
                                mluOpDataTypeBytes(
                                    data_level_start_index_params.get_dtype()) *
                                    2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &data_level_start_index_,
                 mluOpDataTypeBytes(data_level_start_index_params.get_dtype()) *
@@ -125,13 +125,13 @@ class ms_deform_attn_forward_general
       if (mluOpGetTensorElementNum(data_sampling_loc_desc_) >=
           LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &data_sampling_loc_,
                 mluOpDataTypeBytes(data_sampling_loc_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &data_sampling_loc_,
                 mluOpDataTypeBytes(data_sampling_loc_params.get_dtype()) *
@@ -149,13 +149,13 @@ class ms_deform_attn_forward_general
       if (mluOpGetTensorElementNum(data_attn_weight_desc_) >=
           LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &data_attn_weight_,
                 mluOpDataTypeBytes(data_attn_weight_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&data_attn_weight_,
                        mluOpDataTypeBytes(data_attn_weight_params.get_dtype()) *
                            mluOpGetTensorElementNum(data_attn_weight_desc_)));
@@ -170,11 +170,11 @@ class ms_deform_attn_forward_general
 
       if (mluOpGetTensorElementNum(data_col_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&data_col_,
                        mluOpDataTypeBytes(data_col_params.get_dtype()) * 2));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&data_col_,
                                mluOpDataTypeBytes(data_col_params.get_dtype()) *
                                    mluOpGetTensorElementNum(data_col_desc_)));
@@ -218,7 +218,7 @@ class ms_deform_attn_forward_general
     }
 
     if (data_value_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(data_value_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(data_value_));
       data_value_ = nullptr;
     }
 
@@ -228,7 +228,7 @@ class ms_deform_attn_forward_general
     }
 
     if (data_spatial_shapes_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(data_spatial_shapes_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(data_spatial_shapes_));
       data_spatial_shapes_ = nullptr;
     }
 
@@ -238,7 +238,7 @@ class ms_deform_attn_forward_general
     }
 
     if (data_level_start_index_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(data_level_start_index_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(data_level_start_index_));
       data_level_start_index_ = nullptr;
     }
 
@@ -248,7 +248,7 @@ class ms_deform_attn_forward_general
     }
 
     if (data_sampling_loc_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(data_sampling_loc_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(data_sampling_loc_));
       data_sampling_loc_ = nullptr;
     }
 
@@ -258,7 +258,7 @@ class ms_deform_attn_forward_general
     }
 
     if (data_attn_weight_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(data_attn_weight_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(data_attn_weight_));
       data_attn_weight_ = nullptr;
     }
 
@@ -268,7 +268,7 @@ class ms_deform_attn_forward_general
     }
 
     if (data_col_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(data_col_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(data_col_));
       data_col_ = nullptr;
     }
   }

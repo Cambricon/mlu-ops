@@ -458,7 +458,7 @@ double get_io_bandwidth() {
 }
 
 void get_policy_function_block(cnrtDim3_t *dim, cnrtFunctionType_t *func_type) {
-  *func_type = CNRT_FUNC_TYPE_BLOCK;
+  *func_type = cnrtFuncTypeBlock;
   dim->x = 1;
   dim->y = 1;
   dim->z = 1;
@@ -466,7 +466,7 @@ void get_policy_function_block(cnrtDim3_t *dim, cnrtFunctionType_t *func_type) {
 }
 
 void get_policy_function_union1(cnrtDim3_t *dim, cnrtFunctionType_t *func_type) {
-  *func_type = CNRT_FUNC_TYPE_UNION1;
+  *func_type = cnrtFuncTypeUnion1;
   dim->x = get_core_num_per_cluster();
   dim->y = get_cluster_num();
   dim->z = 1;
@@ -702,7 +702,7 @@ int main() {
   cnDeviceGetAttribute(&dimX, CN_DEVICE_ATTRIBUTE_MAX_CORE_COUNT_PER_CLUSTER, dev);
 
   cnrtDim3_t dim3 = {dimX, 1, 1};
-  cnrtFunctionType_t ktype = CNRT_FUNC_TYPE_UNION1;
+  cnrtFunctionType_t ktype = cnrtFuncTypeUnion1;
 
   foo<<<dim3, ktype, queue>>>();
   CHRT_CHECK(cnrtSyncQueue(queue));
@@ -924,7 +924,7 @@ UnionN (N=1, 2, 4, 8, ...) 任务表示一个 Kernel 在执行时至少需要占
 
   ```c++
   void void get_policy_function_union1(cnrtDim3_t *dim, cnrtFunctionType_t *func_type) {
-    *func_type = CNRT_FUNC_TYPE_UNION1;
+    *func_type = cnrtFuncTypeUnion1;
     dim->x = get_core_num_per_cluster();
     dim->y = get_cluster_num();
     dim->z = 1;
@@ -2371,7 +2371,7 @@ mlu_op.h // mluop 接口声明文件
                           cnrtFunctionType_t *k_type) {
      size_t dim = mluOpGetTensorElementNum(desc);
      // Union1 policyFunc
-     *k_type = CNRT_FUNC_TYPE_UNION1;
+     *k_type = cnrtFuncTypeUnion1;
      k_dim->x = handle->core_num_per_cluster;
      k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
      k_dim->z = 1;

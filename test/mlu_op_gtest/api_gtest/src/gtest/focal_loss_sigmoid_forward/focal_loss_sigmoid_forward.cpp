@@ -51,11 +51,11 @@ class focal_loss_sigmoid_forward : public testing::Test {
     if (input) {
       if (input_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&input_, MLUOP_DTYPE_FLOAT *
                                     mluOpGetTensorElementNum(input_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&input_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -71,11 +71,11 @@ class focal_loss_sigmoid_forward : public testing::Test {
     if (target) {
       if (target_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&target_, MLUOP_DTYPE_INT32 *
                                      mluOpGetTensorElementNum(target_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&target_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -87,7 +87,7 @@ class focal_loss_sigmoid_forward : public testing::Test {
                                          weight_desc_dims.data()));
     if (weight) {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&weight_, MLUOP_DTYPE_FLOAT *
                                    mluOpGetTensorElementNum(weight_desc_)));
     }
@@ -103,11 +103,11 @@ class focal_loss_sigmoid_forward : public testing::Test {
     if (output) {
       if (output_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&output_, MLUOP_DTYPE_FLOAT *
                                      mluOpGetTensorElementNum(output_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&output_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -138,7 +138,7 @@ class focal_loss_sigmoid_forward : public testing::Test {
 
     if (input_) {
       VLOG(4) << "Destroy input_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
       input_ = nullptr;
     }
 
@@ -150,7 +150,7 @@ class focal_loss_sigmoid_forward : public testing::Test {
 
     if (target_) {
       VLOG(4) << "Destroy target_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(target_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(target_));
       target_ = nullptr;
     }
 
@@ -162,7 +162,7 @@ class focal_loss_sigmoid_forward : public testing::Test {
 
     if (weight_) {
       VLOG(4) << "Destroy weight_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(weight_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(weight_));
       weight_ = nullptr;
     }
 
@@ -174,7 +174,7 @@ class focal_loss_sigmoid_forward : public testing::Test {
 
     if (output_) {
       VLOG(4) << "Destroy output_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       output_ = nullptr;
     }
   }

@@ -39,7 +39,7 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   uint32_t core_num = union_num * core_dim;
 
   // Union1 policyFunc
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   k_dim->x = core_dim;
   uint32_t need_core_num = (batch_num_all + core_dim - 1) / core_dim * core_dim;
   if (need_core_num < core_num) {

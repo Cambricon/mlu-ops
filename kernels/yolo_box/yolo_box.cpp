@@ -37,7 +37,7 @@
 
 static void policyFunc(const mluOpHandle_t handle, const int kw_num,
                        cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type) {
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
+  *k_type = cnrtFuncTypeBlock;
   uint32_t cluster_num = mluop::runtime::getClusterLimitCapability(handle);
   uint32_t core_num_per_cluster =
       mluop::runtime::getCoreNumOfEachUnionCapability(handle);

@@ -62,7 +62,7 @@ class generate_proposals_v2_general
     uint64_t scores_ele_num = mluOpGetTensorElementNum(scores_desc_);
     uint64_t scores_bytes = mluOpDataTypeBytes(scores_dtype) * scores_ele_num;
     if (scores_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&scores_, scores_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&scores_, scores_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&bbox_deltas_desc_));
@@ -78,7 +78,7 @@ class generate_proposals_v2_general
     uint64_t bbox_deltas_bytes =
         mluOpDataTypeBytes(bbox_deltas_dtype) * bbox_deltas_ele_num;
     if (bbox_deltas_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&bbox_deltas_, bbox_deltas_bytes))
     }
 
@@ -95,7 +95,7 @@ class generate_proposals_v2_general
     uint64_t im_shape_bytes =
         mluOpDataTypeBytes(im_shape_dtype) * im_shape_ele_num;
     if (im_shape_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&im_shape_, im_shape_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&im_shape_, im_shape_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&anchors_desc_));
@@ -111,7 +111,7 @@ class generate_proposals_v2_general
     uint64_t anchors_bytes =
         mluOpDataTypeBytes(anchors_dtype) * anchors_ele_num;
     if (anchors_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&anchors_, anchors_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&anchors_, anchors_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&variances_desc_));
@@ -127,7 +127,7 @@ class generate_proposals_v2_general
     uint64_t variances_bytes =
         mluOpDataTypeBytes(variances_dtype) * variances_ele_num;
     if (variances_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&variances_, variances_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&variances_, variances_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&rpn_rois_desc_));
@@ -143,7 +143,7 @@ class generate_proposals_v2_general
     uint64_t rpn_rois_bytes =
         mluOpDataTypeBytes(rpn_rois_dtype) * rpn_rois_ele_num;
     if (rpn_rois_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&rpn_rois_, rpn_rois_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&rpn_rois_, rpn_rois_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&rpn_roi_probs_desc_));
@@ -162,7 +162,7 @@ class generate_proposals_v2_general
     uint64_t rpn_roi_probs_bytes =
         mluOpDataTypeBytes(rpn_roi_probs_dtype) * rpn_roi_probs_ele_num;
     if (rpn_roi_probs_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&rpn_roi_probs_, rpn_roi_probs_bytes))
     }
 
@@ -180,11 +180,11 @@ class generate_proposals_v2_general
     uint64_t rpn_rois_num_bytes =
         mluOpDataTypeBytes(rpn_rois_num_dtype) * rpn_rois_num_ele_num;
     if (rpn_rois_num_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&rpn_rois_num_, rpn_rois_num_bytes))
     }
 
-    GTEST_CHECK(CNRT_RET_SUCCESS ==
+    GTEST_CHECK(cnrtSuccess ==
                 cnrtMalloc(&rpn_rois_batch_size_,
                            mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
 
@@ -208,7 +208,7 @@ class generate_proposals_v2_general
       destroy();
       return status == expected_status_;
     }
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+    GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
     status = mluOpGenerateProposalsV2(
         handle_, pre_nms_top_n_, post_nms_top_n_, nms_thresh_, min_size_, eta_,
         pixel_offset_, scores_desc_, scores_, bbox_deltas_desc_, bbox_deltas_,
@@ -232,7 +232,7 @@ class generate_proposals_v2_general
       scores_desc_ = NULL;
     }
     if (scores_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(scores_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(scores_));
       scores_ = NULL;
     }
     if (bbox_deltas_desc_) {
@@ -240,7 +240,7 @@ class generate_proposals_v2_general
       bbox_deltas_desc_ = NULL;
     }
     if (bbox_deltas_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(bbox_deltas_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(bbox_deltas_));
       bbox_deltas_ = NULL;
     }
     if (im_shape_desc_) {
@@ -248,7 +248,7 @@ class generate_proposals_v2_general
       im_shape_desc_ = NULL;
     }
     if (im_shape_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(im_shape_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(im_shape_));
       im_shape_ = NULL;
     }
     if (anchors_desc_) {
@@ -256,7 +256,7 @@ class generate_proposals_v2_general
       anchors_desc_ = NULL;
     }
     if (anchors_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(anchors_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(anchors_));
       anchors_ = NULL;
     }
     if (variances_desc_) {
@@ -264,11 +264,11 @@ class generate_proposals_v2_general
       variances_desc_ = NULL;
     }
     if (variances_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(variances_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(variances_));
       variances_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = NULL;
     }
     if (rpn_rois_desc_) {
@@ -276,7 +276,7 @@ class generate_proposals_v2_general
       rpn_rois_desc_ = NULL;
     }
     if (rpn_rois_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_rois_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(rpn_rois_));
       rpn_rois_ = NULL;
     }
     if (rpn_roi_probs_desc_) {
@@ -284,7 +284,7 @@ class generate_proposals_v2_general
       rpn_roi_probs_desc_ = NULL;
     }
     if (rpn_roi_probs_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_roi_probs_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(rpn_roi_probs_));
       rpn_roi_probs_ = NULL;
     }
     if (rpn_rois_num_desc_) {
@@ -292,11 +292,11 @@ class generate_proposals_v2_general
       rpn_rois_num_desc_ = NULL;
     }
     if (rpn_rois_num_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_rois_num_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(rpn_rois_num_));
       rpn_rois_num_ = NULL;
     }
     if (rpn_rois_batch_size_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rpn_rois_batch_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(rpn_rois_batch_size_));
       rpn_rois_batch_size_ = NULL;
     }
   }

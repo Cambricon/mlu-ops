@@ -52,7 +52,7 @@ void BallQueryExecutor::compute() {
   auto data_vector = (int *)data_vector_[2].host_ptr;
   // set idx to 0
   size_t output_total_bytes = data_vector_[2].count * sizeof(int32_t);
-  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(idx_ptr, 0, output_total_bytes));
+  GTEST_CHECK(cnrtSuccess == cnrtMemset(idx_ptr, 0, output_total_bytes));
   interface_timer_.start();
   MLUOP_CHECK(mluOpBallQuery(handle_, new_xyz_desc, new_xyz_ptr, xyz_desc,
                              xyz_ptr, min_radius_, max_radius_, nsample_,

@@ -51,11 +51,11 @@ class mutual_information_forward : public testing::Test {
 
     if (px) {
       if (px_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&px_, MLUOP_DTYPE_FLOAT *
                                          mluOpGetTensorElementNum(px_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&px_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -70,11 +70,11 @@ class mutual_information_forward : public testing::Test {
 
     if (py) {
       if (py_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&py_, MLUOP_DTYPE_FLOAT *
                                          mluOpGetTensorElementNum(py_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&py_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -89,12 +89,12 @@ class mutual_information_forward : public testing::Test {
 
     if (opt_boundary) {
       if (opt_boundary_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&opt_boundary_,
                                MLUOP_DTYPE_INT64 * mluOpGetTensorElementNum(
                                                        opt_boundary_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&opt_boundary_, MLUOP_DTYPE_INT64 * 2));
       }
     }
@@ -109,11 +109,11 @@ class mutual_information_forward : public testing::Test {
 
     if (p) {
       if (p_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&p_, MLUOP_DTYPE_FLOAT *
                                         mluOpGetTensorElementNum(p_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&p_, MLUOP_DTYPE_FLOAT * 2));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&p_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
 
@@ -127,17 +127,17 @@ class mutual_information_forward : public testing::Test {
 
     if (ans) {
       if (ans_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&ans_, MLUOP_DTYPE_FLOAT *
                                           mluOpGetTensorElementNum(ans_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&ans_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
 
     if (workspace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&workspace_, MLUOP_DTYPE_FLOAT * workspace_size_));
     }
   }
@@ -168,7 +168,7 @@ class mutual_information_forward : public testing::Test {
 
     if (px_) {
       VLOG(4) << "Destroy px_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(px_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(px_));
       px_ = nullptr;
     }
 
@@ -180,7 +180,7 @@ class mutual_information_forward : public testing::Test {
 
     if (py_) {
       VLOG(4) << "Destroy py_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(py_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(py_));
       py_ = nullptr;
     }
 
@@ -192,7 +192,7 @@ class mutual_information_forward : public testing::Test {
 
     if (opt_boundary_) {
       VLOG(4) << "Destroy opt_boundary_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(opt_boundary_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(opt_boundary_));
       opt_boundary_ = nullptr;
     }
 
@@ -204,7 +204,7 @@ class mutual_information_forward : public testing::Test {
 
     if (p_) {
       VLOG(4) << "Destroy p_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(p_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(p_));
       p_ = nullptr;
     }
 
@@ -216,13 +216,13 @@ class mutual_information_forward : public testing::Test {
 
     if (ans_) {
       VLOG(4) << "Destroy ans_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(ans_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(ans_));
       ans_ = nullptr;
     }
 
     if (workspace_) {
       VLOG(4) << "Destroy workspace_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
   }

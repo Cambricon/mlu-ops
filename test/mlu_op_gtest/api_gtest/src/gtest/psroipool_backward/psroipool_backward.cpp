@@ -52,7 +52,7 @@ class psroipool_backward : public testing::Test {
       size_t b_ele_num = 1 * 5 * 5 * 9;
       size_t b_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t b_bytes = b_ele_num * b_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&bottom_grad_, b_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&bottom_grad_, b_bytes));
     }
     if (rois_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&rois_desc_));
@@ -64,7 +64,7 @@ class psroipool_backward : public testing::Test {
       size_t r_ele_num = 1 * 5;
       size_t r_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t r_bytes = r_ele_num * r_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&rois_, r_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&rois_, r_bytes));
     }
     if (top_grad_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&top_grad_desc_));
@@ -77,7 +77,7 @@ class psroipool_backward : public testing::Test {
       size_t o_ele_num = 1 * 3 * 3 * 1;
       size_t o_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t o_bytes = o_ele_num * o_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&top_grad_, o_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&top_grad_, o_bytes));
     }
     if (mapping_channel_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&mapping_channel_desc_));
@@ -90,7 +90,7 @@ class psroipool_backward : public testing::Test {
       size_t m_ele_num = 1 * 3 * 3 * 1;
       size_t m_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t m_bytes = m_ele_num * m_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&mapping_channel_, m_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&mapping_channel_, m_bytes));
     }
   }
 
@@ -115,7 +115,7 @@ class psroipool_backward : public testing::Test {
       bottom_grad_desc_ = NULL;
     }
     if (bottom_grad_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(bottom_grad_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(bottom_grad_));
       bottom_grad_ = NULL;
     }
     if (rois_desc_) {
@@ -123,7 +123,7 @@ class psroipool_backward : public testing::Test {
       rois_desc_ = NULL;
     }
     if (rois_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rois_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(rois_));
       rois_ = NULL;
     }
     if (top_grad_desc_) {
@@ -131,7 +131,7 @@ class psroipool_backward : public testing::Test {
       top_grad_desc_ = NULL;
     }
     if (top_grad_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(top_grad_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(top_grad_));
       top_grad_ = NULL;
     }
     if (mapping_channel_desc_) {
@@ -139,7 +139,7 @@ class psroipool_backward : public testing::Test {
       mapping_channel_desc_ = NULL;
     }
     if (mapping_channel_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(mapping_channel_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(mapping_channel_));
       mapping_channel_ = NULL;
     }
   }

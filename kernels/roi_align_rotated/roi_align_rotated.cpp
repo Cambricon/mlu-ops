@@ -36,7 +36,7 @@ static void policyFunc(const mluOpHandle_t handle, const int bin_num,
                        cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type) {
   size_t core_num = handle->core_num_per_cluster;
   size_t cluster_num = mluop::runtime::getJobLimitCapability(handle) / core_num;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   k_dim->x = core_num;
   size_t use_cluster = (bin_num + core_num - 1) / core_num;
   k_dim->y = use_cluster > cluster_num ? cluster_num : use_cluster;

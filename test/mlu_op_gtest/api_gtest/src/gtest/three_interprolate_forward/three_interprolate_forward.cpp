@@ -71,25 +71,25 @@ class three_interprolate_forward : public testing::Test {
       size_t f_ele_num = 1 * 2 * 5;
       size_t f_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t f_bytes = f_ele_num * f_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&features_, f_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&features_, f_bytes));
     }
     if (indices) {
       size_t i_ele_num = 1 * 4 * 3;
       size_t i_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t i_bytes = i_ele_num * i_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&indices_, i_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&indices_, i_bytes));
     }
     if (weight) {
       size_t w_ele_num = 1 * 4 * 3;
       size_t w_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t w_bytes = w_ele_num * w_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&weight_, w_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&weight_, w_bytes));
     }
     if (output) {
       size_t o_ele_num = 1 * 2 * 4;
       size_t o_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t o_bytes = o_ele_num * o_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, o_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_, o_bytes));
     }
   }
 
@@ -126,19 +126,19 @@ class three_interprolate_forward : public testing::Test {
       output_desc_ = NULL;
     }
     if (features_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(features_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(features_));
       features_ = NULL;
     }
     if (indices_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indices_));
       indices_ = NULL;
     }
     if (weight_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(weight_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(weight_));
       weight_ = NULL;
     }
     if (output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       output_ = NULL;
     }
   }

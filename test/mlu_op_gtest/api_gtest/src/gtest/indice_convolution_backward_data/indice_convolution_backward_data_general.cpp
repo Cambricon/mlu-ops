@@ -65,7 +65,7 @@ class indice_convolution_backward_data_general
                                          output_grad_shape.data()));
     uint64_t output_grad_ele_num = mluOpGetTensorElementNum(output_grad_desc_);
     if (output_grad_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&output_grad_,
                              mluOpGetTensorElementNum(output_grad_desc_) *
                                  mluOpDataTypeBytes(output_grad_dtype)))
@@ -83,7 +83,7 @@ class indice_convolution_backward_data_general
     uint64_t filters_ele_num = mluOpGetTensorElementNum(filters_desc_);
     if (filters_ele_num > 0) {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&filters_, mluOpGetTensorElementNum(filters_desc_) *
                                     mluOpDataTypeBytes(filters_dtype)));
     }
@@ -100,7 +100,7 @@ class indice_convolution_backward_data_general
     uint64_t indice_pairs_ele_num =
         mluOpGetTensorElementNum(indice_pairs_desc_);
     if (indice_pairs_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&indice_pairs_,
                              mluOpGetTensorElementNum(indice_pairs_desc_) *
                                  mluOpDataTypeBytes(indice_pairs_dtype)));
@@ -118,7 +118,7 @@ class indice_convolution_backward_data_general
     uint64_t input_grad_ele_num = mluOpGetTensorElementNum(input_grad_desc_);
     if (input_grad_ele_num > 0) {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&input_grad_, mluOpGetTensorElementNum(input_grad_desc_) *
                                        mluOpDataTypeBytes(input_grad_dtype)));
     }
@@ -141,7 +141,7 @@ class indice_convolution_backward_data_general
       destroy();
       return expected_status_ == status;
     }
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+    GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
     status = mluOpIndiceConvolutionBackwardData(
         handle_, output_grad_desc_, output_grad_, filters_desc_, filters_,
         indice_pairs_desc_, indice_pairs_, indice_num_.data(), inverse_, sub_m_,
@@ -163,7 +163,7 @@ class indice_convolution_backward_data_general
       output_grad_desc_ = NULL;
     }
     if (output_grad_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_grad_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_grad_));
       output_grad_ = NULL;
     }
     if (filters_desc_) {
@@ -171,7 +171,7 @@ class indice_convolution_backward_data_general
       filters_desc_ = NULL;
     }
     if (filters_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(filters_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(filters_));
       filters_ = NULL;
     }
     if (indice_pairs_desc_) {
@@ -179,11 +179,11 @@ class indice_convolution_backward_data_general
       indice_pairs_desc_ = NULL;
     }
     if (indice_pairs_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indice_pairs_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indice_pairs_));
       indice_pairs_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = NULL;
     }
     if (input_grad_desc_) {
@@ -191,7 +191,7 @@ class indice_convolution_backward_data_general
       input_grad_desc_ = NULL;
     }
     if (input_grad_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_grad_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(input_grad_));
       input_grad_ = NULL;
     }
   }

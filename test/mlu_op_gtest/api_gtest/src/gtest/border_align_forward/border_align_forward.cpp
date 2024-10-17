@@ -49,7 +49,7 @@ class border_align_forward_test : public testing::Test {
     }
     if (input) {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&input_, 4000 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
     if (boxes_desc) {
@@ -61,7 +61,7 @@ class border_align_forward_test : public testing::Test {
     }
     if (boxes) {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&boxes_, 800 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
     if (output_desc) {
@@ -73,7 +73,7 @@ class border_align_forward_test : public testing::Test {
     }
     if (output) {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&output_, 4000 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
     if (argmax_idx_desc) {
@@ -84,7 +84,7 @@ class border_align_forward_test : public testing::Test {
                                            argmax_idx_dims.data()));
     }
     if (argmax_idx) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&argmax_idx_,
                              4000 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
@@ -123,7 +123,7 @@ class border_align_forward_test : public testing::Test {
       }
       if (input_) {
         VLOG(4) << "Destroy input_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
       }
       if (boxes_desc_) {
         VLOG(4) << "Destroy boxes_desc_";
@@ -131,7 +131,7 @@ class border_align_forward_test : public testing::Test {
       }
       if (boxes_) {
         VLOG(4) << "Destroy boxes_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(boxes_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(boxes_));
       }
       if (output_desc_) {
         VLOG(4) << "Destroy output_desc_";
@@ -139,7 +139,7 @@ class border_align_forward_test : public testing::Test {
       }
       if (output_) {
         VLOG(4) << "Destroy output_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       }
       if (argmax_idx_desc_) {
         VLOG(4) << "Destroy argmax_idx_desc_";
@@ -147,7 +147,7 @@ class border_align_forward_test : public testing::Test {
       }
       if (argmax_idx_) {
         VLOG(4) << "Destroy argmax_idx_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(argmax_idx_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(argmax_idx_));
       }
     } catch (const std::exception &e) {
       FAIL() << "MLUOPAPIGTEST: catched " << e.what()

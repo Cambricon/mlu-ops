@@ -59,7 +59,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
     uint64_t points_ele_num = mluOpGetTensorElementNum(points_desc_);
     uint64_t points_bytes = mluOpDataTypeBytes(points_dtype) * points_ele_num;
     if (points_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&points_, points_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&points_, points_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&voxel_size_desc_));
@@ -75,7 +75,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
     uint64_t voxel_size_bytes =
         mluOpDataTypeBytes(voxel_size_dtype) * voxel_size_ele_num;
     if (voxel_size_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&voxel_size_, voxel_size_bytes))
     }
 
@@ -92,7 +92,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
     uint64_t coors_range_bytes =
         mluOpDataTypeBytes(coors_range_dtype) * coors_range_ele_num;
     if (coors_range_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&coors_range_, coors_range_bytes))
     }
 
@@ -112,7 +112,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
     uint64_t voxels_ele_num = mluOpGetTensorElementNum(voxels_desc_);
     uint64_t voxels_bytes = mluOpDataTypeBytes(voxels_dtype) * voxels_ele_num;
     if (voxels_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&voxels_, voxels_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&voxels_, voxels_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&coors_desc_));
@@ -126,7 +126,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
     uint64_t coors_ele_num = mluOpGetTensorElementNum(coors_desc_);
     uint64_t coors_bytes = mluOpDataTypeBytes(coors_dtype) * coors_ele_num;
     if (coors_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&coors_, coors_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&coors_, coors_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&num_points_per_voxel_desc_));
@@ -148,7 +148,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
         mluOpDataTypeBytes(num_points_per_voxel_dtype) *
         num_points_per_voxel_ele_num;
     if (num_points_per_voxel_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&num_points_per_voxel_,
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&num_points_per_voxel_,
                                                  num_points_per_voxel_bytes))
     }
 
@@ -165,7 +165,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
     uint64_t voxel_num_bytes =
         mluOpDataTypeBytes(voxel_num_dtype) * voxel_num_ele_num;
     if (voxel_num_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&voxel_num_, voxel_num_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&voxel_num_, voxel_num_bytes))
     }
 
     PublicParam publicParam = std::get<8>(GetParam());
@@ -186,7 +186,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
       destroy();
       return status == expected_status_;
     }
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+    GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
     status = mluOpVoxelization(
         handle_, points_desc_, points_, voxel_size_desc_, voxel_size_,
         coors_range_desc_, coors_range_, max_points_, max_voxels_, NDim_,
@@ -209,7 +209,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
       points_desc_ = NULL;
     }
     if (points_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(points_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(points_));
       points_ = NULL;
     }
     if (voxel_size_desc_) {
@@ -217,7 +217,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
       voxel_size_desc_ = NULL;
     }
     if (voxel_size_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxel_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxel_size_));
       voxel_size_ = NULL;
     }
     if (coors_range_desc_) {
@@ -225,11 +225,11 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
       coors_range_desc_ = NULL;
     }
     if (coors_range_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(coors_range_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(coors_range_));
       coors_range_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = NULL;
     }
     if (voxels_desc_) {
@@ -237,7 +237,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
       voxels_desc_ = NULL;
     }
     if (voxels_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxels_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxels_));
       voxels_ = NULL;
     }
     if (coors_desc_) {
@@ -245,7 +245,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
       coors_desc_ = NULL;
     }
     if (coors_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(coors_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(coors_));
       coors_ = NULL;
     }
     if (num_points_per_voxel_desc_) {
@@ -253,7 +253,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
       num_points_per_voxel_desc_ = NULL;
     }
     if (num_points_per_voxel_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(num_points_per_voxel_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(num_points_per_voxel_));
       num_points_per_voxel_ = NULL;
     }
     if (voxel_num_desc_) {
@@ -261,7 +261,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
       voxel_num_desc_ = NULL;
     }
     if (voxel_num_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxel_num_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxel_num_));
       voxel_num_ = NULL;
     }
   }

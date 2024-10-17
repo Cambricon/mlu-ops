@@ -51,11 +51,11 @@ class masked_col2im_forward_general
           col_params.get_dim_nb(), col_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(col_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&col_, mluOpDataTypeBytes(col_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&col_, mluOpDataTypeBytes(col_params.get_dtype()) *
                                   mluOpGetTensorElementNum(col_desc_)));
       }
@@ -68,12 +68,12 @@ class masked_col2im_forward_general
           mask_h_idx_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(mask_h_idx_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&mask_h_idx_,
                        mluOpDataTypeBytes(mask_h_idx_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&mask_h_idx_,
                        mluOpDataTypeBytes(mask_h_idx_params.get_dtype()) *
                            mluOpGetTensorElementNum(mask_h_idx_desc_)));
@@ -87,12 +87,12 @@ class masked_col2im_forward_general
           mask_w_idx_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(mask_w_idx_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&mask_w_idx_,
                        mluOpDataTypeBytes(mask_w_idx_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&mask_w_idx_,
                        mluOpDataTypeBytes(mask_w_idx_params.get_dtype()) *
                            mluOpGetTensorElementNum(mask_w_idx_desc_)));
@@ -105,10 +105,10 @@ class masked_col2im_forward_general
           im_params.get_dim_nb(), im_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(im_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&im_, mluOpDataTypeBytes(im_params.get_dtype()) * 2));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&im_, mluOpDataTypeBytes(im_params.get_dtype()) *
                                          mluOpGetTensorElementNum(im_desc_)));
       }
@@ -116,7 +116,7 @@ class masked_col2im_forward_general
       target_device_ = std::get<4>(GetParam());
       expected_status_ = std::get<5>(GetParam());
 
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&workspace_, MLUOP_DTYPE_FLOAT * workspace_size_));
     } catch (const std::exception &e) {
       FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -154,7 +154,7 @@ class masked_col2im_forward_general
 
     if (col_) {
       VLOG(4) << "Destroy col_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(col_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(col_));
       col_ = nullptr;
     }
 
@@ -166,7 +166,7 @@ class masked_col2im_forward_general
 
     if (mask_h_idx_) {
       VLOG(4) << "Destroy mask_h_idx_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(mask_h_idx_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(mask_h_idx_));
       mask_h_idx_ = nullptr;
     }
 
@@ -178,7 +178,7 @@ class masked_col2im_forward_general
 
     if (mask_w_idx_) {
       VLOG(4) << "Destroy mask_w_idx_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(mask_w_idx_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(mask_w_idx_));
       mask_w_idx_ = nullptr;
     }
 
@@ -190,13 +190,13 @@ class masked_col2im_forward_general
 
     if (im_) {
       VLOG(4) << "Destroy im_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(im_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(im_));
       im_ = nullptr;
     }
 
     if (workspace_) {
       VLOG(4) << "Destroy workspace_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
   }

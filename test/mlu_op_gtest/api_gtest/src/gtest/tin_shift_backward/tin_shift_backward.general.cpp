@@ -52,12 +52,12 @@ class tin_shift_backward_general
           grad_output_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(grad_output_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_output_,
                        mluOpDataTypeBytes(grad_output_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_output_,
                        mluOpDataTypeBytes(grad_output_params.get_dtype()) *
                            mluOpGetTensorElementNum(grad_output_desc_)));
@@ -70,12 +70,12 @@ class tin_shift_backward_general
           shifts_params.get_dim_nb(), shifts_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(shifts_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&shifts_,
                        mluOpDataTypeBytes(shifts_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&shifts_, mluOpDataTypeBytes(shifts_params.get_dtype()) *
                                      mluOpGetTensorElementNum(shifts_desc_)));
       }
@@ -88,12 +88,12 @@ class tin_shift_backward_general
           grad_input_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(grad_input_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_input_,
                        mluOpDataTypeBytes(grad_input_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_input_,
                        mluOpDataTypeBytes(grad_input_params.get_dtype()) *
                            mluOpGetTensorElementNum(grad_input_desc_)));
@@ -140,15 +140,15 @@ class tin_shift_backward_general
       grad_input_desc_ = NULL;
     }
     if (grad_output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_output_));
       grad_output_ = NULL;
     }
     if (shifts_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(shifts_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(shifts_));
       shifts_ = NULL;
     }
     if (grad_input_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_input_));
       grad_input_ = NULL;
     }
   }

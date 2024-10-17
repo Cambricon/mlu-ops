@@ -78,31 +78,31 @@ class yolo_box : public testing::Test {
       size_t ele_num = 8;
       size_t dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t bytes = ele_num * dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&x_, bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&x_, bytes));
     }
     if (img_size) {
       size_t ele_num = 8;
       size_t dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t bytes = ele_num * dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&img_size_, bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&img_size_, bytes));
     }
     if (anchors) {
       size_t ele_num = 8;
       size_t dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t bytes = ele_num * dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&anchors_, bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&anchors_, bytes));
     }
     if (boxes) {
       size_t ele_num = 8;
       size_t dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t bytes = ele_num * dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&boxes_, bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&boxes_, bytes));
     }
     if (scores) {
       size_t ele_num = 8;
       size_t dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t bytes = ele_num * dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&scores_, bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&scores_, bytes));
     }
   }
 
@@ -145,23 +145,23 @@ class yolo_box : public testing::Test {
       scores_desc_ = NULL;
     }
     if (x_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(x_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(x_));
       x_ = NULL;
     }
     if (img_size_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(img_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(img_size_));
       img_size_ = NULL;
     }
     if (anchors_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(anchors_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(anchors_));
       anchors_ = NULL;
     }
     if (boxes_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(boxes_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(boxes_));
       boxes_ = NULL;
     }
     if (scores_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(scores_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(scores_));
       scores_ = NULL;
     }
   }

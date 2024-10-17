@@ -33,9 +33,9 @@
 static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type) {
 #if TARGET_MLU_ARCH == 520
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
+  *k_type = cnrtFuncTypeBlock;
 #else
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
 #endif
   k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   k_dim->y = mluop::runtime::getClusterLimitCapability(handle);

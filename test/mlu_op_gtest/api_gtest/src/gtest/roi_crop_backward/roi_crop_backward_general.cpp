@@ -58,7 +58,7 @@ class roi_crop_backward_general
     uint64_t o_ele_num = mluOpGetTensorElementNum(grad_output_desc_);
     uint64_t o_bytes = mluOpDataTypeBytes(o_dtype) * o_ele_num;
     if (o_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_output_, o_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_output_, o_bytes));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&grid_desc_));
@@ -72,7 +72,7 @@ class roi_crop_backward_general
     uint64_t g_ele_num = mluOpGetTensorElementNum(grid_desc_);
     uint64_t g_bytes = mluOpDataTypeBytes(g_dtype) * g_ele_num;
     if (g_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grid_, g_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grid_, g_bytes));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&grad_input_desc_));
@@ -86,7 +86,7 @@ class roi_crop_backward_general
     uint64_t i_ele_num = mluOpGetTensorElementNum(grad_input_desc_);
     uint64_t i_bytes = mluOpDataTypeBytes(i_dtype) * i_ele_num;
     if (i_bytes > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_input_, i_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_input_, i_bytes))
     }
   }
 
@@ -124,15 +124,15 @@ class roi_crop_backward_general
       grad_input_desc_ = NULL;
     }
     if (grad_output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_output_));
       grad_output_ = NULL;
     }
     if (grid_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grid_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grid_));
       grid_ = NULL;
     }
     if (grad_input_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_input_));
       grad_input_ = NULL;
     }
   }

@@ -65,7 +65,7 @@ void MoeDispatchBackwardGateExecutor::workspaceMalloc() {
 void MoeDispatchBackwardGateExecutor::workspaceFree() {
   if (workspace_size_ > 0) {
     VLOG(4) << "[MoeDispatchBackwardGateExecutor] Free device workspace space.";
-    GTEST_CHECK(CNRT_RET_SUCCESS == mlu_runtime_.deallocate(workspace_[0]));
+    GTEST_CHECK(cnrtSuccess == mlu_runtime_.deallocate(workspace_[0]));
     workspace_[0] = nullptr;
   }
 }

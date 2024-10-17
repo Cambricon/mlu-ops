@@ -49,12 +49,12 @@ class tin_shift_backward : public testing::Test {
     }
     if (grad_output) {
       if (grad_output_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&grad_output_,
                                MLUOP_DTYPE_FLOAT * mluOpGetTensorElementNum(
                                                        grad_output_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&grad_output_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -68,11 +68,11 @@ class tin_shift_backward : public testing::Test {
     if (shifts) {
       if (shifts_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&shifts_, MLUOP_DTYPE_INT32 *
                                      mluOpGetTensorElementNum(shifts_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&shifts_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -85,12 +85,12 @@ class tin_shift_backward : public testing::Test {
     }
     if (grad_input) {
       if (grad_input_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&grad_input_,
                                MLUOP_DTYPE_FLOAT *
                                    mluOpGetTensorElementNum(grad_input_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&grad_input_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -125,15 +125,15 @@ class tin_shift_backward : public testing::Test {
       grad_input_desc_ = NULL;
     }
     if (grad_output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_output_));
       grad_output_ = NULL;
     }
     if (shifts_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(shifts_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(shifts_));
       shifts_ = NULL;
     }
     if (grad_input_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_input_));
       grad_input_ = NULL;
     }
   }

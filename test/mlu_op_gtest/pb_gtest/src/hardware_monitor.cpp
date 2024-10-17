@@ -48,7 +48,7 @@ hardwareMonitor::~hardwareMonitor() {
 
 void hardwareMonitor::setDevice() const {
   GTEST_CHECK(cndevInit(0) == CNDEV_SUCCESS);
-  ASSERT_EQ(cnrtSetDevice(global_var.dev_id_), CNRT_RET_SUCCESS);
+  ASSERT_EQ(cnrtSetDevice(global_var.dev_id_), cnrtSuccess);
 }
 
 void hardwareMonitor::start() {
@@ -130,7 +130,7 @@ void hardwareMonitor::monitorFrequencyOneGRepeat() {
                                std::ios::app);
   frequency_file << "relative_time(ns),IPU_frequency(MHz)\n";
   cndevDevice_t dev_id;
-  GTEST_CHECK(cnrtGetDevice(&dev_id) == CNRT_RET_SUCCESS);
+  GTEST_CHECK(cnrtGetDevice(&dev_id) == cnrtSuccess);
   int i = 1;
 
   cndevFrequencyInfo_t freq_info_prev, freq_info_curr;
@@ -172,7 +172,7 @@ void hardwareMonitor::monitorPowerOneGRepeat() {
                            std::ios::app);
   power_file << "relative_time(ns),instantaneous_power(W),average_power(W)\n";
   cndevDevice_t dev_id;
-  GTEST_CHECK(cnrtGetDevice(&dev_id) == CNRT_RET_SUCCESS);
+  GTEST_CHECK(cnrtGetDevice(&dev_id) == cnrtSuccess);
   GTEST_CHECK(cndevInit(0) == CNDEV_SUCCESS);
   int i = 1;
 

@@ -54,13 +54,13 @@ void PolyNmsExecutor::workspaceMalloc() {
   auto output_tensor = parser_->getMetaTensor("output1").tensor;
   void *output_ptr = parser_->getMetaTensor("output1").dev_origin_ptr;
   size_t output_size = parser_->getMetaTensor("output1").size_in_bytes;
-  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(output_ptr, 0, output_size));
+  GTEST_CHECK(cnrtSuccess == cnrtMemset(output_ptr, 0, output_size));
 }
 
 void PolyNmsExecutor::workspaceFree() {
   if (workspace_[0]) {
     VLOG(4) << "Free device workspace space.";
-    GTEST_CHECK(CNRT_RET_SUCCESS == mlu_runtime_.deallocate(workspace_[0]));
+    GTEST_CHECK(cnrtSuccess == mlu_runtime_.deallocate(workspace_[0]));
     workspace_[0] = nullptr;
   }
 }

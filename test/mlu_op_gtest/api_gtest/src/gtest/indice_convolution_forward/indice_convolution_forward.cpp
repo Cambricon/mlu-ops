@@ -53,12 +53,12 @@ class indice_convolution_forward : public testing::Test {
     if (features) {
       if (features_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&features_, mluOpGetTensorElementNum(features_desc_) *
                                        mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&features_, 64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
     }
@@ -74,12 +74,12 @@ class indice_convolution_forward : public testing::Test {
     if (filters) {
       if (filters_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&filters_, mluOpGetTensorElementNum(filters_desc_) *
                                       mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&filters_, 64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
     }
@@ -94,12 +94,12 @@ class indice_convolution_forward : public testing::Test {
 
     if (indice_pairs) {
       if (indice_pairs_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&indice_pairs_,
                                mluOpGetTensorElementNum(indice_pairs_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&indice_pairs_,
                                64 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
@@ -115,12 +115,12 @@ class indice_convolution_forward : public testing::Test {
 
     if (features_out) {
       if (features_out_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&features_out_,
                                mluOpGetTensorElementNum(features_out_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&features_out_,
                                64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
@@ -134,7 +134,7 @@ class indice_convolution_forward : public testing::Test {
     }
 
     if (worksapce) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
     }
   }
   mluOpStatus_t compute() {
@@ -164,7 +164,7 @@ class indice_convolution_forward : public testing::Test {
 
     if (features_) {
       VLOG(4) << "Destroy features";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(features_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(features_));
       features_ = nullptr;
     }
 
@@ -176,7 +176,7 @@ class indice_convolution_forward : public testing::Test {
 
     if (filters_) {
       VLOG(4) << "Destroy filters";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(filters_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(filters_));
       filters_ = nullptr;
     }
 
@@ -188,13 +188,13 @@ class indice_convolution_forward : public testing::Test {
 
     if (indice_pairs_) {
       VLOG(4) << "Destroy indice_pairs";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indice_pairs_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indice_pairs_));
       indice_pairs_ = nullptr;
     }
 
     if (workspace_) {
       VLOG(4) << "Destroy workspace";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
 
@@ -206,7 +206,7 @@ class indice_convolution_forward : public testing::Test {
 
     if (features_out_) {
       VLOG(4) << "Destroy features_out";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(features_out_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(features_out_));
       features_out_ = nullptr;
     }
   }

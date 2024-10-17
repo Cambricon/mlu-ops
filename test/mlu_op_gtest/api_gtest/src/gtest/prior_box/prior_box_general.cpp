@@ -60,7 +60,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
                                          min_dim, min_dim_size.data()));
     const uint64_t min_ele_num = mluOpGetTensorElementNum(min_desc_);
     if (min_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&min_, 8))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&min_, 8))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&aspect_ratios_desc_));
@@ -75,7 +75,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
     const uint64_t aspect_ele_num =
         mluOpGetTensorElementNum(aspect_ratios_desc_);
     if (aspect_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&aspect_ratios_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&aspect_ratios_, 8));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&variance_desc_));
@@ -89,7 +89,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
                                          variance_dim_size.data()));
     const uint64_t variance_ele_num = mluOpGetTensorElementNum(variance_desc_);
     if (variance_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&variance_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&variance_, 8));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&max_desc_));
@@ -102,7 +102,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
                                          max_dim, max_dim_size.data()));
     const uint64_t max_ele_num = mluOpGetTensorElementNum(max_desc_);
     if (max_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&max_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&max_, 8));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
@@ -115,7 +115,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
                                          o_dim_size.data()));
     const uint64_t o_ele_num = mluOpGetTensorElementNum(output_desc_);
     if (o_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_, 8));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&var_desc_));
@@ -128,7 +128,7 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
                                          var_dim, var_dim_size.data()));
     const uint64_t var_ele_num = mluOpGetTensorElementNum(var_desc_);
     if (var_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&var_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&var_, 8));
     }
 
     PriorBoxDescParam params = std::get<6>(GetParam());
@@ -184,27 +184,27 @@ class prior_box_general : public testing::TestWithParam<PriorBoxParam> {
       var_desc_ = NULL;
     }
     if (min_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(min_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(min_));
       min_ = NULL;
     }
     if (aspect_ratios_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(aspect_ratios_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(aspect_ratios_));
       aspect_ratios_ = NULL;
     }
     if (variance_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(variance_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(variance_));
       variance_ = NULL;
     }
     if (max_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(max_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(max_));
       max_ = NULL;
     }
     if (output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       output_ = NULL;
     }
     if (var_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(var_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(var_));
       var_ = NULL;
     }
   }

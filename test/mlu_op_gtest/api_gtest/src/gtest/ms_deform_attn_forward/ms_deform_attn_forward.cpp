@@ -54,12 +54,12 @@ class ms_deform_attn_forward : public testing::Test {
 
     if (data_value) {
       if (data_value_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&data_value_,
                                MLUOP_DTYPE_INT32 *
                                    mluOpGetTensorElementNum(data_value_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&data_value_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -75,12 +75,12 @@ class ms_deform_attn_forward : public testing::Test {
     if (data_spatial_shapes) {
       if (data_spatial_shapes_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&data_spatial_shapes_,
                        MLUOP_DTYPE_INT32 * mluOpGetTensorElementNum(
                                                data_spatial_shapes_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&data_spatial_shapes_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -96,12 +96,12 @@ class ms_deform_attn_forward : public testing::Test {
     if (data_level_start_index) {
       if (data_level_start_index_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&data_level_start_index_,
                        MLUOP_DTYPE_INT32 * mluOpGetTensorElementNum(
                                                data_level_start_index_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&data_level_start_index_,
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&data_level_start_index_,
                                                    MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -117,12 +117,12 @@ class ms_deform_attn_forward : public testing::Test {
     if (data_sampling_loc) {
       if (data_sampling_loc_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&data_sampling_loc_,
                        MLUOP_DTYPE_INT32 *
                            mluOpGetTensorElementNum(data_sampling_loc_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&data_sampling_loc_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -138,12 +138,12 @@ class ms_deform_attn_forward : public testing::Test {
     if (data_attn_weight) {
       if (data_attn_weight_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&data_attn_weight_,
                        MLUOP_DTYPE_INT32 *
                            mluOpGetTensorElementNum(data_attn_weight_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&data_attn_weight_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -158,12 +158,12 @@ class ms_deform_attn_forward : public testing::Test {
 
     if (data_col) {
       if (data_col_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&data_col_,
                                MLUOP_DTYPE_INT32 *
                                    mluOpGetTensorElementNum(data_col_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&data_col_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -197,7 +197,7 @@ class ms_deform_attn_forward : public testing::Test {
 
     if (data_value_) {
       VLOG(4) << "Destroy data_value";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(data_value_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(data_value_));
       data_value_ = nullptr;
     }
 
@@ -209,7 +209,7 @@ class ms_deform_attn_forward : public testing::Test {
 
     if (data_spatial_shapes_) {
       VLOG(4) << "Destroy data_spatial_shapes";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(data_spatial_shapes_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(data_spatial_shapes_));
       data_spatial_shapes_ = nullptr;
     }
 
@@ -221,7 +221,7 @@ class ms_deform_attn_forward : public testing::Test {
 
     if (data_level_start_index_) {
       VLOG(4) << "Destroy data_level_start_index";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(data_level_start_index_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(data_level_start_index_));
       data_level_start_index_ = nullptr;
     }
 
@@ -233,7 +233,7 @@ class ms_deform_attn_forward : public testing::Test {
 
     if (data_sampling_loc_) {
       VLOG(4) << "Destroy data_sampling_loc";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(data_sampling_loc_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(data_sampling_loc_));
       data_sampling_loc_ = nullptr;
     }
 
@@ -245,7 +245,7 @@ class ms_deform_attn_forward : public testing::Test {
 
     if (data_attn_weight_) {
       VLOG(4) << "Destroy data_attn_weight";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(data_attn_weight_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(data_attn_weight_));
       data_attn_weight_ = nullptr;
     }
 
@@ -257,7 +257,7 @@ class ms_deform_attn_forward : public testing::Test {
 
     if (data_col_) {
       VLOG(4) << "Destroy data_col";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(data_col_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(data_col_));
       data_col_ = nullptr;
     }
   }

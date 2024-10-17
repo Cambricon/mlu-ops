@@ -54,12 +54,12 @@ class roiaware_pool3d_forward : public testing::Test {
     if (rois) {
       if (rois_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&rois_, mluOpGetTensorElementNum(rois_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&rois_, 64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
     }
@@ -75,12 +75,12 @@ class roiaware_pool3d_forward : public testing::Test {
     if (pts) {
       if (pts_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&pts_, mluOpGetTensorElementNum(pts_desc_) *
                                   mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&pts_, 64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
     }
@@ -95,12 +95,12 @@ class roiaware_pool3d_forward : public testing::Test {
 
     if (pts_feature) {
       if (pts_feature_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&pts_feature_,
                                mluOpGetTensorElementNum(pts_feature_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&pts_feature_,
                                64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
@@ -116,12 +116,12 @@ class roiaware_pool3d_forward : public testing::Test {
 
     if (pooled_features) {
       if (pooled_features_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&pooled_features_,
                                mluOpGetTensorElementNum(pooled_features_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&pooled_features_,
                                64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
@@ -138,12 +138,12 @@ class roiaware_pool3d_forward : public testing::Test {
     if (argmax) {
       if (argmax_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&argmax_, mluOpGetTensorElementNum(argmax_desc_) *
                                      mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&argmax_, 64 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
     }
@@ -159,19 +159,19 @@ class roiaware_pool3d_forward : public testing::Test {
     if (pts_idx_of_voxels) {
       if (pts_idx_of_voxels_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&pts_idx_of_voxels_,
                        mluOpGetTensorElementNum(pts_idx_of_voxels_desc_) *
                            mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&pts_idx_of_voxels_,
                                64 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
     }
 
     if (worksapce) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
     }
   }
 
@@ -203,7 +203,7 @@ class roiaware_pool3d_forward : public testing::Test {
 
     if (rois_) {
       VLOG(4) << "Destroy rois";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rois_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(rois_));
       rois_ = nullptr;
     }
 
@@ -215,7 +215,7 @@ class roiaware_pool3d_forward : public testing::Test {
 
     if (pts_) {
       VLOG(4) << "Destroy pts";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(pts_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(pts_));
       pts_ = nullptr;
     }
 
@@ -227,13 +227,13 @@ class roiaware_pool3d_forward : public testing::Test {
 
     if (pts_feature_) {
       VLOG(4) << "Destroy pts_feature";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(pts_feature_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(pts_feature_));
       pts_feature_ = nullptr;
     }
 
     if (workspace_) {
       VLOG(4) << "Destroy workspace";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
 
@@ -245,7 +245,7 @@ class roiaware_pool3d_forward : public testing::Test {
 
     if (argmax_) {
       VLOG(4) << "Destroy argmax";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(argmax_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(argmax_));
       argmax_ = nullptr;
     }
 
@@ -257,7 +257,7 @@ class roiaware_pool3d_forward : public testing::Test {
 
     if (pts_idx_of_voxels_) {
       VLOG(4) << "Destroy pts_idx_of_voxels";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(pts_idx_of_voxels_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(pts_idx_of_voxels_));
       pts_idx_of_voxels_ = nullptr;
     }
 
@@ -269,7 +269,7 @@ class roiaware_pool3d_forward : public testing::Test {
 
     if (pooled_features_) {
       VLOG(4) << "Destroy pooled_features";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(pooled_features_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(pooled_features_));
       pooled_features_ = nullptr;
     }
   }

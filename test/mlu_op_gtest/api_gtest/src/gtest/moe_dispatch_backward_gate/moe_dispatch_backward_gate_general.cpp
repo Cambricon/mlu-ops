@@ -65,11 +65,11 @@ class moe_dispatch_backward_gate_general
           indices_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(indices_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&indices_,
                        mluOpDataTypeBytes(indices_params.get_dtype()) * 10));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&indices_,
                                mluOpDataTypeBytes(indices_params.get_dtype()) *
                                    mluOpGetTensorElementNum(indices_desc_)));
@@ -83,12 +83,12 @@ class moe_dispatch_backward_gate_general
           locations_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(locations_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&locations_,
                        mluOpDataTypeBytes(locations_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&locations_,
                        mluOpDataTypeBytes(locations_params.get_dtype()) *
                            mluOpGetTensorElementNum(locations_desc_)));
@@ -102,12 +102,12 @@ class moe_dispatch_backward_gate_general
 
       if (mluOpGetTensorElementNum(input_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&input_,
                        mluOpDataTypeBytes(input_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&input_, mluOpDataTypeBytes(input_params.get_dtype()) *
                                     mluOpGetTensorElementNum(input_desc_)));
       }
@@ -120,11 +120,11 @@ class moe_dispatch_backward_gate_general
           dispatch_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(dispatch_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&dispatch_,
                        mluOpDataTypeBytes(dispatch_params.get_dtype()) * 10));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&dispatch_,
                                mluOpDataTypeBytes(dispatch_params.get_dtype()) *
                                    mluOpGetTensorElementNum(dispatch_desc_)));
@@ -138,12 +138,12 @@ class moe_dispatch_backward_gate_general
           grad_gates_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(grad_gates_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_gates_,
                        mluOpDataTypeBytes(grad_gates_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_gates_,
                        mluOpDataTypeBytes(grad_gates_params.get_dtype()) *
                            mluOpGetTensorElementNum(grad_gates_desc_)));
@@ -167,7 +167,7 @@ class moe_dispatch_backward_gate_general
       destroy();
       return expected_status_ == status;
     }
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+    GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
 
     status = mluOpMoeDispatchBackwardGate(
         handle_, indices_desc_, indices_, locations_desc_, locations_,
@@ -192,7 +192,7 @@ class moe_dispatch_backward_gate_general
 
     if (indices_) {
       VLOG(4) << "Destroy indices_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indices_));
       indices_ = nullptr;
     }
 
@@ -204,7 +204,7 @@ class moe_dispatch_backward_gate_general
 
     if (locations_) {
       VLOG(4) << "Destroy locations_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(locations_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(locations_));
       locations_ = nullptr;
     }
 
@@ -216,7 +216,7 @@ class moe_dispatch_backward_gate_general
 
     if (input_) {
       VLOG(4) << "Destroy input_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
       input_ = nullptr;
     }
 
@@ -228,7 +228,7 @@ class moe_dispatch_backward_gate_general
 
     if (dispatch_) {
       VLOG(4) << "Destroy dispatch_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(dispatch_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(dispatch_));
       dispatch_ = nullptr;
     }
 
@@ -240,7 +240,7 @@ class moe_dispatch_backward_gate_general
 
     if (grad_gates_) {
       VLOG(4) << "Destroy grad_gates_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_gates_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_gates_));
       grad_gates_ = nullptr;
     }
   }

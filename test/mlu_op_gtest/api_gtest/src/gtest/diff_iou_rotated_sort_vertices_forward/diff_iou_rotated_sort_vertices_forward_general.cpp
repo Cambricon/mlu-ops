@@ -52,12 +52,12 @@ class diff_iou_rotated_sort_vertices_forward_general
           vertices_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(vertices_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&vertices_,
                        mluOpDataTypeBytes(vertices_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-             CNRT_RET_SUCCESS ==
+             cnrtSuccess ==
             cnrtMalloc(&vertices_,
                        mluOpDataTypeBytes(vertices_params.get_dtype()) *
                        mluOpGetTensorElementNum(vertices_desc_)));
@@ -70,12 +70,12 @@ class diff_iou_rotated_sort_vertices_forward_general
           mask_params.get_dim_nb(), mask_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(mask_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&mask_,
                        mluOpDataTypeBytes(mask_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&mask_,
                        mluOpDataTypeBytes(mask_params.get_dtype()) *
                        mluOpGetTensorElementNum(mask_desc_)));
@@ -89,13 +89,13 @@ class diff_iou_rotated_sort_vertices_forward_general
           num_valid_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(num_valid_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &num_valid_,
                 mluOpDataTypeBytes(num_valid_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&num_valid_,
                        mluOpDataTypeBytes(num_valid_params.get_dtype()) *
                            mluOpGetTensorElementNum(num_valid_desc_)));
@@ -108,11 +108,11 @@ class diff_iou_rotated_sort_vertices_forward_general
           idx_params.get_dim_nb(), idx_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(idx_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&idx_, mluOpDataTypeBytes(idx_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&idx_, mluOpDataTypeBytes(idx_params.get_dtype()) *
                               mluOpGetTensorElementNum(idx_desc_)));
       }
@@ -154,7 +154,7 @@ class diff_iou_rotated_sort_vertices_forward_general
 
     if (vertices_) {
       VLOG(4) << "Destroy vertices_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(vertices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(vertices_));
       vertices_ = nullptr;
     }
 
@@ -166,7 +166,7 @@ class diff_iou_rotated_sort_vertices_forward_general
 
     if (mask_) {
       VLOG(4) << "Destroy mask_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(mask_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(mask_));
       mask_ = nullptr;
     }
 
@@ -178,7 +178,7 @@ class diff_iou_rotated_sort_vertices_forward_general
 
     if (num_valid_) {
       VLOG(4) << "Destroy num_valid_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(num_valid_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(num_valid_));
       num_valid_ = nullptr;
     }
 
@@ -190,7 +190,7 @@ class diff_iou_rotated_sort_vertices_forward_general
 
     if (idx_) {
       VLOG(4) << "Destroy idx_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(idx_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(idx_));
       idx_ = nullptr;
     }
   }
