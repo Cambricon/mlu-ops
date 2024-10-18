@@ -14328,6 +14328,24 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  *   output is n/2 + 1 non-redundant complex numbers. This requires a padding of input array.
  * - For in-place N-D real-to-complex FFTs, extra padding of the real-data array on the innermost
  *   dimension is necessary to accommodate the size of the complex-data output.
+ * - For 2D FFTs, cases with strides that meet the following conditions have
+ *   better performance:
+ *     - real-to-complex:
+ *       - n[0] < 200, n[0] == inembed[0], onembed[0] == n[0]
+ *       - n[1] < 200, n[1] == inembed[1], onembed[1] == n[1]/2+1
+ *       - input:  dims[batch, n0, n1], strides[1, batch*n1, batch]
+ *       - output: dims[batch, n0, n1/2+1], strides[1, batch*(n1/2+1), batch]
+ *     - complex-to-complex:
+ *       - n[0] < 200, n[0] == inembed[0], onembed[0] == n[0]
+ *       - n[1] < 200, n[1] == inembed[1], onembed[1] == n[1]
+ *       - input:  dims[batch, n0, n1], strides[1, batch*n1, batch]
+ *       - output: dims[batch, n0, n1], strides[1, batch*n1, batch]
+ *     - complex-to-real:
+ *       - n[0] < 200, n[0] == inembed[0], onembed[0] == n[0]
+ *       - n[1] < 200, n[1]/2+1 == inembed[1], onembed[1] == n[1]
+ *       - input:  dims[batch, n0, n1/2+1], strides[1, batch*(n1/2+1), batch]
+ *       - output: dims[batch, n0, n1], strides[1, batch*n1, batch]
+ *
  * - When \p input contains NaN or infinity and the input onchip data type of FFT is not quantized
  *   data type, the output is computed through the FFT formula with computation rules of NaN or
  *   infinity based on IEEE 754.
