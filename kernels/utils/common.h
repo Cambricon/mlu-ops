@@ -25,6 +25,7 @@
 #ifndef KERNELS_UTILS_COMMON_H_
 #define KERNELS_UTILS_COMMON_H_
 
+#include <algorithm>
 #include <type_traits>
 
 #include "float.h"
@@ -451,7 +452,7 @@ __mlu_func__ void __mluop_int322float(float *dst, float *dst_addition,
 __mlu_func__ void __mluop_float2int32(int32_t *dst, float *dst_addition,
                                       float *src, float *src_addition,
                                       int32_t src_count) {
-#if __BANG_ARCH__ >= 322
+#if __BANG_ARCH__ >= 372
   __bang_float2int32_tz((int32_t *)dst, (float *)src, src_count, 0);
 #else
   // sign ===> src_addition
@@ -708,6 +709,198 @@ __mlu_vector__ void __mluop_get_indices(float *dst, float start_index,
   for (int iter = 0; iter < repeat; iter++) {
     __vv_store(dst + iter * BlockDim, r_out);
     __vv_add(r_out, r_out, r_dim);
+  }
+}
+
+template <typename T>
+__mlu_func__ void __mlu_op_arange_base_(T *dst_nram, uint32_t numel,
+                                      T start_index, T step) {
+  for (uint32_t i = 0; i < numel; i++) {
+    dst_nram[i] = start_index + i * step;
+  }
+}
+
+#define MLUOP_ARANGE_VV_IMPL(VVType, vv_num, dst_nram, start_index, step) \
+  do {                                                                   \
+    VVType vv_index[8];                                                  \
+    __vv_index(vv_index[0], start_index, step);                          \
+    __vv_add(vv_index[1], vv_index[0], 1 * vv_num * step);               \
+    __vv_add(vv_index[2], vv_index[0], 2 * vv_num * step);               \
+    __vv_add(vv_index[3], vv_index[0], 3 * vv_num * step);               \
+    __vv_add(vv_index[4], vv_index[0], 4 * vv_num * step);               \
+    __vv_add(vv_index[5], vv_index[0], 5 * vv_num * step);               \
+    __vv_add(vv_index[6], vv_index[0], 6 * vv_num * step);               \
+    __vv_add(vv_index[7], vv_index[0], 7 * vv_num * step);               \
+    __vv_store(dst_nram, vv_index[0], vv_num);                           \
+    __vv_store(dst_nram + vv_num, vv_index[1], vv_num);                  \
+    __vv_store(dst_nram + 2 * vv_num, vv_index[2], vv_num);              \
+    __vv_store(dst_nram + 3 * vv_num, vv_index[3], vv_num);              \
+    __vv_store(dst_nram + 4 * vv_num, vv_index[4], vv_num);              \
+    __vv_store(dst_nram + 5 * vv_num, vv_index[5], vv_num);              \
+    __vv_store(dst_nram + 6 * vv_num, vv_index[6], vv_num);              \
+    __vv_store(dst_nram + 7 * vv_num, vv_index[7], vv_num);              \
+  } while (false)
+
+template <typename T>
+__mlu_vector__ void __mlu_op_arange_vv_(T *dst_nram, T start_index, T step) {
+#if 592 < _BANG_ARCH_
+  static_assert(
+      (std::is_same<T, float>::value || std::is_same<T, half>::value ||
+       std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value),
+      "_cnnl_arange_vv type error!");
+#else  // #if 592 < _BANG_ARCH_
+  static_assert(
+      (std::is_same<T, float>::value || std::is_same<T, half>::value ||
+       std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value ||
+       std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value),
+      "_cnnl_arange_vv type error!");
+#endif
+
+  const uint32_t vv_num = __vv_get_length() / sizeof(T);
+  if (std::is_same<T, uint16_t>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_uint16, vv_num, dst_nram, start_index, step);
+  } else if (std::is_same<T, int16_t>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_int16, vv_num, dst_nram, start_index, step);
+  }
+#if _BANG_ARCH_ <= 592
+  else if (std::is_same<T, uint32_t>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_uint32, vv_num, dst_nram, start_index, step);
+  } else if (std::is_same<T, int32_t>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_int32, vv_num, dst_nram, start_index, step);
+  }
+#endif  // if _BANG_ARCH_ <= 592
+  else if (std::is_same<T, float>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_float, vv_num, dst_nram, start_index, step);
+  } else if (std::is_same<T, half>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_half, vv_num, dst_nram, start_index, step);
+  }
+  return;
+}
+
+#if 592 < _BANG_ARCH_
+template <typename T>
+__mlu_func__ void __mlu_op_gen_integer_incr_seq_(T *dst_nram, uint32_t elem_count,
+                                               T start = 0, T step = 1) {
+  static_assert(
+      (std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value ||
+       std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>),
+      "__mlu_op_gen_integer_incr_seq type error!");
+  if (std::is_same<T, uint32_t>::value) {
+    __bang_incseq(reinterpret_cast<int32_t *>(dst_nram), elem_count);
+  } else if (std::is_same<T, uint64_t>::value) {
+    __bang_incseq(reinterpret_cast<int64_t *>(dst_nram), elem_count);
+  } else {
+    __bang_incseq(dst_nram, elem_count);
+  }
+
+  if (start != 0) {
+    if (std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value) {
+      if (step != 1) {
+        __bang_mul_scalar(dst_nram, dst_nram, step, elem_count);
+      }
+      __bang_add_scalar(dst_nram, dst_nram, start, elem_count);
+    } else {
+      __bang_fusion(FUSION_FMA, dst_nram, dst_nram, step, start, elem_count);
+    }
+  }
+}
+#endif  // if 592 < _BANG_ARCH_
+
+#define u32_sizeof(T) ((uint32_t)sizeof(T))
+
+template <typename T>
+__mlu_func__ void __mlu_op_arange_by_expand_(T *dst_nram, uint32_t numel,
+                                           T start_index = 0, T step = 1) {
+#if 592 < _BANG_ARCH_
+  static_assert(
+      (std::is_same<T, float>::value || std::is_same<T, half>::value ||
+       std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value),
+      "_cnnl_arange_by_expand type error!");
+#else   // if 592 < _BANG_ARCH_
+  static_assert(
+      (std::is_same<T, float>::value || std::is_same<T, half>::value ||
+       std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value ||
+       std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value ||
+       std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value),
+      "_cnnl_arange_by_expand type error!");
+#endif  // if 592 < _BANG_ARCH_
+
+  // using AluGenSize = std::integral_constant<uint32_t, NFU_ALIGN_SIZE>;
+  using GuGenSize = std::integral_constant<uint32_t, 2048>;
+  uint32_t gu_gen_num = GuGenSize::value / u32_sizeof(T);
+  uint32_t alu_gen_num = NFU_ALIGN_SIZE / u32_sizeof(T);
+  uint32_t base_num = alu_gen_num;
+#if _BANG_ARCH_ <= 592
+  if (std::is_same<T, uint64_t>::value || std::is_same<T, int64_t>::value) {
+    const uint32_t prologue_num = std::min(numel, base_num);
+    __mlu_op_arange_base_(dst_nram, prologue_num, start_index, step);
+
+    if (numel <= base_num) {
+      return;
+    }
+  } else
+#endif  // if _BANG_ARCH_ <= 592
+  {
+    if (numel <= gu_gen_num) {
+      const uint32_t prologue_num = std::min(numel, base_num);
+      __mlu_op_arange_base_(dst_nram, prologue_num, start_index, step);
+
+      if (numel <= base_num) {
+        return;
+      }
+    } else {
+      __mlu_op_arange_vv_(dst_nram, start_index, step);
+      base_num = gu_gen_num;
+    }
+  }
+  // base_num = 2^exp
+  uint32_t exp = 0;
+  asm volatile("findlast1.gpr.b32 %[dst], %[src];\n\t"
+               : [ dst ] "+&r"(exp)
+               : [ src ] "r"(base_num));
+  // numel = count * base_num + remain
+  const uint32_t segnum = numel >> exp;
+  // count = 2^repeat
+  uint32_t repeat = 0;
+  asm volatile("findlast1.gpr.b32 %[dst], %[src];\n\t"
+               : [ dst ] "+&r"(repeat)
+               : [ src ] "r"(segnum));
+  uint32_t count = 1;
+  for (uint32_t i = 0; i < repeat; ++i) {
+    __bang_add_scalar(dst_nram + count * base_num, dst_nram,
+                      count * base_num * step, count * base_num);
+    count *= 2;
+  }
+
+  const uint32_t remain = numel - count * base_num;
+  if (0 < remain) {
+    __bang_add_scalar(dst_nram + count * base_num, dst_nram,
+                      count * base_num * step, remain);
+  }
+}
+/***************************************************************************
+
+    CNNL FUNC: __mlu_op_gen_stage_index.
+    param "dst_nram" is a nram pointer to the generated result.
+    param "numel" is the element number of to be generated.
+    param "start_index" is the starting value for the set of points. Default: 0.
+    param "step" is the gap between each pair of adjacent points points.
+   Default: 1. dst_addition. remarks: Detailed introduction for reference
+    http://wiki.cambricon.com/pages/viewpage.action?pageId=119467501.
+    int64_t and uint64_t types are under-optimized and can be improved with GU.
+    *************************************************************************/
+
+template <typename T>
+__mlu_func__ void __mlu_op_gen_stage_index(T *dst_nram, uint32_t numel,
+                                         T start_index = 0, T step = 1) {
+#if 592 < _BANG_ARCH_
+  if (std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value ||
+      std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value) {
+    __mlu_op_gen_integer_incr_seq_(dst_nram, numel, start_index, step);
+  } else
+#endif  // if 592 < _BANG_ARCH_
+  {
+    __mlu_op_arange_by_expand_(dst_nram, numel, start_index, step);
   }
 }
 
