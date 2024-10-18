@@ -53,12 +53,12 @@ class moe_dispatch_backward_data : public testing::Test {
     if (gates) {
       if (gates_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&gates_, mluOpGetTensorElementNum(gates_desc_) *
                                     mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&gates_, 64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
     }
@@ -74,12 +74,12 @@ class moe_dispatch_backward_data : public testing::Test {
     if (indices) {
       if (indices_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&indices_, mluOpGetTensorElementNum(indices_desc_) *
                                       mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&indices_, 64 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
     }
@@ -95,11 +95,11 @@ class moe_dispatch_backward_data : public testing::Test {
     if (locations) {
       if (locations_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&locations_, mluOpGetTensorElementNum(locations_desc_) *
                                         mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&locations_,
                                64 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
@@ -116,12 +116,12 @@ class moe_dispatch_backward_data : public testing::Test {
     if (dispatch) {
       if (dispatch_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&dispatch_, mluOpGetTensorElementNum(dispatch_desc_) *
                                        mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&dispatch_, 64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
     }
@@ -136,12 +136,12 @@ class moe_dispatch_backward_data : public testing::Test {
 
     if (grad_input) {
       if (grad_input_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&grad_input_,
                                mluOpGetTensorElementNum(grad_input_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&grad_input_,
                                64 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
@@ -173,7 +173,7 @@ class moe_dispatch_backward_data : public testing::Test {
 
     if (gates_) {
       VLOG(4) << "Destroy gates_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(gates_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(gates_));
       gates_ = nullptr;
     }
 
@@ -185,7 +185,7 @@ class moe_dispatch_backward_data : public testing::Test {
 
     if (indices_) {
       VLOG(4) << "Destroy indices_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indices_));
       indices_ = nullptr;
     }
 
@@ -197,7 +197,7 @@ class moe_dispatch_backward_data : public testing::Test {
 
     if (locations_) {
       VLOG(4) << "Destroy locations_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(locations_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(locations_));
       locations_ = nullptr;
     }
 
@@ -209,7 +209,7 @@ class moe_dispatch_backward_data : public testing::Test {
 
     if (dispatch_) {
       VLOG(4) << "Destroy dispatch_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(dispatch_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(dispatch_));
       dispatch_ = nullptr;
     }
 
@@ -221,7 +221,7 @@ class moe_dispatch_backward_data : public testing::Test {
 
     if (grad_input_) {
       VLOG(4) << "Destroy grad_input_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_input_));
       grad_input_ = nullptr;
     }
   }

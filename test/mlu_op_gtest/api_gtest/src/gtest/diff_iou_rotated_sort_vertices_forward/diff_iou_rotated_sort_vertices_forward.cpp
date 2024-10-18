@@ -57,12 +57,12 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
 
     if (vertices) {
       if (vertices_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&vertices_, MLUOP_DTYPE_FLOAT *
                                          mluOpGetTensorElementNum(
                                              vertices_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&vertices_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -77,11 +77,11 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
 
     if (mask) {
       if (mask_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&mask_, MLUOP_DTYPE_BOOL *
                                          mluOpGetTensorElementNum(mask_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&mask_, MLUOP_DTYPE_BOOL * 2));
       }
     }
@@ -96,12 +96,12 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
 
     if (num_valid) {
       if (num_valid_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&num_valid_,
                                MLUOP_DTYPE_INT32 * mluOpGetTensorElementNum(
                                                        num_valid_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&num_valid_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -116,11 +116,11 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
 
     if (idx) {
       if (idx_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&idx_, MLUOP_DTYPE_INT32 *
                                         mluOpGetTensorElementNum(idx_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&idx_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -151,7 +151,7 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
 
     if (vertices_) {
       VLOG(4) << "Destroy vertices_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(vertices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(vertices_));
       vertices_ = nullptr;
     }
 
@@ -163,7 +163,7 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
 
     if (mask_) {
       VLOG(4) << "Destroy mask_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(mask_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(mask_));
       mask_ = nullptr;
     }
 
@@ -175,7 +175,7 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
 
     if (num_valid_) {
       VLOG(4) << "Destroy num_valid_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(num_valid_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(num_valid_));
       num_valid_ = nullptr;
     }
 
@@ -187,7 +187,7 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
 
     if (idx_) {
       VLOG(4) << "Destroy idx_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(idx_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(idx_));
       idx_ = nullptr;
     }
   }

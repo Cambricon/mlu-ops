@@ -48,7 +48,7 @@ void policyFunc(const mluOpHandle_t handle,
   k_dim->y = (num_bins / core_limit) > cluster_limit ? cluster_limit
                                                      : (num_bins / core_limit);
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
 }
 
 static mluOpStatus_t DeformRoiPoolForwardPreCheck(

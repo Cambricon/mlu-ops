@@ -386,9 +386,9 @@ static mluOpStatus_t policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                                 cnrtFunctionType_t *k_type,
                                 uint64_t total_num) {
   if (handle->sram_size <= 0) {
-    *k_type = CNRT_FUNC_TYPE_BLOCK;
+    *k_type = cnrtFuncTypeBlock;
   } else {
-    *k_type = CNRT_FUNC_TYPE_UNION1;
+    *k_type = cnrtFuncTypeUnion1;
   }
   uint32_t union_number = mluop::runtime::getClusterLimitCapability(handle);
 

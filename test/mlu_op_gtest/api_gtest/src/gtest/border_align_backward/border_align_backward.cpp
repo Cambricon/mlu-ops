@@ -49,7 +49,7 @@ class border_align_backward : public testing::Test {
           grad_output_dims.size(), grad_output_dims.data()));
     }
     if (grad_output) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&grad_output_,
                              16 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
@@ -62,7 +62,7 @@ class border_align_backward : public testing::Test {
     }
     if (boxes) {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&boxes_, 16 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
     if (argmax_idx_desc) {
@@ -74,7 +74,7 @@ class border_align_backward : public testing::Test {
     }
     if (argmax_idx) {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&argmax_idx_, 16 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
     if (grad_input_desc) {
@@ -86,7 +86,7 @@ class border_align_backward : public testing::Test {
     }
     if (grad_input) {
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&grad_input_, 16 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
     }
   }
@@ -128,7 +128,7 @@ class border_align_backward : public testing::Test {
       }
       if (grad_output_) {
         VLOG(4) << "Destroy grad_output_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_output_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(grad_output_));
         grad_output_ = nullptr;
       }
       if (boxes_desc_) {
@@ -138,7 +138,7 @@ class border_align_backward : public testing::Test {
       }
       if (boxes_) {
         VLOG(4) << "Destroy boxes_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(boxes_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(boxes_));
         boxes_ = nullptr;
       }
       if (argmax_idx_desc_) {
@@ -148,7 +148,7 @@ class border_align_backward : public testing::Test {
       }
       if (argmax_idx_) {
         VLOG(4) << "Destroy argmax_idx_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(argmax_idx_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(argmax_idx_));
         argmax_idx_ = nullptr;
       }
       if (grad_input_desc_) {
@@ -158,7 +158,7 @@ class border_align_backward : public testing::Test {
       }
       if (grad_input_) {
         VLOG(4) << "Destroy grad_input_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_input_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(grad_input_));
         grad_input_ = nullptr;
       }
     } catch (const std::exception &e) {

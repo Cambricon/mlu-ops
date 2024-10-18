@@ -53,7 +53,7 @@ class roiaware_pool3d_forward_general
           rois_desc_, rois_params.get_layout(), rois_params.get_dtype(),
           rois_params.get_dim_nb(), rois_params.get_dim_size().data()));
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&rois_, mluOpDataTypeBytes(rois_params.get_dtype()) * 10));
 
       MLUOpTensorParam pts_params = std::get<1>(GetParam());
@@ -62,7 +62,7 @@ class roiaware_pool3d_forward_general
           pts_desc_, pts_params.get_layout(), pts_params.get_dtype(),
           pts_params.get_dim_nb(), pts_params.get_dim_size().data()));
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&pts_, mluOpDataTypeBytes(pts_params.get_dtype()) * 10));
 
       MLUOpTensorParam pts_feature_params = std::get<2>(GetParam());
@@ -72,7 +72,7 @@ class roiaware_pool3d_forward_general
           pts_feature_params.get_dtype(), pts_feature_params.get_dim_nb(),
           pts_feature_params.get_dim_size().data()));
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&pts_feature_,
                      mluOpDataTypeBytes(pts_feature_params.get_dtype()) * 10));
 
@@ -84,7 +84,7 @@ class roiaware_pool3d_forward_general
           pooled_features_params.get_dim_nb(),
           pooled_features_params.get_dim_size().data()));
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(
               &pooled_features_,
               mluOpDataTypeBytes(pooled_features_params.get_dtype()) * 10));
@@ -95,7 +95,7 @@ class roiaware_pool3d_forward_general
           argmax_desc_, argmax_params.get_layout(), argmax_params.get_dtype(),
           argmax_params.get_dim_nb(), argmax_params.get_dim_size().data()));
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(&argmax_,
                      mluOpDataTypeBytes(argmax_params.get_dtype()) * 10));
 
@@ -107,7 +107,7 @@ class roiaware_pool3d_forward_general
           pts_idx_of_voxels_params.get_dim_nb(),
           pts_idx_of_voxels_params.get_dim_size().data()));
       GTEST_CHECK(
-          CNRT_RET_SUCCESS ==
+          cnrtSuccess ==
           cnrtMalloc(
               &pts_idx_of_voxels_,
               mluOpDataTypeBytes(pts_idx_of_voxels_params.get_dtype()) * 10));
@@ -137,7 +137,7 @@ class roiaware_pool3d_forward_general
       destroy();
       return expected_status_ == status;
     }
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+    GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
     status = mluOpRoiAwarePool3dForward(
         handle_, pool_method_, boxes_num_, pts_num_, channels_, rois_desc_,
         rois_, pts_desc_, pts_, pts_feature_desc_, pts_feature_, workspace_,
@@ -162,7 +162,7 @@ class roiaware_pool3d_forward_general
       }
 
       if (rois_) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rois_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(rois_));
         rois_ = nullptr;
       }
 
@@ -172,7 +172,7 @@ class roiaware_pool3d_forward_general
       }
 
       if (pts_) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(pts_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(pts_));
         pts_ = nullptr;
       }
 
@@ -182,12 +182,12 @@ class roiaware_pool3d_forward_general
       }
 
       if (pts_feature_) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(pts_feature_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(pts_feature_));
         pts_feature_ = nullptr;
       }
 
       if (workspace_) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
         workspace_ = nullptr;
       }
 
@@ -197,7 +197,7 @@ class roiaware_pool3d_forward_general
       }
 
       if (argmax_) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(argmax_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(argmax_));
         argmax_ = nullptr;
       }
 
@@ -207,7 +207,7 @@ class roiaware_pool3d_forward_general
       }
 
       if (pts_idx_of_voxels_) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(pts_idx_of_voxels_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(pts_idx_of_voxels_));
         pts_idx_of_voxels_ = nullptr;
       }
 
@@ -217,7 +217,7 @@ class roiaware_pool3d_forward_general
       }
 
       if (pooled_features_) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(pooled_features_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(pooled_features_));
         pooled_features_ = nullptr;
       }
     } catch (const std::exception &e) {

@@ -249,7 +249,7 @@ void TestSuite::ThreadX() {
   // in current thread, We should ensure different thread access the same device
   // when we use default queue. Sadly, CNRT have other multithread restriction,
   // we may need to write new thread model.
-  ASSERT_EQ(cnrtSetDevice(global_var.dev_id_), CNRT_RET_SUCCESS);
+  ASSERT_EQ(cnrtSetDevice(global_var.dev_id_), cnrtSuccess);
 
   size_t thread_num = global_var.thread_num_;
   size_t max_exe_vec_num = thread_num * 1.5;
@@ -262,7 +262,7 @@ void TestSuite::ThreadX() {
     auto it = ctx->been_initialized.find(std::this_thread::get_id());
     if (it == ctx->been_initialized
                   .end()) {  // if current thread has not been set device.
-      ASSERT_EQ(cnrtSetDevice(global_var.dev_id_), CNRT_RET_SUCCESS);
+      ASSERT_EQ(cnrtSetDevice(global_var.dev_id_), cnrtSuccess);
       ctx->been_initialized.insert(std::this_thread::get_id());
     }
   };

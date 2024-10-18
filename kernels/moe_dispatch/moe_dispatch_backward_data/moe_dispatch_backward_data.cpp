@@ -36,7 +36,7 @@
 static void PolicyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type) {
   // union1 policy func
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   // dimx equals to num of MLU Cores in each cluster
   k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   // dimy equals to num of current available clusters

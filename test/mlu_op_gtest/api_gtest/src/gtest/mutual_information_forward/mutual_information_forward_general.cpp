@@ -52,10 +52,10 @@ class mutual_information_forward_general
           px_params.get_dim_nb(), px_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(px_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&px_, mluOpDataTypeBytes(px_params.get_dtype()) * 2));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&px_, mluOpDataTypeBytes(px_params.get_dtype()) *
                                          mluOpGetTensorElementNum(px_desc_)));
       }
@@ -67,10 +67,10 @@ class mutual_information_forward_general
           py_params.get_dim_nb(), py_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(py_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&py_, mluOpDataTypeBytes(py_params.get_dtype()) * 2));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&py_, mluOpDataTypeBytes(py_params.get_dtype()) *
                                          mluOpGetTensorElementNum(py_desc_)));
       }
@@ -83,13 +83,13 @@ class mutual_information_forward_general
           opt_boundary_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(opt_boundary_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &opt_boundary_,
                 mluOpDataTypeBytes(opt_boundary_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&opt_boundary_,
                        mluOpDataTypeBytes(opt_boundary_params.get_dtype()) *
                            mluOpGetTensorElementNum(opt_boundary_desc_)));
@@ -102,10 +102,10 @@ class mutual_information_forward_general
           p_params.get_dim_nb(), p_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(p_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&p_, mluOpDataTypeBytes(p_params.get_dtype()) * 2));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&p_, mluOpDataTypeBytes(p_params.get_dtype()) *
                                         mluOpGetTensorElementNum(p_desc_)));
       }
@@ -117,11 +117,11 @@ class mutual_information_forward_general
           ans_params.get_dim_nb(), ans_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(ans_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&ans_, mluOpDataTypeBytes(ans_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&ans_, mluOpDataTypeBytes(ans_params.get_dtype()) *
                                   mluOpGetTensorElementNum(ans_desc_)));
       }
@@ -129,7 +129,7 @@ class mutual_information_forward_general
       target_device_ = std::get<5>(GetParam());
       expected_status_ = std::get<6>(GetParam());
 
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&workspace_, MLUOP_DTYPE_FLOAT * workspace_size_));
     } catch (const std::exception &e) {
       FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -167,7 +167,7 @@ class mutual_information_forward_general
 
     if (px_) {
       VLOG(4) << "Destroy px_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(px_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(px_));
       px_ = nullptr;
     }
 
@@ -179,7 +179,7 @@ class mutual_information_forward_general
 
     if (py_) {
       VLOG(4) << "Destroy py_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(py_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(py_));
       py_ = nullptr;
     }
 
@@ -191,7 +191,7 @@ class mutual_information_forward_general
 
     if (opt_boundary_) {
       VLOG(4) << "Destroy opt_boundary_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(opt_boundary_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(opt_boundary_));
       opt_boundary_ = nullptr;
     }
 
@@ -203,7 +203,7 @@ class mutual_information_forward_general
 
     if (p_) {
       VLOG(4) << "Destroy p_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(p_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(p_));
       p_ = nullptr;
     }
 
@@ -215,13 +215,13 @@ class mutual_information_forward_general
 
     if (ans_) {
       VLOG(4) << "Destroy ans_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(ans_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(ans_));
       ans_ = nullptr;
     }
 
     if (workspace_) {
       VLOG(4) << "Destroy workspace_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
   }

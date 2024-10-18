@@ -39,7 +39,7 @@ CPURuntime::CPURuntime() {}
 CPURuntime::~CPURuntime() {}
 
 // all member variable are shared_ptr.
-cnrtRet_t CPURuntime::destroy() { return CNRT_RET_SUCCESS; }
+cnrtRet_t CPURuntime::destroy() { return cnrtSuccess; }
 
 void *CPURuntime::allocate(void *ptr, std::string name) {
   if (ptr == NULL) {
@@ -119,12 +119,12 @@ bool MLURuntime::checkOneMemBlock(const struct MemBlock &mem_block) {
   char *footer = header + mem_block.raw_bytes - mask_bytes_ -
                  mem_block.unalign_address_offset;
   GTEST_CHECK(
-      CNRT_RET_SUCCESS == cnrtMemcpy((void *)header_check_.get(), header,
-                                     mask_bytes_, CNRT_MEM_TRANS_DIR_DEV2HOST),
+      cnrtSuccess == cnrtMemcpy((void *)header_check_.get(), header,
+                                     mask_bytes_, cnrtMemcpyDevToHost),
       "MLURuntime: memcpy device to host failed when check overwritten");
   GTEST_CHECK(
-      CNRT_RET_SUCCESS == cnrtMemcpy((void *)footer_check_.get(), footer,
-                                     mask_bytes_, CNRT_MEM_TRANS_DIR_DEV2HOST),
+      cnrtSuccess == cnrtMemcpy((void *)footer_check_.get(), footer,
+                                     mask_bytes_, cnrtMemcpyDevToHost),
       "MLURuntime: memcpy device to host failed when check overwritten");
 
   if (!check_byte((void *)header_check_.get(), (void *)header_mask_.get(),
@@ -147,11 +147,11 @@ bool MLURuntime::checkOneMemBlock(const struct MemBlock &mem_block) {
 
 MLURuntime::~MLURuntime() {}
 bool MLURuntime::freeOneMemBlock(const struct MemBlock &mem_block) {
-  cnrtRet_t ret = CNRT_RET_SUCCESS;
+  cnrtRet_t ret = cnrtSuccess;
   bool ok = true;
   char *header = mem_block.header;
   ret = cnrtFree(header - mem_block.unalign_address_offset);
-  if (ret != CNRT_RET_SUCCESS) {
+  if (ret != cnrtSuccess) {
     ADD_FAILURE() << "MLURuntime: free mlu memory failed. Addr = "
                   << (void *)header;
     ok = false;
@@ -161,7 +161,7 @@ bool MLURuntime::freeOneMemBlock(const struct MemBlock &mem_block) {
 }
 
 cnrtRet_t MLURuntime::destroy() {
-  cnrtRet_t ret = CNRT_RET_SUCCESS;
+  cnrtRet_t ret = cnrtSuccess;
   bool ok = true;
   for (auto mem_block : memory_blocks_) {
     ok = ok && (freeOneMemBlock(mem_block));
@@ -213,7 +213,7 @@ void *MLURuntime::allocate(size_t num_bytes, std::string name,
   if (true == check_enable_) {
     raw_bytes += 2 * mask_bytes_;
   }
-  cnrtRet_t ret = CNRT_RET_SUCCESS;
+  cnrtRet_t ret = cnrtSuccess;
   if (!const_dram) {
     VLOG(4) << "memory allocated by cnrtMalloc";
     ret = cnrtMalloc((void **)&raw_addr, raw_bytes);
@@ -222,7 +222,7 @@ void *MLURuntime::allocate(size_t num_bytes, std::string name,
     ret = cnrtMallocConstant((void **)&raw_addr, raw_bytes);
   }
   printLinearMemoryMsg(raw_addr, raw_bytes);
-  if (raw_addr == NULL || ret != CNRT_RET_SUCCESS) {
+  if (raw_addr == NULL || ret != cnrtSuccess) {
     LOG(ERROR) << "MLURuntime: Failed to allocate " << num_bytes << " bytes.";
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
@@ -245,8 +245,8 @@ void *MLURuntime::allocate(size_t num_bytes, std::string name,
 #endif
 
   ret = cnrtMemcpy(header, (void *)header_mask_.get(), mask_bytes_,
-                   CNRT_MEM_TRANS_DIR_HOST2DEV);
-  if (ret != CNRT_RET_SUCCESS) {
+                   cnrtMemcpyHostToDev);
+  if (ret != cnrtSuccess) {
     LOG(ERROR) << "MLURuntime: Failed to copy header " << num_bytes
                << " bytes.";
     throw std::invalid_argument(std::string(__FILE__) + " +" +
@@ -255,8 +255,8 @@ void *MLURuntime::allocate(size_t num_bytes, std::string name,
   }
 
   ret = cnrtMemcpy(footer, (void *)footer_mask_.get(), mask_bytes_,
-                   CNRT_MEM_TRANS_DIR_HOST2DEV);
-  if (ret != CNRT_RET_SUCCESS) {
+                   cnrtMemcpyHostToDev);
+  if (ret != cnrtSuccess) {
     LOG(ERROR) << "MLURuntime: Failed to copy footer " << num_bytes
                << " bytes.";
     throw std::invalid_argument(std::string(__FILE__) + " +" +
@@ -275,13 +275,13 @@ void *MLURuntime::allocate(size_t num_bytes, std::string name,
 
 cnrtRet_t MLURuntime::deallocate(void *mlu_addr) {
   if (mlu_addr == NULL) {
-    return CNRT_RET_SUCCESS;
+    return cnrtSuccess;
   }
   char *header = (char *)mlu_addr;
   if (true == check_enable_) {
     header = header - mask_bytes_;
   }
-  cnrtRet_t ret = CNRT_RET_SUCCESS;
+  cnrtRet_t ret = cnrtSuccess;
   // get header and footer
   auto it = std::find_if(memory_blocks_.begin(), memory_blocks_.end(),
                          [=](MemBlock b) { return b.header == header; });

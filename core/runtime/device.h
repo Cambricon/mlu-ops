@@ -121,17 +121,17 @@ inline cnrtFunctionType_t castCnKernelClassToCnrtFuncType(KernelClass jobType) {
     default:
       return CNRT_FUNC_TYPE_MUTABLE;
     case CN_KERNEL_CLASS_BLOCK:
-      return CNRT_FUNC_TYPE_BLOCK;
+      return cnrtFuncTypeBlock;
     case CN_KERNEL_CLASS_UNION:
-      return CNRT_FUNC_TYPE_UNION1;
+      return cnrtFuncTypeUnion1;
     case CN_KERNEL_CLASS_UNION2:
-      return CNRT_FUNC_TYPE_UNION2;
+      return cnrtFuncTypeUnion2;
     case CN_KERNEL_CLASS_UNION4:
-      return CNRT_FUNC_TYPE_UNION4;
+      return cnrtFuncTypeUnion4;
     case CN_KERNEL_CLASS_UNION8:
-      return CNRT_FUNC_TYPE_UNION8;
+      return cnrtFuncTypeUnion8;
     case CN_KERNEL_CLASS_UNION16:
-      return CNRT_FUNC_TYPE_UNION16;
+      return cnrtFuncTypeUnion16;
   }
 }
 

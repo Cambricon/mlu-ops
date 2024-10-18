@@ -58,12 +58,12 @@ class ms_deform_attn_backward_general
 
       if (mluOpGetTensorElementNum(value_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&value_,
                        mluOpDataTypeBytes(value_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&value_, mluOpDataTypeBytes(value_params.get_dtype()) *
                                     mluOpGetTensorElementNum(value_desc_)));
       }
@@ -76,13 +76,13 @@ class ms_deform_attn_backward_general
           spatial_shapes_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(spatial_shapes_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &spatial_shapes_,
                 mluOpDataTypeBytes(spatial_shapes_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&spatial_shapes_,
                        mluOpDataTypeBytes(spatial_shapes_params.get_dtype()) *
                            mluOpGetTensorElementNum(spatial_shapes_desc_)));
@@ -99,13 +99,13 @@ class ms_deform_attn_backward_general
       if (mluOpGetTensorElementNum(level_start_index_desc_) >=
           LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &level_start_index_,
                 mluOpDataTypeBytes(level_start_index_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &level_start_index_,
                 mluOpDataTypeBytes(level_start_index_params.get_dtype()) *
@@ -120,13 +120,13 @@ class ms_deform_attn_backward_general
           sampling_loc_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(sampling_loc_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &sampling_loc_,
                 mluOpDataTypeBytes(sampling_loc_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&sampling_loc_,
                        mluOpDataTypeBytes(sampling_loc_params.get_dtype()) *
                            mluOpGetTensorElementNum(sampling_loc_desc_)));
@@ -140,12 +140,12 @@ class ms_deform_attn_backward_general
           attn_weight_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(attn_weight_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&attn_weight_,
                        mluOpDataTypeBytes(attn_weight_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&attn_weight_,
                        mluOpDataTypeBytes(attn_weight_params.get_dtype()) *
                            mluOpGetTensorElementNum(attn_weight_desc_)));
@@ -159,12 +159,12 @@ class ms_deform_attn_backward_general
           grad_output_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(grad_output_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_output_,
                        mluOpDataTypeBytes(grad_output_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_output_,
                        mluOpDataTypeBytes(grad_output_params.get_dtype()) *
                            mluOpGetTensorElementNum(grad_output_desc_)));
@@ -178,12 +178,12 @@ class ms_deform_attn_backward_general
           grad_value_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(grad_value_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_value_,
                        mluOpDataTypeBytes(grad_value_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_value_,
                        mluOpDataTypeBytes(grad_value_params.get_dtype()) *
                            mluOpGetTensorElementNum(grad_value_desc_)));
@@ -199,13 +199,13 @@ class ms_deform_attn_backward_general
       if (mluOpGetTensorElementNum(grad_sampling_loc_desc_) >=
           LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &grad_sampling_loc_,
                 mluOpDataTypeBytes(grad_sampling_loc_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &grad_sampling_loc_,
                 mluOpDataTypeBytes(grad_sampling_loc_params.get_dtype()) *
@@ -222,13 +222,13 @@ class ms_deform_attn_backward_general
       if (mluOpGetTensorElementNum(grad_attn_weight_desc_) >=
           LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &grad_attn_weight_,
                 mluOpDataTypeBytes(grad_attn_weight_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_attn_weight_,
                        mluOpDataTypeBytes(grad_attn_weight_params.get_dtype()) *
                            mluOpGetTensorElementNum(grad_attn_weight_desc_)));
@@ -277,7 +277,7 @@ class ms_deform_attn_backward_general
 
     if (value_) {
       VLOG(4) << "Destroy value";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(value_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(value_));
       value_ = nullptr;
     }
 
@@ -289,7 +289,7 @@ class ms_deform_attn_backward_general
 
     if (spatial_shapes_) {
       VLOG(4) << "Destroy spatial_shapes";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(spatial_shapes_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(spatial_shapes_));
       spatial_shapes_ = nullptr;
     }
 
@@ -301,7 +301,7 @@ class ms_deform_attn_backward_general
 
     if (level_start_index_) {
       VLOG(4) << "Destroy level_start_index";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(level_start_index_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(level_start_index_));
       level_start_index_ = nullptr;
     }
 
@@ -313,7 +313,7 @@ class ms_deform_attn_backward_general
 
     if (sampling_loc_) {
       VLOG(4) << "Destroy sampling_loc";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(sampling_loc_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(sampling_loc_));
       sampling_loc_ = nullptr;
     }
 
@@ -325,7 +325,7 @@ class ms_deform_attn_backward_general
 
     if (attn_weight_) {
       VLOG(4) << "Destroy attn_weight";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(attn_weight_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(attn_weight_));
       attn_weight_ = nullptr;
     }
 
@@ -337,7 +337,7 @@ class ms_deform_attn_backward_general
 
     if (grad_output_) {
       VLOG(4) << "Destroy grad_output";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_output_));
       grad_output_ = nullptr;
     }
 
@@ -349,7 +349,7 @@ class ms_deform_attn_backward_general
 
     if (grad_value_) {
       VLOG(4) << "Destroy grad_value";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_value_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_value_));
       grad_value_ = nullptr;
     }
 
@@ -361,7 +361,7 @@ class ms_deform_attn_backward_general
 
     if (grad_sampling_loc_) {
       VLOG(4) << "Destroy grad_sampling_loc";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_sampling_loc_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_sampling_loc_));
       grad_sampling_loc_ = nullptr;
     }
 
@@ -373,7 +373,7 @@ class ms_deform_attn_backward_general
 
     if (grad_attn_weight_) {
       VLOG(4) << "Destroy grad_attn_weight";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_attn_weight_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_attn_weight_));
       grad_attn_weight_ = nullptr;
     }
   }

@@ -370,7 +370,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
   k_dims.x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   k_dims.y = mluop::runtime::getClusterLimitCapability(handle);
   k_dims.z = 1;
-  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
+  cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
 
   if (boxes_num <= 10240) {
     VLOG(5) << "Launch Kernel KernelRoipointPool3d<<<Union" << k_type / CORE_DIM

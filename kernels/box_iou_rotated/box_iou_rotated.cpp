@@ -39,7 +39,7 @@ static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        const int num_box1, const int num_box2) {
   // When current MLU arch only support Block type job
   if (mluop::runtime::getJobLimitCapability(handle) == CN_KERNEL_CLASS_BLOCK) {
-    *k_type = CNRT_FUNC_TYPE_BLOCK;
+    *k_type = cnrtFuncTypeBlock;
     k_dim->x = 1;
     k_dim->y = 1;
     k_dim->z = 1;
@@ -48,7 +48,7 @@ static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
   }
 
   // union1 policy func
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   // dimx equals to num of mlu cores in each cluster
   k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   // dimy equals to num of current available clusters
@@ -59,7 +59,7 @@ static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
   const uint32_t single_core_small_case = 64;
 
   if (single_core_small_case >= num_box1) {  // only 1 mlu core enough
-    *k_type = CNRT_FUNC_TYPE_BLOCK;
+    *k_type = cnrtFuncTypeBlock;
     k_dim->x = 1;
     k_dim->y = 1;
     VLOG(5) << "Launch Kernel MLUKernelBoxIouRotated in BLOCK type";

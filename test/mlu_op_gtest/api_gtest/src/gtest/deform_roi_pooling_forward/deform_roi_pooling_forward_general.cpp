@@ -62,7 +62,7 @@ class deform_roi_pooling_forward_general
       uint64_t i_ele_num = mluOpGetTensorElementNum(input_desc_);
       uint64_t i_bytes = mluOpDataTypeBytes(input_dtype) * i_ele_num;
       if (i_bytes > 0) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&input_, i_bytes));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&input_, i_bytes));
       }
 
       MLUOpTensorParam roisDescParam = std::get<1>(GetParam());
@@ -76,7 +76,7 @@ class deform_roi_pooling_forward_general
       uint64_t roi_ele_num = mluOpGetTensorElementNum(rois_desc_);
       uint64_t roi_bytes = mluOpDataTypeBytes(rois_dtype) * roi_ele_num;
       if (roi_bytes > 0) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&rois_, roi_bytes));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&rois_, roi_bytes));
       }
 
       MLUOpTensorParam offsetDescParam = std::get<2>(GetParam());
@@ -91,7 +91,7 @@ class deform_roi_pooling_forward_general
       uint64_t offset_ele_num = mluOpGetTensorElementNum(offset_desc_);
       uint64_t offset_bytes = mluOpDataTypeBytes(offset_dtype) * offset_ele_num;
       if (offset_bytes > 0) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&offset_, offset_bytes));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&offset_, offset_bytes));
       }
 
       DeformRoiPoolingForwardAdditionalParam additoinal_param_ =
@@ -111,7 +111,7 @@ class deform_roi_pooling_forward_general
       uint64_t o_ele_num = mluOpGetTensorElementNum(output_desc_);
       uint64_t o_bytes = mluOpDataTypeBytes(output_dtype) * o_ele_num;
       if (o_bytes > 0) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, o_bytes));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_, o_bytes));
       }
     } catch (const std::exception &e) {
       FAIL() << "MLUOPAPIGTEST: catched " << e.what()
@@ -147,7 +147,7 @@ class deform_roi_pooling_forward_general
       }
       if (input_) {
         VLOG(4) << "Destroy input";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
         input_ = nullptr;
       }
       if (rois_desc_) {
@@ -156,7 +156,7 @@ class deform_roi_pooling_forward_general
       }
       if (rois_) {
         VLOG(4) << "Destroy rois";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rois_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(rois_));
         rois_ = nullptr;
       }
       if (offset_desc_) {
@@ -165,7 +165,7 @@ class deform_roi_pooling_forward_general
       }
       if (offset_) {
         VLOG(4) << "Destroy offset";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(offset_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(offset_));
         offset_ = nullptr;
       }
       if (output_desc_) {
@@ -174,7 +174,7 @@ class deform_roi_pooling_forward_general
       }
       if (output_) {
         VLOG(4) << "Destroy output";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
         output_ = nullptr;
       }
     } catch (const std::exception &e) {

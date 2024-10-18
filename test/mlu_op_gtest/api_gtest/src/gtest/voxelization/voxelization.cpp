@@ -55,7 +55,7 @@ class voxelization : public testing::Test {
       size_t points_ele_num = 1 * 2;
       size_t points_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t points_bytes = points_ele_num * points_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&points_, points_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&points_, points_bytes));
     }
     if (voxel_size_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&voxel_size_desc_));
@@ -68,7 +68,7 @@ class voxelization : public testing::Test {
       size_t voxel_size_ele_num = 3;
       size_t voxel_size_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t voxel_size_bytes = voxel_size_ele_num * voxel_size_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&voxel_size_, voxel_size_bytes));
     }
     if (coors_range_desc) {
@@ -82,14 +82,14 @@ class voxelization : public testing::Test {
       size_t coors_range_ele_num = 6;
       size_t coors_range_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t coors_range_bytes = coors_range_ele_num * coors_range_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&coors_range_, coors_range_bytes));
     }
     if (workspace) {
       size_t workspace_ele_num = workspace_size_;
       size_t workspace_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t workspace_bytes = workspace_ele_num * workspace_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_bytes));
     }
     if (voxels_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&voxels_desc_));
@@ -102,7 +102,7 @@ class voxelization : public testing::Test {
       size_t voxels_ele_num = 5 * 4 * 2;
       size_t voxels_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t voxels_bytes = voxels_ele_num * voxels_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&voxels_, voxels_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&voxels_, voxels_bytes));
     }
     if (coors_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&coors_desc_));
@@ -115,7 +115,7 @@ class voxelization : public testing::Test {
       size_t coors_ele_num = 5 * 3;
       size_t coors_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t coors_bytes = coors_ele_num * coors_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&coors_, coors_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&coors_, coors_bytes));
     }
     if (num_points_per_voxel_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&num_points_per_voxel_desc_));
@@ -130,7 +130,7 @@ class voxelization : public testing::Test {
           mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t num_points_per_voxel_bytes =
           num_points_per_voxel_ele_num * num_points_per_voxel_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&num_points_per_voxel_,
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&num_points_per_voxel_,
                                                  num_points_per_voxel_bytes));
     }
     if (voxel_num_desc) {
@@ -144,7 +144,7 @@ class voxelization : public testing::Test {
       size_t voxel_num_ele_num = 1;
       size_t voxel_num_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       size_t voxel_num_bytes = voxel_num_ele_num * voxel_num_dtype_bytes;
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&voxel_num_, voxel_num_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&voxel_num_, voxel_num_bytes));
     }
   }
 
@@ -171,7 +171,7 @@ class voxelization : public testing::Test {
       points_desc_ = NULL;
     }
     if (points_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(points_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(points_));
       points_ = NULL;
     }
     if (voxel_size_desc_) {
@@ -179,7 +179,7 @@ class voxelization : public testing::Test {
       voxel_size_desc_ = NULL;
     }
     if (voxel_size_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxel_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxel_size_));
       voxel_size_ = NULL;
     }
     if (coors_range_desc_) {
@@ -187,11 +187,11 @@ class voxelization : public testing::Test {
       coors_range_desc_ = NULL;
     }
     if (coors_range_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(coors_range_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(coors_range_));
       coors_range_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = NULL;
     }
     if (voxels_desc_) {
@@ -199,7 +199,7 @@ class voxelization : public testing::Test {
       voxels_desc_ = NULL;
     }
     if (voxels_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxels_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxels_));
       voxels_ = NULL;
     }
     if (coors_desc_) {
@@ -207,7 +207,7 @@ class voxelization : public testing::Test {
       coors_desc_ = NULL;
     }
     if (coors_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(coors_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(coors_));
       coors_ = NULL;
     }
     if (num_points_per_voxel_desc_) {
@@ -215,7 +215,7 @@ class voxelization : public testing::Test {
       num_points_per_voxel_desc_ = NULL;
     }
     if (num_points_per_voxel_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(num_points_per_voxel_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(num_points_per_voxel_));
       num_points_per_voxel_ = NULL;
     }
     if (voxel_num_desc_) {
@@ -223,7 +223,7 @@ class voxelization : public testing::Test {
       voxel_num_desc_ = NULL;
     }
     if (voxel_num_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(voxel_num_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(voxel_num_));
       voxel_num_ = NULL;
     }
   }

@@ -37,6 +37,10 @@
 #include "tools.h"
 #include "memory_pool.h"
 
+#ifndef CNRT_RET_ERR_INVALID
+#define CNRT_RET_ERR_INVALID (632007)
+#endif
+
 namespace mluoptest {
 
 class Runtime {
@@ -49,11 +53,11 @@ class Runtime {
   void *allocate(size_t num_bytes, std::string name = "") { return NULL; }
 
   // this function will throw exception
-  cnrtRet_t deallocate(void *ptr) { return CNRT_RET_SUCCESS; }
+  cnrtRet_t deallocate(void *ptr) { return cnrtSuccess; }
 
   // this function won't throw exception
   // so only this function can be called in dtor
-  cnrtRet_t destroy() { return CNRT_RET_SUCCESS; }
+  cnrtRet_t destroy() { return cnrtSuccess; }
   // use cnrtRet_t, cuz when call cnrtFree .. can return directly.
 };
 
@@ -98,7 +102,7 @@ class CPURuntime : public Runtime {
   template <typename T>
   cnrtRet_t deallocate(T object) {
     if (NULL == (void *)object) {
-      return CNRT_RET_SUCCESS;
+      return cnrtSuccess;
     }
     auto it = std::find_if(memory_blocks_.begin(), memory_blocks_.end(),
                            [=](std::shared_ptr<MemBlockBase> b) {
@@ -115,7 +119,7 @@ class CPURuntime : public Runtime {
     // XXX(zhaolianshui): since using erase rather frequently, memory_blocks_
     // should be std::list?
     memory_blocks_.erase(it);
-    return CNRT_RET_SUCCESS;
+    return cnrtSuccess;
   }
 
   // so only this function can be called in dtor

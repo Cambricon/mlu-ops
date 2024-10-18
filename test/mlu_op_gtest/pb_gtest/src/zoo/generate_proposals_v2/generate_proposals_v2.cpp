@@ -54,25 +54,25 @@ void GenerateProposalsV2Executor::workspaceMalloc() {
 
   void *output_ptr = parser_->getMetaTensor("output1").dev_origin_ptr;
   size_t output_size = parser_->getMetaTensor("output1").size_in_bytes;
-  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(output_ptr, 0, output_size));
+  GTEST_CHECK(cnrtSuccess == cnrtMemset(output_ptr, 0, output_size));
 
   void *output_ptr1 = parser_->getMetaTensor("output2").dev_origin_ptr;
   size_t output_size1 = parser_->getMetaTensor("output2").size_in_bytes;
-  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(output_ptr1, 0, output_size1));
+  GTEST_CHECK(cnrtSuccess == cnrtMemset(output_ptr1, 0, output_size1));
 
   void *output_ptr2 = parser_->getMetaTensor("output3").dev_origin_ptr;
   size_t output_size2 = parser_->getMetaTensor("output3").size_in_bytes;
-  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(output_ptr2, 0, output_size2));
+  GTEST_CHECK(cnrtSuccess == cnrtMemset(output_ptr2, 0, output_size2));
 
   void *output_ptr3 = parser_->getMetaTensor("output4").dev_origin_ptr;
   size_t output_size3 = parser_->getMetaTensor("output4").size_in_bytes;
-  GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMemset(output_ptr3, 0, output_size3));
+  GTEST_CHECK(cnrtSuccess == cnrtMemset(output_ptr3, 0, output_size3));
 }
 
 void GenerateProposalsV2Executor::workspaceFree() {
   if (workspace_[0]) {
     VLOG(4) << "Free device workspace space.";
-    GTEST_CHECK(CNRT_RET_SUCCESS == mlu_runtime_.deallocate(workspace_[0]));
+    GTEST_CHECK(cnrtSuccess == mlu_runtime_.deallocate(workspace_[0]));
     workspace_[0] = nullptr;
   }
 }

@@ -254,7 +254,7 @@ mluOpStatus_t genPolicy(mluOpHandle_t handle,
           << "NRAM usage (Nb. of dtype_size) = " << nram_usage;
 
   // determine task type and dims
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
+  *k_type = cnrtFuncTypeBlock;
   k_dim->x = core_dim;
   k_dim->y = union_number;
   k_dim->z = 1;
@@ -883,7 +883,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeBackward(
   task_dim_x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   task_dim_y = mluop::runtime::getClusterLimitCapability(handle);
   cnrtDim3_t k_dim = {task_dim_x, task_dim_y, 1};
-  cnrtJobType_t k_type = CNRT_FUNC_TYPE_BLOCK;
+  cnrtFunctionType_t k_type = cnrtFuncTypeBlock;
 
   VLOG(5) << "Launch KernelCarafeBackward<<<k_type=" << k_type << ", "
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
