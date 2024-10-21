@@ -153,15 +153,12 @@ __mlu_func__ void inclusiveScan(T* nram_src,
   T *nram_src0 = nram_src;
   T *nram_src1 = nram_src0 + size_aligned;
   // when datatype is not float32, we need a buffer for exp & log
-  T *add_buffer;
+  T *add_buffer = nullptr;
   if (std::is_same<T, half>::value) {
     add_buffer = nram_src1 + size_aligned;
   }
-  if (std::is_same<T, float>::value) {
-    __mluop_exp(nram_src0, nram_src0, nullptr, 0, data_size);
-  } else {
-    __mluop_exp(nram_src0, nram_src0, add_buffer, 0, data_size);
-  }
+  __mluop_exp(nram_src0, nram_src0, add_buffer, 0, data_size);
+
   dimOneCumsum(nram_src0, nram_src1, data_size);
   if (__is_ipu()) {
     core_offsets[coreId] = nram_src0[data_size-1];
@@ -271,7 +268,7 @@ dimOneKernel(const T *input,
       __memcpy(this_sram + n_core * coreId, this_nram,
                n_core * sizeof(T), NRAM2SRAM);
       __sync_cluster();
-        __memcpy_async(output + totalId * n_cluster, this_sram,
+      __memcpy_async(output + totalId * n_cluster, this_sram,
                  n_cluster * sizeof(T), SRAM2GDRAM);
       round++;
     }

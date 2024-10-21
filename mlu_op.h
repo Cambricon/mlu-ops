@@ -14378,21 +14378,21 @@ mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
 * in the logcumsumexp execution. For detailed information, see ::mluOpHandle_t.
 *
 * @param[in] dim
-* The target dimension to execute logcumsumexp
+* The target dimension to execute logcumsumexp.
 *
 * @param[in] input_desc
-* The descriptor of input signals. For detailed information,
+* The descriptor of input tensor. For detailed information,
 * see ::mluOpTensorDescriptor_t.
 *
 * @param[in] input
 * Pointer to the MLU memory that stores the input tensor.
 *
 * @param[in] output_desc
-* The descriptor of input signals. For detailed information,
+* The descriptor of output tensor. For detailed information,
 * see ::mluOpTensorDescriptor_t.
 *
 * @param[in] output
-* Pointer to the MLU memory that stores the input tensor.
+* Pointer to the MLU memory that stores the output tensor.
 *
 * @par Return
 * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_EXECUTION_FAILED, MLUOP_STATUS_BAD_PARAM

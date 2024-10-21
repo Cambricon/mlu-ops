@@ -83,9 +83,9 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
 
     for (int i = 0; i < input_desc->dim; i++) {
         if (input_desc->dims[i] == 0) {
-            LOG(ERROR)  << API
-                        << " there is a zero element"
-                        << "in input tensor's shape";
+            VLOG(5)  << API
+                     << " there is a zero element"
+                     << "in input tensor's shape";
             return MLUOP_STATUS_SUCCESS;
         }
     }
