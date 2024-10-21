@@ -140,6 +140,7 @@ __mlu_global__ void unionApplyAdamW(T *param_h, T *grad, float *param,
                                     float bias2, float epsilon,
                                     float weight_decay, float scale,
                                     bool use_nesterov, size_t size) {
+  PERF_TIME_BEGIN();
   if (__is_mpu()) {
     return;
   }
@@ -218,6 +219,7 @@ __mlu_global__ void unionApplyAdamW(T *param_h, T *grad, float *param,
     ddr_velocity += num_x;
     __asm__ volatile("sync;");
   }
+  PERF_TIME_END();
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelApplyAdamW(
@@ -226,10 +228,9 @@ mluOpStatus_t MLUOP_WIN_API KernelApplyAdamW(
     void *momentum, void *velocity, float lr, float beta1, float beta2,
     float bias1, float bias2, float epsilon, float weight_decay, float scale,
     bool use_nesterov, size_t size, mluOpDataType_t k_data_type) {
-  PERF_TIME_BEGIN();
   switch (k_data_type) {
     default: {
-      MLULOG("Not Implemented.");
+      LOG(ERROR) << "Not Implemented.";
     }
     case MLUOP_DTYPE_BFLOAT16: {
       KERNEL_CHECK(unionApplyAdamW<bfloat16_t><<<k_dim, k_type, queue>>>(
@@ -238,6 +239,5 @@ mluOpStatus_t MLUOP_WIN_API KernelApplyAdamW(
           epsilon, weight_decay, scale, use_nesterov, size));
     }; break;
   }
-  PERF_TIME_END();
   return MLUOP_STATUS_SUCCESS;
 }
