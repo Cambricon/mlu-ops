@@ -158,7 +158,6 @@ __mlu_func__ void inclusiveScan(T* nram_src,
     add_buffer = nram_src1 + size_aligned;
   }
   __mluop_exp(nram_src0, nram_src0, add_buffer, 0, data_size);
-
   dimOneCumsum(nram_src0, nram_src1, data_size);
   if (__is_ipu()) {
     core_offsets[coreId] = nram_src0[data_size-1];
