@@ -23,12 +23,12 @@
 #include "kernels/ms_deform_attn_forward/ms_deform_attn_forward.h"
 
 #include "core/context.h"
-#include "core/logging.h"
 #include "core/gen_case.h"
+#include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
-#include "core/type.h"
 #include "core/tool.h"
+#include "core/type.h"
 #include "kernels/kernel.h"
 
 typedef enum {
