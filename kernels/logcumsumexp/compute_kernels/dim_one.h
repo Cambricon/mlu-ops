@@ -162,6 +162,7 @@ __mlu_func__ void inclusiveScan(T* nram_src,
   if (__is_ipu()) {
     core_offsets[coreId] = nram_src0[data_size-1];
   }
+
   __sync_cluster();
   // offset between coresx
   if (coreId == 0) {
