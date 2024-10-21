@@ -3,6 +3,16 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V1.3.2
+
+  **Date:** October 21, 2024
+
+  **Changes:**
+
+  - ``exec_fft``
+
+    - optimize performance.
+
 
 * V1.3.1
 
