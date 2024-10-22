@@ -1,0 +1,398 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "logspace.h"
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/unary_op/unary_op_3pipeline.h"
+#include "kernels/unary_op/unary_op_5pipeline.h"
+
+#define ALIGN_NUM_LOGSPACE 32
+#define LUT_TABEL_LENGTH 64
+#define LOGSPACE_NRAM_USED (MAX_NRAM_SIZE - 4 * LUT_TABEL_LENGTH * sizeof(int))
+
+__nram__ int8_t nram_buffer[LOGSPACE_NRAM_USED];
+
+template <typename T>
+__mlu_func__ void setResult(T *res, unsigned int elem_count, T value) {
+  const size_t per_core_num = elem_count / taskDim;
+  int32_t remain_num = elem_count % taskDim;
+  const size_t cur_core_num =
+      taskId < remain_num ? per_core_num + 1 : per_core_num;
+  size_t cur_core_offset =
+      taskId * per_core_num + (taskId < remain_num ? taskId : remain_num);
+  if (cur_core_num > 0) {
+    __gdramset(res + cur_core_offset, cur_core_num, value);
+  }
+}
+
+template <typename T>
+__mlu_func__ void float2DifferentType(float *result_float, T *result,
+                                      const int num) {
+  if (std::is_same<T, half>::value) {
+    float *result_ge_half_max = result_float + num;
+    __bang_abs(result_ge_half_max, result_float, num);
+    int half_max = 65504;
+    __bang_ge_scalar(result_ge_half_max, result_ge_half_max, half_max, num);
+    __bang_float2int16_rd((int16_t *)result_ge_half_max, result_ge_half_max,
+                          num, 0);
+    __nram__ int16_t table_half_all1[LUT_TABEL_LENGTH] = {0, (int16_t)0x7cff};
+    __bang_lut((int16_t *)result_ge_half_max, (uint16_t *)result_ge_half_max,
+               (int16_t *)table_half_all1, num, LUT_TABEL_LENGTH);
+    __bang_float2half_tz((half *)result, result_float, num);
+    __bang_bor((int16_t *)result, (int16_t *)result,
+               (int16_t *)result_ge_half_max, num);
+    __bang_ge_scalar((int16_t *)result_ge_half_max,
+                     (int16_t *)result_ge_half_max, 1, num);
+    __nram__ int16_t table_half_inf[LUT_TABEL_LENGTH] = {(int16_t)0xffff,
+                                                         (int16_t)0xfc00};
+    __bang_lut((int16_t *)result_ge_half_max, (uint16_t *)result_ge_half_max,
+               (int16_t *)table_half_inf, num, LUT_TABEL_LENGTH);
+    __bang_band((int16_t *)result, (int16_t *)result,
+                (int16_t *)result_ge_half_max, num);
+  }
+  if (std::is_same<T, int>::value) {
+    __bang_float2int32_tz((int *)result, result_float, num, 0);
+  }
+}
+
+template <typename T>
+__mlu_func__ void dealStep1(const float start, const float base, T *res) {
+  if (taskId == 0) {
+    *res = (T)powf(base, start);
+  }
+}
+
+template <typename T>
+__mlu_func__ void dealAll1Nan(const float start, const float end,
+                              const int64_t steps, T *res) {
+  float all_the_result = 1;
+  if ((abs(start) == INFINITY) && (abs(end) == INFINITY)) {
+    all_the_result = NAN;
+  }
+  setResult(res, steps, (T)all_the_result);
+}
+
+template <typename T>
+__mlu_func__ void dealStartEndInfinity(const float start, const float end,
+                                       const int64_t steps, const float base,
+                                       T *res) {
+  if (abs(start) == INFINITY) {
+    if (steps > 2) {
+      float part_result = powf(base, start);
+      if (std::is_same<T, half>::value) {
+        if (base < 0) {
+          part_result = INFINITY;
+        } else {
+          part_result = NAN;
+        }
+      }
+      setResult(res + steps / 2, (steps - 1) / 2, (T)part_result);
+    }
+    setResult(res, steps / 2, (T)NAN);
+    setResult(res + steps - 1, 1, (T)NAN);
+  } else if (abs(end) == INFINITY) {
+    if (steps > 2) {
+      float part_result = powf(base, end);
+      if (std::is_same<T, half>::value) {
+        if (base < 0) {
+          part_result = INFINITY;
+        } else {
+          part_result = NAN;
+        }
+      }
+      setResult(res + 1, (steps - 1) / 2, (T)part_result);
+    }
+    setResult(res, 1, (T)NAN);
+    setResult(res + (steps + 1) / 2, steps / 2, (T)NAN);
+  }
+}
+
+template <typename T>
+__mlu_func__ void dealBase0(const float start, const float end,
+                            const int64_t steps, T *res) {
+  if (start * end > 0) {
+    if (start > 0) {
+      setResult(res, steps, (T)0);
+    } else {
+      setResult(res, steps, (T)INFINITY);
+    }
+  } else {
+    float step = (float)(end - start) / (steps - 1);
+    int numbers_form_start_to_0 = abs(start / step) + 1;
+    if (start > 0) {
+      setResult(res, numbers_form_start_to_0, (T)0);
+      setResult(res + numbers_form_start_to_0, steps - numbers_form_start_to_0,
+                (T)INFINITY);
+    } else {
+      setResult(res, numbers_form_start_to_0, (T)INFINITY);
+      setResult(res + numbers_form_start_to_0, steps - numbers_form_start_to_0,
+                (T)0);
+    }
+  }
+}
+
+template <typename T>
+__mlu_func__ void dealStep0(const float start, const float end,
+                            const int64_t steps, const float base, T *res) {
+  float base_start = powf(base, start);
+  int half_max = 65504;
+  if (abs(base_start) > half_max && std::is_same<T, half>::value) {
+    base_start = INFINITY;
+  }
+  float base_end = powf(base, end);
+  if (abs(base_end) > half_max && std::is_same<T, half>::value) {
+    base_end = INFINITY;
+  }
+  // if steps >= 65520 * 2 + 1, the result from index 65520 will be nan, and the
+  // length is steps - 65520 * 2
+  if ((steps < 65520 * 2 + 1) ||
+      (abs((float)(end - start) / (steps - 1) == 0))) {
+    setResult(res, steps / 2, (T)base_start);
+    setResult(res + steps / 2, (steps + 1) / 2, (T)base_end);
+
+  } else {
+    setResult(res, 65520, (T)base_start);
+    setResult(res + 65520, steps - 65520 * 2, (T)NAN);
+    setResult(res + steps - 65520, 65520, (T)base_end);
+  }
+}
+
+template <typename T>
+__mlu_func__ void dealBaseNegative(const float start, const float end,
+                                   const int64_t steps, const float base,
+                                   T *res) {
+  const int32_t max_deal_num =
+      PAD_DOWN(LOGSPACE_NRAM_USED / 5 / sizeof(float), ALIGN_NUM_LOGSPACE);
+  float *log2_result = (float *)nram_buffer;
+  float *result_float = (float *)nram_buffer;
+  T *result = (T *)nram_buffer;
+  float *floor_y = (float *)nram_buffer + 2 * max_deal_num;
+  float *y_copy = (float *)nram_buffer + 3 * max_deal_num;
+  int *all_int_1 = (int *)nram_buffer + 4 * max_deal_num;
+  __bang_write_value(all_int_1, max_deal_num, (int)1);
+  const size_t per_core_num = steps / taskDim;
+  int32_t remain_num = steps % taskDim;
+  const size_t cur_core_num =
+      taskId < remain_num ? per_core_num + 1 : per_core_num;
+  size_t cur_core_offset =
+      taskId * per_core_num + (taskId < remain_num ? taskId : remain_num);
+  const int32_t repeat_steps = cur_core_num / max_deal_num;
+  const int32_t remain_steps = cur_core_num % max_deal_num;
+
+  float base_log;
+  base_log = log2f(-base);
+  float step = (float)(end - start) / (steps - 1);
+
+  for (int step_i = 0; step_i <= repeat_steps; step_i++) {
+    if (step_i == repeat_steps && remain_steps == 0) {
+      break;
+    }
+    const int32_t actual_deal_num =
+        step_i == repeat_steps ? remain_steps : max_deal_num;
+    const int64_t loop_offset = cur_core_offset + step_i * max_deal_num;
+
+    const int64_t halfway = steps / 2;
+    if (loop_offset + actual_deal_num < halfway) {
+      __mluop_get_indices(log2_result, loop_offset, actual_deal_num);
+      __bang_mul_scalar(log2_result, log2_result, step, actual_deal_num);
+      __bang_add_scalar(log2_result, log2_result, (float)start,
+                        actual_deal_num);
+    } else if (loop_offset >= halfway) {
+      __mluop_get_indices(log2_result, loop_offset + 1 - steps,
+                          actual_deal_num);
+      __bang_mul_scalar(log2_result, log2_result, step, actual_deal_num);
+      __bang_add_scalar(log2_result, log2_result, (float)end, actual_deal_num);
+    } else {
+      const int64_t offset2halfway = halfway - loop_offset;
+      if (offset2halfway > 0) {
+        __mluop_get_indices(log2_result, loop_offset, offset2halfway);
+        __bang_mul_scalar(log2_result, log2_result, step, offset2halfway);
+        __bang_add_scalar(log2_result, log2_result, (float)start,
+                          offset2halfway);
+      }
+      const int64_t deal_num_sub_halfway = actual_deal_num - offset2halfway;
+      if (deal_num_sub_halfway > 0) {
+        __mluop_get_indices(log2_result + offset2halfway, -(steps - 1) / 2,
+                            deal_num_sub_halfway);
+        __bang_mul_scalar(log2_result + offset2halfway,
+                          log2_result + offset2halfway, step,
+                          deal_num_sub_halfway);
+        __bang_add_scalar(log2_result + offset2halfway,
+                          log2_result + offset2halfway, (float)end,
+                          deal_num_sub_halfway);
+      }
+    }
+
+    __bang_floor(floor_y, log2_result, actual_deal_num);
+    __bang_eq(floor_y, floor_y, log2_result, actual_deal_num);
+    __bang_float2int32((int *)floor_y, floor_y, actual_deal_num, 0);
+    __bang_move(y_copy, log2_result, sizeof(float) * actual_deal_num);
+    __bang_float2int32((int *)y_copy, y_copy, actual_deal_num, 0);
+    __bang_band((int *)y_copy, (int *)y_copy, all_int_1, actual_deal_num);
+    __bang_band((int *)y_copy, (int *)y_copy, (int *)floor_y, actual_deal_num);
+    __nram__ uint32_t table_for_odd_or_even_power[LUT_TABEL_LENGTH] = {
+        0, 0x80000000};
+    __bang_lut((int32_t *)y_copy, (uint32_t *)y_copy,
+               (int32_t *)table_for_odd_or_even_power, actual_deal_num,
+               LUT_TABEL_LENGTH);
+    __nram__ int table_for_integer_power[LUT_TABEL_LENGTH] = {0x7fffffff, 0};
+    __bang_lut((int32_t *)floor_y, (uint32_t *)floor_y,
+               (int32_t *)table_for_integer_power, actual_deal_num,
+               LUT_TABEL_LENGTH);
+    __bang_bor((int *)log2_result, (int *)log2_result, (int *)floor_y,
+               actual_deal_num);
+    __bang_mul_scalar(log2_result, log2_result, base_log, actual_deal_num);
+    __bang_pow2(result_float, log2_result, actual_deal_num);
+    __bang_bor((int *)result_float, (int *)result_float, (int *)y_copy,
+               actual_deal_num);
+    float2DifferentType(result_float, result, actual_deal_num);
+    __memcpy(res + loop_offset, result, actual_deal_num * sizeof(T),
+             NRAM2GDRAM);
+  }
+}
+
+template <typename T>
+__mlu_func__ void dealNormalCase(const float start, const float end,
+                                 const int64_t steps, const float base,
+                                 T *res) {
+  const int32_t max_deal_num =
+      PAD_DOWN(LOGSPACE_NRAM_USED / 2 / sizeof(float), ALIGN_NUM_LOGSPACE);
+  float *log2_result = (float *)nram_buffer;
+  float *result_float = (float *)nram_buffer;
+  T *result = (T *)nram_buffer;
+  const size_t per_core_num = steps / taskDim;
+  int32_t remain_num = steps % taskDim;
+  const size_t cur_core_num =
+      taskId < remain_num ? per_core_num + 1 : per_core_num;
+  size_t cur_core_offset =
+      taskId * per_core_num + (taskId < remain_num ? taskId : remain_num);
+  const int32_t repeat_steps = cur_core_num / max_deal_num;
+  const int32_t remain_steps = cur_core_num % max_deal_num;
+
+  float base_log;
+  if (base == -INFINITY) {
+    base_log = log2f(-base);
+  } else {
+    base_log = log2f(base);
+  }
+  float step = (float)(end - start) / (steps - 1);
+
+  for (int step_i = 0; step_i <= repeat_steps; step_i++) {
+    if (step_i == repeat_steps && remain_steps == 0) {
+      break;
+    }
+    const int32_t actual_deal_num =
+        step_i == repeat_steps ? remain_steps : max_deal_num;
+    const int64_t loop_offset = cur_core_offset + step_i * max_deal_num;
+
+    const int64_t halfway = steps / 2;
+    if (loop_offset + actual_deal_num < halfway) {
+      __mluop_get_indices(log2_result, loop_offset, actual_deal_num);
+      __bang_mul_scalar(log2_result, log2_result, step, actual_deal_num);
+      __bang_add_scalar(log2_result, log2_result, (float)start,
+                        actual_deal_num);
+    } else if (loop_offset >= halfway) {
+      __mluop_get_indices(log2_result, loop_offset + 1 - steps,
+                          actual_deal_num);
+      __bang_mul_scalar(log2_result, log2_result, step, actual_deal_num);
+      __bang_add_scalar(log2_result, log2_result, (float)end, actual_deal_num);
+    } else {
+      const int64_t offset2halfway = halfway - loop_offset;
+      if (offset2halfway > 0) {
+        __mluop_get_indices(log2_result, loop_offset, offset2halfway);
+        __bang_mul_scalar(log2_result, log2_result, step, offset2halfway);
+        __bang_add_scalar(log2_result, log2_result, (float)start,
+                          offset2halfway);
+      }
+      const int64_t deal_num_sub_halfway = actual_deal_num - offset2halfway;
+      if (deal_num_sub_halfway > 0) {
+        __mluop_get_indices(log2_result + offset2halfway, -(steps - 1) / 2,
+                            deal_num_sub_halfway);
+        __bang_mul_scalar(log2_result + offset2halfway,
+                          log2_result + offset2halfway, step,
+                          deal_num_sub_halfway);
+        __bang_add_scalar(log2_result + offset2halfway,
+                          log2_result + offset2halfway, (float)end,
+                          deal_num_sub_halfway);
+      }
+    }
+    __bang_mul_scalar(log2_result, log2_result, base_log, actual_deal_num);
+    __bang_pow2(result_float, log2_result, actual_deal_num);
+    float2DifferentType(result_float, result, actual_deal_num);
+    __memcpy(res + loop_offset, result, actual_deal_num * sizeof(T),
+             NRAM2GDRAM);
+  }
+}
+
+template <typename T>
+__mlu_global__ void MLUKernelLogspace(const float start, const float end,
+                                      const int64_t steps, const float base,
+                                      T *res) {
+  float scalar_start = (T)start;
+  float scalar_end = (T)end;
+  if (steps == 1) {
+    dealStep1(scalar_start, base, res);
+  } else if ((scalar_start == 0 && scalar_end == 0) || base == 1 ||
+             ((abs(scalar_start) == INFINITY) &&
+              (abs(scalar_end) == INFINITY))) {
+    dealAll1Nan(scalar_start, scalar_end, steps, res);
+  } else if (abs(scalar_start) == INFINITY || abs(scalar_end) == INFINITY) {
+    dealStartEndInfinity(scalar_start, scalar_end, steps, base, res);
+  } else if (base == 0) {
+    dealBase0(scalar_start, scalar_end, steps, res);
+  } else if ((abs((float)(scalar_end - scalar_start) / (steps - 1) == 0)) ||
+             ((std::is_same<T, half>::value) &&
+              (abs((float)(scalar_end - scalar_start) / (steps - 1)) <
+               0.0009765625))) {
+    dealStep0(scalar_start, scalar_end, steps, base, res);
+  } else if (base < 0 && base != -INFINITY) {
+    dealBaseNegative(scalar_start, scalar_end, steps, base, res);
+  } else {
+    dealNormalCase(scalar_start, scalar_end, steps, base, res);
+  }
+  __sync();
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelLogspace(
+    const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+    const cnrtQueue_t queue, const mluOpDataType_t d_type, const float start,
+    const float end, const int64_t steps, const float base, void *res) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      KERNEL_CHECK(MLUKernelLogspace<<<k_dim, k_type, queue>>>(
+          start, end, steps, base, (float *)res));
+    }; break;
+    case MLUOP_DTYPE_HALF: {
+      KERNEL_CHECK(MLUKernelLogspace<<<k_dim, k_type, queue>>>(
+          start, end, steps, base, (half *)res));
+    }; break;
+    case MLUOP_DTYPE_INT32: {
+      KERNEL_CHECK(MLUKernelLogspace<<<k_dim, k_type, queue>>>(
+          start, end, steps, base, (int *)res));
+    }; break;
+    default:
+      break;
+  }
+  return MLUOP_STATUS_SUCCESS;
+}
