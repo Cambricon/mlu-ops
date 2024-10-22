@@ -757,3 +757,39 @@ mluOpExecFFT
 - ``y`` 为输出信号。
 - :math:`DFT_{N}` 为长度为N傅里叶变换的变换矩阵。
 
+.. _logspace:
+
+mluOpLogspace
+---------------
+该算子输出长度为 `steps` 的数组，其值为以 `base` 为底数，以[start,end]区间上均分部分的数为指数生成的幂。
+
+计算公式如下：
+
+.. math::
+
+   y = base^{start + i * (end-start) / (steps - 1)} 
+
+其中：
+
+- ``base`` 为输入底数。
+- ``start,end`` 分别为指数区间的上下限。
+- ``steps`` 为指数区间的均分块数。
+- ``i`` 为均分块数的索引。
+
+.. _lgamma:
+
+mluOpLgamma
+---------------
+该算子根据 `lgamma` 函数计算输入张量input中每个元素的输出，输出相同Shape的张量。
+
+计算公式如下：
+
+.. math::
+
+   lgamma(x) = ln | \Gamma (x)| \\
+   \Gamma(x) =  \int_{0}^{+\infty} t^{x-1} e^{-t} dt \quad(x>0)
+
+其中：
+
+- ``x`` 为输入张量。
+
