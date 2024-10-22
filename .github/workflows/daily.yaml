@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         runner: [mlu370-m8]
-        mlu_ops_version : [1.3.1]
+        mlu_ops_version : [1.3.2]
         cntoolkit_version : [3.14.0]
         cnnl_version: [1.26.6]
     runs-on: ${{matrix.runner}}
