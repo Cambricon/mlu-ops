@@ -179,7 +179,7 @@ for (size_t k = 1; k < numCoeff; k++) {
 }
 float lgamma_x = (reflect_x+0.5)*log(reflect_x+numCoeff) - (reflect_x+numCoeff) + log(accm/reflect_x);
 
-// 为保证 abs(log(sin(pi * z)) 计算精度
+// 为保证 abs(log(sin(pi * z))) 计算精度
 float abs_input = std::abs(x);
 float abs_frac_input = abs_input - std::floor(abs_input);
 float reduced_frac_input = (abs_frac_input > 0.5) ? 1 - abs_frac_input : abs_frac_input;
