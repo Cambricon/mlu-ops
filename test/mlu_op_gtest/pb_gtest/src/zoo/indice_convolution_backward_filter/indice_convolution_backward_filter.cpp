@@ -206,12 +206,15 @@ int64_t IndiceConvolutionBackwardFilterExecutor::getTheoryIoSize() {
   int64_t in_active_num = input_indice_desc_->dims[0];
   int64_t kernel_volume = indice_pair_desc_->dims[0];
   int64_t theory_ios = 0;
-  auto input_indice_dwidth =
-      mluop::getSizeOfDataType(input_indice_desc_->dtype);
-  auto diffy_indice_dwidth =
-      mluop::getSizeOfDataType(diffy_indice_desc_->dtype);
-  auto indice_pair_dwidth = mluop::getSizeOfDataType(indice_pair_desc_->dtype);
-  auto diffw_dwidth = mluop::getSizeOfDataType(diffw_desc_->dtype);
+  size_t input_indice_dwidth, diffy_indice_dwidth, indice_pair_dwidth,
+      diffw_dwidth;
+  MLUOP_CHECK(
+      mluOpGetSizeOfDataType(input_indice_desc_->dtype, &input_indice_dwidth));
+  MLUOP_CHECK(
+      mluOpGetSizeOfDataType(diffy_indice_desc_->dtype, &diffy_indice_dwidth));
+  MLUOP_CHECK(
+      mluOpGetSizeOfDataType(indice_pair_desc_->dtype, &indice_pair_dwidth));
+  MLUOP_CHECK(mluOpGetSizeOfDataType(diffw_desc_->dtype, &diffw_dwidth));
 
   auto gather_nd_ios = [&](const int64_t kernel_index, const int64_t gather_num,
                            const int64_t channel,
