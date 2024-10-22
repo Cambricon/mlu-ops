@@ -103,7 +103,9 @@ void Executor::baselineOutputMalloc() {
       cpu_fp32_output_.push_back(nullptr);
       continue;
     }
-    size_t cpu_dtype_size = mluop::getSizeOfDataType(getCpuDtype(ts->dtype));
+    size_t cpu_dtype_size;
+    MLUOP_CHECK(
+        mluOpGetSizeOfDataType(getCpuDtype(ts->dtype), &cpu_dtype_size));
     ts->cpu_ptr = (float *)cpu_runtime_.allocate(
         ts->shape_count * cpu_dtype_size, ts->name);
     cpu_fp32_output_.push_back(ts->cpu_ptr);
@@ -121,7 +123,9 @@ void Executor::mluOutputMalloc() {
       mlu_fp32_output_.push_back(nullptr);
       continue;
     }
-    size_t cpu_dtype_size = mluop::getSizeOfDataType(getCpuDtype(ts->dtype));
+    size_t cpu_dtype_size;
+    MLUOP_CHECK(
+        mluOpGetSizeOfDataType(getCpuDtype(ts->dtype), &cpu_dtype_size));
     void *temp =
         cpu_runtime_.allocate(ts->total_count * cpu_dtype_size, ts->name);
     mlu_fp32_output_.push_back((float *)temp);
@@ -136,7 +140,9 @@ void Executor::strideOutput() {
     if (!ts->stride.empty()) {  // TODO(None): 2023-7-13: fix here
       VLOG(4) << "[WARNING] Executor: " << ts->name
               << " cpu ptr been strided_out.";
-      size_t cpu_dtype_size = mluop::getSizeOfDataType(getCpuDtype(ts->dtype));
+      size_t cpu_dtype_size;
+      MLUOP_CHECK(
+          mluOpGetSizeOfDataType(getCpuDtype(ts->dtype), &cpu_dtype_size));
       void *temp = cpu_runtime_.allocate(ts->total_count * cpu_dtype_size);
       if (!flag_input_reuse_) {  // TODO(None): fix after zhaolianshui
                                  // fix is_output
@@ -146,9 +152,9 @@ void Executor::strideOutput() {
         for (int i = 0; i < data_vector_.size(); i++) {
           // BUG(zhaolianshui): wrong, always get to the first one
           if (data_vector_[i].is_output()) {
-            memcpy(temp, cpu_fp32_stride_input_[i],
-                   ts->total_count *
-                       cpu_dtype_size);  // TODO(None): cpu_stride?
+            memcpy(
+                temp, cpu_fp32_stride_input_[i],
+                ts->total_count * cpu_dtype_size);  // TODO(None): cpu_stride?
             break;
           }
         }

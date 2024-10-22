@@ -84,11 +84,6 @@ Executor::~Executor() {
   hostFree();
   baselineFree();
   destroyTensors();
-// #if GTEST_ENABLE_GPERFTOOLS
-//   if (exe_config_ != nullptr && exe_config_->gtest_internal_cpu_profile) {
-//     ProfilerStop();
-//   }
-// #endif
   VLOG(4) << "Executor end.";
 }
 
@@ -943,8 +938,8 @@ int Executor::getIpuFrequency() {
   freqInfo.version = CNDEV_VERSION_5;
   GTEST_CHECK(CN_SUCCESS ==
               cnDeviceGetAttribute(&ipu_frequency,
-                                    CN_DEVICE_ATTRIBUTE_CLUSTER_CLOCK_RATE,
-                                    ordinal));
+                                   CN_DEVICE_ATTRIBUTE_CLUSTER_CLOCK_RATE,
+                                   ordinal));
   VLOG(4) << "MLU Core Frequency = " << (double)ipu_frequency / 1000 / 1000
           << " GHz";
   return ipu_frequency;
@@ -1388,12 +1383,13 @@ void Executor::saveInputWithStride() {
     // when tensor has stride, and input is reused, need use input to init
     // baselineOutput.
     if (!ts->stride.empty() && flag_input_reuse_) {
+      size_t cpu_dtype_size;
+      MLUOP_CHECK(mluOpGetSizeOfDataType(ts->dtype, &cpu_dtype_size));
       cpu_fp32_stride_input_.push_back(
           (float *)cpu_runtime_.allocate(ts->total_count * sizeof(float)));
-      void *temp_gpu = cpu_runtime_.allocate(
-          ts->total_count * mluop::getSizeOfDataType(ts->dtype));
+      void *temp_gpu = cpu_runtime_.allocate(ts->total_count * cpu_dtype_size);
       memcpy(temp_gpu, data_vector_[i].host_ptr,
-             ts->total_count * mluop::getSizeOfDataType(ts->dtype));
+             ts->total_count * cpu_dtype_size);
       // BUG(zhaolianshui): the last allocated cpu_fp32_stride_input may not be
       // i'th; always float?
       castDataOut(temp_gpu, ts->dtype, cpu_fp32_stride_input_[i],
@@ -1412,10 +1408,12 @@ void Executor::saveInputWithStrideByDtype() {
     // TODO(None): use is_input_and_output, now it is bug
     // TODO(None): move it to class Stride
     if (!ts->stride.empty() && flag_input_reuse_) {
-      cpu_stride_input_.push_back((float *)cpu_runtime_.allocate(
-          ts->total_count * mluop::getSizeOfDataType(ts->dtype)));
+      size_t cpu_dtype_size;
+      MLUOP_CHECK(mluOpGetSizeOfDataType(ts->dtype, &cpu_dtype_size));
+      cpu_stride_input_.push_back(
+          (float *)cpu_runtime_.allocate(ts->total_count * cpu_dtype_size));
       memcpy(cpu_stride_input_[i], data_vector_[i].host_ptr,
-             ts->total_count * mluop::getSizeOfDataType(ts->dtype));
+             ts->total_count * cpu_dtype_size);
     }
   }
 }
@@ -1452,7 +1450,9 @@ void Executor::baselineInputMalloc() {
     }
     // malloc a ptr with stride, to get random value
     // if this tensor has stride, will stride_in in castIn()
-    size_t cpu_dtype_size = mluop::getSizeOfDataType(getCpuDtype(ts->dtype));
+    size_t cpu_dtype_size;
+    MLUOP_CHECK(
+        mluOpGetSizeOfDataType(getCpuDtype(ts->dtype), &cpu_dtype_size));
     ts->cpu_ptr = (float *)cpu_runtime_.allocate(
         ts->total_count * cpu_dtype_size, ts->name);
     cpu_fp32_input_.push_back(ts->cpu_ptr);
@@ -1810,7 +1810,9 @@ void Executor::castDataIn(float *src_data, mluOpDataType_t src_dtype,
     return;
   }
   if (src_dtype == dst_dtype) {
-    memcpy(dst_data, src_data, count * mluop::getSizeOfDataType(src_dtype));
+    size_t dtype_size;
+    MLUOP_CHECK(mluOpGetSizeOfDataType(src_dtype, &dtype_size));
+    memcpy(dst_data, src_data, count * dtype_size);
   } else if ((src_dtype == MLUOP_DTYPE_FLOAT &&
               dst_dtype == MLUOP_DTYPE_INT8) ||
              (src_dtype == MLUOP_DTYPE_FLOAT &&
@@ -1886,8 +1888,11 @@ void Executor::cnrtCastDataTypeWrap(void *src_data,
     GTEST_CHECK(cnrtSuccess ==
                 cnrtCastDataType_V2(src, in_dtype, dst, out_dtype, INT_MAX,
                                     quant_param, cnrtRounding_rm));
-    src += INT_MAX * mluop::getSizeOfDataType(src_dtype);
-    dst += INT_MAX * mluop::getSizeOfDataType(dst_dtype);
+    size_t src_dtype_size, dst_dtype_size;
+    MLUOP_CHECK(mluOpGetSizeOfDataType(src_dtype, &src_dtype_size));
+    MLUOP_CHECK(mluOpGetSizeOfDataType(dst_dtype, &dst_dtype_size));
+    src += INT_MAX * src_dtype_size;
+    dst += INT_MAX * dst_dtype_size;
   }
   if (count_remain) {
     GTEST_CHECK(cnrtSuccess ==
@@ -1906,7 +1911,9 @@ void Executor::castDataOut(void *src_data, mluOpDataType_t src_dtype,
     return;
   }
   if (src_dtype == dst_dtype) {
-    memcpy(dst_data, src_data, count * mluop::getSizeOfDataType(src_dtype));
+    size_t src_dtype_size;
+    MLUOP_CHECK(mluOpGetSizeOfDataType(src_dtype, &src_dtype_size));
+    memcpy(dst_data, src_data, count * src_dtype_size);
   } else if (src_dtype == MLUOP_DTYPE_COMPLEX_HALF &&
              dst_dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
     arrayCastFloatAndNormalWrapper(src_data, src_dtype, dst_data, dst_dtype,
@@ -1975,12 +1982,13 @@ void Executor::quantizeTensorByChannel(
   float *scale = (float *)malloc(co * sizeof(float));
   int *offset = (int *)malloc(co * sizeof(int));
   int deal_count = count / co;
+  size_t dst_dtype_size;
+  MLUOP_CHECK(mluOpGetSizeOfDataType(dst_dtype, &dst_dtype_size));
   for (int co_index = 0; co_index < co; ++co_index) {
-    castDataIn(
-        src_data + deal_count, MLUOP_DTYPE_FLOAT,
-        (char *)dst_data + deal_count * mluop::getSizeOfDataType(dst_dtype),
-        dst_dtype, deal_count, flag_quant_mode_, position + co_index,
-        scale + co_index, offset + co_index, true);
+    castDataIn(src_data + deal_count, MLUOP_DTYPE_FLOAT,
+               (char *)dst_data + deal_count * dst_dtype_size, dst_dtype,
+               deal_count, flag_quant_mode_, position + co_index,
+               scale + co_index, offset + co_index, true);
   }
   // MLUOP_CHECK(mluOpSetTensorDescriptorPositionScaleOffsetByChannel(
   //       tensor_desc_[tensor_index].tensor, co, position, scale, offset));
@@ -2043,8 +2051,9 @@ void Executor::castIn() {
                  online_quantize);  // p/s, discarded.
 
       // get oc_dt's p/s and set to tensor.
-      void *temp = cpu_runtime_.allocate(ts->total_count *
-                                         mluop::getSizeOfDataType(ts->oc_dt));
+      size_t dtype_size;
+      MLUOP_CHECK(mluOpGetSizeOfDataType(ts->oc_dt, &dtype_size));
+      void *temp = cpu_runtime_.allocate(ts->total_count * dtype_size);
       castDataIn(src_data, MLUOP_DTYPE_FLOAT,  // src data
                  temp, ts->oc_dt,              // dst data
                  ts->total_count,              // count
@@ -2057,7 +2066,9 @@ void Executor::castIn() {
     }
     if (!ts->stride.empty()) {
       VLOG(4) << "Executor: " << ts->name << " host ptr been strided_out.";
-      size_t cpu_dtype_size = mluop::getSizeOfDataType(getCpuDtype(ts->dtype));
+      size_t cpu_dtype_size;
+      MLUOP_CHECK(
+          mluOpGetSizeOfDataType(getCpuDtype(ts->dtype), &cpu_dtype_size));
       void *temp = cpu_runtime_.allocate(ts->shape_count * cpu_dtype_size);
       memset(temp, 0x0, ts->shape_count * cpu_dtype_size);
       if (flag_input_reuse_) {
@@ -2246,9 +2257,11 @@ void Executor::castHalfOuput() {
                   "After cpuCompute, "
                   "complex_float->complex_half->complex_float conversion is "
                   "not implemented yet.");
+    size_t dtype_size;
+    MLUOP_CHECK(mluOpGetSizeOfDataType(ts->dtype, &dtype_size));
     if (ts->dtype == MLUOP_DTYPE_HALF) {
-      int16_t *half_data = (int16_t *)cpu_runtime_.allocate(
-          ts->shape_count * mluop::getSizeOfDataType(ts->dtype));
+      int16_t *half_data =
+          (int16_t *)cpu_runtime_.allocate(ts->shape_count * dtype_size);
       arrayCastFloatToHalf(half_data, cpu_fp32_output_[i], ts->shape_count);
       if (getFlagHalfInfTo65504()) {
         arrayCastHalfToFloatInvalidInf(cpu_fp32_output_[i], half_data,
@@ -2258,8 +2271,8 @@ void Executor::castHalfOuput() {
       }
       cpu_runtime_.deallocate(half_data);
     } else if (ts->dtype == MLUOP_DTYPE_BFLOAT16) {
-      uint16_t *bf16_data = (uint16_t *)cpu_runtime_.allocate(
-          ts->shape_count * mluop::getSizeOfDataType(ts->dtype));
+      uint16_t *bf16_data =
+          (uint16_t *)cpu_runtime_.allocate(ts->shape_count * dtype_size);
       arrayCastFloatToBF16(bf16_data, cpu_fp32_output_[i], ts->shape_count);
       arrayCastBF16ToFloat(cpu_fp32_output_[i], bf16_data, ts->shape_count);
       cpu_runtime_.deallocate(bf16_data);
@@ -2510,11 +2523,12 @@ void Executor::baselineOutputMallocByDtype() {
       cpu_output_.emplace_back(nullptr);
       continue;
     }
-    void *temp_ptr = (void *)cpu_runtime_.allocate(
-        ts->shape_count * mluop::getSizeOfDataType(ts->dtype), ts->name);
+    size_t dtype_size;
+    MLUOP_CHECK(mluOpGetSizeOfDataType(ts->dtype, &dtype_size));
+    void *temp_ptr =
+        (void *)cpu_runtime_.allocate(ts->shape_count * dtype_size, ts->name);
     cpu_output_.emplace_back(temp_ptr);
-    memset(temp_ptr, 0x0,
-           ts->shape_count * mluop::getSizeOfDataType(ts->dtype));
+    memset(temp_ptr, 0x0, ts->shape_count * dtype_size);
   }
 }
 
