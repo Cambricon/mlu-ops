@@ -36,7 +36,7 @@ __nram__ float filter_kd_index[KERNEL_V];
 __nram__ float filter_kh_index[KERNEL_V];
 __nram__ float filter_kw_index[KERNEL_V];
 
-__nram__ char nbuf_total[NRAM_LIMIT];
+__nram__ int8_t nbuf_total[NRAM_LIMIT];
 
 __mlu_func__ void computeIndex(int32_t *nram_output, int32_t *nram_input,
                                int32_t *nram_aux_a, float *nram_aux_b,
@@ -44,7 +44,6 @@ __mlu_func__ void computeIndex(int32_t *nram_output, int32_t *nram_input,
                                Dilation dilation, Padding padding,
                                int32_t deal_num, int32_t step_index_start,
                                int32_t k_dhw, int32_t batch) {
-#if __BANG_ARCH__ >= 370
   int32_t len_l_dim = deal_num * (Ndim + 1);
   int32_t deal_num_lk = deal_num * k_dhw;
   int32_t output_size =
@@ -82,7 +81,6 @@ __mlu_func__ void computeIndex(int32_t *nram_output, int32_t *nram_input,
                      output_size);
   __bang_transpose((int32_t *)nram_output + 2 * deal_num_lk,
                    (int32_t *)nram_aux_a + 2 * deal_num_lk, deal_num, k_dhw);
-#endif
 }
 
 __mlu_global__ void MLUBlockDefaultGetIndicePairKernel1(
@@ -91,7 +89,6 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel1(
     InputSpace host_input_space, OutputSpace host_output_space,
     Stride host_stride, Dilation host_dilation, Padding host_padding,
     int32_t core_num_l, int32_t input_active_site, int32_t batch) {
-#if __BANG_ARCH__ >= 370
   /*  nram_space
    |input| mask_all | indice_index_in | indice_out_expand |  4l +  3 k l
    |input| mask_all | indice_index_in | indice_out_expand |  4l +  3 k l
@@ -127,7 +124,7 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel1(
           (int32_t *)indices_in + (offset_l_job + i * core_num_l) * Ndim;
       int32_t *nram_input_t = (int32_t *)nram_input + (i % 2) * ping_pong_num;
       int32_t deal_num = i == repeat - 1 ? rem_num_l : core_num_l;
-      __memcpy_async((char *)nram_input_t, (char *)indices_in_addr,
+      __memcpy_async((int8_t *)nram_input_t, (int8_t *)indices_in_addr,
                      deal_num * Ndim * sizeof(int), GDRAM2NRAM);
     }
     if (1 <= i && i < (repeat + 1)) {
@@ -147,30 +144,28 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel1(
           (offset_l_job + (i - 2) * core_num_l) * sizeof(int);
       int32_t *nram_output_t =
           (int32_t *)nram_output + ((i - 2) % 2) * ping_pong_num;
-      __memcpy_async((char *)mask_all_ws + gdram_offset,
-                     (char *)(nram_output_t), deal_num * sizeof(int),
+      __memcpy_async((int8_t *)mask_all_ws + gdram_offset,
+                     (int8_t *)(nram_output_t), deal_num * sizeof(int),
                      NRAM2GDRAM, input_active_site * sizeof(int),
                      deal_num * sizeof(int), k_dhw - 1);
-      __memcpy_async((char *)indice_index_in_ws + gdram_offset,
-                     (char *)(nram_output_t + deal_num * k_dhw),
+      __memcpy_async((int8_t *)indice_index_in_ws + gdram_offset,
+                     (int8_t *)(nram_output_t + deal_num * k_dhw),
                      deal_num * sizeof(int), NRAM2GDRAM,
                      input_active_site * sizeof(int), deal_num * sizeof(int),
                      k_dhw - 1);
-      __memcpy_async((char *)indice_out_expand_ws + gdram_offset,
-                     (char *)(nram_output_t + 2 * deal_num * k_dhw),
+      __memcpy_async((int8_t *)indice_out_expand_ws + gdram_offset,
+                     (int8_t *)(nram_output_t + 2 * deal_num * k_dhw),
                      deal_num * sizeof(int), NRAM2GDRAM,
                      input_active_site * sizeof(int), deal_num * sizeof(int),
                      k_dhw - 1);
     }
     __sync();
   }
-#endif
 }
 
 __mlu_global__ void MLUBlockDefaultGetIndicePairKernel2(void *index_output_ptr,
                                                         int32_t num_act_out,
                                                         int32_t core_num_l) {
-#if __BANG_ARCH__ >= 370
   int32_t len_job = 0, offset_job = 0;
   assignTask(num_act_out, taskIdY, taskDimY, offset_job, len_job);
   int32_t repeat = (len_job + core_num_l - 1) / core_num_l;
@@ -182,16 +177,15 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel2(void *index_output_ptr,
     int32_t length = i == (repeat - 1) ? rem_num_l : core_num_l;
     stepIndex((int32_t *)nram_input, start_index, length);  //  sync
     int32_t *output_ptr = (int32_t *)index_output_ptr + start_index;
-    __memcpy((char *)output_ptr, nram_input, length * sizeof(int), NRAM2GDRAM);
+    __memcpy((int8_t *)output_ptr, nram_input, length * sizeof(int),
+             NRAM2GDRAM);
   }
-#endif
 }
 
 __mlu_global__ void MLUBlockBalanceGetIndicePairKernel(
     void *balance_input, void *balance_mask, void *balance_output,
     int32_t len_l, int32_t kernel_volume, int32_t core_num_l,
     int32_t output_size) {
-#if __BANG_ARCH__ >= 370
   int32_t len_job, offset_job = 0;
   assignTask(len_l * kernel_volume, taskIdY, taskDimY, offset_job, len_job);
   int32_t repeat = (len_job + core_num_l - 1) / core_num_l;
@@ -214,9 +208,9 @@ __mlu_global__ void MLUBlockBalanceGetIndicePairKernel(
           (int32_t *)balance_mask + offset_job + i * core_num_l;
       int32_t *nram_input_t = (int32_t *)nram_input + (i % 2) * ping_pong_num;
       int32_t *nram_mask_t = (int32_t *)nram_mask + (i % 2) * ping_pong_num;
-      __memcpy_async((char *)nram_input_t, (char *)balance_input_ptr,
+      __memcpy_async((int8_t *)nram_input_t, (int8_t *)balance_input_ptr,
                      deal_num * sizeof(int), GDRAM2NRAM);
-      __memcpy_async((char *)nram_mask_t, (char *)balance_mask_ptr,
+      __memcpy_async((int8_t *)nram_mask_t, (int8_t *)balance_mask_ptr,
                      deal_num * sizeof(int), GDRAM2NRAM);
     }
     if (1 <= i && i <= repeat) {
@@ -229,12 +223,12 @@ __mlu_global__ void MLUBlockBalanceGetIndicePairKernel(
           (int32_t *)nram_output + ((i - 1) % 2) * ping_pong_num;
       __bang_mul_scalar((int32_t *)nram_aux, (int32_t *)nram_mask_t, int(-1),
                         deal_num);
-      __bang_band((char *)nram_output_t, (char *)nram_input_t, (char *)nram_aux,
-                  deal_num * sizeof(int));
+      __bang_band((int8_t *)nram_output_t, (int8_t *)nram_input_t,
+                  (int8_t *)nram_aux, deal_num * sizeof(int));
       __bang_sub_scalar((int32_t *)nram_aux, (int32_t *)nram_mask_t, int(1),
                         deal_num);
-      __bang_band((char *)nram_aux, (char *)nram_aux, (char *)nram_random_num,
-                  deal_num * sizeof(int));
+      __bang_band((int8_t *)nram_aux, (int8_t *)nram_aux,
+                  (int8_t *)nram_random_num, deal_num * sizeof(int));
       __bang_add((int32_t *)nram_output_t, (int32_t *)nram_output_t,
                  (int32_t *)nram_aux, deal_num);
     }
@@ -243,18 +237,17 @@ __mlu_global__ void MLUBlockBalanceGetIndicePairKernel(
       uint64_t gdram_offset = (offset_job + (i - 2) * core_num_l) * sizeof(int);
       int32_t *nram_output_t =
           (int32_t *)nram_output + ((i - 2) % 2) * ping_pong_num;
-      __memcpy_async((char *)balance_output + gdram_offset,
-                     (char *)nram_output_t, deal_num * sizeof(int), NRAM2GDRAM);
+      __memcpy_async((int8_t *)balance_output + gdram_offset,
+                     (int8_t *)nram_output_t, deal_num * sizeof(int),
+                     NRAM2GDRAM);
     }
     __sync();
   }
-#endif
 }
 
 __mlu_global__ void MLUBlockDefaultGetIndicePairKernel3(
     void *indice_pair, void *indice_index_ptr, void *mask_all, int32_t len_l,
     int32_t kernel_volume, int32_t core_num_l) {
-#if __BANG_ARCH__ >= 370
   int32_t len_l_job = 0, offset_l_job = 0;
   assignTask(2 * kernel_volume, taskIdY, taskDimY, offset_l_job, len_l_job);
   float *nram_input = (float *)nbuf_total;
@@ -290,18 +283,16 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel3(
           (int32_t *)indice_pair + store_offset * len_l + core_offset_l_valid;
       core_offset_l_valid += valid_l_num_now;
       if (valid_l_num_now > 0) {
-        __memcpy((char *)store_valid_ptr, (char *)nram_output,
+        __memcpy((int8_t *)store_valid_ptr, (int8_t *)nram_output,
                  valid_l_num_now * sizeof(int32_t), NRAM2GDRAM);
       }
     }
   }
-#endif
 }
 
 __mlu_global__ void MLUBlockDefaultGetIndicePairKernel4(
     void *indice_out, void *input_ptr, OutputSpace host_output_space,
     int32_t len_l, int32_t core_num_l) {
-#if __BANG_ARCH__ >= 370
   OutputSpace output_space = host_output_space;
   int32_t len_l_job = 0, offset_l_job = 0;
   assignTask(len_l, taskIdY, taskDimY, offset_l_job, len_l_job);
@@ -319,7 +310,7 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel4(
       int32_t load_num_l = i == (repeat - 1) ? rem_num_l : core_num_l;
       int32_t *input_start_ptr = input_start_core + i * core_num_l;
       int32_t *nram_input_load = nram_input + (i % 2) * ping_pong_num;
-      __memcpy_async((char *)nram_input_load, (char *)input_start_ptr,
+      __memcpy_async((int8_t *)nram_input_load, (int8_t *)input_start_ptr,
                      load_num_l * sizeof(int32_t), GDRAM2NRAM);
     }
     if (1 <= i && i < (repeat + 1)) {
@@ -334,12 +325,11 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel4(
       int32_t *nram_output_t = nram_output + ((i - 2) % 2) * ping_pong_num;
       int32_t *indice_out_t =
           (int32_t *)indice_out + (offset_l_job + (i - 2) * core_num_l) * 4;
-      __memcpy_async((char *)indice_out_t, (char *)nram_output_t,
+      __memcpy_async((int8_t *)indice_out_t, (int8_t *)nram_output_t,
                      load_num_l * 4 * sizeof(int32_t), NRAM2GDRAM);
     }
     __sync();
   }
-#endif
 }
 
 __mlu_global__ void MLUBlockSubmGetIndicePairKernel1(
@@ -349,7 +339,6 @@ __mlu_global__ void MLUBlockSubmGetIndicePairKernel1(
     OutputSpace host_output_space, Stride host_stride, Dilation host_dilation,
     Padding host_padding, int32_t core_num_l, int32_t input_active_site,
     int32_t batch) {
-#if __BANG_ARCH__ >= 370
   /*  nram_space
   |input| mask_all | indice_index_in |  indice_out_expand | indice_in_expand |
   4l + l + 3kl |input| mask_all | indice_index_in |  indice_out_expand |
@@ -385,7 +374,7 @@ __mlu_global__ void MLUBlockSubmGetIndicePairKernel1(
           (float *)indices_in + (offset_l_job + i * core_num_l) * Ndim;
       int32_t *nram_input_t = (int32_t *)nram_input + (i % 2) * ping_pong_num;
       int32_t deal_num = i == repeat - 1 ? rem_num_l : core_num_l;
-      __memcpy_async((char *)nram_input_t, (char *)indices_in_addr,
+      __memcpy_async((int8_t *)nram_input_t, (int8_t *)indices_in_addr,
                      deal_num * Ndim * sizeof(int), GDRAM2NRAM);
     }
     if (1 <= i && i < (repeat + 1)) {
@@ -407,34 +396,32 @@ __mlu_global__ void MLUBlockSubmGetIndicePairKernel1(
           (offset_l_job + (i - 2) * core_num_l) * sizeof(int32_t);
       int32_t *nram_output_t =
           (int32_t *)nram_output + ((i - 2) % 2) * ping_pong_num;
-      __memcpy_async((char *)mask_all_ptr + gdram_offset,
-                     (char *)(nram_output_t), deal_num * sizeof(int),
+      __memcpy_async((int8_t *)mask_all_ptr + gdram_offset,
+                     (int8_t *)(nram_output_t), deal_num * sizeof(int),
                      NRAM2GDRAM, input_active_site * sizeof(int),
                      deal_num * sizeof(int32_t), k_dhw - 1);
-      __memcpy_async((char *)indice_index_in_ptr + gdram_offset,
-                     (char *)(nram_output_t + deal_num * k_dhw),
+      __memcpy_async((int8_t *)indice_index_in_ptr + gdram_offset,
+                     (int8_t *)(nram_output_t + deal_num * k_dhw),
                      deal_num * sizeof(int), NRAM2GDRAM,
                      input_active_site * sizeof(int),
                      deal_num * sizeof(int32_t), k_dhw - 1);
-      __memcpy_async((char *)indice_out_expand_ptr + gdram_offset,
-                     (char *)(nram_output_t + 2 * deal_num * k_dhw),
+      __memcpy_async((int8_t *)indice_out_expand_ptr + gdram_offset,
+                     (int8_t *)(nram_output_t + 2 * deal_num * k_dhw),
                      deal_num * sizeof(int), NRAM2GDRAM,
                      input_active_site * sizeof(int),
                      deal_num * sizeof(int32_t), k_dhw - 1);
-      __memcpy_async((char *)indice_in_expand_ptr + gdram_offset,
-                     (char *)(nram_output_t + 3 * deal_num * k_dhw),
+      __memcpy_async((int8_t *)indice_in_expand_ptr + gdram_offset,
+                     (int8_t *)(nram_output_t + 3 * deal_num * k_dhw),
                      deal_num * sizeof(int), NRAM2GDRAM);
     }
     __sync();
   }
-#endif
 }
 
 __mlu_global__ void MLUBlockSubmGetIndicePairKernel2(
     void *indice_out, void *mask_all_ptr, void *indice_out_index_ptr,
     void *indices_in, int32_t len_1_one, int32_t len_l_two,
     int32_t core_num_1_one, int32_t core_num_l_two) {
-#if __BANG_ARCH__ >= 370
   int32_t len_job = 0, offset_job = 0;
   assignTask(len_1_one, taskIdY, taskDimY, offset_job, len_job);
   int32_t repeat = (len_job + core_num_1_one - 1) / core_num_1_one;
@@ -447,9 +434,9 @@ __mlu_global__ void MLUBlockSubmGetIndicePairKernel2(
   for (int i = 0; i < repeat; ++i) {
     int32_t offset = i * core_num_1_one;
     int32_t deal_num = i == repeat - 1 ? rem_num_l : core_num_1_one;
-    __memcpy_async((char *)nram_input, (char *)(indices_in_offset + offset),
+    __memcpy_async((int8_t *)nram_input, (int8_t *)(indices_in_offset + offset),
                    deal_num * bit_width, GDRAM2NRAM);
-    __memcpy_async((char *)(indice_out_offset + offset), (char *)nram_input,
+    __memcpy_async((int8_t *)(indice_out_offset + offset), (int8_t *)nram_input,
                    deal_num * bit_width, NRAM2GDRAM);
   }
 
@@ -464,19 +451,18 @@ __mlu_global__ void MLUBlockSubmGetIndicePairKernel2(
   for (int i = 0; i < repeat; ++i) {
     int32_t offset = i * core_num_l_two;
     int32_t deal_num = i == repeat - 1 ? rem_num_l : core_num_l_two;
-    __memcpy((char *)nram_input, (char *)(mask_all_ptr_offset + offset),
+    __memcpy((int8_t *)nram_input, (int8_t *)(mask_all_ptr_offset + offset),
              deal_num * bit_width, GDRAM2NRAM);
-    __memcpy((char *)nram_output,
-             (char *)(indice_out_index_ptr_offset + offset),
+    __memcpy((int8_t *)nram_output,
+             (int8_t *)(indice_out_index_ptr_offset + offset),
              deal_num * bit_width, GDRAM2NRAM);
     __bang_ge_scalar((int32_t *)nram_output, (int32_t *)nram_output, (int)0,
                      deal_num);
     __bang_and((int32_t *)nram_output, (int32_t *)nram_output,
                (int32_t *)nram_input, deal_num);
-    __memcpy((char *)(mask_all_ptr_offset + offset), (char *)nram_output,
+    __memcpy((int8_t *)(mask_all_ptr_offset + offset), (int8_t *)nram_output,
              deal_num * bit_width, NRAM2GDRAM);
   }
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelDefaultGetIndicePairKl1(

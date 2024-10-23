@@ -28,22 +28,17 @@ void MoeDispatchForwardExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_moe_dispatch_forward_param()) {
     LOG(ERROR) << "Lose moe_dispatch_forward_param.";
   }
-  GTEST_CHECK(
-      parser_->inputs().size() == 5,
-      "[MoeDispatchForwardExecutor] tensor input number is wrong.");
-  GTEST_CHECK(
-      parser_->outputs().size() == 1,
-      "[MoeDispatchForwardExecutor] tensor output number is wrong.");
+  GTEST_CHECK(parser_->inputs().size() == 5,
+              "[MoeDispatchForwardExecutor] tensor input number is wrong.");
+  GTEST_CHECK(parser_->outputs().size() == 1,
+              "[MoeDispatchForwardExecutor] tensor output number is wrong.");
   flag_input_reuse_ = true;
 }
 
 void MoeDispatchForwardExecutor::initData() {
-  samples_ =
-      parser_->getProtoNode()->moe_dispatch_forward_param().samples();
-  capacity_ =
-      parser_->getProtoNode()->moe_dispatch_forward_param().capacity();
-  hidden_ =
-      parser_->getProtoNode()->moe_dispatch_forward_param().hidden();
+  samples_ = parser_->getProtoNode()->moe_dispatch_forward_param().samples();
+  capacity_ = parser_->getProtoNode()->moe_dispatch_forward_param().capacity();
+  hidden_ = parser_->getProtoNode()->moe_dispatch_forward_param().hidden();
   num_experts_ =
       parser_->getProtoNode()->moe_dispatch_forward_param().num_experts();
 }
@@ -96,14 +91,14 @@ void MoeDispatchForwardExecutor::cpuCompute() {
     output[i] = dispatch[i];
   }
   for (int i = 0; i < samples_; ++i) {
-     if (locations[i] >= 0 && locations[i] < capacity_ &&
-         indices[i] >= 0 && indices[i] < num_experts_) {
-       for (int j = 0; j < hidden_; ++j) {
-         int idx = ((int)indices[i] * capacity_ +
-                   (int)locations[i]) * (hidden_) + j;
-         output[idx] = gates[i] * input[i * (hidden_) + j];
-       }
-     }
+    if (locations[i] >= 0 && locations[i] < capacity_ && indices[i] >= 0 &&
+        indices[i] < num_experts_) {
+      for (int j = 0; j < hidden_; ++j) {
+        int idx =
+            ((int)indices[i] * capacity_ + (int)locations[i]) * (hidden_) + j;
+        output[idx] = gates[i] * input[i * (hidden_) + j];
+      }
+    }
   }
 
   VLOG(4) << "[MoeDispatchForwardExecutor] call cpuCompute() end.";
@@ -118,25 +113,28 @@ int64_t MoeDispatchForwardExecutor::getTheoryOps() {
 }
 
 int64_t MoeDispatchForwardExecutor::getTheoryIoSize() {
-  auto gates_dwidth = mluop::getSizeOfDataType(desc_gates_->dtype);
-  auto indices_dwidth = mluop::getSizeOfDataType(desc_indices_->dtype);
-  auto locations_dwidth = mluop::getSizeOfDataType(desc_locations_->dtype);
-  auto input_dwidth = mluop::getSizeOfDataType(desc_input_->dtype);
-  auto dispatch_dwidth = mluop::getSizeOfDataType(desc_input_->dtype);
+  size_t gates_dwidth, indices_dwidth, locations_dwidth, input_dwidth,
+      dispatch_dwidth;
+  MLUOP_CHECK(mluOpGetSizeOfDataType(desc_gates_->dtype, &gates_dwidth));
+  MLUOP_CHECK(mluOpGetSizeOfDataType(desc_indices_->dtype, &indices_dwidth));
+  MLUOP_CHECK(
+      mluOpGetSizeOfDataType(desc_locations_->dtype, &locations_dwidth));
+  MLUOP_CHECK(mluOpGetSizeOfDataType(desc_input_->dtype, &input_dwidth));
+  MLUOP_CHECK(mluOpGetSizeOfDataType(desc_input_->dtype, &dispatch_dwidth));
 
   int64_t gates_theory_ios = samples_ * gates_dwidth;
   int64_t indices_theory_ios = samples_ * indices_dwidth;
   int64_t locations_theory_ios = samples_ * locations_dwidth;
   int64_t input_theory_ios = samples_ * hidden_ * input_dwidth;
-  int64_t dispatch_theory_ios = num_experts_ * capacity_ * hidden_ *
-                                dispatch_dwidth;
+  int64_t dispatch_theory_ios =
+      num_experts_ * capacity_ * hidden_ * dispatch_dwidth;
 
   int64_t theory_ios = gates_theory_ios + indices_theory_ios +
                        locations_theory_ios + input_theory_ios +
                        dispatch_theory_ios;
 
-  VLOG(4) << "MoeDispatchForwardExecutor::getTheoryIoSize() : "
-          << theory_ios << " IoSize";
+  VLOG(4) << "MoeDispatchForwardExecutor::getTheoryIoSize() : " << theory_ios
+          << " IoSize";
   return theory_ios;
 }
 

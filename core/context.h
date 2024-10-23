@@ -96,17 +96,17 @@ struct mluOpContext {
     switch (function_type) {
       default:
         return 0;
-      case CNRT_FUNC_TYPE_BLOCK:
+      case cnrtFuncTypeBlock:
         return job_num[0];
-      case CNRT_FUNC_TYPE_UNION1:
+      case cnrtFuncTypeUnion1:
         return job_num[1];
-      case CNRT_FUNC_TYPE_UNION2:
+      case cnrtFuncTypeUnion2:
         return job_num[2];
-      case CNRT_FUNC_TYPE_UNION4:
+      case cnrtFuncTypeUnion4:
         return job_num[3];
-      case CNRT_FUNC_TYPE_UNION8:
+      case cnrtFuncTypeUnion8:
         return job_num[4];
-      case CNRT_FUNC_TYPE_UNION16:
+      case cnrtFuncTypeUnion16:
         return job_num[5];
     }
   }

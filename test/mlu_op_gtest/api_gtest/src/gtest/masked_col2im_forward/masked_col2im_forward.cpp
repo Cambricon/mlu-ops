@@ -51,11 +51,11 @@ class masked_col2im_forward : public testing::Test {
 
     if (col) {
       if (col_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&col_, MLUOP_DTYPE_FLOAT *
                                           mluOpGetTensorElementNum(col_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&col_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -70,12 +70,12 @@ class masked_col2im_forward : public testing::Test {
 
     if (mask_h_idx) {
       if (mask_h_idx_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&mask_h_idx_,
                                MLUOP_DTYPE_INT32 *
                                    mluOpGetTensorElementNum(mask_h_idx_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&mask_h_idx_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -90,12 +90,12 @@ class masked_col2im_forward : public testing::Test {
 
     if (mask_w_idx) {
       if (mask_w_idx_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&mask_w_idx_,
                                MLUOP_DTYPE_INT32 *
                                    mluOpGetTensorElementNum(mask_w_idx_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&mask_w_idx_, MLUOP_DTYPE_INT32 * 2));
       }
     }
@@ -110,17 +110,17 @@ class masked_col2im_forward : public testing::Test {
 
     if (im) {
       if (im_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&im_, MLUOP_DTYPE_FLOAT *
                                          mluOpGetTensorElementNum(im_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&im_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
 
     if (workspace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&workspace_, MLUOP_DTYPE_FLOAT * workspace_size_));
     }
   }
@@ -151,7 +151,7 @@ class masked_col2im_forward : public testing::Test {
 
     if (col_) {
       VLOG(4) << "Destroy col_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(col_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(col_));
       col_ = nullptr;
     }
 
@@ -163,7 +163,7 @@ class masked_col2im_forward : public testing::Test {
 
     if (mask_h_idx_) {
       VLOG(4) << "Destroy mask_h_idx_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(mask_h_idx_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(mask_h_idx_));
       mask_h_idx_ = nullptr;
     }
 
@@ -175,7 +175,7 @@ class masked_col2im_forward : public testing::Test {
 
     if (mask_w_idx_) {
       VLOG(4) << "Destroy mask_w_idx_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(mask_w_idx_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(mask_w_idx_));
       mask_w_idx_ = nullptr;
     }
 
@@ -187,13 +187,13 @@ class masked_col2im_forward : public testing::Test {
 
     if (im_) {
       VLOG(4) << "Destroy im_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(im_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(im_));
       im_ = nullptr;
     }
 
     if (workspace_) {
       VLOG(4) << "Destroy workspace_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
   }

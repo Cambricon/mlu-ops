@@ -47,7 +47,7 @@ void unaryOpPolicyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   tensor_size = CEIL_ALIGN(tensor_size, NFU_ALIGN_SIZE);
   uint64_t need_core =
       CEIL_ALIGN(tensor_size / NFU_ALIGN_SIZE, core_in_cluster);
-  *k_type = CNRT_FUNC_TYPE_UNION1;  // default func type
+  *k_type = cnrtFuncTypeUnion1;  // default func type
   k_dim->x = core_in_cluster;
   if (need_core < core_number) {
     k_dim->y = need_core / core_in_cluster;
@@ -68,7 +68,7 @@ void unaryOpPolicyFuncBlock(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   uint32_t core_used =
       CEIL_ALIGN(data_size, OPTIMAL_BOUNDARY) / OPTIMAL_BOUNDARY;
   core_used = core_used > core_num ? core_num : core_used;
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
+  *k_type = cnrtFuncTypeBlock;
   k_dim->x = 1;
   k_dim->y = core_used;
   k_dim->z = 1;
@@ -81,7 +81,7 @@ void unaryOpPolicyFuncBlock_v2(mluOpHandle_t handle,
                                cnrtDim3_t &k_dim, cnrtFunctionType_t &k_type,
                                size_t &normal_core_elem_num,
                                size_t &tail_core_elem_num) {
-  k_type = CNRT_FUNC_TYPE_BLOCK;
+  k_type = cnrtFuncTypeBlock;
   if (MLUOP_MLU590 == handle->arch) {
     const size_t llc_pending_size = 512;
     single_core_min_load_size =

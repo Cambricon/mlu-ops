@@ -35,13 +35,13 @@
   template <typename DType_in1, typename DType_in2, typename DType_out, \
             typename... Args>                                           \
   __mlu_global__ void MLUBlockKernel3StagePipeline##Op##Prefer(         \
-      char *x, char *y, char *z, size_t element_num, Args... args);
+      int8_t *x, int8_t *y, int8_t *z, size_t element_num, Args... args);
 
 #define BINARY_OP_KERNEL_3PIPELINE(Op, Prefer)                                \
   template <typename DType_in1, typename DType_in2, typename DType_out,       \
             typename... Args>                                                 \
   __mlu_global__ void MLUBlockKernel3StagePipeline##Op##Prefer(               \
-      char *input1_gdram, char *input2_gdram, char *output_gdram,             \
+      int8_t *input1_gdram, int8_t *input2_gdram, int8_t *output_gdram,       \
       size_t element_num, Args... args) {                                     \
     if (__is_mpu()) {                                                         \
       return;                                                                 \
@@ -56,11 +56,11 @@
         auxiliary_b_gap, auxiliary_c_gap, span_num_deal, align_num, args...); \
     const size_t num_rem = element_num % taskDim;                             \
     size_t num_per_core = element_num / taskDim;                              \
-    const char *const input1_start =                                          \
+    const int8_t *const input1_start =                                        \
         input1_gdram + taskId * num_per_core * sizeof(DType_in1);             \
-    const char *const input2_start =                                          \
+    const int8_t *const input2_start =                                        \
         input2_gdram + taskId * num_per_core * sizeof(DType_in2);             \
-    char *const output_start =                                                \
+    int8_t *const output_start =                                              \
         output_gdram + taskId * num_per_core * sizeof(DType_out);             \
     if (num_rem > 0 && taskId == taskDim - 1) {                               \
       num_per_core = num_per_core + num_rem;                                  \
@@ -69,12 +69,12 @@
     const int32_t repeat = num_per_core / span_num_deal;                      \
     const size_t rem = num_per_core % span_num_deal;                          \
     const size_t align_rem = CEIL_ALIGN(rem, align_num);                      \
-    char *ping_output = nram_buffer;                                          \
-    char *ping_input1 = nram_buffer + output_input1_gap;                      \
-    char *ping_input2 = nram_buffer + output_input2_gap;                      \
-    char *auxiliary_a = nram_buffer + auxiliary_a_gap;                        \
-    char *auxiliary_b = nram_buffer + auxiliary_b_gap;                        \
-    char *auxiliary_c = nram_buffer + auxiliary_c_gap;                        \
+    int8_t *ping_output = nram_buffer;                                        \
+    int8_t *ping_input1 = nram_buffer + output_input1_gap;                    \
+    int8_t *ping_input2 = nram_buffer + output_input2_gap;                    \
+    int8_t *auxiliary_a = nram_buffer + auxiliary_a_gap;                      \
+    int8_t *auxiliary_b = nram_buffer + auxiliary_b_gap;                      \
+    int8_t *auxiliary_c = nram_buffer + auxiliary_c_gap;                      \
     const size_t span_load_input1_size = span_num_deal * sizeof(DType_in1);   \
     const size_t span_load_input2_size = span_num_deal * sizeof(DType_in2);   \
     const size_t span_store_size = span_num_deal * sizeof(DType_out);         \
@@ -99,11 +99,9 @@
       __asm__ volatile("sync;");                                              \
     }                                                                         \
     for (int32_t i = 0; i < repeat - 2; ++i) {                                \
-      pvLock();                                                               \
       __memcpy_async(output_start + i * span_store_size,                      \
                      ping_output + (i % 2) * ping_pong_gap, span_store_size,  \
                      NRAM2GDRAM);                                             \
-      pvUnlock();                                                             \
       __memcpy_async(ping_input1 + (i % 2) * ping_pong_gap,                   \
                      input1_start + (i + 2) * span_load_input1_size,          \
                      span_load_input1_size, GDRAM2NRAM);                      \
@@ -118,11 +116,9 @@
       __asm__ volatile("sync;");                                              \
     }                                                                         \
     if (repeat > 1) {                                                         \
-      pvLock();                                                               \
       __memcpy_async(output_start + (repeat - 2) * span_store_size,           \
                      ping_output + ((repeat - 2) % 2) * ping_pong_gap,        \
                      span_store_size, NRAM2GDRAM);                            \
-      pvUnlock();                                                             \
     }                                                                         \
     if (rem > 0) {                                                            \
       __memcpy_async(ping_input1 + (repeat % 2) * ping_pong_gap,              \
@@ -141,11 +137,9 @@
     }                                                                         \
     __asm__ volatile("sync;");                                                \
     if (repeat > 0) {                                                         \
-      pvLock();                                                               \
       __memcpy_async(output_start + (repeat - 1) * span_store_size,           \
                      ping_output + ((repeat - 1) % 2) * ping_pong_gap,        \
                      span_store_size, NRAM2GDRAM);                            \
-      pvUnlock();                                                             \
     }                                                                         \
     if (rem > 0) {                                                            \
       compute##Op##Prefer<DType_in1, DType_in2, DType_out>(                   \
@@ -154,11 +148,9 @@
           ping_input2 + (repeat % 2) * ping_pong_gap, auxiliary_a,            \
           auxiliary_b, auxiliary_c, align_rem, rem, args...);                 \
       __asm__ volatile("sync;");                                              \
-      pvLock();                                                               \
       __memcpy_async(output_start + repeat * span_store_size,                 \
                      ping_output + (repeat % 2) * ping_pong_gap,              \
                      rem * sizeof(DType_out), NRAM2GDRAM);                    \
-      pvUnlock();                                                             \
     }                                                                         \
   }
 
@@ -167,20 +159,20 @@
   template <typename DType_in1, typename DType_in2, typename DType_out, \
             typename... Args>                                           \
   __mlu_global__ void MLUBlockKernel3StagePipelineV2##Op##Prefer(       \
-      char *x, char *y, char *z, size_t normal_core_elem_num,           \
+      int8_t *x, int8_t *y, int8_t *z, size_t normal_core_elem_num,     \
       size_t tail_core_elem_num, Args... args);
 
 #define BINARY_OP_KERNEL_3PIPELINE_V2(Op, Prefer)                             \
   template <typename DType_in1, typename DType_in2, typename DType_out,       \
             typename... Args>                                                 \
   __mlu_global__ void MLUBlockKernel3StagePipelineV2##Op##Prefer(             \
-      char *input1_gdram, char *input2_gdram, char *output_gdram,             \
+      int8_t *input1_gdram, int8_t *input2_gdram, int8_t *output_gdram,       \
       size_t normal_core_elem_num, size_t tail_core_elem_num, Args... args) { \
-    const char *const input1_start =                                          \
+    const int8_t *const input1_start =                                        \
         input1_gdram + taskId * normal_core_elem_num * sizeof(DType_in1);     \
-    const char *const input2_start =                                          \
+    const int8_t *const input2_start =                                        \
         input2_gdram + taskId * normal_core_elem_num * sizeof(DType_in2);     \
-    char *const output_start =                                                \
+    int8_t *const output_start =                                              \
         output_gdram + taskId * normal_core_elem_num * sizeof(DType_out);     \
     const size_t num_cur_core =                                               \
         (taskId + 1 == taskDim) ? tail_core_elem_num : normal_core_elem_num;  \
@@ -197,12 +189,12 @@
     const uint32_t repeat = num_cur_core / span_num_deal;                     \
     const size_t rem = num_cur_core % span_num_deal;                          \
     const size_t align_rem = CEIL_ALIGN(rem, align_num);                      \
-    char *ping_output = nram_buffer;                                          \
-    char *ping_input1 = nram_buffer + output_input1_gap;                      \
-    char *ping_input2 = nram_buffer + output_input2_gap;                      \
-    char *auxiliary_a = nram_buffer + auxiliary_a_gap;                        \
-    char *auxiliary_b = nram_buffer + auxiliary_b_gap;                        \
-    char *auxiliary_c = nram_buffer + auxiliary_c_gap;                        \
+    int8_t *ping_output = nram_buffer;                                        \
+    int8_t *ping_input1 = nram_buffer + output_input1_gap;                    \
+    int8_t *ping_input2 = nram_buffer + output_input2_gap;                    \
+    int8_t *auxiliary_a = nram_buffer + auxiliary_a_gap;                      \
+    int8_t *auxiliary_b = nram_buffer + auxiliary_b_gap;                      \
+    int8_t *auxiliary_c = nram_buffer + auxiliary_c_gap;                      \
     const size_t span_load_input1_size = span_num_deal * sizeof(DType_in1);   \
     const size_t span_load_input2_size = span_num_deal * sizeof(DType_in2);   \
     const size_t span_store_size = span_num_deal * sizeof(DType_out);         \

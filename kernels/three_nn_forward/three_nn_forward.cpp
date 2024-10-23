@@ -224,14 +224,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
   mluOpDataType_t input_dtype = unknown_desc->dtype;
   void *known_workspace = workspace;
   void *transpose_workspace =
-      (char *)known_workspace + known_desc->total_tensor_size;
+      (int8_t *)known_workspace + known_desc->total_tensor_size;
 
   // start U1 task, occupy all available clusters
   cnrtDim3_t k_dims;
   k_dims.x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   k_dims.y = mluop::runtime::getClusterLimitCapability(handle);
   k_dims.z = 1;
-  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
+  cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
 
   VLOG(5) << "[mluOpThreeNNForward] cnnlTranspose_v2 feature start.";
 

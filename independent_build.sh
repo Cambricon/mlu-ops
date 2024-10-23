@@ -111,7 +111,7 @@ usage () {
     echo "    --asan                      Build with asan check enabled"
     echo "    -d, --debug                 Build mlu-ops with debug mode"
     echo "    --disable-gtest             Build mlu-ops without gtest"
-    echo "    --enable-bang-memcheck      Build with cncc '-mllvm -enable-mlisa-sanitizer -Xbang-cnas -O0 -g' arg to enable memcheck"
+    echo "    --enable-bang-memcheck      (Deprecated, use CNSanitizer instead) Build with cncc '-mllvm -enable-mlisa-sanitizer -Xbang-cnas -O0 -g' arg to enable memcheck"
     echo "    --enable-static             Build mlu-ops static library"
     echo "    --mlu370                    Build for target product MLU370: __BANG_ARCH__ = 372"
     echo "                                                                 __MLU_NRAM_SIZE__ = 768KB"
@@ -326,6 +326,7 @@ if [ $# != 0 ]; then
       --enable-bang-memcheck)
           shift
           export MLUOP_BUILD_BANG_MEMCHECK="ON"
+          prog_log_warn "[deprecated] bang memcheck, consider use CNSanitizer instead" && sleep 3
           ;;
       --enable-static)
           shift
@@ -469,7 +470,7 @@ pushd ${BUILD_PATH} > /dev/null
                 -DBUILD_VERSION="${BUILD_VERSION}" \
                 -DMAJOR_VERSION="${MAJOR_VERSION}" \
                 -DMLUOP_BUILD_ASAN_CHECK="${MLUOP_BUILD_ASAN_CHECK}" \
-                -DMLUOP_BUILD_BANG_MEMCHECK="${MLUOP_BUILD_BANG_MEMCHECK}" \
+                -DMLUOP_BUILD_BANG_MEMCHECK="${MLUOP_BUILD_BANG_MEMCHECK:-OFF}" \
                 -DMLUOP_MLU_ARCH_LIST="${MLUOP_MLU_ARCH_LIST}" \
                 -DMLUOP_TARGET_CPU_ARCH="${MLUOP_TARGET_CPU_ARCH}" \
                 -DMLUOP_BUILD_SPECIFIC_OP="${MLUOP_BUILD_SPECIFIC_OP}" \

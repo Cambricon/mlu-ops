@@ -106,12 +106,12 @@ class fft_general : public testing::TestWithParam<FFTParams> {
       }
       if (workspace_size_) {
         VLOG(4) << "Destroy workspace_size_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_size_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_size_));
         workspace_size_ = nullptr;
       }
       if (reservespace_size_) {
         VLOG(4) << "Destroy reservespace_size_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(reservespace_size_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(reservespace_size_));
         reservespace_size_ = nullptr;
       }
     } catch (const std::exception &e) {

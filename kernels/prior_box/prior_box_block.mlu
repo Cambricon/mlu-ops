@@ -28,7 +28,7 @@
 #define ALIGN_BYTE 1024
 #define MIN(x, y) ((x) < (y)) ? (x) : (y)
 #define EPSILON 1e-6
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void generate_AbAb_Mask(T *a_mask, T a_index, T *b_mask, T b_index,

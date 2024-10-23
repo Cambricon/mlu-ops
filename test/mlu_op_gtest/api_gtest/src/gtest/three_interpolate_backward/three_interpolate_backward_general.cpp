@@ -60,7 +60,7 @@ class three_interprolate_backward_general
                                          grad_output_shape.data()));
     uint64_t grad_output_ele_num = mluOpGetTensorElementNum(grad_output_desc_);
     if (grad_output_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_output_, 8))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_output_, 8))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&indices_desc_));
@@ -74,7 +74,7 @@ class three_interprolate_backward_general
                                          indices_shape.data()));
     uint64_t indices_ele_num = mluOpGetTensorElementNum(indices_desc_);
     if (indices_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&indices_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&indices_, 8));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&weight_desc_));
@@ -88,7 +88,7 @@ class three_interprolate_backward_general
                                          weight_shape.data()));
     uint64_t weight_ele_num = mluOpGetTensorElementNum(weight_desc_);
     if (weight_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&weight_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&weight_, 8));
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&grad_features_desc_));
@@ -104,7 +104,7 @@ class three_interprolate_backward_general
     uint64_t grad_features_ele_num =
         mluOpGetTensorElementNum(grad_features_desc_);
     if (grad_features_ele_num > 0) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&grad_features_, 8));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_features_, 8));
     }
   }
 
@@ -146,19 +146,19 @@ class three_interprolate_backward_general
       grad_features_desc_ = NULL;
     }
     if (grad_output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_output_));
       grad_output_ = NULL;
     }
     if (indices_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indices_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indices_));
       indices_ = NULL;
     }
     if (weight_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(weight_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(weight_));
       weight_ = NULL;
     }
     if (grad_features_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_features_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_features_));
       grad_features_ = NULL;
     }
   }

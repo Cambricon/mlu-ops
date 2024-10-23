@@ -57,6 +57,7 @@ if(${MLUOP_BUILD_ASAN_CHECK} MATCHES "ON")
 endif()
 
 # -- BANG memcheck
+#TODO remove this option after cntoolkit upgraded to 4.0
 if(${MLUOP_BUILD_BANG_MEMCHECK} MATCHES "ON")
   message("-- BANG memcheck enabled")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -mllvm -enable-mlisa-sanitizer")
@@ -88,6 +89,36 @@ if(NOT BANG_FOUND)
   message(FATAL_ERROR "BANG cannot be found.")
 elseif (NOT BANG_CNCC_EXECUTABLE)
   message(FATAL_ERROR "cncc not found, please ensure cncc is in your PATH env or set variable BANG_CNCC_EXECUTABLE from cmake. Otherwise you should check path used by find_program(BANG_CNCC_EXECUTABLE) in FindBANG.cmake")
+endif()
+message(STATUS "BANG_CNCC_EXECUTABLE=${BANG_CNCC_EXECUTABLE}")
+execute_process(
+  COMMAND ${BANG_CNCC_EXECUTABLE} --version
+  COMMAND head -n1
+  COMMAND awk "{print $2}"
+  COMMAND sed "s/^v//g"
+  OUTPUT_VARIABLE _cncc_version
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+message(STATUS "cncc version ${_cncc_version}")
+execute_process(
+  COMMAND echo ${_cncc_version}
+  COMMAND cut -d "." -f1
+  OUTPUT_VARIABLE _cncc_version_major
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+execute_process(
+  COMMAND echo ${_cncc_version}
+  COMMAND cut -d "." -f2
+  OUTPUT_VARIABLE _cncc_version_minor
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+if (NOT "${_cncc_version}" VERSION_LESS "4.15.0")
+  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -mllvm --fmlu-memintr-warning=true")
+endif()
+
+if(NOT "${_cncc_version}" VERSION_LESS "4.1.0")
+  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -mllvm --fmlu-addrspace-warning")
 endif()
 
 find_package(fmt REQUIRED)

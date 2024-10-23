@@ -40,7 +40,7 @@ static void policyFuncDefault(const mluOpHandle_t handle,
       std::min((num_points + k_dim->x - 1) / k_dim->x,
                (size_t)mluop::runtime::getClusterLimitCapability(handle));
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
 }
 
 static void policyFuncCalcPointsPerVoxel(const mluOpHandle_t handle,
@@ -50,7 +50,7 @@ static void policyFuncCalcPointsPerVoxel(const mluOpHandle_t handle,
   k_dim->x = 1;
   k_dim->y = 1;
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
+  *k_type = cnrtFuncTypeBlock;
 }
 
 mluOpStatus_t voxelizationParamCheck(
@@ -284,13 +284,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpVoxelization(
   void *temp_coors = workspace;
   // point_to_pointidx : [num_points]
   void *point_to_pointidx =
-      (char *)temp_coors + num_points * 3 * sizeof(int32_t);
+      (int8_t *)temp_coors + num_points * 3 * sizeof(int32_t);
   // point_to_voxelidx : [num_points]
   void *point_to_voxelidx =
-      (char *)point_to_pointidx + num_points * sizeof(int32_t);
+      (int8_t *)point_to_pointidx + num_points * sizeof(int32_t);
   // coor_to_voxelidx : [num_points]
   void *coor_to_voxelidx =
-      (char *)point_to_voxelidx + num_points * sizeof(int32_t);
+      (int8_t *)point_to_voxelidx + num_points * sizeof(int32_t);
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;

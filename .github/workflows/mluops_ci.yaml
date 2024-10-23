@@ -48,4 +48,4 @@ jobs:
 
       - name: run_mlu_ops_ci
         run: >
-          bash .github/ci_script/mlu-ops-ci_script.sh
+            bash .github/scripts/invoke_ci_test.sh

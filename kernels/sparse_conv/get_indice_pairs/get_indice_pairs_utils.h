@@ -29,7 +29,6 @@
 #include "kernels/sparse_conv/get_indice_pairs/normal_get_indice_pairs.h"
 #include "kernels/kernel.h"
 
-#if __BANG_ARCH__ >= 370
 __mlu_func__ void assignTask(const int32_t num_total_task,
                              const int32_t &taskid, const int32_t &taskdim,
                              int32_t &task_offset, int32_t &num_cur_task) {
@@ -245,13 +244,13 @@ __mlu_func__ void genIndiceOutExpand(int32_t *nram_output, int32_t *mask_all,
                                      int32_t *nram_input, int32_t *temp,
                                      int32_t deal_num, int32_t output_size) {
   __bang_mul_scalar((int32_t *)temp, (int32_t *)mask_all, int(-1), deal_num);
-  __bang_band((char *)nram_output, (char *)nram_input, (char *)temp,
+  __bang_band((int8_t *)nram_output, (int8_t *)nram_input, (int8_t *)temp,
               deal_num * sizeof(int32_t));
   // clost to intmax
   __bang_sub_scalar((int32_t *)temp, (int32_t *)mask_all, int(1), deal_num);
   __bang_mul_scalar((int32_t *)temp, (int32_t *)temp, int(-1 * output_size),
                     deal_num);
-  __bang_bor((char *)nram_output, (char *)nram_output, (char *)temp,
+  __bang_bor((int8_t *)nram_output, (int8_t *)nram_output, (int8_t *)temp,
              deal_num * sizeof(int32_t));
 }
 
@@ -344,5 +343,4 @@ __mlu_func__ void genIndiceInExpand(int32_t *nram_output, int32_t *nram_input,
   __bang_add((int32_t *)nram_output, (int32_t *)nram_output,
              (int32_t *)nram_aux + 4 * deal_num, deal_num);
 }
-#endif
 #endif  // KERNELS_GET_INDICE_PAIRS_GET_INDICE_PAIRS_UTILS_H_

@@ -51,11 +51,11 @@ class indice_convolution_backward_filter_general
           features_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(features_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&features_,
                        mluOpDataTypeBytes(features_params.get_dtype()) * 10));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&features_,
                                mluOpDataTypeBytes(features_params.get_dtype()) *
                                    mluOpGetTensorElementNum(features_desc_)));
@@ -69,13 +69,13 @@ class indice_convolution_backward_filter_general
           output_grad_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(output_grad_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &output_grad_,
                 mluOpDataTypeBytes(output_grad_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&output_grad_,
                        mluOpDataTypeBytes(output_grad_params.get_dtype()) *
                            mluOpGetTensorElementNum(output_grad_desc_)));
@@ -89,13 +89,13 @@ class indice_convolution_backward_filter_general
           indice_pairs_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(indice_pairs_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &indice_pairs_,
                 mluOpDataTypeBytes(indice_pairs_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&indice_pairs_,
                        mluOpDataTypeBytes(indice_pairs_params.get_dtype()) *
                            mluOpGetTensorElementNum(indice_pairs_desc_)));
@@ -109,13 +109,13 @@ class indice_convolution_backward_filter_general
           filters_grad_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(filters_grad_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(
                 &filters_grad_,
                 mluOpDataTypeBytes(filters_grad_params.get_dtype()) * 10));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&filters_grad_,
                        mluOpDataTypeBytes(filters_grad_params.get_dtype()) *
                            mluOpGetTensorElementNum(filters_grad_desc_)));
@@ -149,7 +149,7 @@ class indice_convolution_backward_filter_general
       destroy();
       return expected_status_ == status;
     }
-    GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+    GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
 
     status = mluOpIndiceConvolutionBackwardFilter(
         handle_, features_desc_, features_, output_grad_desc_, output_grad_,
@@ -175,7 +175,7 @@ class indice_convolution_backward_filter_general
 
       if (features_) {
         VLOG(4) << "Destroy features";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(features_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(features_));
         features_ = nullptr;
       }
 
@@ -187,7 +187,7 @@ class indice_convolution_backward_filter_general
 
       if (output_grad_) {
         VLOG(4) << "Destroy output_grad";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_grad_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(output_grad_));
         output_grad_ = nullptr;
       }
 
@@ -199,7 +199,7 @@ class indice_convolution_backward_filter_general
 
       if (indice_pairs_) {
         VLOG(4) << "Destroy indice_pairs";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indice_pairs_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(indice_pairs_));
         indice_pairs_ = nullptr;
       }
 
@@ -211,7 +211,7 @@ class indice_convolution_backward_filter_general
 
       if (filters_grad_) {
         VLOG(4) << "Destroy filters_grad";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(filters_grad_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(filters_grad_));
         filters_grad_ = nullptr;
       }
     } catch (const std::exception &e) {

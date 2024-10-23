@@ -34,7 +34,7 @@
 // policyFunc
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type) {
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
   k_dim->z = 1;

@@ -45,7 +45,6 @@ __mlu_func__ void genWSc1_opt(DT* w_r, DT* w_i, DT* tmp, DT* seq_addr,
   __bang_add_scalar(tmp, seq_addr, inc_value, size_tmp_bytes);
   __bang_mul_scalar(tmp, tmp, scale, size_tmp_bytes);
 
-#if __BANG_ARCH__ >= 372
   __bang_cos((float*)w_r, (float*)tmp, size_tmp_bytes);
   if (n <= 48000) {
     __bang_sin((float*)w_i, (float*)tmp, size_tmp_bytes);
@@ -53,7 +52,6 @@ __mlu_func__ void genWSc1_opt(DT* w_r, DT* w_i, DT* tmp, DT* seq_addr,
     // This function has higher precision, and the actual test determined n.
     __cn_vector_sin_f32(size_tmp_bytes, (float*)w_i, (float*)tmp);
   }
-#endif
 }
 
 // Load input data from GDRAM to NRAM. The data source(src_in) is the
@@ -126,7 +124,7 @@ __mlu_func__ void load(DT* y_in_r, DT* y_in_i, DT* z_in_r, DT* z_in_i,
     int src_offset = L_sub * pow_2_m * part + b * n * 2;
     int data_size_bytes = pow_2_m * sizeof(DT);
     int total_data_size_bytes = L_deal * data_size_bytes;
-    int distance_bytes = int((char*)x_out1_i - (char*)x_out1_r);
+    int distance_bytes = int((int8_t*)x_out1_i - (int8_t*)x_out1_r);
     if (part < part_num / 2 || part_num == 1) {
       __memcpy_async(x_out1_r, matmul_re_mul_re_addr + src_offset,
                      total_data_size_bytes, GDRAM2NRAM, distance_bytes,

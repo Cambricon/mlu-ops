@@ -51,7 +51,7 @@ static mluOpStatus_t kernelPtsIdxOfVoxelsPolicyFunc(
   k_dim->x = core_limit;
   k_dim->y = (task_dim / core_limit) > 0 ? (task_dim / core_limit) : 1;
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -73,7 +73,7 @@ static mluOpStatus_t kernelRoiawarePool3dForwardPolicyFunc(
   k_dim->x = core_limit;
   k_dim->y = (task_dim / core_limit) > 0 ? (task_dim / core_limit) : 1;
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -94,7 +94,7 @@ static mluOpStatus_t kernelRoiawarePool3dBackwardPolicyFunc(
   k_dim->x = core_limit;
   k_dim->y = (task_dim / core_limit) > 0 ? (task_dim / core_limit) : 1;
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -373,9 +373,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
   uint64_t pts_feature_dtype_size = mluOpGetTensorElementNum(pts_feature_desc) *
                                     mluop::getSizeOfDataType(data_dtype);
   void *pts_workspace = workspace;
-  void *pts_feature_workspace = (char *)pts_workspace + pts_dtype_size;
+  void *pts_feature_workspace = (int8_t *)pts_workspace + pts_dtype_size;
   void *transpose_workspace =
-      (char *)pts_feature_workspace + pts_feature_dtype_size;
+      (int8_t *)pts_feature_workspace + pts_feature_dtype_size;
 
   VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlTranspose pts start.";
   int pts_dim = pts_desc->dim;

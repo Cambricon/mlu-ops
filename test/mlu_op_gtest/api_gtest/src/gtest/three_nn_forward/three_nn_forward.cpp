@@ -47,7 +47,7 @@ class three_nn_forward : public testing::Test {
                                            unknown_dims.data()));
     }
     if (unknown) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&unknown_, 6 * 4))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&unknown_, 6 * 4))
     }
     if (known_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&known_desc_));
@@ -57,10 +57,10 @@ class three_nn_forward : public testing::Test {
                                            known_dims.data()));
     }
     if (known) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&known_, 30 * 4))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&known_, 30 * 4))
     }
     if (workspace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_))
     }
     if (dist2_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&dist2_desc_));
@@ -70,7 +70,7 @@ class three_nn_forward : public testing::Test {
                                            dist2_dims.data()));
     }
     if (dist2) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&dist2_, 6 * 4))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&dist2_, 6 * 4))
     }
     if (idx_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&idx_desc_));
@@ -80,7 +80,7 @@ class three_nn_forward : public testing::Test {
                                            idx_dims.data()));
     }
     if (idx) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&idx_, 6 * 4))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&idx_, 6 * 4))
     }
   }
 
@@ -104,7 +104,7 @@ class three_nn_forward : public testing::Test {
       unknown_desc_ = NULL;
     }
     if (unknown_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(unknown_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(unknown_));
       unknown_ = NULL;
     }
     if (known_desc_) {
@@ -112,11 +112,11 @@ class three_nn_forward : public testing::Test {
       known_desc_ = NULL;
     }
     if (known_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(known_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(known_));
       known_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = NULL;
     }
     if (dist2_desc_) {
@@ -124,7 +124,7 @@ class three_nn_forward : public testing::Test {
       dist2_desc_ = NULL;
     }
     if (dist2_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(dist2_))
+      GTEST_CHECK(cnrtSuccess == cnrtFree(dist2_))
       dist2_ = NULL;
     }
     if (idx_desc_) {
@@ -132,7 +132,7 @@ class three_nn_forward : public testing::Test {
       idx_desc_ = NULL;
     }
     if (idx_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(idx_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(idx_));
       idx_ = NULL;
     }
   }

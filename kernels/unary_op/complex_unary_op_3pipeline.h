@@ -34,12 +34,12 @@
 #define COMPLEX_UNARY_OP_KERNEL_3PIPELINE_DECLARE(Op, Prefer)          \
   template <typename DType_in, typename DType_out, typename... Args>   \
   __mlu_global__ void MLUBlockKernel3StagePipelineComplex##Op##Prefer( \
-      char *x, char *y, size_t element_num, Args... args);
+      int8_t *x, int8_t *y, size_t element_num, Args... args);
 
 #define COMPLEX_UNARY_OP_KERNEL_3PIPELINE_IMPLE(Op, Prefer)                    \
   template <typename DType_in, typename DType_out, typename... Args>           \
   __mlu_global__ void MLUBlockKernel3StagePipelineComplex##Op##Prefer(         \
-      char *input_gdram, char *output_gdram, size_t element_num,               \
+      int8_t *input_gdram, int8_t *output_gdram, size_t element_num,           \
       Args... args) {                                                          \
     if (__is_mpu()) {                                                          \
       return;                                                                  \
@@ -53,9 +53,9 @@
         span_num_deal, align_num, args...);                                    \
     size_t num_per_core = element_num / taskDim;                               \
     size_t num_rem = element_num % taskDim;                                    \
-    char *input_start =                                                        \
+    int8_t *input_start =                                                      \
         input_gdram + taskId * num_per_core * sizeof(DType_in);                \
-    char *output_start =                                                       \
+    int8_t *output_start =                                                     \
         output_gdram + taskId * num_per_core * sizeof(DType_out);              \
     if (num_rem > 0 && taskId == taskDim - 1) {                                \
       num_per_core = num_per_core + num_rem;                                   \
@@ -63,10 +63,10 @@
     int repeat = num_per_core / span_num_deal;                                 \
     size_t rem = num_per_core % span_num_deal;                                 \
     size_t align_rem = CEIL_ALIGN(rem, align_num);                             \
-    char *ping_output = nram_buffer;                                           \
-    char *ping_input = nram_buffer + output_input_gap;                         \
-    char *auxiliary_a = nram_buffer + auxiliary_a_gap;                         \
-    char *auxiliary_b = nram_buffer + auxiliary_b_gap;                         \
+    int8_t *ping_output = nram_buffer;                                         \
+    int8_t *ping_input = nram_buffer + output_input_gap;                       \
+    int8_t *auxiliary_a = nram_buffer + auxiliary_a_gap;                       \
+    int8_t *auxiliary_b = nram_buffer + auxiliary_b_gap;                       \
     size_t span_load_size = span_num_deal * sizeof(DType_in);                  \
     size_t span_store_size = span_num_deal * sizeof(DType_out);                \
     if (repeat > 0) {                                                          \
@@ -82,11 +82,9 @@
       __asm__ volatile("sync;");                                               \
     }                                                                          \
     for (int i = 0; i < repeat - 2; i++) {                                     \
-      pvLock();                                                                \
       __memcpy_async(output_start + i * span_store_size,                       \
                      ping_output + (i % 2) * ping_pong_gap, span_store_size,   \
                      NRAM2GDRAM);                                              \
-      pvUnlock();                                                              \
       __memcpy_async(ping_input + (i % 2) * ping_pong_gap,                     \
                      input_start + (i + 2) * span_load_size, span_load_size,   \
                      GDRAM2NRAM);                                              \

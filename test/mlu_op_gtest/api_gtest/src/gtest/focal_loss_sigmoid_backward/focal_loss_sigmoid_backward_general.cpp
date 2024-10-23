@@ -55,12 +55,12 @@ class focal_loss_sigmoid_backward_general
           input_params.get_dim_nb(), input_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(input_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&input_,
                        mluOpDataTypeBytes(input_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&input_, mluOpDataTypeBytes(input_params.get_dtype()) *
                                     mluOpGetTensorElementNum(input_desc_)));
       }
@@ -72,12 +72,12 @@ class focal_loss_sigmoid_backward_general
           target_params.get_dim_nb(), target_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(target_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&target_,
                        mluOpDataTypeBytes(target_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&target_, mluOpDataTypeBytes(target_params.get_dtype()) *
                                      mluOpGetTensorElementNum(target_desc_)));
       }
@@ -89,12 +89,12 @@ class focal_loss_sigmoid_backward_general
           weight_params.get_dim_nb(), weight_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(weight_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&weight_,
                        mluOpDataTypeBytes(weight_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&weight_, mluOpDataTypeBytes(weight_params.get_dtype()) *
                                      mluOpGetTensorElementNum(weight_desc_)));
       }
@@ -107,12 +107,12 @@ class focal_loss_sigmoid_backward_general
           grad_input_params.get_dim_size().data()));
       if (mluOpGetTensorElementNum(grad_input_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_input_,
                        mluOpDataTypeBytes(grad_input_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&grad_input_,
                        mluOpDataTypeBytes(grad_input_params.get_dtype()) *
                            mluOpGetTensorElementNum(grad_input_desc_)));
@@ -157,7 +157,7 @@ class focal_loss_sigmoid_backward_general
 
     if (input_) {
       VLOG(4) << "Destroy input_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
       input_ = nullptr;
     }
 
@@ -169,7 +169,7 @@ class focal_loss_sigmoid_backward_general
 
     if (target_) {
       VLOG(4) << "Destroy target_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(target_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(target_));
       target_ = nullptr;
     }
 
@@ -181,7 +181,7 @@ class focal_loss_sigmoid_backward_general
 
     if (weight_) {
       VLOG(4) << "Destroy weight_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(weight_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(weight_));
       weight_ = nullptr;
     }
 
@@ -193,7 +193,7 @@ class focal_loss_sigmoid_backward_general
 
     if (grad_input_) {
       VLOG(4) << "Destroy grad_input_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(grad_input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(grad_input_));
       grad_input_ = nullptr;
     }
   }

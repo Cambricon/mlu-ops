@@ -33,7 +33,7 @@
 #define REM_FOR_FLOAT2INT32 128
 #define ALIGN_NUM 64
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void genIndexFunc(T *index, const uint32_t max_index,
@@ -64,23 +64,14 @@ __mlu_func__ void convertFloat2Int(int32_t *dst, float *dst_addtion,
                                    const uint32_t elem_count,
                                    const uint32_t offset) {
   if (elem_count == 0) return;
-#if __BANG_ARCH__ >= 322
   int32_t *src = (int32_t *)src_origin;
   __bang_add_scalar((int32_t *)dst, (int32_t *)src, offset, elem_count);
-#else
-  float *src = (float *)src_origin;
-  __bang_add_scalar((float *)src, (float *)src, (float)(offset),
-                    CEIL_ALIGN(elem_count, ALIGN_NUM));
-  __mluop_float2int32((int32_t *)dst, (float *)dst_addtion, (float *)src,
-                      (float *)src_addtion, CEIL_ALIGN(elem_count, ALIGN_NUM));
-#endif
 }
 
 __mlu_func__ void checkPointsValid(float *distance2, float *tmp_addr,
                                    float *output_addr, float *zeros_addr,
                                    uint32_t num_deal_xyz, float min_radius2,
                                    float max_radius2) {
-#if __BANG_ARCH__ >= 322
   // distance2 >= min_radius2
   __bang_ge_scalar(tmp_addr, distance2, min_radius2, num_deal_xyz);
   // distance2 < max_radius2
@@ -91,20 +82,6 @@ __mlu_func__ void checkPointsValid(float *distance2, float *tmp_addr,
   __bang_eq_scalar(output_addr, distance2, 0, num_deal_xyz);
   // distance2 == 0 | min_radius2 <= distance2 < max_radius2
   __bang_or(output_addr, output_addr, tmp_addr, num_deal_xyz);
-#else
-  // distance2 >= min_radius2
-  __bang_ge_scalar(tmp_addr, distance2, min_radius2, num_deal_xyz);
-  // distance2 < max_radius2
-  __bang_ge_scalar(output_addr, distance2, max_radius2, num_deal_xyz);
-  __bang_not(output_addr, output_addr, num_deal_xyz);
-  // min_radius2 <= distance2 < max_radius2
-  __bang_and(tmp_addr, tmp_addr, output_addr, num_deal_xyz);
-  // distance2 == 0
-  // __bang_write_zero(tmp2, num_deal_xyz);// 提前
-  __bang_eq(output_addr, distance2, zeros_addr, num_deal_xyz);
-  // distance2 == 0 | min_radius2 <= distance2 < max_radius2
-  __bang_or(output_addr, output_addr, tmp_addr, num_deal_xyz);
-#endif
 }
 
 template <typename T>
@@ -133,9 +110,6 @@ __mlu_func__ void ballQueryWorkflow(
 
   uint32_t index_start = 0, cur_batch_id = 0;
   uint32_t same_batch_s = 0, same_batch_e = 0;
-#if __BANG_ARCH__ < 322
-  __bang_write_zero((float *)tmp2, num_stride);
-#endif
   for (uint32_t i = 0; i < num_loop_new_xyz; ++i) {
     uint32_t index_new_xyz = task_start + i * num_stride;
     uint32_t num_deal_new_xyz = i * num_stride + num_stride > num_per_task
@@ -281,36 +255,32 @@ __mlu_global__ void MLUUnion1KernelBallQuery(
                   nfu_align_size);
   const uint32_t num_stride = FLOOR_ALIGN(num_stride1, 64);
 
-  char *vec_new_x1 = nram_buffer;
-  char *vec_new_y1 = vec_new_x1 + num_stride * sizeof(T);
-  char *vec_new_z1 = vec_new_y1 + num_stride * sizeof(T);
-  char *vec_idx_num = vec_new_z1 + num_stride * sizeof(T);
+  int8_t *vec_new_x1 = nram_buffer;
+  int8_t *vec_new_y1 = vec_new_x1 + num_stride * sizeof(T);
+  int8_t *vec_new_z1 = vec_new_y1 + num_stride * sizeof(T);
+  int8_t *vec_idx_num = vec_new_z1 + num_stride * sizeof(T);
 
-  char *vec_x1 = vec_idx_num + num_stride * sizeof(int32_t);
-  char *vec_y1 = vec_x1 + num_stride * sizeof(T);
-  char *vec_z1 = vec_y1 + num_stride * sizeof(T);
-  char *vec_index = vec_z1 + num_stride * sizeof(T);
+  int8_t *vec_x1 = vec_idx_num + num_stride * sizeof(int32_t);
+  int8_t *vec_y1 = vec_x1 + num_stride * sizeof(T);
+  int8_t *vec_z1 = vec_y1 + num_stride * sizeof(T);
+  int8_t *vec_index = vec_z1 + num_stride * sizeof(T);
 
-  char *vec_sub_x1 = vec_index + num_stride * sizeof(int32_t);
-  char *vec_sub_y1 = vec_sub_x1 + num_stride * sizeof(T);
-  char *vec_sub_z1 = vec_sub_y1 + num_stride * sizeof(T);
-  char *tmp1 = vec_sub_z1 + num_stride * sizeof(T);
+  int8_t *vec_sub_x1 = vec_index + num_stride * sizeof(int32_t);
+  int8_t *vec_sub_y1 = vec_sub_x1 + num_stride * sizeof(T);
+  int8_t *vec_sub_z1 = vec_sub_y1 + num_stride * sizeof(T);
+  int8_t *tmp1 = vec_sub_z1 + num_stride * sizeof(T);
 
-  char *out1 = tmp1 + num_stride * sizeof(int32_t);
-  char *out2 = out1 + num_stride * sizeof(T);
-  char *out3 = out2 + num_stride * sizeof(T);
-  char *tmp2 = out3 + num_stride * sizeof(T);
+  int8_t *out1 = tmp1 + num_stride * sizeof(int32_t);
+  int8_t *out2 = out1 + num_stride * sizeof(T);
+  int8_t *out3 = out2 + num_stride * sizeof(T);
+  int8_t *tmp2 = out3 + num_stride * sizeof(T);
 
-  char *src_addtion = tmp2 + num_stride * sizeof(int32_t);
+  int8_t *src_addtion = tmp2 + num_stride * sizeof(int32_t);
 
   const float min_radius2 = min_radius * min_radius;
   const float max_radius2 = max_radius * max_radius;
 
-#if __BANG_ARCH__ >= 322
   genIndexFunc<int32_t>((int32_t *)vec_index, num_stride, nfu_align_size);
-#else
-  genIndexFunc<float>((float *)vec_index, num_stride, nfu_align_size);
-#endif
 
   ballQueryWorkflow(
       (T *)vec_new_x1, (T *)vec_new_y1, (T *)vec_new_z1, (int32_t *)vec_idx_num,

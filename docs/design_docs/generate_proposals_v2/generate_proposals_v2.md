@@ -606,13 +606,9 @@ __mul_func__ void getTopKVal(T * scores, T * bbox_deltas, T *anchors, T *varianc
 
 // output = exp(input)
 __mlu__func void calcExp(T * output, const T * input, cpnst int length){
-#if __BANG_ARCH__ >= 372
 #define LOG_2_E (1.44269504088f)
   __bang_mul_scalar(output, input, (float)LOG_2_E, length);
   __bang_pow2(output, output, length);
-#else
-  __bang_active(output, input, length);
-#endif
 }
 // 生成proposals
 __mlu__func void proposalsBoxesDecode(const T* anchor, const T *deltas, const T *var, const int deal_size, T * proposals, T *nram_temp, bool pixes_offset = true){

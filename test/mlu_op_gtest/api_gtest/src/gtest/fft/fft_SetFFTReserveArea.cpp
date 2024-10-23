@@ -44,7 +44,7 @@ class fft_SetFFTReserveArea : public testing::Test {
     }
 
     if (reservespace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&reservespace_, reservespace_size));
     }
   }
@@ -79,7 +79,7 @@ class fft_SetFFTReserveArea : public testing::Test {
       }
       if (reservespace_) {
         VLOG(4) << "Destroy reservespace_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(reservespace_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(reservespace_));
         reservespace_ = nullptr;
       }
     } catch (const std::exception &e) {

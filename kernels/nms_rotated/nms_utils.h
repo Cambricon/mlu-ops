@@ -41,7 +41,7 @@ __nram__ int16_t table_half[TABLE_LENGTH] = {0, static_cast<int16_t>(0xffff)};
 
 // each box data contains 5 number: x, y, w, h, a
 #define SINGLE_BOX_DIM 5
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename IN_DT>
 __mlu_func__ void findCoreMaxBox(
@@ -398,20 +398,19 @@ __mlu_func__ void getIntersectionPoints(
       if (sizeof(T) == sizeof(float)) {
         __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                            actual_compute_box_num, 0);
-        __bang_lut_s32((int32_t *)temp2_ram, (int32_t *)temp2_ram,
-                       (int32_t *)table_float, actual_compute_box_num,
-                       TABLE_LENGTH);
+        __bang_lut((int32_t *)temp2_ram, (uint32_t *)temp2_ram,
+                   (int32_t *)table_float, actual_compute_box_num,
+                   TABLE_LENGTH);
       } else {
         __bang_half2int16_rd((int16_t *)temp2_ram, (half *)temp2_ram,
                              actual_compute_box_num, 0);
-        __bang_lut_s16((int16_t *)temp2_ram, (int16_t *)temp2_ram,
-                       (int16_t *)table_half, actual_compute_box_num,
-                       TABLE_LENGTH);
+        __bang_lut((int16_t *)temp2_ram, (uint16_t *)temp2_ram,
+                   (int16_t *)table_half, actual_compute_box_num, TABLE_LENGTH);
       }
-      __bang_band(
-          (char *)((T *)intersect_pts_x + (4 * i + j) * actual_compute_box_num),
-          (char *)temp7_ram, (char *)temp2_ram,
-          actual_compute_box_num * sizeof(T));
+      __bang_band((int8_t *)((T *)intersect_pts_x +
+                             (4 * i + j) * actual_compute_box_num),
+                  (int8_t *)temp7_ram, (int8_t *)temp2_ram,
+                  actual_compute_box_num * sizeof(T));
 
       __bang_mul((T *)temp7_ram, (T *)vec1_y + i * actual_compute_box_num,
                  (T *)temp6_ram, actual_compute_box_num);
@@ -419,10 +418,10 @@ __mlu_func__ void getIntersectionPoints(
                  (T *)rotated_pts1_y + i * actual_compute_box_num,
                  (T *)temp7_ram, actual_compute_box_num);
 
-      __bang_band(
-          (char *)((T *)intersect_pts_y + (4 * i + j) * actual_compute_box_num),
-          (char *)temp7_ram, (char *)temp2_ram,
-          actual_compute_box_num * sizeof(T));
+      __bang_band((int8_t *)((T *)intersect_pts_y +
+                             (4 * i + j) * actual_compute_box_num),
+                  (int8_t *)temp7_ram, (int8_t *)temp2_ram,
+                  actual_compute_box_num * sizeof(T));
 
       // Assign `valid_pts` bit and accumulate `nums_in` of valid points of each
       // box pair
@@ -486,24 +485,22 @@ __mlu_func__ void getIntersectionPoints(
     if (sizeof(T) == sizeof(float)) {
       __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                          actual_compute_box_num, 0);
-      __bang_lut_s32((int32_t *)temp2_ram, (int32_t *)temp2_ram,
-                     (int32_t *)table_float, actual_compute_box_num,
-                     TABLE_LENGTH);
+      __bang_lut((int32_t *)temp2_ram, (uint32_t *)temp2_ram,
+                 (int32_t *)table_float, actual_compute_box_num, TABLE_LENGTH);
     } else {
       __bang_half2int16_rd((int16_t *)temp2_ram, (half *)temp1_ram,
                            actual_compute_box_num, 0);
-      __bang_lut_s16((int16_t *)temp2_ram, (int16_t *)temp2_ram,
-                     (int16_t *)table_half, actual_compute_box_num,
-                     TABLE_LENGTH);
+      __bang_lut((int16_t *)temp2_ram, (uint16_t *)temp2_ram,
+                 (int16_t *)table_half, actual_compute_box_num, TABLE_LENGTH);
     }
     __bang_band(
-        (char *)((T *)intersect_pts_x + (16 + i) * actual_compute_box_num),
-        (char *)((T *)rotated_pts1_x + i * actual_compute_box_num),
-        (char *)temp2_ram, actual_compute_box_num * sizeof(T));
+        (int8_t *)((T *)intersect_pts_x + (16 + i) * actual_compute_box_num),
+        (int8_t *)((T *)rotated_pts1_x + i * actual_compute_box_num),
+        (int8_t *)temp2_ram, actual_compute_box_num * sizeof(T));
     __bang_band(
-        (char *)((T *)intersect_pts_y + (16 + i) * actual_compute_box_num),
-        (char *)((T *)rotated_pts1_y + i * actual_compute_box_num),
-        (char *)temp2_ram, actual_compute_box_num * sizeof(T));
+        (int8_t *)((T *)intersect_pts_y + (16 + i) * actual_compute_box_num),
+        (int8_t *)((T *)rotated_pts1_y + i * actual_compute_box_num),
+        (int8_t *)temp2_ram, actual_compute_box_num * sizeof(T));
 
     // assign valid_pts bit and accumulate nums of valid points of each box pair
     __bang_or((T *)valid_pts + (16 + i) * actual_compute_box_num,
@@ -562,24 +559,22 @@ __mlu_func__ void getIntersectionPoints(
     if (sizeof(T) == sizeof(float)) {
       __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                          actual_compute_box_num, 0);
-      __bang_lut_s32((int32_t *)temp2_ram, (int32_t *)temp2_ram,
-                     (int32_t *)table_float, actual_compute_box_num,
-                     TABLE_LENGTH);
+      __bang_lut((int32_t *)temp2_ram, (uint32_t *)temp2_ram,
+                 (int32_t *)table_float, actual_compute_box_num, TABLE_LENGTH);
     } else {
       __bang_half2int16_rd((int16_t *)temp2_ram, (half *)temp1_ram,
                            actual_compute_box_num, 0);
-      __bang_lut_s16((int16_t *)temp2_ram, (int16_t *)temp2_ram,
-                     (int16_t *)table_half, actual_compute_box_num,
-                     TABLE_LENGTH);
+      __bang_lut((int16_t *)temp2_ram, (uint16_t *)temp2_ram,
+                 (int16_t *)table_half, actual_compute_box_num, TABLE_LENGTH);
     }
     __bang_band(
-        (char *)((T *)intersect_pts_x + (20 + i) * actual_compute_box_num),
-        (char *)((T *)rotated_pts2_x + i * actual_compute_box_num),
-        (char *)temp2_ram, actual_compute_box_num * sizeof(T));
+        (int8_t *)((T *)intersect_pts_x + (20 + i) * actual_compute_box_num),
+        (int8_t *)((T *)rotated_pts2_x + i * actual_compute_box_num),
+        (int8_t *)temp2_ram, actual_compute_box_num * sizeof(T));
     __bang_band(
-        (char *)((T *)intersect_pts_y + (20 + i) * actual_compute_box_num),
-        (char *)((T *)rotated_pts2_y + i * actual_compute_box_num),
-        (char *)temp2_ram, actual_compute_box_num * sizeof(T));
+        (int8_t *)((T *)intersect_pts_y + (20 + i) * actual_compute_box_num),
+        (int8_t *)((T *)rotated_pts2_y + i * actual_compute_box_num),
+        (int8_t *)temp2_ram, actual_compute_box_num * sizeof(T));
 
     // assign valid_pts bit and accumulate nums of valid points of each box pair
     __bang_or((T *)valid_pts + (20 + i) * actual_compute_box_num,

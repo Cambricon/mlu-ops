@@ -57,7 +57,9 @@ MLU Binary Op算子结构：　
 | indice_convolution_backward_data       | √             |               |
 | indice_convolution_backward_filter     | √             |               |
 | indice_convolution_forward             | √             |               |
+| lgamma                                 | √             |               |
 | log                                    | √             |               |
+| logspace                               | √             |               |
 | masked_col2im_forward                  | √             |               |
 | masked_im2col_forward                  | √             |               |
 | moe_dispatch_backward_data             | √             |               |

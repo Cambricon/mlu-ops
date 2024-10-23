@@ -26,7 +26,7 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 #define BITINDEX_BYTED_ALIGNED 32
 #define MAXNUM_PERF_SUPPORT (2147483648 / 4)
@@ -79,7 +79,6 @@ __mlu_func__ void MLUKernelVoxelPoolingDefaultKernel(
     const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,
     const int split_num, const int *geom_xyz, const float *input_features,
     float *output_features, int *pos_memo) {
-#if __BANG_ARCH__ >= 322
   if (__is_mpu()) {
     return;
   }
@@ -232,7 +231,6 @@ __mlu_func__ void MLUKernelVoxelPoolingDefaultKernel(
       }
     }
   }
-#endif
 }
 
 __mlu_func__ void MLUKernelVoxelPoolingStageTwoPerfKernel(
@@ -416,7 +414,6 @@ __mlu_global__ void MLUKernelVoxelPoolingForward(
     const int num_voxel_x, const int num_voxel_y, const int num_voxel_z,
     const int *geom_xyz, const float *input_features, float *output_features,
     int *pos_memo) {
-#if __BANG_ARCH__ >= 370
   if (__is_mpu()) {
     return;
   }
@@ -435,7 +432,6 @@ __mlu_global__ void MLUKernelVoxelPoolingForward(
         num_voxel_z, split_num, geom_xyz, input_features, output_features,
         pos_memo);
   }
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelVoxelPoolingForward(

@@ -57,9 +57,9 @@ class nms_rotated_general : public testing::TestWithParam<MmsRotatedParam> {
     uint64_t b_bytes = mluOpDataTypeBytes(b_dtype) * b_ele_num;
     if (b_bytes > 0) {
       if (b_bytes < LARGE_TENSOR_NUM) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&boxes_, b_bytes))
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&boxes_, b_bytes))
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&boxes_, 8))
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&boxes_, 8))
       }
     }
 
@@ -75,9 +75,9 @@ class nms_rotated_general : public testing::TestWithParam<MmsRotatedParam> {
     uint64_t s_bytes = mluOpDataTypeBytes(s_dtype) * s_ele_num;
     if (s_bytes > 0) {
       if (s_bytes < LARGE_TENSOR_NUM) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&scores_, s_bytes))
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&scores_, s_bytes))
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&scores_, 8))
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&scores_, 8))
       }
     }
 
@@ -93,13 +93,13 @@ class nms_rotated_general : public testing::TestWithParam<MmsRotatedParam> {
     uint64_t o_bytes = mluOpDataTypeBytes(o_dtype) * o_ele_num;
     if (o_bytes > 0) {
       if (o_bytes < LARGE_TENSOR_NUM) {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, o_bytes))
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_, o_bytes))
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, 8))
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_, 8))
       }
     }
     GTEST_CHECK(
-        CNRT_RET_SUCCESS ==
+        cnrtSuccess ==
         cnrtMalloc(&result_num_, mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
   }
 
@@ -117,10 +117,10 @@ class nms_rotated_general : public testing::TestWithParam<MmsRotatedParam> {
     }
     if (workspace_size_ > 0) {
       if (workspace_size_ < LARGE_TENSOR_NUM) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&workspace_, workspace_size_));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, 8));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, 8));
       }
     }
     status = mluOpNmsRotated(handle_, iou_threshold_, boxes_desc_, boxes_,
@@ -142,7 +142,7 @@ class nms_rotated_general : public testing::TestWithParam<MmsRotatedParam> {
       boxes_desc_ = NULL;
     }
     if (boxes_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(boxes_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(boxes_));
       boxes_ = NULL;
     }
     if (scores_desc_) {
@@ -150,11 +150,11 @@ class nms_rotated_general : public testing::TestWithParam<MmsRotatedParam> {
       scores_desc_ = NULL;
     }
     if (scores_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(scores_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(scores_));
       scores_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = NULL;
     }
     if (output_desc_) {
@@ -162,11 +162,11 @@ class nms_rotated_general : public testing::TestWithParam<MmsRotatedParam> {
       output_desc_ = NULL;
     }
     if (output_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       output_ = NULL;
     }
     if (result_num_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(result_num_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(result_num_));
       result_num_ = NULL;
     }
   }

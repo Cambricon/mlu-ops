@@ -27,9 +27,8 @@
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
-#if __BANG_ARCH__ >= 372
 template <typename T>
 static __mlu_func__ void load(T *dispatch_addr, T *nram_dispatch,
                               const int deal_num, const int pingpong_num,
@@ -126,7 +125,6 @@ static __mlu_func__ void lcs(T *base_gard_input_addr, T *base_dispatch_addr,
     store(gard_input_addr, nram_gard_input, rem_num, pingpong_num, repeat_num);
   }
 }
-#endif
 
 template <typename T>
 __mlu_entry__ void MLUKernelMoeDispatchBwdData1(
@@ -138,7 +136,6 @@ __mlu_entry__ void MLUKernelMoeDispatchBwdData1(
   // locations: (samples)
   // dispatch: (num_experts * capacity, hidden)
   // grad_input: (samples, hidden)
-#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -189,7 +186,6 @@ __mlu_entry__ void MLUKernelMoeDispatchBwdData1(
   int rem_h = hidden_seg_num % deal_h;
   lcs(base_grad_input_addr, base_dispatch_addr, nram_grad_input, nram_dispatch,
       gates_si_value, repeat_h, rem_h, deal_h, pingpong_num);
-#endif
 }
 
 template <typename T>
@@ -202,7 +198,6 @@ __mlu_entry__ void MLUKernelMoeDispatchBwdData2(
   // locations: (samples)
   // dispatch: (num_experts * capacity, hidden)
   // grad_input: (samples, hidden)
-#if __BANG_ARCH__ >= 372
   if (__is_mpu()) {
     return;
   }
@@ -307,7 +302,6 @@ __mlu_entry__ void MLUKernelMoeDispatchBwdData2(
       }  // repeat h
     }    // repeat deal_s_num
   }      // repeat s
-#endif
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelMoeDispatchBwdData1(

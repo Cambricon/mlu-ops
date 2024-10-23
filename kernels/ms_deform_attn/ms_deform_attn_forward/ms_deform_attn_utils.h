@@ -32,8 +32,6 @@
 #define BIT_COLLECT_PAD (8)
 #define BACKWARD_MAX_NQ_NL_NP (1024)
 
-#if (__BANG_ARCH__ >= 372)
-
 __mlu_func__ void broadcastSpatialHW(
     float* spatial_offset_bd_nram,  // (num_levels, num_points)
     float* spatial_h_bd_nram,       // (num_levels, num_points)
@@ -80,8 +78,8 @@ __mlu_func__ void prepareLoopV2(
     __bang_add_scalar(seq_nram + 512, seq_nram, 512, 512);  // [0, 511] + 512
   }
   __bang_write_value(zeros_nram, channels, (T)0);
-  __bang_write_value(mask_x_nram, mask_size, (char)0x55);
-  __bang_write_value(mask_y_nram, mask_size, (char)0xAA);
+  __bang_write_value(mask_x_nram, mask_size, (int8_t)0x55);
+  __bang_write_value(mask_y_nram, mask_size, (int8_t)0xAA);
   __memcpy_async(spatial_offset_nram, data_level_start_index_gdram,
                  num_levels * sizeof(int32_t), GDRAM2NRAM);
   __memcpy_async(spatial_hw_nram, data_spatial_shapes_gdram,
@@ -304,8 +302,8 @@ __mlu_func__ void computePolationWeightOffsetCond(
   __bang_mul_scalar((int32_t*)cond_point_polation_nram_tmp,
                     (int32_t*)cond_point_polation_nram_tmp, (int32_t)0xffffffff,
                     total_points * 4);
-  __bang_band((char*)weight_polation_nram, (char*)weight_polation_nram,
-              (char*)cond_point_polation_nram_tmp,
+  __bang_band((int8_t*)weight_polation_nram, (int8_t*)weight_polation_nram,
+              (int8_t*)cond_point_polation_nram_tmp,
               total_points * 4 * sizeof(float));
 }
 
@@ -368,7 +366,8 @@ __mlu_func__ void stageOneLoop(
     __bang_mul_scalar((int32_t*)cond_point_valid_nram,
                       (int32_t*)cond_point_valid_nram, (int32_t)0xffffffff,
                       deal_point_num);
-    __bang_band((char*)buf_nram, (char*)buf_nram, (char*)cond_point_valid_nram,
+    __bang_band((int8_t*)buf_nram, (int8_t*)buf_nram,
+                (int8_t*)cond_point_valid_nram,
                 deal_n * num_levels * num_points * sizeof(T));
     __memcpy(weight_attn_sram + sram_offset, buf_nram, copy_size, NRAM2SRAM);
     sram_offset += deal_point_num;
@@ -393,6 +392,4 @@ __mlu_func__ void gatherSync(void* dst, void* src, unsigned int* offset,
   __gather(dst, src, offset, mask, transfer_size, dir, dst_stride,
            transfer_num);
 }
-#endif
-
 #endif

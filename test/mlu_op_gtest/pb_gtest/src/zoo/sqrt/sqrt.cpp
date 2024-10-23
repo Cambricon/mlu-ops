@@ -48,8 +48,8 @@ void SqrtExecutor::compute() {
 }
 
 void SqrtExecutor::cpuCompute() {
-  assert(parser_->getInputNum() == 1);
-  assert(parser_->getOutputNum() == 1);
+  GTEST_CHECK(parser_->getInputNum() == 1);
+  GTEST_CHECK(parser_->getOutputNum() == 1);
 
   auto count1 = parser_->getInputDataCount(0);
   auto count2 = parser_->getOutputDataCount(0);

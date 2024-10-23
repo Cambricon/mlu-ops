@@ -229,12 +229,12 @@ static mluOpStatus_t mainIndiceConvolutionForward(
 
   // allocate workspace segment for intermediate data
   void *validFilters_ptr = filters_need_trans ? workspace : (void *)filters;
-  void *transposeExtra_ptr = (char *)workspace + workspaceSize_transpose;
-  void *matmulResult_ptr = (char *)workspace + workspaceSize_transpose;
-  void *gatherResult_ptr = (char *)matmulResult_ptr + workspaceSize_matmul;
-  void *matmulExtra_ptr = (char *)gatherResult_ptr + workspaceSize_gather;
-  void *scatterResult_ptr = (char *)matmulResult_ptr + workspaceSize_matmul;
-  void *addNExtra_ptr = (char *)scatterResult_ptr + workspaceSize_scatter;
+  void *transposeExtra_ptr = (int8_t *)workspace + workspaceSize_transpose;
+  void *matmulResult_ptr = (int8_t *)workspace + workspaceSize_transpose;
+  void *gatherResult_ptr = (int8_t *)matmulResult_ptr + workspaceSize_matmul;
+  void *matmulExtra_ptr = (int8_t *)gatherResult_ptr + workspaceSize_gather;
+  void *scatterResult_ptr = (int8_t *)matmulResult_ptr + workspaceSize_matmul;
+  void *addNExtra_ptr = (int8_t *)scatterResult_ptr + workspaceSize_scatter;
   void *addN_ptrs[2] = {scatterResult_ptr, features_out};
 
   // create intermediate tensor
@@ -407,11 +407,12 @@ static mluOpStatus_t mainIndiceConvolutionForward(
                                     ? tempSize_addNExtra
                                     : workspaceSize_addNExtra;
     } else {
-      void *filters_buffer = (char *)validFilters_ptr + i * elementSize_filters;
+      void *filters_buffer =
+          (int8_t *)validFilters_ptr + i * elementSize_filters;
       void *gatherIndice_buffer =
-          (char *)indice_pairs + i * 2 * elementSize_indice_pairs;
+          (int8_t *)indice_pairs + i * 2 * elementSize_indice_pairs;
       void *scatterAddIndice_buffer =
-          (char *)indice_pairs + (i * 2 + 1) * elementSize_indice_pairs;
+          (int8_t *)indice_pairs + (i * 2 + 1) * elementSize_indice_pairs;
       // invoke gather to get input data:
       // [num_act_in, ci] -> [indice_pairs_num[i], ci]
       {

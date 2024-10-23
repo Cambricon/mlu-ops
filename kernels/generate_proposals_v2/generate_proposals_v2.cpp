@@ -51,9 +51,9 @@ static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   k_dim->z = 1;
   if (job < 4) {
     k_dim->x = 1;
-    *k_type = CNRT_FUNC_TYPE_BLOCK;
+    *k_type = cnrtFuncTypeBlock;
   } else {
-    *k_type = CNRT_FUNC_TYPE_UNION1;
+    *k_type = cnrtFuncTypeUnion1;
     k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   }
   return;
@@ -429,7 +429,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
   VLOG(5) << "N : " << n;
   const size_t hwa = h * w * a;
   cnrtDim3_t k_dim;
-  cnrtJobType_t k_type;
+  cnrtFunctionType_t k_type;
   policyFunc(handle, &k_dim, &k_type, hwa);
   VLOG(5) << "Launch Kernel KernelGenerateProposalsV2 <<<k_dim: " << k_type
           << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
@@ -475,8 +475,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
     mluOpGetSizeOfDataType(scores_desc->dtype, &data_size);
 
     const size_t indices_size = PAD_UP(n * max_k * data_size, GDRAM_ALIGN_SIZE);
-    void *sorted_score = (void *)((char *)workspace + tok_workspace_align_size);
-    void *sorted_index = (void *)((char *)sorted_score + indices_size);
+    void *sorted_score =
+        (void *)((int8_t *)workspace + tok_workspace_align_size);
+    void *sorted_index = (void *)((int8_t *)sorted_score + indices_size);
 
     // call cnnlTopK
     CALL_CNNL(cnnlTopKTensor_v3(
@@ -488,7 +489,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
     CALL_CNNL(cnnlDestroyTensorDescriptor(sorted_score_desc));
     CALL_CNNL(cnnlDestroyTensorDescriptor(sorted_index_desc));
     DESTROY_CNNL_HANDLE(cnnl_handle);
-    void *workspace_buffer = (void *)((char *)sorted_index + indices_size);
+    void *workspace_buffer = (void *)((int8_t *)sorted_index + indices_size);
     CHECK_RETURN(
         "[mluOpGenerateProposalsV2]",
         KernelGenerateProposalsV2(

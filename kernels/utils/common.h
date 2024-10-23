@@ -25,6 +25,7 @@
 #ifndef KERNELS_UTILS_COMMON_H_
 #define KERNELS_UTILS_COMMON_H_
 
+#include <algorithm>
 #include <type_traits>
 
 #include "float.h"
@@ -68,23 +69,13 @@ __mlu_func__ T __mluop_max(T a, T b) {
  * param 'src' is the source pointer in NRAM.
  * param 'src_count' is the src element count.
  * Note:
- *      The rounding mode on MLU200 is rd, on MLU300 is rn.
+ *      The rounding mode on MLU300 is rn.
  ******************************************************************************/
 __mlu_func__ void __mluop_float2half(half *dst, float *src, int src_count) {
-#if __BANG_ARCH__ >= 300
   __bang_float2half_rn(dst, src, src_count);
-#else
-  __bang_float2half_rd(dst, src, src_count);
-#endif
 }
 
-__mlu_func__ half __mluop_float2half(float a) {
-#if __BANG_ARCH__ >= 300
-  return __float2half_rn(a);
-#else
-  return __float2half_rd(a);
-#endif
-}
+__mlu_func__ half __mluop_float2half(float a) { return __float2half_rn(a); }
 
 /******************************************************************************
  * MLUOP FUNC: __mluop_div
@@ -165,26 +156,11 @@ __mlu_func__ void __mluop_recip(T *nram_dst, T *nram_src, void *nram_addition,
                                 const bool is_high_precision,
                                 const uint32_t deal_num) {
   if (sizeof(T) == sizeof(float)) {
-#if __BANG_ARCH__ >= 300
     __bang_recip((float *)nram_dst, (float *)nram_src, deal_num);
-#else
-    __bang_active_reciphp((float *)nram_dst, (float *)nram_src, deal_num);
-#endif
   } else if (sizeof(T) == sizeof(half)) {
-#if __BANG_ARCH__ >= 300
     __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
     __bang_recip((float *)nram_addition, (float *)nram_addition, deal_num);
     __bang_float2half_rn((half *)nram_dst, (float *)nram_addition, deal_num);
-#else
-    if (is_high_precision) {
-      __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
-      __bang_active_reciphp((float *)nram_addition, (float *)nram_addition,
-                            deal_num);
-      __bang_float2half_rd((half *)nram_dst, (float *)nram_addition, deal_num);
-    } else {
-      __bang_active_reciphp((half *)nram_dst, (half *)nram_src, deal_num);
-    }
-#endif
   } else {
     return;
   }
@@ -204,17 +180,12 @@ template <typename T>
 __mlu_func__ void __mluop_exp(T *nram_dst, T *nram_src, void *nram_addition,
                               const int is_high_precision, const int deal_num) {
   if (sizeof(T) == sizeof(float)) {
-#if __BANG_ARCH__ >= 300
     int x2d = 0x3fb8aa3b;
     float log2e = *(float *)&x2d;
     __bang_mul_scalar((float *)nram_dst, (float *)nram_src, (float)log2e,
                       deal_num);
     __bang_pow2((float *)nram_dst, (float *)nram_dst, deal_num);
-#else
-    __bang_active_exphp((float *)nram_dst, (float *)nram_src, deal_num);
-#endif
   } else if (sizeof(T) == sizeof(half)) {
-#if __BANG_ARCH__ >= 300
     int x2d = 0x3fb8aa3b;
     float log2e = *(float *)&x2d;
     __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
@@ -222,16 +193,6 @@ __mlu_func__ void __mluop_exp(T *nram_dst, T *nram_src, void *nram_addition,
                       (float)log2e, deal_num);
     __bang_pow2((float *)nram_addition, (float *)nram_addition, deal_num);
     __bang_float2half_rn((half *)nram_dst, (float *)nram_addition, deal_num);
-#else
-    if (is_high_precision) {
-      __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
-      __bang_active_exphp((float *)nram_addition, (float *)nram_addition,
-                          deal_num);
-      __bang_float2half_rd((half *)nram_dst, (float *)nram_addition, deal_num);
-    } else {
-      __bang_active_exphp((half *)nram_dst, (half *)nram_src, deal_num);
-    }
-#endif
   } else {
     return;
   }
@@ -257,14 +218,14 @@ __mlu_func__ void __mluop_log(T *nram_dst, T *nram_src, void *nram_addition,
   if (sizeof(T) == sizeof(float)) {
     int x2d = 0x3f317217;
     float rlog2e = *(float *)&x2d;
-    __bang_log((float *)nram_dst, (float *)nram_src, deal_num);
+    __bang_log2((float *)nram_dst, (float *)nram_src, deal_num);
     __bang_mul_scalar((float *)nram_dst, (float *)nram_dst, (float)rlog2e,
                       deal_num);
   } else if (sizeof(T) == sizeof(half)) {
     int x2d = 0x3f317217;
     float rlog2e = *(float *)&x2d;
     __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
-    __bang_log((float *)nram_addition, (float *)nram_addition, deal_num);
+    __bang_log2((float *)nram_addition, (float *)nram_addition, deal_num);
     __mluop_float2half((half *)nram_dst, (float *)nram_addition, deal_num);
     __bang_mul_scalar((half *)nram_dst, (half *)nram_dst, (half)rlog2e,
                       deal_num);
@@ -289,18 +250,13 @@ __mlu_func__ void __mluop_sigmoid(T *nram_dst, T *nram_src, void *nram_addition,
                                   const int is_high_precision,
                                   const int deal_num) {
   if (sizeof(T) == sizeof(float)) {
-#if __BANG_ARCH__ >= 300
     __bang_mul_scalar((float *)nram_dst, (float *)nram_src, (float)-1.0,
                       deal_num);
     __mluop_exp((float *)nram_dst, (float *)nram_dst, NULL, 0, deal_num);
     __bang_add_scalar((float *)nram_dst, (float *)nram_dst, (float)1.0,
                       deal_num);
     __mluop_recip((float *)nram_dst, (float *)nram_dst, NULL, 0, deal_num);
-#else
-    __bang_active_sigmoid((float *)nram_dst, (float *)nram_src, deal_num);
-#endif
   } else if (sizeof(T) == sizeof(half)) {
-#if __BANG_ARCH__ >= 300
     __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
     __bang_mul_scalar((float *)nram_addition, (float *)nram_addition,
                       (float)-1.0, deal_num);
@@ -310,16 +266,6 @@ __mlu_func__ void __mluop_sigmoid(T *nram_dst, T *nram_src, void *nram_addition,
                       (float)1.0, deal_num);
     __mluop_recip((float *)nram_dst, (float *)nram_addition, NULL, 0, deal_num);
     __bang_float2half_rn((half *)nram_dst, (float *)nram_dst, deal_num);
-#else
-    if (is_high_precision) {
-      __bang_half2float((float *)nram_addition, (half *)nram_src, deal_num);
-      __bang_active_sigmoid((float *)nram_addition, (float *)nram_addition,
-                            deal_num);
-      __bang_float2half_rd((half *)nram_dst, (float *)nram_addition, deal_num);
-    } else {
-      __bang_active_sigmoid((half *)nram_dst, (half *)nram_src, deal_num);
-    }
-#endif
   } else {
     return;
   }
@@ -351,176 +297,6 @@ __mlu_func__ void __mluop_recursive_sum_pool(T *dst, int low_dim, int high_dim,
     high_dim = repeat_s + static_cast<int>(remain_s > 0);
   }
   return;
-}
-
-/*****************************************************************************
- * MLUOPS FUNC: __mluop_int322float
- * param 'dst' is the destination pointer in NRAM, same memory space as src
- * required in NRAM
- * param 'dst_addition' is the addition workspace of dst, requiring the same
- * amount of space as dst in NRAM
- * param 'src' is the source pointer in NRAM
- * param 'src_addition' is the addition workspace of src, requiring only 128B
- * space in NRAM
- * param 'src_count' is the src element count
- * Notes:
- *   the sapces pointed by dst and src can not overlap
- *   src_count*sizeof(float) should be divisible by 128
- *   src input must be in range of [-2^23, 2^23-1] for MLU270 and MLU290
- *****************************************************************************/
-__mlu_func__ void __mluop_int322float(float *dst, float *dst_addition,
-                                      int32_t *src, float *src_addition,
-                                      int32_t src_count) {
-#if __BANG_ARCH__ >= 300
-  __bang_int322float((float *)dst, (int32_t *)src, src_count, 0);
-#else
-  // get sign bit
-  int32_t seg_elem_count = 32;  // 128/sizeof(float) = 32
-  int32_t float_size = 4;       // sizeof(float) = 4
-  int32_t align_128 = 128;
-  float move_23bit = 8388608.0;
-  // 0x80000000 = 1,000000000,0000000000000000000000000000
-  __bang_write_value((unsigned *)src_addition, seg_elem_count,
-                     (unsigned)0x80000000);
-  __bang_cycle_band((char *)dst_addition, (char *)src, (char *)src_addition,
-                    src_count * float_size, align_128);
-  // get 1 or 0 from sign bit
-  // judge is Odd
-  __bang_write_value((unsigned *)src_addition, seg_elem_count,
-                     (unsigned)0x00000001);
-  __bang_cycle_bor((char *)dst_addition, (char *)dst_addition,
-                   (char *)src_addition, src_count * float_size, align_128);
-  __bang_write_value((unsigned *)src_addition, seg_elem_count,
-                     (unsigned)0x80000001);
-  __bang_cycle_eq(dst_addition, dst_addition, src_addition, src_count,
-                  seg_elem_count);
-  // minus xor, positive num invariant
-  __bang_write_value((unsigned *)src_addition, seg_elem_count,
-                     (unsigned)0xffffffff);
-  __bang_cycle_mul(dst, dst_addition, src_addition, src_count, seg_elem_count);
-  __bang_bxor((char *)dst, (char *)src, (char *)dst, src_count * float_size);
-  // convert int32 to float32
-  __bang_write_value((unsigned *)src_addition, seg_elem_count,
-                     (unsigned)0x7fffff);
-  __bang_cycle_band((char *)dst, (char *)dst, (char *)src_addition,
-                    src_count * float_size, align_128);
-  __bang_write_value((unsigned *)src_addition, seg_elem_count,
-                     (unsigned)0x4b000000);
-  __bang_cycle_bor((char *)dst, (char *)dst, (char *)src_addition,
-                   src_count * float_size, align_128);
-  __bang_sub_scalar(dst, dst, move_23bit, src_count);
-  // add one
-  __bang_add(dst, dst, dst_addition, src_count);
-  // set sign for float32
-  __bang_write_value((unsigned *)src_addition, seg_elem_count,
-                     (unsigned)0xffffffff);
-  __bang_cycle_mul(dst_addition, dst_addition, src_addition, src_count,
-                   seg_elem_count);
-
-  // fix on MLU300
-  __bang_write_value((unsigned *)src_addition, seg_elem_count,
-                     (unsigned)0x00000001);
-  __bang_cycle_add(dst_addition, dst_addition, src_addition, src_count,
-                   seg_elem_count);
-  // end fix
-
-  __bang_write_value((unsigned *)src_addition, seg_elem_count,
-                     (unsigned)0x80000000);
-  __bang_cycle_band((char *)dst_addition, (char *)dst_addition,
-                    (char *)src_addition, src_count * float_size, align_128);
-  __bang_bor((char *)dst, (char *)dst, (char *)dst_addition,
-             src_count * float_size);
-#endif
-}
-
-/*****************************************************************************
- * MLUOPS FUNC: __mluop_float2int32
- * param 'dst' is the destination pointer in NRAM, same memory space as src
- * required in NRAM
- * param 'dst_addition' is the addition workspace of dst, requiring the same
- * amount of space as dst in NRAM
- * param 'src' is the source pointer in NRAM
- * param 'src_addition' is the addition workspace of src, requiring only 128B
- * space in NRAM
- * param 'src_count' is the src element count
- * Notes:
- *   the sapces pointed by dst and src can not overlap
- *   src_count*sizeof(float) should be divisible by 128
- *   src input must be in range of [-2^23, 2^23-1] for MLU270 and MLU290
- *****************************************************************************/
-__mlu_func__ void __mluop_float2int32(int32_t *dst, float *dst_addition,
-                                      float *src, float *src_addition,
-                                      int32_t src_count) {
-#if __BANG_ARCH__ >= 322
-  __bang_float2int32_tz((int32_t *)dst, (float *)src, src_count, 0);
-#else
-  // sign ===> src_addition
-  // dst=-1.0 : when src[i] is a negative number
-  // dst=+1.0 : when src[i] is a positive number
-  int32_t floatDchar = sizeof(float) / sizeof(char);
-  __bang_active_sign((float *)dst, src, src_count);
-  // dst_addition = abs(src)
-  __bang_mul(dst_addition, src, (float *)dst, src_count);
-  // if dst_addition < 1.0, then src_addition + 1. to fix add error
-  __bang_write_value((float *)src_addition, NFU_ALIGN_SIZE / sizeof(float),
-                     1.0f);
-  __bang_cycle_lt(dst_addition, dst_addition, (float *)src_addition, src_count,
-                  NFU_ALIGN_SIZE / sizeof(float));
-  __bang_add_tz((float *)dst, (float *)dst, (float *)dst_addition, src_count);
-  __bang_write_value((unsigned *)src_addition, NFU_ALIGN_SIZE / sizeof(float),
-                     0xbf800000);
-  // set negative flag -1.0 = 0xbf80000
-  __bang_cycle_eq(
-      (float *)dst, (float *)dst, (float *)src_addition, src_count,
-      NFU_ALIGN_SIZE / sizeof(float));  // to mask all src in [x < -1.0]
-  __bang_active_abs(dst_addition, src, src_count);
-  __bang_write_value((float *)src_addition, NFU_ALIGN_SIZE / sizeof(float),
-                     8388608.0f);
-  // mask shift move 23
-  __bang_cycle_add_tz(
-      dst_addition, dst_addition, src_addition, src_count,
-      NFU_ALIGN_SIZE / sizeof(float));  // right shift move 23bit
-  // dst=1.0, when src < -1.0
-  // dst=0.0, when src >=-1.0
-  __bang_sub(dst_addition, dst_addition, (float *)dst, src_count);
-  // to fix max value
-  __bang_mul_scalar((float *)dst, (float *)dst, 16777215.0, src_count);
-  __bang_bxor((char *)dst_addition, (char *)dst_addition, (char *)dst,
-              src_count * floatDchar);
-  // get log 23bit
-  __bang_write_value((unsigned *)src_addition, NFU_ALIGN_SIZE / sizeof(float),
-                     (unsigned)0x007fffff);
-  // mask low 23bit is 1
-  __bang_cycle_band((char *)dst_addition, (char *)dst_addition,
-                    (char *)src_addition, src_count * floatDchar,
-                    NFU_ALIGN_SIZE / sizeof(char));
-
-  __bang_write_value(src_addition, NFU_ALIGN_SIZE / sizeof(float), 0x3f800000);
-  __bang_cycle_and((float *)dst, (float *)dst, src_addition, src_count,
-                   NFU_ALIGN_SIZE / sizeof(float));
-  // src or dst_addition
-  __bang_bor((char *)dst_addition, (char *)dst, (char *)dst_addition,
-             src_count * floatDchar);
-  __bang_mul_scalar((float *)dst, (float *)dst, -2.0, src_count);
-  __bang_bor((char *)dst, (char *)dst, (char *)dst_addition,
-             src_count * floatDchar);
-#endif
-}
-
-__mlu_func__ void pvLock() {
-#if __BANG_ARCH__ == 270
-  if (__is_ipu()) {
-    __bang_lock(0, 0);
-  }
-#endif
-}
-
-__mlu_func__ void pvUnlock() {
-#if __BANG_ARCH__ == 270
-  if (__is_ipu()) {
-    __bang_unlock(0, 0);
-  }
-#endif
 }
 
 /******************************************************************************
@@ -709,6 +485,215 @@ __mlu_vector__ void __mluop_get_indices(float *dst, float start_index,
     __vv_store(dst + iter * BlockDim, r_out);
     __vv_add(r_out, r_out, r_dim);
   }
+}
+
+template <typename T>
+__mlu_func__ void __mlu_op_arange_base_(T *dst_nram, uint32_t numel,
+                                        T start_index, T step) {
+  for (uint32_t i = 0; i < numel; i++) {
+    dst_nram[i] = start_index + i * step;
+  }
+}
+
+#define MLUOP_ARANGE_VV_IMPL(VVType, vv_num, dst_nram, start_index, step) \
+  do {                                                                    \
+    VVType vv_index[8];                                                   \
+    __vv_index(vv_index[0], start_index, step);                           \
+    __vv_add(vv_index[1], vv_index[0], 1 * vv_num * step);                \
+    __vv_add(vv_index[2], vv_index[0], 2 * vv_num * step);                \
+    __vv_add(vv_index[3], vv_index[0], 3 * vv_num * step);                \
+    __vv_add(vv_index[4], vv_index[0], 4 * vv_num * step);                \
+    __vv_add(vv_index[5], vv_index[0], 5 * vv_num * step);                \
+    __vv_add(vv_index[6], vv_index[0], 6 * vv_num * step);                \
+    __vv_add(vv_index[7], vv_index[0], 7 * vv_num * step);                \
+    __vv_store(dst_nram, vv_index[0], vv_num);                            \
+    __vv_store(dst_nram + vv_num, vv_index[1], vv_num);                   \
+    __vv_store(dst_nram + 2 * vv_num, vv_index[2], vv_num);               \
+    __vv_store(dst_nram + 3 * vv_num, vv_index[3], vv_num);               \
+    __vv_store(dst_nram + 4 * vv_num, vv_index[4], vv_num);               \
+    __vv_store(dst_nram + 5 * vv_num, vv_index[5], vv_num);               \
+    __vv_store(dst_nram + 6 * vv_num, vv_index[6], vv_num);               \
+    __vv_store(dst_nram + 7 * vv_num, vv_index[7], vv_num);               \
+  } while (false)
+
+template <typename T>
+__mlu_vector__ void __mlu_op_arange_vv_(T *dst_nram, T start_index, T step) {
+#if 592 < _BANG_ARCH_
+  static_assert(
+      (std::is_same<T, float>::value || std::is_same<T, half>::value ||
+       std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value),
+      "__mlu_op_arange_vv type error!");
+#else  // #if 592 < _BANG_ARCH_
+  static_assert(
+      (std::is_same<T, float>::value || std::is_same<T, half>::value ||
+       std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value ||
+       std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value),
+      "__mlu_op_arange_vv type error!");
+#endif
+
+  const uint32_t vv_num = __vv_get_length() / sizeof(T);
+
+#if _BANG_ARCH_ <= 592
+  if (std::is_same<T, uint16_t>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_uint16, vv_num, dst_nram, start_index, step);
+  } else if (std::is_same<T, int16_t>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_int16, vv_num, dst_nram, start_index, step);
+  } else if (std::is_same<T, uint32_t>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_uint32, vv_num, dst_nram, start_index, step);
+  } else if (std::is_same<T, int32_t>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_int32, vv_num, dst_nram, start_index, step);
+  }
+#endif  // if _BANG_ARCH_ <= 592
+  if (std::is_same<T, uint16_t>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_uint16, vv_num, dst_nram, start_index, step);
+  } else if (std::is_same<T, int16_t>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_int16, vv_num, dst_nram, start_index, step);
+  } else if (std::is_same<T, float>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_float, vv_num, dst_nram, start_index, step);
+  } else if (std::is_same<T, half>::value) {
+    MLUOP_ARANGE_VV_IMPL(vv_half, vv_num, dst_nram, start_index, step);
+  }
+  return;
+}
+
+#if 592 < _BANG_ARCH_
+template <typename T>
+__mlu_func__ void __mlu_op_gen_integer_incr_seq_(T *dst_nram,
+                                                 uint32_t elem_count,
+                                                 T start = 0, T step = 1) {
+  static_assert(
+      (std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value ||
+       std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>),
+      "__mlu_op_gen_integer_incr_seq type error!");
+  if (std::is_same<T, uint32_t>::value) {
+    __bang_incseq(reinterpret_cast<int32_t *>(dst_nram), elem_count);
+  } else if (std::is_same<T, uint64_t>::value) {
+    __bang_incseq(reinterpret_cast<int64_t *>(dst_nram), elem_count);
+  } else {
+    __bang_incseq(dst_nram, elem_count);
+  }
+
+  if (start != 0) {
+    if (std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value) {
+      if (step != 1) {
+        __bang_mul_scalar(dst_nram, dst_nram, step, elem_count);
+      }
+      __bang_add_scalar(dst_nram, dst_nram, start, elem_count);
+    } else {
+      __bang_fusion(FUSION_FMA, dst_nram, dst_nram, step, start, elem_count);
+    }
+  }
+}
+#endif  // if 592 < _BANG_ARCH_
+
+#define u32_sizeof(T) ((uint32_t)sizeof(T))
+
+template <typename T>
+__mlu_func__ void __mlu_op_arange_by_expand_(T *dst_nram, uint32_t numel,
+                                             T start_index = 0, T step = 1) {
+#if 592 < _BANG_ARCH_
+  static_assert(
+      (std::is_same<T, float>::value || std::is_same<T, half>::value ||
+       std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value),
+      "__mlu_op_arange_by_expand type error!");
+#else   // if 592 < _BANG_ARCH_
+  static_assert(
+      (std::is_same<T, float>::value || std::is_same<T, half>::value ||
+       std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value ||
+       std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value ||
+       std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value),
+      "__mlu_op_arange_by_expand type error!");
+#endif  // if 592 < _BANG_ARCH_
+
+  // using AluGenSize = std::integral_constant<uint32_t, NFU_ALIGN_SIZE>;
+  using GuGenSize = std::integral_constant<uint32_t, 2048>;
+  uint32_t gu_gen_num = GuGenSize::value / u32_sizeof(T);
+  uint32_t alu_gen_num = NFU_ALIGN_SIZE / u32_sizeof(T);
+  uint32_t base_num = alu_gen_num;
+#if _BANG_ARCH_ <= 592
+  if (std::is_same<T, uint64_t>::value || std::is_same<T, int64_t>::value) {
+    const uint32_t prologue_num = std::min(numel, base_num);
+    __mlu_op_arange_base_(dst_nram, prologue_num, start_index, step);
+
+    if (numel <= base_num) {
+      return;
+    }
+  } else {
+    if (numel <= gu_gen_num) {
+      const uint32_t prologue_num = std::min(numel, base_num);
+      __mlu_op_arange_base_(dst_nram, prologue_num, start_index, step);
+
+      if (numel <= base_num) {
+        return;
+      }
+    } else {
+      __mlu_op_arange_vv_(dst_nram, start_index, step);
+      base_num = gu_gen_num;
+    }
+  }
+#else
+  if (numel <= gu_gen_num) {
+    const uint32_t prologue_num = std::min(numel, base_num);
+    __mlu_op_arange_base_(dst_nram, prologue_num, start_index, step);
+
+    if (numel <= base_num) {
+      return;
+    }
+  } else {
+    __mlu_op_arange_vv_(dst_nram, start_index, step);
+    base_num = gu_gen_num;
+  }
+#endif
+  // base_num = 2^exp
+  uint32_t exp = 0;
+  asm volatile("findlast1.gpr.b32 %[dst], %[src];\n\t"
+               : [ dst ] "+&r"(exp)
+               : [ src ] "r"(base_num));
+  // numel = count * base_num + remain
+  const uint32_t segnum = numel >> exp;
+  // count = 2^repeat
+  uint32_t repeat = 0;
+  asm volatile("findlast1.gpr.b32 %[dst], %[src];\n\t"
+               : [ dst ] "+&r"(repeat)
+               : [ src ] "r"(segnum));
+  uint32_t count = 1;
+  for (uint32_t i = 0; i < repeat; ++i) {
+    __bang_add_scalar(dst_nram + count * base_num, dst_nram,
+                      count * base_num * step, count * base_num);
+    count *= 2;
+  }
+
+  const uint32_t remain = numel - count * base_num;
+  if (0 < remain) {
+    __bang_add_scalar(dst_nram + count * base_num, dst_nram,
+                      count * base_num * step, remain);
+  }
+}
+/***************************************************************************
+
+    CNNL FUNC: __mlu_op_gen_stage_index.
+    param "dst_nram" is a nram pointer to the generated result.
+    param "numel" is the element number of to be generated.
+    param "start_index" is the starting value for the set of points. Default: 0.
+    param "step" is the gap between each pair of adjacent points points.
+   Default: 1. dst_addition. remarks: Detailed introduction for reference
+    http://wiki.cambricon.com/pages/viewpage.action?pageId=119467501.
+    int64_t and uint64_t types are under-optimized and can be improved with GU.
+    *************************************************************************/
+
+template <typename T>
+__mlu_func__ void __mlu_op_gen_stage_index(T *dst_nram, uint32_t numel,
+                                           T start_index = 0, T step = 1) {
+#if 592 < _BANG_ARCH_
+  if (std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value ||
+      std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value) {
+    __mlu_op_gen_integer_incr_seq_(dst_nram, numel, start_index, step);
+  } else {
+    __mlu_op_arange_by_expand_(dst_nram, numel, start_index, step);
+  }
+#else
+  __mlu_op_arange_by_expand_(dst_nram, numel, start_index, step);
+#endif
 }
 
 #endif  // KERNELS_UTILS_COMMON_H_

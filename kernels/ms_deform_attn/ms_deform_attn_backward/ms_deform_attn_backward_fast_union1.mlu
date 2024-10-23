@@ -35,9 +35,9 @@
 #define WRAM_AVALIABLE_SIZE (__MLU_WRAM_SIZE__ * 1024)
 #define SRAM_AVALIABLE_SIZE (__MLU_SRAM_SIZE__ * 1024 - SRAM_REMAIN_SIZE)
 
-__nram__ char nram_buffer[NRAM_AVALIABLE_SIZE];
-__mlu_shared__ char sram_buffer[SRAM_AVALIABLE_SIZE];
-__wram__ char wram_buffer[WRAM_AVALIABLE_SIZE];
+__nram__ int8_t nram_buffer[NRAM_AVALIABLE_SIZE];
+__mlu_shared__ int8_t sram_buffer[SRAM_AVALIABLE_SIZE];
+__wram__ int8_t wram_buffer[WRAM_AVALIABLE_SIZE];
 
 __mlu_func__ void loadNram2Gpr(int32_t& v1, int32_t& v2, int32_t& v3,
                                int32_t& v4, const int32_t* p1,
@@ -68,7 +68,7 @@ __mlu_func__ void memPolicyBackward(
     T*& grad_wp_nram_stg3,         // (4, total_deal_n, num_levels, num_points)
     int32_t*& data_offset_sram, T*& weight_polation_sram, T*& grad_wp_sram,
     T*& weight_attn_sram, T*& cond_point_polation_sram, T*& delta_xy_sram,
-    char* nram_buffer, char* sram_buffer, int32_t& max_cached_n,
+    int8_t* nram_buffer, int8_t* sram_buffer, int32_t& max_cached_n,
     int32_t& stage_1_max_deal_n, int32_t& stage_2_max_deal_n,
     int32_t& stage_3_max_deal_n, int32_t& mask_size,
     const int32_t nram_avaliable_size, const int32_t sram_avaliable_size,
@@ -163,7 +163,7 @@ __mlu_func__ void backwardStageTwoLoop(
     T* weight_polation_sram, T* grad_wp_sram, T* weight_attn_sram,
     T* cond_point_polation_sram, T* delta_xy_sram, T* data_value_gdram,
     T* grad_output_gdram, T* grad_value_gdram, T* grad_attn_weight_gdram,
-    char* wram_buffer, const int32_t total_deal_n, const int32_t max_deal_n,
+    int8_t* wram_buffer, const int32_t total_deal_n, const int32_t max_deal_n,
     const int32_t input_stride_2, const int32_t input_stride_3,
     const int32_t output_stride_2, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels,
@@ -203,18 +203,19 @@ __mlu_func__ void backwardStageTwoLoop(
     if (nq_nl_np_pad8 == nq_nl_np) {
       int32_t bit_cond_stride_4 = 4 * bit_cond_stride;
       __bang_gt_bitindex((T*)bit_cond_nram, cond_nram, tmp_zero, nq_nl_np_4);
-      __bang_bnot((char*)bit_cond_reverse_nram, (char*)bit_cond_nram,
+      __bang_bnot((int8_t*)bit_cond_reverse_nram, (int8_t*)bit_cond_nram,
                   4 * bit_cond_stride);
       __bang_gt_bitindex((T*)(bit_cond_nram + bit_cond_stride_4),
                          cond_nram + nq_nl_np_4, tmp_zero, nq_nl_np);
-      __bang_bnot((char*)(bit_cond_reverse_nram + bit_cond_stride_4),
-                  (char*)(bit_cond_nram + bit_cond_stride_4), bit_cond_stride);
+      __bang_bnot((int8_t*)(bit_cond_reverse_nram + bit_cond_stride_4),
+                  (int8_t*)(bit_cond_nram + bit_cond_stride_4),
+                  bit_cond_stride);
     } else {
       for (int j = 0; j < 5; j++) {
         __bang_gt_bitindex((T*)((int8_t*)bit_cond_nram + j * bit_cond_stride),
                            cond_nram + j * nq_nl_np, tmp_zero, nq_nl_np_pad8);
-        __bang_bnot((char*)bit_cond_reverse_nram + j * bit_cond_stride,
-                    (char*)bit_cond_nram + j * bit_cond_stride,
+        __bang_bnot((int8_t*)bit_cond_reverse_nram + j * bit_cond_stride,
+                    (int8_t*)bit_cond_nram + j * bit_cond_stride,
                     bit_cond_stride);
       }
     }
@@ -281,7 +282,7 @@ __mlu_func__ void backwardStageTwoLoop(
                            nq_nl_np, 0);
         __bang_mul_scalar((int32_t*)v_pong, (int32_t*)v_pong,
                           (int32_t)0xffffffff, nq_nl_np);
-        __bang_band((char*)buffer, (char*)buffer, (char*)v_pong,
+        __bang_band((int8_t*)buffer, (int8_t*)buffer, (int8_t*)v_pong,
                     nq_nl_np * sizeof(T));
         // (nq, nl, np) => (Nq, nl, np)
         __sync_compute();

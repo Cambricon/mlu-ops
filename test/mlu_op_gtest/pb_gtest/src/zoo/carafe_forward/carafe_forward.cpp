@@ -65,8 +65,8 @@ void CarafeForwardExecutor::compute() {
 }
 
 void CarafeForwardExecutor::cpuCompute() {
-  assert(parser_->getInputNum() == 2);
-  assert(parser_->getOutputNum() == 1);
+  GTEST_CHECK(parser_->getInputNum() == 2);
+  GTEST_CHECK(parser_->getOutputNum() == 1);
 
   auto carafe_desc_node = parser_->getProtoNode()->carafe_param();
 
@@ -74,9 +74,9 @@ void CarafeForwardExecutor::cpuCompute() {
   int group_size = carafe_desc_node.group_size();
   int scale_factor = carafe_desc_node.scale_factor();
 
-  assert(kernel_size >= 1 && (kernel_size - 1) % 2 == 0);
-  assert(scale_factor >= 1);
-  assert(group_size >= 1);
+  GTEST_CHECK(kernel_size >= 1 && (kernel_size - 1) % 2 == 0);
+  GTEST_CHECK(scale_factor >= 1);
+  GTEST_CHECK(group_size >= 1);
 
   int half_kernel_size = (kernel_size - 1) / 2;
 
@@ -99,15 +99,15 @@ void CarafeForwardExecutor::cpuCompute() {
   int output_dimW = mluOpGetTensordimW(output_desc);
   int output_dimC = mluOpGetTensordimC(output_desc);
 
-  assert(input_dimN == mask_dimN);
-  assert(input_dimN == output_dimN);
-  assert(input_dimC == output_dimC);
-  assert(mask_dimC == kernel_size * kernel_size * group_size);
-  assert(mask_dimH == scale_factor * input_dimH);
-  assert(mask_dimW == scale_factor * input_dimW);
-  assert(mask_dimH == output_dimH);
-  assert(mask_dimW == output_dimW);
-  assert(input_dimC % group_size == 0);
+  GTEST_CHECK(input_dimN == mask_dimN);
+  GTEST_CHECK(input_dimN == output_dimN);
+  GTEST_CHECK(input_dimC == output_dimC);
+  GTEST_CHECK(mask_dimC == kernel_size * kernel_size * group_size);
+  GTEST_CHECK(mask_dimH == scale_factor * input_dimH);
+  GTEST_CHECK(mask_dimW == scale_factor * input_dimW);
+  GTEST_CHECK(mask_dimH == output_dimH);
+  GTEST_CHECK(mask_dimW == output_dimW);
+  GTEST_CHECK(input_dimC % group_size == 0);
 
   int channels_per_group = input_dimC / group_size;
 

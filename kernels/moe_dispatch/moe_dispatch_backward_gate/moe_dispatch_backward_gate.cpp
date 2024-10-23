@@ -40,7 +40,7 @@ static void policyFunc(const mluOpHandle_t handle, const int samples,
   k_dim->y = 1;
   k_dim->z = 1;
   if (samples > max_core_num) {
-    *k_type = CNRT_FUNC_TYPE_UNION1;
+    *k_type = cnrtFuncTypeUnion1;
   } else {
     *k_type = mluop::runtime::getJobLimitCapabilityCnrtFuncType(handle);
   }

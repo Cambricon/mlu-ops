@@ -326,8 +326,8 @@ if(unknown_rem > 0) {
 ```
 
 - step 5. 计算最小前3个`dist2`及其`index`。
-  - a. 若只有一个`known_segment`, 使用`__bang_min()` 对`known_segment`所有点的dist2计算最小值及index，再将该位置置对应数据类型的最大值，进行下一次取最小值，重复3次可得前3最小值及其index，分别存储在aux_a, aux_b。
-  - b. 若`known`数据需分多个`segment`处理，将每个分块中的最小前3`dist2`收集后再次进行比较得出最小前3`dist2`，才为`unknown`点跟本`known`集合所有点的最小前3`dist2`。如上使用`__bang_min()`重复取值，但分别存储在`aux_a + offset`, `aux_b + offset`，`offset` 随着每处理一个`known_segment`往后移动`3个数据位置`。如`aux_a`空间存满，则对`aux_a`已存在的`dist2`数据进行一次最小前3 `dist2`计算，并放在 `aux_a, aux_b`前3位置，其他位置清空，以待处理下一个`known_segment`。
+  - a. 若只有一个`known_segment`, 使用`__bang_argmin()` 对`known_segment`所有点的dist2计算最小值及index，再将该位置置对应数据类型的最大值，进行下一次取最小值，重复3次可得前3最小值及其index，分别存储在aux_a, aux_b。
+  - b. 若`known`数据需分多个`segment`处理，将每个分块中的最小前3`dist2`收集后再次进行比较得出最小前3`dist2`，才为`unknown`点跟本`known`集合所有点的最小前3`dist2`。如上使用`__bang_argmin()`重复取值，但分别存储在`aux_a + offset`, `aux_b + offset`，`offset` 随着每处理一个`known_segment`往后移动`3个数据位置`。如`aux_a`空间存满，则对`aux_a`已存在的`dist2`数据进行一次最小前3 `dist2`计算，并放在 `aux_a, aux_b`前3位置，其他位置清空，以待处理下一个`known_segment`。
 ```c++
 // T *aux_a: [(0, 1, 2), (3, 4, 5), ..., 128/sizeof(T)]
 // int *aux_b: [(0, 1, 2), (3, 4, 5), ..., 64]
@@ -339,7 +339,7 @@ __mlu_func__ void auxFuncSort(char *aux_a, char *aux_b) {
 
   for (int i = 0; i < 3; i++)
   {
-    __bang_min((T *)dest, aux_a, NFU_ALIGN_SIZE / sizeof(T));
+    __bang_argmin((T *)dest, aux_a, NFU_ALIGN_SIZE / sizeof(T));
     (T *)value[i] = (T)dest[0];
     int index = getIndice((T)dest);
     indice[i] = aux_b[index];
@@ -360,7 +360,7 @@ if(deal_offset >= NFU_ALIGN_SIZE/sizeof(T) / 3) {
 
 char dest[NFU_ALIGN_SIZE];
 for (int i = 0; i < 3; i++) {
-  __bang_min((T *)dest, (T *)dist, known_num_deal);
+  __bang_argmin((T *)dest, (T *)dist, known_num_deal);
   (T *)nram_aux_a[i + deal_offset] = (T)dest[0];
   int index = getIndice((T)dest);
   nram_aux_b[i + deal_offset] = index;
@@ -390,7 +390,7 @@ if(deal_offset > 3) {
   k_dims.x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   k_dims.y = mluop::runtime::getClusterLimitCapability(handle);
   k_dims.z = 1;
-  cnrtFunctionType_t k_type = CNRT_FUNC_TYPE_UNION1;
+  cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
 ```
 数据拆分如图所示：
 

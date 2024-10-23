@@ -36,7 +36,7 @@
 #define NINESPLIT 9
 #define THIRTEENSPLIT 13
 
-__nram__ char data_nram[MAX_NRAM_SIZE];
+__nram__ int8_t data_nram[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ bool containNanInf(const T pos1) {

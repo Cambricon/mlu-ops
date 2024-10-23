@@ -68,8 +68,7 @@ __mlu_func__ void MLUUnion1BoxIouRotatedNonAligned(const T *box1, const T *box2,
   const uint32_t max_box_pair =
       FLOOR_ALIGN(MAX_NRAM_SIZE / copies_of_nram, COMPUTE_COUNT_ALIGN);
   // First, initialize ram with all 0, or could cause nan/inf unexcepted results
-  __bang_write_zero((unsigned char *)nram_buffer,
-                    copies_of_nram * max_box_pair);
+  __bang_write_zero((uint8_t *)nram_buffer, copies_of_nram * max_box_pair);
 
   void *box1_onchip = nram_buffer + 2 * max_box_pair * sizeof(T);
   void *box2_onchip =
@@ -84,43 +83,46 @@ __mlu_func__ void MLUUnion1BoxIouRotatedNonAligned(const T *box1, const T *box2,
   void *ious_ram = nram_buffer + 1 * max_box_pair * sizeof(T);
   void *valid_box = nram_buffer + 1 * max_box_pair * sizeof(T);
 
-  void *new_pts2 = ((char *)box2_trans) + 5 * max_box_pair * sizeof(T);
+  void *new_pts2 = ((int8_t *)box2_trans) + 5 * max_box_pair * sizeof(T);
 
   // over-written Intersect points = [24xN] points, each point has (x, y)
-  void *intersect_pts_x = ((char *)box1_trans) + 16 * max_box_pair * sizeof(T);
-  void *intersect_pts_y = ((char *)box1_trans) + 40 * max_box_pair * sizeof(T);
+  void *intersect_pts_x =
+      ((int8_t *)box1_trans) + 16 * max_box_pair * sizeof(T);
+  void *intersect_pts_y =
+      ((int8_t *)box1_trans) + 40 * max_box_pair * sizeof(T);
   // Record whether this position of intersect points is valid or not
-  void *valid_pts = ((char *)box1_onchip) + 40 * max_box_pair * sizeof(T);
+  void *valid_pts = ((int8_t *)box1_onchip) + 40 * max_box_pair * sizeof(T);
   // Record each box pair has how many valid intersect points
-  void *nums_in_ram = ((char *)box1_onchip) + 10 * max_box_pair * sizeof(T);
+  void *nums_in_ram = ((int8_t *)box1_onchip) + 10 * max_box_pair * sizeof(T);
 
-  void *rotated_pts1_x = ((char *)box2_onchip);
-  void *rotated_pts1_y = ((char *)box2_onchip) + 4 * max_box_pair * sizeof(T);
-  void *rotated_pts2_x = ((char *)box2_onchip) + 8 * max_box_pair * sizeof(T);
-  void *rotated_pts2_y = ((char *)box2_onchip) + 12 * max_box_pair * sizeof(T);
+  void *rotated_pts1_x = ((int8_t *)box2_onchip);
+  void *rotated_pts1_y = ((int8_t *)box2_onchip) + 4 * max_box_pair * sizeof(T);
+  void *rotated_pts2_x = ((int8_t *)box2_onchip) + 8 * max_box_pair * sizeof(T);
+  void *rotated_pts2_y =
+      ((int8_t *)box2_onchip) + 12 * max_box_pair * sizeof(T);
 
-  void *temp1_ram = ((char *)box1_onchip) + 5 * max_box_pair * sizeof(T);
-  void *temp2_ram = ((char *)box1_onchip) + 6 * max_box_pair * sizeof(T);
-  void *temp3_ram = ((char *)box1_onchip) + 7 * max_box_pair * sizeof(T);
-  void *temp4_ram = ((char *)box1_onchip) + 8 * max_box_pair * sizeof(T);
-  void *temp5_ram = ((char *)box1_onchip) + 9 * max_box_pair * sizeof(T);
-  void *temp6_ram = ((char *)box1_onchip) + 11 * max_box_pair * sizeof(T);
-  void *temp7_ram = ((char *)box1_onchip) + 12 * max_box_pair * sizeof(T);
-  void *temp8_ram = ((char *)box1_onchip) + 13 * max_box_pair * sizeof(T);
-  void *temp9_ram = ((char *)box1_onchip) + 14 * max_box_pair * sizeof(T);
+  void *temp1_ram = ((int8_t *)box1_onchip) + 5 * max_box_pair * sizeof(T);
+  void *temp2_ram = ((int8_t *)box1_onchip) + 6 * max_box_pair * sizeof(T);
+  void *temp3_ram = ((int8_t *)box1_onchip) + 7 * max_box_pair * sizeof(T);
+  void *temp4_ram = ((int8_t *)box1_onchip) + 8 * max_box_pair * sizeof(T);
+  void *temp5_ram = ((int8_t *)box1_onchip) + 9 * max_box_pair * sizeof(T);
+  void *temp6_ram = ((int8_t *)box1_onchip) + 11 * max_box_pair * sizeof(T);
+  void *temp7_ram = ((int8_t *)box1_onchip) + 12 * max_box_pair * sizeof(T);
+  void *temp8_ram = ((int8_t *)box1_onchip) + 13 * max_box_pair * sizeof(T);
+  void *temp9_ram = ((int8_t *)box1_onchip) + 14 * max_box_pair * sizeof(T);
 
-  void *vec1_x = ((char *)box2_onchip) + 16 * max_box_pair * sizeof(T);
-  void *vec1_y = ((char *)box2_onchip) + 20 * max_box_pair * sizeof(T);
-  void *vec2_x = ((char *)box2_onchip) + 24 * max_box_pair * sizeof(T);
-  void *vec2_y = ((char *)box2_onchip) + 28 * max_box_pair * sizeof(T);
+  void *vec1_x = ((int8_t *)box2_onchip) + 16 * max_box_pair * sizeof(T);
+  void *vec1_y = ((int8_t *)box2_onchip) + 20 * max_box_pair * sizeof(T);
+  void *vec2_x = ((int8_t *)box2_onchip) + 24 * max_box_pair * sizeof(T);
+  void *vec2_y = ((int8_t *)box2_onchip) + 28 * max_box_pair * sizeof(T);
 
-  void *ordered_pts_x = ((char *)box2_trans) + 16 * max_box_pair * sizeof(T);
-  void *ordered_pts_y = ((char *)box2_trans) + 40 * max_box_pair * sizeof(T);
+  void *ordered_pts_x = ((int8_t *)box2_trans) + 16 * max_box_pair * sizeof(T);
+  void *ordered_pts_y = ((int8_t *)box2_trans) + 40 * max_box_pair * sizeof(T);
 
-  void *dist_ram = ((char *)box1_onchip) + 16 * max_box_pair * sizeof(T);
-  void *temp_long_1 = ((char *)box2_onchip);
-  void *temp_long_2 = ((char *)box2_onchip) + 24 * max_box_pair * sizeof(T);
-  void *temp_long_3 = ((char *)box2_onchip) + 48 * max_box_pair * sizeof(T);
+  void *dist_ram = ((int8_t *)box1_onchip) + 16 * max_box_pair * sizeof(T);
+  void *temp_long_1 = ((int8_t *)box2_onchip);
+  void *temp_long_2 = ((int8_t *)box2_onchip) + 24 * max_box_pair * sizeof(T);
+  void *temp_long_3 = ((int8_t *)box2_onchip) + 48 * max_box_pair * sizeof(T);
 
   // load offchip current data, for loop
   uint32_t repeat_box1 = num_box1 / max_box_pair;
@@ -358,18 +360,16 @@ __mlu_func__ void MLUUnion1BoxIouRotatedNonAligned(const T *box1, const T *box2,
           __nram__ int table[TABLE_LENGTH] = {0, FIILED_ONES};
           __bang_float2int32((int32_t *)temp9_ram, (float *)temp9_ram,
                              actual_compute_box_num, 0);
-          __bang_lut_s32((int32_t *)temp9_ram, (int32_t *)temp9_ram,
-                         (int32_t *)table, actual_compute_box_num,
-                         TABLE_LENGTH);
+          __bang_lut((int32_t *)temp9_ram, (uint32_t *)temp9_ram,
+                     (int32_t *)table, actual_compute_box_num, TABLE_LENGTH);
         } else {
           __nram__ int16_t table[TABLE_LENGTH] = {0, HALF_FILLED_ONES};
           __bang_half2int16_rd((int16_t *)temp9_ram, (half *)temp9_ram,
                                actual_compute_box_num, 0);
-          __bang_lut_s16((int16_t *)temp9_ram, (int16_t *)temp9_ram,
-                         (int16_t *)table, actual_compute_box_num,
-                         TABLE_LENGTH);
+          __bang_lut((int16_t *)temp9_ram, (uint16_t *)temp9_ram,
+                     (int16_t *)table, actual_compute_box_num, TABLE_LENGTH);
         }
-        __bang_band((char *)ious_ram, (char *)ious_ram, (char *)temp9_ram,
+        __bang_band((int8_t *)ious_ram, (int8_t *)ious_ram, (int8_t *)temp9_ram,
                     actual_compute_box_num * sizeof(T));
 
         __memcpy(ious + current_ious_offset, (T *)ious_ram,

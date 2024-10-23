@@ -137,7 +137,8 @@ void *Stride::strideOutputByDtype() { return pimpl_->strideOutputByDtype(); }
 
 void *Stride::StrideImpl::strideOutputByDtype() {
   if (have_stride_) {
-    size_t dtype_size = mluop::getSizeOfDataType(ts_->dtype);
+    size_t dtype_size;
+    MLUOP_CHECK(mluOpGetSizeOfDataType(ts_->dtype, &dtype_size));
     void *tensor_out = cpu_runtime_->allocate(ts_->total_count * dtype_size);
     if (init_by_input_) {
       memcpy(tensor_out, tensor_copy_, ts_->total_count * dtype_size);

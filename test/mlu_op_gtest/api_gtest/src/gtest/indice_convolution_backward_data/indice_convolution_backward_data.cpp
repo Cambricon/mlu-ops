@@ -50,12 +50,12 @@ class indice_convolution_backward_data : public testing::Test {
     }
     if (output_grad) {
       if (output_grad_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&output_grad_,
                                mluOpGetTensorElementNum(output_grad_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&output_grad_,
                                100 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
@@ -70,11 +70,11 @@ class indice_convolution_backward_data : public testing::Test {
     if (filters) {
       if (filters_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&filters_, mluOpGetTensorElementNum(filters_desc_) *
                                       mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&filters_,
                                1890 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
@@ -88,12 +88,12 @@ class indice_convolution_backward_data : public testing::Test {
     }
     if (indice_pairs) {
       if (indice_pairs_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&indice_pairs_,
                                mluOpGetTensorElementNum(indice_pairs_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&indice_pairs_,
                                180 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32)));
       }
@@ -107,18 +107,18 @@ class indice_convolution_backward_data : public testing::Test {
     }
     if (input_grad) {
       if (input_grad_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&input_grad_,
                                mluOpGetTensorElementNum(input_grad_desc_) *
                                    mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&input_grad_,
                                210 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT)));
       }
     }
     if (workspace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
     }
   }
 
@@ -144,7 +144,7 @@ class indice_convolution_backward_data : public testing::Test {
       output_grad_desc_ = NULL;
     }
     if (output_grad_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_grad_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_grad_));
       output_grad_ = NULL;
     }
     if (filters_desc_) {
@@ -152,7 +152,7 @@ class indice_convolution_backward_data : public testing::Test {
       filters_desc_ = NULL;
     }
     if (filters_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(filters_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(filters_));
       filters_ = NULL;
     }
     if (indice_pairs_desc_) {
@@ -160,11 +160,11 @@ class indice_convolution_backward_data : public testing::Test {
       indice_pairs_desc_ = NULL;
     }
     if (indice_pairs_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indice_pairs_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(indice_pairs_));
       indice_pairs_ = NULL;
     }
     if (workspace_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
     if (input_grad_desc_) {
@@ -172,7 +172,7 @@ class indice_convolution_backward_data : public testing::Test {
       input_grad_desc_ = NULL;
     }
     if (input_grad_) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_grad_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(input_grad_));
       input_grad_ = NULL;
     }
   }

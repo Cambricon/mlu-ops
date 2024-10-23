@@ -52,11 +52,11 @@ class mutual_information_backward : public testing::Test {
 
     if (px) {
       if (px_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&px_, MLUOP_DTYPE_FLOAT *
                                          mluOpGetTensorElementNum(px_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&px_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -71,11 +71,11 @@ class mutual_information_backward : public testing::Test {
 
     if (py) {
       if (py_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&py_, MLUOP_DTYPE_FLOAT *
                                          mluOpGetTensorElementNum(py_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&py_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -90,12 +90,12 @@ class mutual_information_backward : public testing::Test {
 
     if (opt_boundary) {
       if (opt_boundary_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&opt_boundary_,
                                MLUOP_DTYPE_INT64 * mluOpGetTensorElementNum(
                                                        opt_boundary_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&opt_boundary_, MLUOP_DTYPE_INT64 * 2));
       }
     }
@@ -110,11 +110,11 @@ class mutual_information_backward : public testing::Test {
 
     if (p) {
       if (p_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&p_, MLUOP_DTYPE_FLOAT *
                                         mluOpGetTensorElementNum(p_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&p_, MLUOP_DTYPE_FLOAT * 2));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&p_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
 
@@ -128,12 +128,12 @@ class mutual_information_backward : public testing::Test {
 
     if (ans_grad) {
       if (ans_grad_desc) {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&ans_grad_,
                                MLUOP_DTYPE_FLOAT *
                                    mluOpGetTensorElementNum(ans_grad_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&ans_grad_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -149,11 +149,11 @@ class mutual_information_backward : public testing::Test {
     if (px_grad) {
       if (px_grad_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&px_grad_, MLUOP_DTYPE_FLOAT *
                                       mluOpGetTensorElementNum(px_grad_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&px_grad_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
@@ -169,17 +169,17 @@ class mutual_information_backward : public testing::Test {
     if (py_grad) {
       if (py_grad_desc) {
         GTEST_CHECK(
-            CNRT_RET_SUCCESS ==
+            cnrtSuccess ==
             cnrtMalloc(&py_grad_, MLUOP_DTYPE_FLOAT *
                                       mluOpGetTensorElementNum(py_grad_desc_)));
       } else {
-        GTEST_CHECK(CNRT_RET_SUCCESS ==
+        GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&py_grad_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
 
     if (workspace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS ==
+      GTEST_CHECK(cnrtSuccess ==
                   cnrtMalloc(&workspace_, MLUOP_DTYPE_FLOAT * workspace_size_));
     }
   }
@@ -211,7 +211,7 @@ class mutual_information_backward : public testing::Test {
 
     if (px_) {
       VLOG(4) << "Destroy px_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(px_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(px_));
       px_ = nullptr;
     }
 
@@ -223,7 +223,7 @@ class mutual_information_backward : public testing::Test {
 
     if (py_) {
       VLOG(4) << "Destroy py_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(py_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(py_));
       py_ = nullptr;
     }
 
@@ -235,7 +235,7 @@ class mutual_information_backward : public testing::Test {
 
     if (opt_boundary_) {
       VLOG(4) << "Destroy opt_boundary_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(opt_boundary_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(opt_boundary_));
       opt_boundary_ = nullptr;
     }
 
@@ -247,7 +247,7 @@ class mutual_information_backward : public testing::Test {
 
     if (p_) {
       VLOG(4) << "Destroy p_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(p_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(p_));
       p_ = nullptr;
     }
 
@@ -259,7 +259,7 @@ class mutual_information_backward : public testing::Test {
 
     if (ans_grad_) {
       VLOG(4) << "Destroy ans_grad_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(ans_grad_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(ans_grad_));
       ans_grad_ = nullptr;
     }
 
@@ -271,7 +271,7 @@ class mutual_information_backward : public testing::Test {
 
     if (px_grad_) {
       VLOG(4) << "Destroy px_grad_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(px_grad_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(px_grad_));
       px_grad_ = nullptr;
     }
 
@@ -283,13 +283,13 @@ class mutual_information_backward : public testing::Test {
 
     if (py_grad_) {
       VLOG(4) << "Destroy py_grad_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(py_grad_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(py_grad_));
       py_grad_ = nullptr;
     }
 
     if (workspace_) {
       VLOG(4) << "Destroy workspace_";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
       workspace_ = nullptr;
     }
   }

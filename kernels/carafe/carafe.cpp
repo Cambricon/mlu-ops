@@ -254,7 +254,7 @@ mluOpStatus_t genPolicy(mluOpHandle_t handle,
           << "NRAM usage (Nb. of dtype_size) = " << nram_usage;
 
   // determine task type and dims
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
+  *k_type = cnrtFuncTypeBlock;
   k_dim->x = core_dim;
   k_dim->y = union_number;
   k_dim->z = 1;
@@ -783,6 +783,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeForward(
                 &grid_dimG, &grid_dimC, &job_num),
       "Error occured in generating policy.");
 
+  {
+    LARGE_TENSOR_CHECK("[mluOpCarafeForward]", input_desc);
+    LARGE_TENSOR_CHECK("[mluOpCarafeForward]", mask_desc);
+    LARGE_TENSOR_CHECK("[mluOpCarafeForward]", output_desc);
+  }
   // GEN_CASE
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("carafe_forward", "CARAFE_FORWARD");
@@ -790,12 +795,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeForward(
     GEN_CASE_DATA(true, "input", input, input_desc, 5.1, -5.3);
     GEN_CASE_DATA(true, "mask", mask, mask_desc, 0.0, 1.0);
     GEN_CASE_DATA(false, "output", output, output_desc, 1.7, -1.8);
-    GEN_CASE_OP_PARAM_SINGLE(0, "carafe_forward", "dimnb", carafe_desc->dimNb);
-    GEN_CASE_OP_PARAM_SINGLE(1, "carafe_forward", "kernel_size",
+    GEN_CASE_OP_PARAM_SINGLE(0, "carafe", "dimnb", carafe_desc->dimNb);
+    GEN_CASE_OP_PARAM_SINGLE(1, "carafe", "kernel_size",
                              carafe_desc->kernel_size);
-    GEN_CASE_OP_PARAM_SINGLE(1, "carafe_forward", "group_size",
+    GEN_CASE_OP_PARAM_SINGLE(1, "carafe", "group_size",
                              carafe_desc->group_size);
-    GEN_CASE_OP_PARAM_SINGLE(2, "carafe_forward", "scale_factor",
+    GEN_CASE_OP_PARAM_SINGLE(2, "carafe", "scale_factor",
                              carafe_desc->scale_factor);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
@@ -840,6 +845,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeBackward(
     return param_check_status;
   }
 
+  {
+    LARGE_TENSOR_CHECK("[mluOpCarafeBackward]", input_desc);
+    LARGE_TENSOR_CHECK("[mluOpCarafeBackward]", mask_desc);
+    LARGE_TENSOR_CHECK("[mluOpCarafeBackward]", grad_output_desc);
+    LARGE_TENSOR_CHECK("[mluOpCarafeBackward]", grad_input_desc);
+    LARGE_TENSOR_CHECK("[mluOpCarafeBackward]", grad_mask_desc);
+  }
+
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("carafe_backward", "CARAFE_BACKWARD");
     GEN_CASE_HANDLE(handle);
@@ -849,12 +862,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeBackward(
                   -1.8);
     GEN_CASE_DATA(false, "grad_input", grad_input, grad_input_desc, 0, 0);
     GEN_CASE_DATA(false, "grad_mask", grad_mask, grad_mask_desc, 0, 0);
-    GEN_CASE_OP_PARAM_SINGLE(0, "carafe_backward", "dimnb", carafe_desc->dimNb);
-    GEN_CASE_OP_PARAM_SINGLE(1, "carafe_backward", "kernel_size",
+    GEN_CASE_OP_PARAM_SINGLE(0, "carafe", "dimnb", carafe_desc->dimNb);
+    GEN_CASE_OP_PARAM_SINGLE(1, "carafe", "kernel_size",
                              carafe_desc->kernel_size);
-    GEN_CASE_OP_PARAM_SINGLE(1, "carafe_backward", "group_size",
+    GEN_CASE_OP_PARAM_SINGLE(1, "carafe", "group_size",
                              carafe_desc->group_size);
-    GEN_CASE_OP_PARAM_SINGLE(2, "carafe_backward", "scale_factor",
+    GEN_CASE_OP_PARAM_SINGLE(2, "carafe", "scale_factor",
                              carafe_desc->scale_factor);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
@@ -883,7 +896,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCarafeBackward(
   task_dim_x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   task_dim_y = mluop::runtime::getClusterLimitCapability(handle);
   cnrtDim3_t k_dim = {task_dim_x, task_dim_y, 1};
-  cnrtJobType_t k_type = CNRT_FUNC_TYPE_BLOCK;
+  cnrtFunctionType_t k_type = cnrtFuncTypeBlock;
 
   VLOG(5) << "Launch KernelCarafeBackward<<<k_type=" << k_type << ", "
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";

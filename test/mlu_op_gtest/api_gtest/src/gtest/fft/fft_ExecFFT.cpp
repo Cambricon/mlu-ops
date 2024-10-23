@@ -47,16 +47,16 @@ class fft_ExecFFT : public testing::Test {
 
     if (input) {
       size_t i_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&input_, i_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&input_, i_bytes));
     }
 
     if (workspace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
     }
 
     if (output) {
       size_t o_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_COMPLEX_FLOAT);
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, o_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_, o_bytes));
     }
   }
 
@@ -136,12 +136,12 @@ class fft_ExecFFT : public testing::Test {
       }
       if (input_) {
         VLOG(4) << "Destroy input_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
         input_ = nullptr;
       }
       if (output_) {
         VLOG(4) << "Destroy output_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
         output_ = nullptr;
       }
       if (fft_plan_) {
@@ -151,7 +151,7 @@ class fft_ExecFFT : public testing::Test {
       }
       if (workspace_) {
         VLOG(4) << "Destroy workspace_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
         workspace_ = nullptr;
       }
     } catch (const std::exception &e) {

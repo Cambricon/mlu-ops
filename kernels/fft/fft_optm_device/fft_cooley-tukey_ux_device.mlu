@@ -63,15 +63,8 @@ __mlu_func__ void genWVec1(float *w_r, float *w_i, float *w_tmp1, float *w_tmp2,
         2.0 * M_PI / (n / L_align * L * 2.0) * (fft_flag != IRFFT ? -1 : 1);
     scale *= ((fft_flag == FFT_IFFT && direction == FFT_INVERSE) ? -1 : 1);
     __bang_mul_scalar(tmp_offset_addr, tmp_inc_addr, scale, L_align);
-#if __BANG_ARCH__ >= 372
     __bang_cos(tmp_cos_addr, tmp_offset_addr, L_align);
     __bang_sin(tmp_sin_addr, tmp_offset_addr, L_align);
-#else
-    for (int i = 0; i < L_align; i++) {
-      tmp_cos_addr[i] = cosf(tmp_offset_addr[i]);
-      tmp_sin_addr[i] = sinf(tmp_offset_addr[i]);
-    }
-#endif
   }
 }
 
@@ -270,7 +263,6 @@ __mlu_func__ void transAndStore(DT *x_out_trans, DT *y_in_r, DT *y_in_i,
     int bc_offset = bc * n * COMPLEX_FACTOR;
     int dst_offset =
         (ro * repeat_inner_basic_group + ri) * basic_size * 2 + bc_offset;
-#if __BANG_ARCH__ >= 372
     __bang_transpose(x_out_trans, y_in_r, COMPLEX_FACTOR,
                      basic_size_align_via_L);
     __memcpy((DT *)output + dst_offset, x_out_trans,
@@ -281,28 +273,6 @@ __mlu_func__ void transAndStore(DT *x_out_trans, DT *y_in_r, DT *y_in_i,
       __memcpy((DT *)output + dst_offset + n, x_out_trans,
                basic_size_bytes * COMPLEX_FACTOR, NRAM2GDRAM);
     }
-#else
-    // For efficiency and space, we split one transpose [2, N] --> [2, x, N/x],
-    // into two as follows:
-    //     trans1: [(2, x),  N/x] -> [N/x, (2, x)]
-    //     trans2: [(N/x, 2), x)] -> [x, (N/x, 2)]
-    // Note: both dim2 and dim3 need to meet alignment requirement:
-    //       TRANS_ALIGN_SIZE / (int)sizeof(DT)
-    int dim1 = COMPLEX_FACTOR;
-    int dim2 = TRANS_ALIGN_SIZE / (int)sizeof(DT);
-    int dim3 = basic_size_align_via_L / dim2;
-    DT *x_out_trans_tmp = x_out_trans + dim1 * dim2 * dim3;
-    __bang_transpose(x_out_trans_tmp, y_in_r, dim1 * dim2, dim3);
-    __bang_transpose(x_out_trans, x_out_trans_tmp, dim3 * dim1, dim2);
-    __memcpy((DT *)output + dst_offset, x_out_trans,
-             basic_size_bytes * COMPLEX_FACTOR, NRAM2GDRAM);
-    if (stage == ITER_ONCHIP) {
-      __bang_transpose(x_out_trans_tmp, y_in_i, dim1 * dim2, dim3);
-      __bang_transpose(x_out_trans, x_out_trans_tmp, dim3 * dim1, dim2);
-      __memcpy((DT *)output + dst_offset + n, x_out_trans,
-               basic_size_bytes * COMPLEX_FACTOR, NRAM2GDRAM);
-    }
-#endif
   } else if (fft_flag == RFFT) {
     int bc_offset = bc * (n / 2 + 1) * COMPLEX_FACTOR;
     int dst_offset = (ro * repeat_inner_basic_group + ri) * basic_size;
@@ -312,18 +282,8 @@ __mlu_func__ void transAndStore(DT *x_out_trans, DT *y_in_r, DT *y_in_i,
       *((DT *)output + bc_offset + (n + 1)) =
           *((DT *)y_in_i + basic_size / YZ_FACTOR);
     }
-#if __BANG_ARCH__ >= 372
     __bang_transpose(x_out_trans, y_in_r, COMPLEX_FACTOR,
                      basic_size_align_via_L);
-#else
-    // the principle of transpose is the same as FFT_IFFT
-    int dim1 = COMPLEX_FACTOR;
-    int dim2 = TRANS_ALIGN_SIZE / (int)sizeof(DT);
-    int dim3 = basic_size_align_via_L / dim2;
-    DT *x_out_trans_tmp = x_out_trans + dim1 * dim2 * dim3;
-    __bang_transpose(x_out_trans_tmp, y_in_r, dim1 * dim2, dim3);
-    __bang_transpose(x_out_trans, x_out_trans_tmp, dim3 * dim1, dim2);
-#endif
     if (stage == ITER_OFFCHIP) {
       __memcpy((DT *)output + dst_offset + bc_offset, x_out_trans,
                basic_size_bytes, NRAM2GDRAM);

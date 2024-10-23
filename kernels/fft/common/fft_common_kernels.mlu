@@ -30,7 +30,7 @@
 
 #define PAD_SIZE 64
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 /*
   convert function
@@ -78,36 +78,26 @@ __mlu_func__ void __mluop_mod(T *src_addr, T *temp_addr, T n, int len) {
  */
 __mlu_func__ void genSinCosVec(float *src_addr, float *sin_addr,
                                float *cos_addr, int deal_size) {
-#if __BANG_ARCH__ >= 372
   __bang_sin(sin_addr, src_addr, deal_size);
   __bang_cos(cos_addr, src_addr, deal_size);
-#else
-  for (int i = 0; i < deal_size; i++) {
-    sin_addr[i] = sinf(src_addr[i]);
-    cos_addr[i] = cosf(src_addr[i]);
-  }
-#endif
 }
 
 /*
   generate select offset vector function:
   bang_arch >= 372, for gather inst offset, should mul sizeof(float)
-  bang_arch < 372, for scalar select offset
   [input] offset_addr: offset data in float32
   [input] deal_size: offset data number(don't need align)
   [output] offset_int_addr: offset data in int32
  */
 __mlu_func__ void genSelectOffsetVec(float *offset_addr,
                                      int32_t *offset_int_addr, int deal_size) {
-  for (int i = 0; i < deal_size; i++) {
-    offset_int_addr[i] = (int)(offset_addr[i]);
-  }
+  __bang_mul_scalar(offset_addr, offset_addr, (float)sizeof(float), deal_size);
+  __bang_float2int32((int32_t *)offset_int_addr, offset_addr, deal_size, 0);
 }
 
 /*
   select data function:
   bang_arch >= 372, use gather inst, offset should mul sizeof(float)
-  bang_arch < 372, use for and  scalar select inst
   [input] src_addr: input data to be selected
   [input] offset_int_addr: offset data to select data in int32
   [input] deal_size: offset data number(don't need align)
@@ -115,9 +105,16 @@ __mlu_func__ void genSelectOffsetVec(float *offset_addr,
  */
 __mlu_func__ void selectVec(float *src_addr, int32_t *offset_int_addr,
                             float *dst_addr, int deal_size) {
+#if __BANG_ARCH__ >= 372 && __BANG_ARCH__ != 520
+  __asm__ volatile(
+      "gather.clean.nram.nram.nram.b32.u32 "
+      "[%[dst]], [%[src]], [%[offset]], %[data_num];\n\t" ::[dst] "r"(dst_addr),
+      [src] "r"(src_addr), [offset] "r"(offset_int_addr), [data_num] "r"(deal_size));
+#else
   for (auto i = 0; i < deal_size; i++) {
     dst_addr[i] = src_addr[offset_int_addr[i]];
   }
+#endif
 }
 
 /*
@@ -152,7 +149,7 @@ __mlu_func__ void generateRFFTHalfDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_get_indices(inc_addr, (float)0.0, deal_size);
+  __mlu_op_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
 
   // generate sin and cos vectors
   const float scale = -2.0 * M_PI / n;
@@ -236,7 +233,7 @@ __mlu_func__ void generateRFFTFullDFTMatrixImpl(int row, int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_get_indices(inc_addr, (float)0.0, deal_size);
+  __mlu_op_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
 
   // generate sin and cos vectors
   const float scale = -2.0 * M_PI / n;
@@ -325,7 +322,7 @@ __mlu_func__ void generateIRFFTHalfDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_get_indices(inc_addr, (float)0.0, deal_size);
+  __mlu_op_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
 
   // generate sin and cos coefficient vectors
   __bang_write_value((float *)cos_coeff_addr, deal_size, (float)2.0);
@@ -420,7 +417,7 @@ __mlu_func__ void generateIRFFTFullDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_get_indices(inc_addr, (float)0.0, deal_size);
+  __mlu_op_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
 
   // generate sin and cos vectors
   const float scale = 2.0 * M_PI / n;
@@ -516,7 +513,7 @@ __mlu_func__ void generateC2CFFTDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mluop_get_indices(inc_addr, (float)0.0, deal_size);
+  __mlu_op_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
 
   // generate sin and cos vectors
   const float forward_scale = -2.0 * M_PI / n;

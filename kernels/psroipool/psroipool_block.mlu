@@ -29,27 +29,16 @@
 
 #define ALIGN_SIZE 64
 
-__nram__ char nram_ptr[MAX_NRAM_SIZE];
+__nram__ int8_t nram_ptr[MAX_NRAM_SIZE];
 
 // This function is used to align the round_rn
 template <typename T>
 __mlu_func__ T scalarRound(T key) {
-#if __BANG_ARCH__ >= 370
   if (sizeof(T) == 2) {
     return (T)(__half2int_rd(T(key)));
   } else {
     return (T)(__float2int_rd(T(key)));
   }
-#else
-  int key_remain = ((int)key) % 2;
-  int result = 0;
-  if (!(((key - (int)key) == 0.5) || ((key - (int)key) == -0.5))) {
-    return (T)(round(key));
-  } else {
-    result = (int)(key + key_remain * 0.5);
-    return (T)result;
-  }
-#endif
 }
 
 template <typename T>

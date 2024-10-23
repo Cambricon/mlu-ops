@@ -47,7 +47,7 @@ class deform_roi_pooling_forward : public testing::Test {
           std::vector<int>({1, 5, 5, 1}).data()));
     }
     if (input) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&input_, 10));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&input_, 10));
     }
     if (rois_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&rois_desc_));
@@ -56,7 +56,7 @@ class deform_roi_pooling_forward : public testing::Test {
                                            std::vector<int>({3, 5}).data()));
     }
     if (rois) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&rois_, 5));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&rois_, 5));
     }
     if (offset_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&offset_desc_));
@@ -65,7 +65,7 @@ class deform_roi_pooling_forward : public testing::Test {
           std::vector<int>({3, 2, 3, 3}).data()));
     }
     if (offset) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&offset_, 5));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&offset_, 5));
     }
     if (output_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_desc_));
@@ -74,7 +74,7 @@ class deform_roi_pooling_forward : public testing::Test {
           std::vector<int>({3, 3, 3, 1}).data()));
     }
     if (output) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&output_, 10));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_, 10));
     }
   }
   mluOpStatus_t compute() {
@@ -111,7 +111,7 @@ class deform_roi_pooling_forward : public testing::Test {
     }
     if (input_) {
       VLOG(4) << "Destroy input";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
       input_ = nullptr;
     }
     if (rois_desc_) {
@@ -120,7 +120,7 @@ class deform_roi_pooling_forward : public testing::Test {
     }
     if (rois_) {
       VLOG(4) << "Destroy rois";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(rois_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(rois_));
       rois_ = nullptr;
     }
     if (offset_desc_) {
@@ -129,7 +129,7 @@ class deform_roi_pooling_forward : public testing::Test {
     }
     if (offset_) {
       VLOG(4) << "Destroy offset";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(offset_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(offset_));
       offset_ = nullptr;
     }
     if (output_desc_) {
@@ -138,7 +138,7 @@ class deform_roi_pooling_forward : public testing::Test {
     }
     if (output_) {
       VLOG(4) << "Destroy output";
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+      GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
       output_ = nullptr;
     }
   }

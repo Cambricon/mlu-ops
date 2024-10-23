@@ -28,7 +28,7 @@
 
 mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineLgamma(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    mluOpDataType_t d_type, const void *x, void *y, const int num);
+    mluOpDataType_t d_type, const void *x, void *y, const size_t num);
 
 mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineWithStrideLgamma(
     const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,

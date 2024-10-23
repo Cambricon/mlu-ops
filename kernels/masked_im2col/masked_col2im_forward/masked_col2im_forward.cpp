@@ -42,7 +42,7 @@ static void policyFunc(const mluOpHandle_t handle, const int mask_cnt,
   k_dim->y = (task_dim / core_limit) > cluster_limit ? cluster_limit
                                                      : (task_dim / core_limit);
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
 }
 
 static mluOpStatus_t maskedCol2imForwardPreCheck(
@@ -269,8 +269,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMaskedCol2imForward(
   // generate mluOpMaskedCol2imForward prototxt end!
   mluOpDataType_t input_dtype = col_desc->dtype;
   void *col_workspace = workspace;
-  void *im_workspace = (char *)workspace + col_desc->total_tensor_size;
-  void *transpose_workspace = (char *)im_workspace + im_desc->total_tensor_size;
+  void *im_workspace = (int8_t *)workspace + col_desc->total_tensor_size;
+  void *transpose_workspace =
+      (int8_t *)im_workspace + im_desc->total_tensor_size;
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;

@@ -39,7 +39,7 @@
  ***********************************************************************************************/
 #define TWELVE_SPLIT 12
 
-__nram__ char nram_buffer[MAX_NRAM_SIZE];
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void checkPointsInBox3d(const T *boxes3d, const size_t deal_num,
@@ -71,12 +71,7 @@ __mlu_func__ void checkPointsInBox3d(const T *boxes3d, const size_t deal_num,
   // |z - cz|
   __bang_active_abs((T *)auxiliary_c, (T *)auxiliary_c, deal_num);
   // |z - cz| > dz / 2.0
-#if __BANG_ARCH__ >= 322
   __bang_gt_scalar((T *)auxiliary_c, (T *)auxiliary_c, (T)(0.5 * dz), deal_num);
-#else
-  __bang_write_value((T *)auxiliary_d, deal_num, (T)(0.5 * dz));
-  __bang_lt((T *)auxiliary_c, (T *)auxiliary_d, (T *)auxiliary_c, deal_num);
-#endif
   // !(|z - cz| > dz / 2.0)
   __bang_not((T *)auxiliary_c, (T *)auxiliary_c, deal_num);
   // (x - cx) * cos(-rz)
@@ -88,12 +83,7 @@ __mlu_func__ void checkPointsInBox3d(const T *boxes3d, const size_t deal_num,
   // |local_x|
   __bang_active_abs((T *)auxiliary_d, (T *)auxiliary_d, deal_num);
   // |local_x| < dx / 2.0
-#if __BANG_ARCH__ >= 322
   __bang_lt_scalar(auxiliary_d, auxiliary_d, (T)(0.5 * dx), deal_num);
-#else
-  __bang_write_value((T *)auxiliary_e, deal_num, (T)(0.5 * dx));
-  __bang_gt((T *)auxiliary_d, (T *)auxiliary_e, (T *)auxiliary_d, deal_num);
-#endif
   // (x - cx) * sin(-rz)
   __bang_mul_scalar((T *)auxiliary_e, (T *)auxiliary_a, (T)sina, deal_num);
   // (y - cy) * cos(-rz)
@@ -103,12 +93,7 @@ __mlu_func__ void checkPointsInBox3d(const T *boxes3d, const size_t deal_num,
   // |local_y|
   __bang_active_abs((T *)auxiliary_e, (T *)auxiliary_e, deal_num);
   // |local_y| < dy / 2.0
-#if __BANG_ARCH__ >= 322
   __bang_lt_scalar(auxiliary_e, auxiliary_e, (T)(0.5 * dy), deal_num);
-#else
-  __bang_write_value((T *)auxiliary_f, deal_num, (T)(0.5 * dy));
-  __bang_gt((T *)auxiliary_e, (T *)auxiliary_f, (T *)auxiliary_e, deal_num);
-#endif
   // pts_assign = |x - cx| < dx / 2.0 && |y - cy| < dy / 2.0 && |z - cz| <= dz
   // / 2.0
   __bang_mul((T *)pts_assign, (T *)auxiliary_c, (T *)auxiliary_d, deal_num);
@@ -117,13 +102,14 @@ __mlu_func__ void checkPointsInBox3d(const T *boxes3d, const size_t deal_num,
 
 template <typename T>
 __mlu_func__ void computeStoreRoipointPool3d(
-    char *boxes3d, int *cnt, char *points_x, char *points_y, char *points_z,
-    const char *point_features, char *auxiliary_a, char *auxiliary_b,
-    char *auxiliary_c, char *auxiliary_d, char *auxiliary_e, char *auxiliary_f,
-    const int box_idx, const int pts_num, const int feature_in_len,
-    const int sampled_pts_num, const size_t span_num_deal,
-    char *pooled_features_gdram, char *pooled_empty_flag_gdram) {
-  char *pts_assign = auxiliary_a;
+    int8_t *boxes3d, int *cnt, int8_t *points_x, int8_t *points_y,
+    int8_t *points_z, const int8_t *point_features, int8_t *auxiliary_a,
+    int8_t *auxiliary_b, int8_t *auxiliary_c, int8_t *auxiliary_d,
+    int8_t *auxiliary_e, int8_t *auxiliary_f, const int box_idx,
+    const int pts_num, const int feature_in_len, const int sampled_pts_num,
+    const size_t span_num_deal, int8_t *pooled_features_gdram,
+    int8_t *pooled_empty_flag_gdram) {
+  int8_t *pts_assign = auxiliary_a;
   if (cnt[box_idx] >= sampled_pts_num) {
     return;
   }
@@ -193,14 +179,14 @@ __mlu_func__ void computeStoreRoipointPool3d(
 
 template <typename T>
 __mlu_func__ void computeStoreLastBlockRoipointPool3d(
-    char *boxes3d, int *cnt, char *points_x, char *points_y, char *points_z,
-    const char *point_features, char *auxiliary_a, char *auxiliary_b,
-    char *auxiliary_c, char *auxiliary_d, char *auxiliary_e, char *auxiliary_f,
-    const int box_idx, const int pts_num, const int feature_in_len,
-    const int sampled_pts_num, const size_t span_num_deal,
-    const size_t auxiliary_num_deal, char *pooled_features_gdram,
-    char *pooled_empty_flag_gdram) {
-  char *pts_assign = auxiliary_a;
+    int8_t *boxes3d, int *cnt, int8_t *points_x, int8_t *points_y,
+    int8_t *points_z, const int8_t *point_features, int8_t *auxiliary_a,
+    int8_t *auxiliary_b, int8_t *auxiliary_c, int8_t *auxiliary_d,
+    int8_t *auxiliary_e, int8_t *auxiliary_f, const int box_idx,
+    const int pts_num, const int feature_in_len, const int sampled_pts_num,
+    const size_t span_num_deal, const size_t auxiliary_num_deal,
+    int8_t *pooled_features_gdram, int8_t *pooled_empty_flag_gdram) {
+  int8_t *pts_assign = auxiliary_a;
   if (cnt[box_idx] >= sampled_pts_num) {
     // pooled_empty_flag_gdram set 0
     *((int *)auxiliary_a) = 0;
@@ -329,9 +315,9 @@ template <typename T>
 __mlu_global__ void MLUKernelRoipointPool3d(
     const int batch_size, const int pts_num, const int boxes_num,
     const int feature_in_len, const int sampled_pts_num,
-    const char *points_xyz_gdram, const char *point_features_gdram,
-    const char *boxes3d_gdram, char *pooled_features_gdram,
-    char *pooled_empty_flag_gdram) {
+    const int8_t *points_xyz_gdram, const int8_t *point_features_gdram,
+    const int8_t *boxes3d_gdram, int8_t *pooled_features_gdram,
+    int8_t *pooled_empty_flag_gdram) {
   if (__is_mpu()) {
     return;
   }
@@ -356,10 +342,10 @@ __mlu_global__ void MLUKernelRoipointPool3d(
           : ((taskId + 1) * boxes_per_core + boxes_rem) - batch_end * boxes_num;
 
   // points_xyz : [3, B, N]
-  const char *points_x_gdram = points_xyz_gdram;
-  const char *points_y_gdram =
+  const int8_t *points_x_gdram = points_xyz_gdram;
+  const int8_t *points_y_gdram =
       points_xyz_gdram + (1 * batch_size * pts_num) * sizeof(T);
-  const char *points_z_gdram =
+  const int8_t *points_z_gdram =
       points_xyz_gdram + (2 * batch_size * pts_num) * sizeof(T);
 
   size_t boxes3d_size = PAD_UP(boxes_num * 7, NFU_ALIGN_SIZE) * sizeof(T);
@@ -371,18 +357,18 @@ __mlu_global__ void MLUKernelRoipointPool3d(
   int32_t repeat = pts_num / span_num_deal;
   size_t rem = pts_num % span_num_deal;
   size_t align_rem = CEIL_ALIGN(rem, align_num);
-  char *boxes3d = nram_buffer;
-  char *cnt = nram_buffer + boxes3d_size;
-  char *ping_points_x = cnt + cnt_size;
-  char *ping_points_y = ping_points_x + span_num_deal * sizeof(T);
-  char *ping_points_z = ping_points_y + span_num_deal * sizeof(T);
+  int8_t *boxes3d = nram_buffer;
+  int8_t *cnt = nram_buffer + boxes3d_size;
+  int8_t *ping_points_x = cnt + cnt_size;
+  int8_t *ping_points_y = ping_points_x + span_num_deal * sizeof(T);
+  int8_t *ping_points_z = ping_points_y + span_num_deal * sizeof(T);
   size_t ping_pong_gap = 3 * span_num_deal * sizeof(T);
-  char *auxiliary_a = ping_points_x + 2 * ping_pong_gap;
-  char *auxiliary_b = auxiliary_a + span_num_deal * sizeof(T);
-  char *auxiliary_c = auxiliary_b + span_num_deal * sizeof(T);
-  char *auxiliary_d = auxiliary_c + span_num_deal * sizeof(T);
-  char *auxiliary_e = auxiliary_d + span_num_deal * sizeof(T);
-  char *auxiliary_f = auxiliary_e + span_num_deal * sizeof(T);
+  int8_t *auxiliary_a = ping_points_x + 2 * ping_pong_gap;
+  int8_t *auxiliary_b = auxiliary_a + span_num_deal * sizeof(T);
+  int8_t *auxiliary_c = auxiliary_b + span_num_deal * sizeof(T);
+  int8_t *auxiliary_d = auxiliary_c + span_num_deal * sizeof(T);
+  int8_t *auxiliary_e = auxiliary_d + span_num_deal * sizeof(T);
+  int8_t *auxiliary_f = auxiliary_e + span_num_deal * sizeof(T);
   size_t span_load_input1_size = span_num_deal * sizeof(T);
   size_t span_load_input2_size = span_num_deal * sizeof(T);
   size_t span_load_input3_size = span_num_deal * sizeof(T);
@@ -393,16 +379,19 @@ __mlu_global__ void MLUKernelRoipointPool3d(
                    boxes_num * 7 * sizeof(T), GDRAM2NRAM);
     __bang_write_zero((int *)cnt, PAD_UP(boxes_num, NFU_ALIGN_SIZE));
 
-    const char *points_x_start = points_x_gdram + bs_idx * pts_num * sizeof(T);
-    const char *points_y_start = points_y_gdram + bs_idx * pts_num * sizeof(T);
-    const char *points_z_start = points_z_gdram + bs_idx * pts_num * sizeof(T);
-    const char *point_features_start =
+    const int8_t *points_x_start =
+        points_x_gdram + bs_idx * pts_num * sizeof(T);
+    const int8_t *points_y_start =
+        points_y_gdram + bs_idx * pts_num * sizeof(T);
+    const int8_t *points_z_start =
+        points_z_gdram + bs_idx * pts_num * sizeof(T);
+    const int8_t *point_features_start =
         point_features_gdram + bs_idx * feature_in_len * pts_num * sizeof(T);
-    char *pooled_features_start =
+    int8_t *pooled_features_start =
         pooled_features_gdram +
         (bs_idx * boxes_num * sampled_pts_num * (3 + feature_in_len)) *
             sizeof(T);
-    char *pooled_empty_flag_start =
+    int8_t *pooled_empty_flag_start =
         pooled_empty_flag_gdram + bs_idx * boxes_num * sizeof(int);
     size_t box_start = bs_idx == batch_start ? first_batch_box_start : 0;
     size_t box_end = bs_idx == batch_end ? last_batch_box_end : boxes_num;
@@ -520,24 +509,24 @@ __mlu_global__ void MLUKernelRoipointPool3d(
 template __mlu_global__ void MLUKernelRoipointPool3d<float>(
     const int batch_size, const int pts_num, const int boxes_num,
     const int feature_in_len, const int sampled_pts_num,
-    const char *points_xyz_gdram, const char *point_features_gdram,
-    const char *boxes3d_gdram, char *pooled_features_gdram,
-    char *pooled_empty_flag_gdram);
+    const int8_t *points_xyz_gdram, const int8_t *point_features_gdram,
+    const int8_t *boxes3d_gdram, int8_t *pooled_features_gdram,
+    int8_t *pooled_empty_flag_gdram);
 
 template __mlu_global__ void MLUKernelRoipointPool3d<half>(
     const int batch_size, const int pts_num, const int boxes_num,
     const int feature_in_len, const int sampled_pts_num,
-    const char *points_xyz_gdram, const char *point_features_gdram,
-    const char *boxes3d_gdram, char *pooled_features_gdram,
-    char *pooled_empty_flag_gdram);
+    const int8_t *points_xyz_gdram, const int8_t *point_features_gdram,
+    const int8_t *boxes3d_gdram, int8_t *pooled_features_gdram,
+    int8_t *pooled_empty_flag_gdram);
 
 mluOpStatus_t MLUOP_WIN_API KernelRoipointPool3d(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const int batch_size, const int pts_num,
     const int boxes_num, const int feature_in_len, const int sampled_pts_num,
-    const char *points_xyz_gdram, const char *point_features_gdram,
-    const char *boxes3d_gdram, char *pooled_features_gdram,
-    char *pooled_empty_flag_gdram) {
+    const int8_t *points_xyz_gdram, const int8_t *point_features_gdram,
+    const int8_t *boxes3d_gdram, int8_t *pooled_features_gdram,
+    int8_t *pooled_empty_flag_gdram) {
   switch (d_type) {
     /* Only float and half data types are supported
        in host-side CPP file fool-proof processing. */

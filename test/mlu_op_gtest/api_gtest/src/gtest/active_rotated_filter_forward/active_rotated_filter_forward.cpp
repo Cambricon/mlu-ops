@@ -56,7 +56,7 @@ class active_rotated_filter_forward : public testing::Test {
       } else {
         i_bytes = 12 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       }
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&input_, i_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&input_, i_bytes))
     }
 
     if (indices_desc) {
@@ -76,11 +76,11 @@ class active_rotated_filter_forward : public testing::Test {
       } else {
         id_bytes = 12 * mluOpDataTypeBytes(MLUOP_DTYPE_INT32);
       }
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&indices_, id_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&indices_, id_bytes))
     }
 
     if (workspace) {
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&workspace_, workspace_size_))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_))
     }
 
     if (output_desc) {
@@ -100,7 +100,7 @@ class active_rotated_filter_forward : public testing::Test {
       } else {
         o_bytes = 12 * mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       }
-      GTEST_CHECK(CNRT_RET_SUCCESS == cnrtMalloc(&input_, o_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&input_, o_bytes))
     }
   }
   mluOpStatus_t compute() {
@@ -140,7 +140,7 @@ class active_rotated_filter_forward : public testing::Test {
       }
       if (input_) {
         VLOG(4) << "Destroy input_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(input_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(input_));
         input_ = nullptr;
       }
       if (indices_desc_) {
@@ -150,12 +150,12 @@ class active_rotated_filter_forward : public testing::Test {
       }
       if (indices_) {
         VLOG(4) << "Destroy indices_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(indices_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(indices_));
         indices_ = nullptr;
       }
       if (workspace_) {
         VLOG(4) << "Destroy workspace_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(workspace_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(workspace_));
         workspace_ = nullptr;
       }
       if (output_desc_) {
@@ -165,7 +165,7 @@ class active_rotated_filter_forward : public testing::Test {
       }
       if (output_) {
         VLOG(4) << "Destroy output_";
-        GTEST_CHECK(CNRT_RET_SUCCESS == cnrtFree(output_));
+        GTEST_CHECK(cnrtSuccess == cnrtFree(output_));
         output_ = nullptr;
       }
     } catch (const std::exception &e) {

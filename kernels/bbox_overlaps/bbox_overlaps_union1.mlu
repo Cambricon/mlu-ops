@@ -34,8 +34,8 @@
 #define BBOX_SIZE 32
 #define COORD_NUM 4
 
-__nram__ char nmem_buf[MAX_NRAM_SIZE];
-__nram__ char bbox_nram[BBOX_SIZE];
+__nram__ int8_t nmem_buf[MAX_NRAM_SIZE];
+__nram__ int8_t bbox_nram[BBOX_SIZE];
 
 template <typename T>
 __mlu_func__ inline void __mluop_max(T *dst, T *src0, T *src1, size_t num) {

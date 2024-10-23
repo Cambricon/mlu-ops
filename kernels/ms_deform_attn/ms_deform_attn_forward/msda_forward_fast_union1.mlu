@@ -24,8 +24,6 @@
 
 #pragma bang walign(64)
 
-#if (__BANG_ARCH__ >= 372)
-
 #define MAX_MEMCPY_SEGNUM (65536)
 #define NRAM_REMAIN_SIZE (48 * 1024)
 #define SRAM_REMAIN_SIZE (32 * 1024)
@@ -46,9 +44,9 @@
 #define WRAM_ALIGN_SIZE (64)
 #endif
 
-__nram__ char nram_buffer[NRAM_AVALIABLE_SIZE];
-__mlu_shared__ char sram_buffer[SRAM_AVALIABLE_SIZE];
-__wram__ char wram_buffer[WRAM_AVALIABLE_SIZE];
+__nram__ int8_t nram_buffer[NRAM_AVALIABLE_SIZE];
+__mlu_shared__ int8_t sram_buffer[SRAM_AVALIABLE_SIZE];
+__wram__ int8_t wram_buffer[WRAM_AVALIABLE_SIZE];
 
 template <typename T>
 __mlu_func__ void tileWeight2WramAsync(T* dst,
@@ -298,8 +296,8 @@ __mlu_func__ void getConditionCoordWeight(
   __bang_mul_scalar((int32_t*)cond_point_polation_nram,
                     (int32_t*)cond_point_polation_nram, (int32_t)0xffffffff,
                     total_points * 4);
-  __bang_band((char*)weight_polation_nram_tmp, (char*)weight_polation_nram,
-              (char*)cond_point_polation_nram,
+  __bang_band((int8_t*)weight_polation_nram_tmp, (int8_t*)weight_polation_nram,
+              (int8_t*)cond_point_polation_nram,
               total_points * 4 * sizeof(float));
   __bang_filter((float*)weight_polation_nram, (float*)weight_polation_nram_tmp,
                  cond_point_valid_nram, total_points);
@@ -404,8 +402,8 @@ __mlu_func__ void reduceLevelByConv(
     __sync_move();
 
     if (value_contain_infnan) {
-      __bang_cycle_band((char*)input_trans, (char*)input_trans,
-                        (char*)cond_compute, co * ci * sizeof(T),
+      __bang_cycle_band((int8_t*)input_trans, (int8_t*)input_trans,
+                        (int8_t*)cond_compute, co * ci * sizeof(T),
                         ci * sizeof(T));
     }
 
@@ -593,16 +591,16 @@ __mlu_func__ void prepareLoop(
     T* ones_nram, int32_t* spatial_offset_nram, int32_t* spatial_hw_nram,
     int8_t* mask_x_nram, int8_t* mask_y_nram, T* spatial_offset_bd_nram,
     T* spatial_h_bd_nram, T* spatial_w_bd_nram, T* value_sram,
-    const char* data_level_start_index_gdram,
-    const char* data_spatial_shapes_gdram, const int32_t num_keys,
+    const int8_t* data_level_start_index_gdram,
+    const int8_t* data_spatial_shapes_gdram, const int32_t num_keys,
     const int32_t num_levels, const int32_t num_points,
     const int32_t max_deal_n, const int32_t mask_size, const int32_t channels) {
   int32_t pad_num_points_levels =
       PAD_UP(num_levels * num_points, WRAM_ALIGN_SIZE / sizeof(T));
   __bang_write_value(ones_nram, pad_num_points_levels, (T)0);
   __bang_write_value(ones_nram, num_levels * num_points, (T)1);
-  __bang_write_value(mask_x_nram, mask_size, (char)0x55);
-  __bang_write_value(mask_y_nram, mask_size, (char)0xAA);
+  __bang_write_value(mask_x_nram, mask_size, (int8_t)0x55);
+  __bang_write_value(mask_y_nram, mask_size, (int8_t)0xAA);
   __memcpy_async(spatial_offset_nram, data_level_start_index_gdram,
                  num_levels * sizeof(int32_t), GDRAM2NRAM);
   __memcpy_async(spatial_hw_nram, data_spatial_shapes_gdram,
@@ -730,12 +728,12 @@ __mlu_func__ void memPolicyCommon(
 
 template <typename T, int32_t POLICY>
 __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
-    const char* data_value_gdram, const char* data_spatial_shapes_gdram,
-    const char* data_level_start_index_gdram,
-    const char* data_sampling_loc_gdram, const char* data_attn_weight_gdram,
+    const int8_t* data_value_gdram, const int8_t* data_spatial_shapes_gdram,
+    const int8_t* data_level_start_index_gdram,
+    const int8_t* data_sampling_loc_gdram, const int8_t* data_attn_weight_gdram,
     const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels, const int32_t num_queries,
-    const int32_t num_points, char* data_col_gdram) {
+    const int32_t num_points, int8_t* data_col_gdram) {
   int32_t input_stride_4 = num_queries * num_heads * num_levels * num_points;
   int32_t input_stride_3 = num_heads * num_levels * num_points;
   int32_t input_stride_2 = num_levels * num_points;
@@ -827,7 +825,7 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
     if (__is_ipu()) {
       if (sram_stay) {
         int32_t buf_size =
-            (int)((char*)buf_nram_end - (char*)value_output_nram);
+            (int)((int8_t*)buf_nram_end - (int8_t*)value_output_nram);
         isValueContainInfNan(value_sram, value_sram + num_keys * channels,
                              value_output_nram, value_contain_infnan, buf_size,
                              num_keys * channels);
@@ -907,7 +905,6 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
     __sync_cluster();
   }
 }
-#endif
 
 #if (__BANG_ARCH__ == 592)
 
@@ -943,8 +940,8 @@ __mlu_func__ void memPolicy590(
     T*& value_pong, T*& compute_buffer, T*& weight_polation_nram_stg2,
     T*& weight_attn_nram_stg2, int32_t*& offset_nram_stg2, T*& output_nram,
     T*& cond_nram_stg2, int32_t*& data_offset_sram, T*& weight_polation_sram,
-    T*& weight_attn_sram, T*& cond_point_polation_sram, char* nram_buffer,
-    char* sram_buffer, int32_t& max_cached_n, int32_t& stage_1_max_deal_n,
+    T*& weight_attn_sram, T*& cond_point_polation_sram, int8_t* nram_buffer,
+    int8_t* sram_buffer, int32_t& max_cached_n, int32_t& stage_1_max_deal_n,
     int32_t& stage_2_max_deal_n, int32_t& mask_size,
     const int32_t nram_avaliable_size, const int32_t sram_avaliable_size,
     const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
@@ -1064,7 +1061,7 @@ __mlu_func__ void forwardStageTwoLoop(
       __sync_move();
       __bang_gt_bitindex(cond_nram_stg2, cond_nram_stg2, compute_buffer_nram,
                          total_point_pad_8);
-      __bang_bnot((char*)cond_nram_stg2_reverse, (char*)cond_nram_stg2,
+      __bang_bnot((int8_t*)cond_nram_stg2_reverse, (int8_t*)cond_nram_stg2,
                   gather_mask_size);
     }
 
@@ -1102,12 +1099,12 @@ __mlu_func__ void forwardStageTwoLoop(
 // only for 590
 template <typename T>
 __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
-    const char* data_value_gdram, const char* data_spatial_shapes_gdram,
-    const char* data_level_start_index_gdram,
-    const char* data_sampling_loc_gdram, const char* data_attn_weight_gdram,
+    const int8_t* data_value_gdram, const int8_t* data_spatial_shapes_gdram,
+    const int8_t* data_level_start_index_gdram,
+    const int8_t* data_sampling_loc_gdram, const int8_t* data_attn_weight_gdram,
     const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels, const int32_t num_queries,
-    const int32_t num_points, char* data_col_gdram) {
+    const int32_t num_points, int8_t* data_col_gdram) {
   int32_t input_stride_4 = num_queries * num_heads * num_levels * num_points;
   int32_t input_stride_3 = num_heads * num_levels * num_points;
   int32_t input_stride_2 = num_levels * num_points;
@@ -1240,12 +1237,12 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
 
 template <typename T>
 __mlu_global__ void MLUKernelMsDeformAttnForwardFast(
-    const char* data_value_gdram, const char* data_spatial_shapes_gdram,
-    const char* data_level_start_index_gdram,
-    const char* data_sampling_loc_gdram, const char* data_attn_weight_gdram,
+    const int8_t* data_value_gdram, const int8_t* data_spatial_shapes_gdram,
+    const int8_t* data_level_start_index_gdram,
+    const int8_t* data_sampling_loc_gdram, const int8_t* data_attn_weight_gdram,
     const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels, const int32_t num_queries,
-    const int32_t num_points, char* data_col_gdram) {
+    const int32_t num_points, int8_t* data_col_gdram) {
 #if (__BANG_ARCH__ == 372)
   size_t single_value_size = num_keys * channels * sizeof(T);
   if (single_value_size <= SRAM_FOR_VALUE_SIZE) {
@@ -1272,9 +1269,9 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardFast(
 }
 
 template __mlu_global__ void MLUKernelMsDeformAttnForwardFast<float>(
-    const char* data_value_gdram, const char* data_spatial_shapes_gdram,
-    const char* data_level_start_index_gdram,
-    const char* data_sampling_loc_gdram, const char* data_attn_weight_gdram,
+    const int8_t* data_value_gdram, const int8_t* data_spatial_shapes_gdram,
+    const int8_t* data_level_start_index_gdram,
+    const int8_t* data_sampling_loc_gdram, const int8_t* data_attn_weight_gdram,
     const int32_t batch_size, const int32_t num_keys, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels, const int32_t num_queries,
-    const int32_t num_points, char* data_col_gdram);
+    const int32_t num_points, int8_t* data_col_gdram);

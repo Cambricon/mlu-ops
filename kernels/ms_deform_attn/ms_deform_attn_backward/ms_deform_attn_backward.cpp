@@ -68,7 +68,7 @@ static void policyFunc(mluOpHandle_t handle, const int32_t batch,
                  ? cluster_limit
                  : (total_num_align / core_limit);
   k_dim->z = 1;
-  *k_type = CNRT_FUNC_TYPE_UNION1;
+  *k_type = cnrtFuncTypeUnion1;
 }
 
 mluOpDeformAttnBackwardKernelPolicy_t msDeformAttnBackwardPolicyFunc(
