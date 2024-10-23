@@ -2450,6 +2450,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
     fft_plan->inembed[i] = input_desc->dims[fft_plan->idim - rank + i];
     fft_plan->onembed[i] = output_desc->dims[fft_plan->odim - rank + i];
   }
+  for (auto i = 0; i < fft_plan->idim; i++) {
+    fft_plan->in_stride[i] = input_desc->strides[i];
+  }
   for (auto i = 0; i < fft_plan->odim; i++) {
     fft_plan->out_stride[i] = output_desc->strides[i];
   }

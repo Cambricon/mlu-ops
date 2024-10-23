@@ -193,9 +193,10 @@ struct mluOpFFTStruct {
   int inum;                  // element num of input tensor
   int istride;  // distance between two successive input elements in the
                 // innermost dimension
-  int idist;    // distance between the first element of two consecutive signals
-                // in a batch of the input data
-  int odim;     // the dimension size of output tensor
+  int in_stride[FFT_DIM_MAX + 1];
+  int idist;  // distance between the first element of two consecutive signals
+              // in a batch of the input data
+  int odim;   // the dimension size of output tensor
   int onembed[FFT_DIM_MAX];  // Pointer of size rank that indicates the storage
                              // dimensions of the output data in memory
   int onum;                  // element num of output tensor

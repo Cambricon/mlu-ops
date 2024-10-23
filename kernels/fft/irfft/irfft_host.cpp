@@ -1864,9 +1864,10 @@ static mluOpStatus_t makeIRFFT2dContiguousInput(mluOpHandle_t handle,
     int64_t dims[in_dim_num] = {
         fft_plan->batch, std::min(fft_plan->inembed[0], fft_plan->n[0]),
         std::min(FFT_HALF(fft_plan->n[1]), fft_plan->inembed[1])};
-    int64_t strides[in_dim_num] = {fft_plan->idist,
-                                   (fft_plan->istride * fft_plan->inembed[1]),
-                                   fft_plan->istride};
+    int64_t strides[3];
+    for (int i = 0; i < in_dim_num; i++) {
+      strides[i] = fft_plan->in_stride[i];
+    }
     status = mluOpSetTensorDescriptorEx_v2(input_desc, MLUOP_LAYOUT_ARRAY,
                                            fft_plan->input_dtype, in_dim_num,
                                            dims, strides);
@@ -1902,9 +1903,10 @@ static mluOpStatus_t makeIRFFT2dContiguousOutput(mluOpHandle_t handle,
     const int out_dim_num = 3;
     int64_t dims[out_dim_num] = {fft_plan->batch, fft_plan->n[0],
                                  fft_plan->n[1]};
-    int64_t strides[out_dim_num] = {fft_plan->odist,
-                                    fft_plan->ostride * fft_plan->onembed[1],
-                                    fft_plan->ostride};
+    int64_t strides[3];
+    for (int i = 0; i < out_dim_num; i++) {
+      strides[i] = fft_plan->out_stride[i];
+    }
     status = mluOpSetTensorDescriptor_v2(copy_src_desc, MLUOP_LAYOUT_ARRAY,
                                          out_c_dtype, out_dim_num, dims);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);

@@ -1193,9 +1193,11 @@ static mluOpStatus_t makeFFT2dContiguousInput(mluOpHandle_t handle,
     int64_t dims[in_dim_num] = {fft_plan->batch,
                                 std::min(fft_plan->n[0], fft_plan->inembed[0]),
                                 std::min(fft_plan->n[1], fft_plan->inembed[1])};
-    int64_t strides[in_dim_num] = {fft_plan->idist,
-                                   (fft_plan->istride * fft_plan->inembed[1]),
-                                   fft_plan->istride};
+
+    int64_t strides[3];
+    for (int i = 0; i < in_dim_num; i++) {
+      strides[i] = fft_plan->in_stride[i];
+    }
     status = mluOpSetTensorDescriptorEx_v2(input_desc, MLUOP_LAYOUT_ARRAY,
                                            fft_plan->input_dtype, in_dim_num,
                                            dims, strides);
