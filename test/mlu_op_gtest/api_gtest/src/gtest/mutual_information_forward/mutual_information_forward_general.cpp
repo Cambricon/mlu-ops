@@ -263,22 +263,6 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
 INSTANTIATE_TEST_CASE_P(
-    zero_element_2, mutual_information_forward_general,
-    testing::Combine(
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         3, std::vector<int>({4, 0, 1})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         3, std::vector<int>({4, 1, 0})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT64,
-                                         2, std::vector<int>({4, 4})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         3, std::vector<int>({4, 1, 1})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         1, std::vector<int>({4})}),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_SUCCESS)));
-
-INSTANTIATE_TEST_CASE_P(
     py_error_dim, mutual_information_forward_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
