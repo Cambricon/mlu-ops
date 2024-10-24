@@ -390,10 +390,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreateGroupTensorDescriptors(
 
 static inline mluOpStatus_t mluOpSetTensorDescriptorZeroDim(
     mluOpTensorDescriptor_t desc) {
-  if (desc->pointer_mode == MLUOP_POINTER_MODE_HOST) {
-    desc->dim = 0;
-    desc->total_element_num = 1;
-    desc->total_tensor_size = mluop::getSizeOfDataType(desc->dtype);
+  if (desc->getPointerMode() == MLUOP_POINTER_MODE_HOST) {
+    desc->setDim(0);
+    desc->setTotalElementNum(1);
+    desc->setTotalTensorSize(mluop::getSizeOfDataType(desc->getDtype()));
     return MLUOP_STATUS_SUCCESS;
   } else {
     LOG(ERROR)
@@ -412,9 +412,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptor(
   PARAM_CHECK("[mluOpSetTensorDescriptor]", desc != NULL);
   PARAM_CHECK("[mluOpSetTensorDescriptor]", layout >= 0);
   PARAM_CHECK("[mluOpSetTensorDescriptor]", dtype >= 0);
-
-  desc->dtype = dtype;
-  desc->layout = layout;
+  desc->setDtype(dtype);
+  desc->setLayout(layout);
 
   if (dimNb == 0) {
     return mluOpSetTensorDescriptorZeroDim(desc);
@@ -431,9 +430,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptor_v2(
   PARAM_CHECK("[mluOpSetTensorDescriptor]", desc != NULL);
   PARAM_CHECK("[mluOpSetTensorDescriptor]", layout >= 0);
   PARAM_CHECK("[mluOpSetTensorDescriptor]", dtype >= 0);
-
-  desc->dtype = dtype;
-  desc->layout = layout;
+  desc->setDtype(dtype);
+  desc->setLayout(layout);
 
   if (dimNb == 0) {
     return mluOpSetTensorDescriptorZeroDim(desc);
@@ -448,19 +446,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptor_v2(
 // Internal interface. Caller should guarantee parameter validity.
 static inline void mluOpSetTensorDescriptorDimBase(mluOpTensorDescriptor_t desc,
                                                    int dimNb) {
-  if (dimNb != desc->dim) {
-    if MLUOP_PREDICT_FALSE (desc->dims != desc->normal_dims) {
-      delete[] desc->dims;
-      delete[] desc->strides;
+  if (dimNb != desc->getDim()) {
+    if MLUOP_PREDICT_FALSE (desc->getDims() != desc->getNormalDims()) {
+      desc->releaseDims();
+      desc->releaseStrides();
     }
     if MLUOP_PREDICT_FALSE (dimNb > MLUOP_DIM_MAX) {
-      desc->dims = new (std::nothrow) int64_t[dimNb];
-      desc->strides = new (std::nothrow) int64_t[dimNb];
+      desc->setDims(new (std::nothrow) int64_t[dimNb]);
+      desc->setStrides(new (std::nothrow) int64_t[dimNb]);
     } else {
-      desc->dims = desc->normal_dims;
-      desc->strides = desc->normal_strides;
+      desc->setDims(desc->getNormalDims());
+      desc->setStrides(desc->getNormalStrides());
     }
-    desc->dim = dimNb;
+    desc->setDim(dimNb);
   }
 }
 
@@ -471,7 +469,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorDim(
                  mluOpSetTensorDescriptorZeroDim(desc));
   } else {
     mluOpSetTensorDescriptorDimBase(desc, dimNb);
-    std::copy(dimSize, dimSize + dimNb, desc->dims);
+    std::copy(dimSize, dimSize + dimNb, desc->getDims());
   }
 
   // infer strides of dimNb dimensions and compute total_num & total_size
@@ -479,13 +477,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorDim(
   bool is_overflow = false;
   int tmp_num = 0;
   for (int i = dimNb - 1; i >= 0; --i) {
-    desc->strides[i] = stride_base;
+    desc->setStrideIndex(i, stride_base);
     is_overflow |= __builtin_smul_overflow(stride_base, dimSize[i], &tmp_num);
     stride_base *= dimSize[i];
   }
-  desc->total_element_num = stride_base;
-  desc->total_tensor_size =
-      desc->total_element_num * mluop::getSizeOfDataType(desc->dtype);
+  desc->setTotalElementNum(stride_base);
+  desc->setTotalTensorSize(desc->getTotalElementNum() *
+                           mluop::getSizeOfDataType(desc->getDtype()));
   // judge int overflow situation
   if (MLUOP_PREDICT_FALSE(is_overflow)) {
     std::stringstream tensor_info;
@@ -495,7 +493,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorDim(
     }
 
     tensor_info << dimSize[dimNb - 1]
-                << "), data width:" << mluop::getSizeOfDataType(desc->dtype)
+                << "), data width:" << mluop::getSizeOfDataType(desc->getDtype())
                 << ".";
     LOG(WARNING) << "[mluOpSetTensorDescriptor]: overflow max tensor num. "
                  << "Currently, mluop supports tensor num smaller than 2^31, "
@@ -508,20 +506,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorDim_v2(
     mluOpTensorDescriptor_t desc, int dimNb, const int64_t *dimSize) {
   mluOpSetTensorDescriptorDimBase(desc, dimNb);
 
-  memcpy(desc->dims, dimSize, dimNb * sizeof(int64_t));
+  memcpy(desc->getDims(), dimSize, dimNb * sizeof(int64_t));
 
   // infer strides of dimNb dimensions and compute total_num & total_size
   uint64_t stride_base = 1;
   bool is_overflow = false;
   int64_t tmp_num = 0;
   for (int i = dimNb - 1; i >= 0; --i) {
-    desc->strides[i] = stride_base;
+    desc->setStrideIndex(i,stride_base);
     is_overflow |= __builtin_smull_overflow(stride_base, dimSize[i], &tmp_num);
     stride_base *= dimSize[i];
   }
-  desc->total_element_num = stride_base;
-  desc->total_tensor_size =
-      desc->total_element_num * mluop::getSizeOfDataType(desc->dtype);
+  desc->setTotalElementNum(stride_base);
+  desc->setTotalTensorSize(desc->getTotalElementNum() * 
+                          mluop::getSizeOfDataType(desc->getDtype()));
   // judge int overflow situation
   if (MLUOP_PREDICT_FALSE(is_overflow)) {
     std::stringstream tensor_info;
@@ -531,7 +529,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorDim_v2(
     }
 
     tensor_info << dimSize[dimNb - 1]
-                << "), data width:" << mluop::getSizeOfDataType(desc->dtype)
+                << "), data width:" << mluop::getSizeOfDataType(desc->getDtype())
                 << ".";
     LOG(WARNING) << "[mluOpSetTensorDescriptor_v2]: overflow max tensor num. "
                  << "Currently, mluop supports tensor num smaller than 2^63, "
@@ -553,31 +551,31 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetGroupTensorDescriptors(
 
   int group_dimSize_iterator = 0;
   for (int i = 0; i < desc_num; ++i) {
-    group_desc[i][0]->dim = group_dimNb[i];
-    group_desc[i][0]->dtype = group_dtype[i];
-    group_desc[i][0]->layout = group_layout[i];
+    group_desc[i][0]->setDim(group_dimNb[i]);
+    group_desc[i][0]->setDtype(group_dtype[i]);
+    group_desc[i][0]->setLayout(group_layout[i]);
 
     if (MLUOP_PREDICT_FALSE(group_dimNb[i] > MLUOP_DIM_MAX)) {
-      group_desc[i][0]->dims = new (std::nothrow) int64_t[group_dimNb[i]];
-      group_desc[i][0]->strides = new (std::nothrow) int64_t[group_dimNb[i]];
+      group_desc[i][0]->setDims(new (std::nothrow) int64_t[group_dimNb[i]]);
+      group_desc[i][0]->setStrides(new (std::nothrow) int64_t[group_dimNb[i]]);
     } else {
-      group_desc[i][0]->dims = group_desc[i][0]->normal_dims;
-      group_desc[i][0]->strides = group_desc[i][0]->normal_strides;
+      group_desc[i][0]->setDims(group_desc[i][0]->getNormalDims());
+      group_desc[i][0]->setStrides(group_desc[i][0]->getNormalStrides());
     }
     std::copy(group_dimSize + group_dimSize_iterator,
               group_dimSize + group_dimSize_iterator + group_dimNb[i],
-              group_desc[i][0]->dims);
+              group_desc[i][0]->getDims());
 
     // infer strides of dimNb dimensions and compute total_num and total_size
     int strideBase = 1;
     for (int j = group_dimNb[i] - 1; j >= 0; --j) {
-      group_desc[i][0]->strides[j] = strideBase;
-      strideBase *= group_desc[i][0]->dims[j];
+      group_desc[i][0]->setStrideIndex(j,strideBase);
+      strideBase *= group_desc[i][0]->getDimIndex(j);
     }
-    group_desc[i][0]->total_element_num = strideBase;
-    group_desc[i][0]->total_tensor_size =
-        group_desc[i][0]->total_element_num *
-        mluop::getSizeOfDataType(group_dtype[i]);
+    group_desc[i][0]->setTotalElementNum(strideBase);
+    group_desc[i][0]->setTotalTensorSize(
+        group_desc[i][0]->getTotalElementNum() *
+        mluop::getSizeOfDataType(group_dtype[i]));
 
     // compute new iterator for next loop.
     group_dimSize_iterator += group_dimNb[i];
@@ -599,31 +597,29 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetGroupTensorDescriptors_v2(
 
   int group_dimSize_iterator = 0;
   for (int i = 0; i < desc_num; ++i) {
-    group_desc[i][0]->dim = group_dimNb[i];
-    group_desc[i][0]->dtype = group_dtype[i];
-    group_desc[i][0]->layout = group_layout[i];
+    group_desc[i][0]->setDim(group_dimNb[i]);
+    group_desc[i][0]->setDtype(group_dtype[i]);
+    group_desc[i][0]->setLayout(group_layout[i]);
 
     if (MLUOP_PREDICT_FALSE(group_dimNb[i] > MLUOP_DIM_MAX)) {
-      group_desc[i][0]->dims = new (std::nothrow) int64_t[group_dimNb[i]];
-      group_desc[i][0]->strides = new (std::nothrow) int64_t[group_dimNb[i]];
+      group_desc[i][0]->setDims(new (std::nothrow) int64_t[group_dimNb[i]]);
+      group_desc[i][0]->setStrides(new (std::nothrow) int64_t[group_dimNb[i]]);
     } else {
-      group_desc[i][0]->dims = group_desc[i][0]->normal_dims;
-      group_desc[i][0]->strides = group_desc[i][0]->normal_strides;
+      group_desc[i][0]->setDims(group_desc[i][0]->getNormalDims());
+      group_desc[i][0]->setStrides(group_desc[i][0]->getNormalStrides());
     }
-    memcpy(group_desc[i][0]->dims, group_dimSize + group_dimSize_iterator,
+    memcpy(group_desc[i][0]->getDims(), group_dimSize + group_dimSize_iterator,
            group_dimNb[i] * sizeof(int64_t));
 
     // infer strides of dimNb dimensions and compute total_num and total_size
     int strideBase = 1;
     for (int j = group_dimNb[i] - 1; j >= 0; --j) {
-      group_desc[i][0]->strides[j] = strideBase;
-      strideBase *= group_desc[i][0]->dims[j];
+      group_desc[i][0]->setStrideIndex(j,strideBase);
+      strideBase *= group_desc[i][0]->getDimIndex(j);
     }
-    group_desc[i][0]->total_element_num = strideBase;
-    group_desc[i][0]->total_tensor_size =
-        group_desc[i][0]->total_element_num *
-        mluop::getSizeOfDataType(group_dtype[i]);
-
+    group_desc[i][0]->setTotalElementNum(strideBase);
+    group_desc[i][0]->setTotalTensorSize(group_desc[i][0]->getTotalElementNum() *
+                                         mluop::getSizeOfDataType(group_dtype[i]));
     // compute new iterator for next loop.
     group_dimSize_iterator += group_dimNb[i];
   }
@@ -635,27 +631,25 @@ mluOpStatus_t MLUOP_WIN_API
 mluOpResetTensorDescriptor(mluOpTensorDescriptor_t desc) {
   PARAM_CHECK("[mluOpResetTensorDescriptor]", desc != NULL);
 
-  if MLUOP_PREDICT_FALSE (desc->dims != desc->normal_dims) {
-    delete[] desc->dims;
-    desc->dims = desc->normal_dims;
+  if MLUOP_PREDICT_FALSE (desc->getDims() != desc->getNormalDims()) {
+    desc->setDims(desc->getNormalDims());
   }
-  if MLUOP_PREDICT_FALSE (desc->strides != desc->normal_strides) {
-    delete[] desc->strides;
-    desc->strides = desc->normal_strides;
+  if MLUOP_PREDICT_FALSE (desc->getStrides() != desc->getNormalStrides()) {
+    desc->setDims(desc->getNormalStrides());
   }
+  
+  desc->setDim(0);
+  desc->setDtype(MLUOP_DTYPE_FLOAT);
+  desc->setOnchipDtype(MLUOP_DTYPE_INVALID);
+  desc->setLayout(MLUOP_LAYOUT_ARRAY);
+  desc->setPointerMode(MLUOP_POINTER_MODE_DEVICE);
 
-  desc->dim = 0;
-  desc->dtype = MLUOP_DTYPE_FLOAT;
-  desc->onchip_dtype = MLUOP_DTYPE_INVALID;
-  desc->layout = MLUOP_LAYOUT_ARRAY;
-  desc->pointer_mode = MLUOP_POINTER_MODE_DEVICE;
+  desc->setTotalElementNum(0);
+  desc->setTotalTensorSize(0);
 
-  desc->total_element_num = 0;
-  desc->total_tensor_size = 0;
-
-  desc->position = 0;
-  desc->scale = 1.0f;
-  desc->offset = 0;
+  desc->setPosition(0);
+  desc->setScale(1.0f);
+  desc->setOffset(0);
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -668,8 +662,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorEx(
   PARAM_CHECK("[mluOpSetTensorDescriptorEx]", layout >= 0);
   PARAM_CHECK("[mluOpSetTensorDescriptorEx]", dtype >= 0);
 
-  desc->dtype = dtype;
-  desc->layout = layout;
+  desc->setDtype(dtype);
+  desc->setLayout(layout);
 
   if (dimNb == 0) {
     return mluOpSetTensorDescriptorZeroDim(desc);
@@ -679,16 +673,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorEx(
     PARAM_CHECK("[mluOpSetTensorDescriptorEx]", dimNb > 0);
 
     mluOpSetTensorDescriptorDimBase(desc, dimNb);
-    std::copy(dimSize, dimSize + dimNb, desc->dims);
-    std::copy(dimStride, dimStride + dimNb, desc->strides);
+    std::copy(dimSize, dimSize + dimNb, desc->getDims());
+    std::copy(dimStride, dimStride + dimNb, desc->getStrides());
 
     // assign total_element_num and total_tensor_size
-    desc->total_element_num = 1;
+    desc->setTotalElementNum(1);
     for (int i = 0; i < dimNb; ++i) {
-      desc->total_element_num *= dimSize[i];
+      desc->setTotalElementNum(desc->getTotalElementNum() * dimSize[i]);
     }
-    desc->total_tensor_size =
-        desc->total_element_num * mluop::getSizeOfDataType(dtype);
+    desc->setTotalTensorSize(desc->getTotalElementNum() *
+                             mluop::getSizeOfDataType(dtype));
 
     return MLUOP_STATUS_SUCCESS;
   }
@@ -702,8 +696,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorEx_v2(
   PARAM_CHECK("[mluOpSetTensorDescriptorEx]", layout >= 0);
   PARAM_CHECK("[mluOpSetTensorDescriptorEx]", dtype >= 0);
 
-  desc->dtype = dtype;
-  desc->layout = layout;
+  desc->setDtype(dtype);
+  desc->setLayout(layout);
 
   if MLUOP_PREDICT_FALSE (dimNb == 0) {
     return mluOpSetTensorDescriptorZeroDim(desc);
@@ -712,16 +706,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorEx_v2(
     PARAM_CHECK("[mluOpSetTensorDescriptorEx]", dimStride != NULL);
 
     mluOpSetTensorDescriptorDimBase(desc, dimNb);
-    memcpy(desc->dims, dimSize, dimNb * sizeof(int64_t));
-    memcpy(desc->strides, dimStride, dimNb * sizeof(int64_t));
+    memcpy(desc->getDims(), dimSize, dimNb * sizeof(int64_t));
+    memcpy(desc->getStrides(), dimStride, dimNb * sizeof(int64_t));
 
     // assign total_element_num and total_tensor_size
-    desc->total_element_num = 1;
+    desc->setTotalElementNum(1);
     for (int i = 0; i < dimNb; ++i) {
-      desc->total_element_num *= dimSize[i];
+      desc->setTotalElementNum(desc->getTotalElementNum() * dimSize[i]);
     }
-    desc->total_tensor_size =
-        desc->total_element_num * mluop::getSizeOfDataType(dtype);
+    desc->setTotalTensorSize(desc->getTotalElementNum() *
+                             mluop::getSizeOfDataType(dtype));
 
     return MLUOP_STATUS_SUCCESS;
   }
@@ -731,7 +725,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorOnchipDataType(
     mluOpTensorDescriptor_t desc, mluOpDataType_t onchip_dtype) {
   PARAM_CHECK("[mluOpSetTensorDescriptorOnchipDataType]", desc != NULL);
 
-  desc->onchip_dtype = onchip_dtype;
+  desc->setOnchipDtype(onchip_dtype);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -739,7 +733,7 @@ mluOpStatus_t MLUOP_WIN_API
 mluOpSetTensorDescriptorPosition(mluOpTensorDescriptor_t desc, int position) {
   PARAM_CHECK("[mluOpSetTensorDescriptorPosition]", desc != NULL);
 
-  desc->position = position;
+  desc->setPosition(position);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -747,8 +741,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorPositionAndScale(
     mluOpTensorDescriptor_t desc, int position, float scale) {
   PARAM_CHECK("[mluOpSetTensorDescriptorPositionAndScale]", desc != NULL);
 
-  desc->position = position;
-  desc->scale = scale;
+  desc->setPosition(position);
+  desc->setScale(scale);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -756,9 +750,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorPositionScaleAndOffset(
     mluOpTensorDescriptor_t desc, int position, float scale, int offset) {
   PARAM_CHECK("[mluOpSetTensorDescriptorPositionScaleAndOffset]", desc != NULL);
 
-  desc->position = position;
-  desc->scale = scale;
-  desc->offset = offset;
+  desc->setPosition(position);
+  desc->setScale(scale);
+  desc->setOffset(offset);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -767,7 +761,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetTensorDescriptorPointerMode(
   PARAM_CHECK("[mluOpSetTensorDescriptorPointerMode]", desc != NULL);
   PARAM_CHECK("[mluOpSetTensorDescriptorPointerMode]", pointer_mode >= 0);
 
-  desc->pointer_mode = pointer_mode;
+  desc->setPointerMode(pointer_mode);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -781,12 +775,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTensorDescriptorEx(
   PARAM_CHECK("[mluOpGetTensorDescriptorEx]", dimSize != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptorEx]", dimStride != NULL);
 
-  *layout = desc->layout;
-  *dtype = desc->dtype;
-  *dimNb = desc->dim;
+  *layout = desc->getLayout();
+  *dtype = desc->getDtype();
+  *dimNb = desc->getDim();
   for (int i = 0; i < *dimNb; ++i) {
-    dimSize[i] = static_cast<int>(desc->dims[i]);
-    dimStride[i] = static_cast<int>(desc->strides[i]);
+    dimSize[i] = static_cast<int>(desc->getDimIndex(i));
+    dimStride[i] = static_cast<int>(desc->getStrideIndex(i));
   }
 
   return MLUOP_STATUS_SUCCESS;
@@ -802,12 +796,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTensorDescriptorEx_v2(
   PARAM_CHECK("[mluOpGetTensorDescriptorEx]", dimSize != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptorEx]", dimStride != NULL);
 
-  *layout = desc->layout;
-  *dtype = desc->dtype;
-  *dimNb = desc->dim;
+  *layout = desc->getLayout();
+  *dtype = desc->getDtype();
+  *dimNb = desc->getDim();
   for (int i = 0; i < *dimNb; ++i) {
-    dimSize[i] = desc->dims[i];
-    dimStride[i] = desc->strides[i];
+    dimSize[i] = desc->getDimIndex(i);
+    dimStride[i] = desc->getStrideIndex(i);
   }
 
   return MLUOP_STATUS_SUCCESS;
@@ -818,10 +812,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTensorDescriptor(
     mluOpDataType_t *dtype, int *dimNb, int *dimSize) {
   PARAM_CHECK("[mluOpGetTensorDescriptor]", desc != NULL);
 
-  SET_PARAM_FOR_POINTER(layout, desc->layout);
-  SET_PARAM_FOR_POINTER(dtype, desc->dtype);
-  SET_PARAM_FOR_POINTER(dimNb, desc->dim);
-  SET_ARRAY_PARAM_FOR_POINTER(dimSize, desc->dims, desc->dim);
+  SET_PARAM_FOR_POINTER(layout, desc->getLayout());
+  SET_PARAM_FOR_POINTER(dtype, desc->getDtype());
+  SET_PARAM_FOR_POINTER(dimNb, desc->getDim());
+  SET_ARRAY_PARAM_FOR_POINTER(dimSize, desc->getDims(), desc->getDim());
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -831,10 +825,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTensorDescriptor_v2(
     mluOpDataType_t *dtype, int *dimNb, int64_t *dimSize) {
   PARAM_CHECK("[mluOpGetTensorDescriptor]", desc != NULL);
 
-  SET_PARAM_FOR_POINTER(layout, desc->layout);
-  SET_PARAM_FOR_POINTER(dtype, desc->dtype);
-  SET_PARAM_FOR_POINTER(dimNb, desc->dim);
-  SET_ARRAY_PARAM_FOR_POINTER(dimSize, desc->dims, desc->dim);
+  SET_PARAM_FOR_POINTER(layout, desc->getLayout());
+  SET_PARAM_FOR_POINTER(dtype, desc->getDtype());
+  SET_PARAM_FOR_POINTER(dimNb, desc->getDim());
+  SET_ARRAY_PARAM_FOR_POINTER(dimSize, desc->getDims(), desc->getDim());
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -844,7 +838,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTensorDescriptorOnchipDataType(
   PARAM_CHECK("[mluOpGetTensorDescriptorOnchipDataType]", desc != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptorOnchipDataType]", onchip_dtype != NULL);
 
-  *onchip_dtype = desc->onchip_dtype;
+  *onchip_dtype = desc->getOnchipDtype();
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -853,7 +847,7 @@ mluOpGetTensorDescriptorPosition(mluOpTensorDescriptor_t desc, int *position) {
   PARAM_CHECK("[mluOpGetTensorDescriptorPosition]", desc != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptorPosition]", position != NULL);
 
-  *position = desc->position;
+  *position = desc->getPosition();
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -863,8 +857,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTensorDescriptorPositionAndScale(
   PARAM_CHECK("[mluOpGetTensorDescriptorPositionAndScale]", position != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptorPositionAndScale]", scale != NULL);
 
-  *position = desc->position;
-  *scale = desc->scale;
+  *position = desc->getPosition();
+  *scale = desc->getScale();
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -878,9 +872,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTensorDescriptorPositionScaleAndOffset(
   PARAM_CHECK("[mluOpGetTensorDescriptorPositionScaleAndOffset]",
               offset != NULL);
 
-  *position = desc->position;
-  *scale = desc->scale;
-  *offset = desc->offset;
+  *position = desc->getPosition();
+  *scale = desc->getScale();
+  *offset = desc->getOffset();
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -889,7 +883,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetTensorDescriptorPointerMode(
   PARAM_CHECK("[mluOpGetTensorDescriptorPointerMode]", desc != NULL);
   PARAM_CHECK("[mluOpGetTensorDescriptorPointerMode]", pointer_mode != NULL);
 
-  SET_PARAM_FOR_POINTER(pointer_mode, desc->pointer_mode);
+  SET_PARAM_FOR_POINTER(pointer_mode, desc->getPointerMode());
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -934,7 +928,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDestroyGroupTensorDescriptors(
 uint64_t MLUOP_WIN_API
 mluOpGetTensorElementNum(const mluOpTensorDescriptor_t desc) {
   CHECK(desc != NULL);
-  return desc->total_element_num;
+  return desc->getTotalElementNum();
 }
 
 uint64_t mluOpGetSeqDataElementNum(mluOpSeqDataDescriptor_t desc) {

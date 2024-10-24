@@ -112,7 +112,7 @@ void ActiveRotatedFilterForwardExecutor::cpuCompute() {
 }
 
 int64_t ActiveRotatedFilterForwardExecutor::getTheoryIoSize() {
-  auto dtype = tensor_desc_[0].tensor->dtype;
+  auto dtype = tensor_desc_[0].tensor->getDtype();
   std::vector<int64_t> indices_shape = parser_->input(1)->shape;
   const int64_t rotations = indices_shape[3];
 
