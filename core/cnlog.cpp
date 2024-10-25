@@ -423,9 +423,9 @@ void LogMessage::printHead(bool is_colored) {
       fmt::arg("module",
                is_colored
                    ? fmt::to_string(fmt::styled(
-                         "MLUOP", fmt::emphasis::bold |
+                         "MLU-OPS", fmt::emphasis::bold |
                                       fmt::fg(fmt::terminal_color::yellow)))
-                   : "MLUOP"),
+                   : "MLU-OPS"),
       fmt::arg("severity", formatSeverity(logSeverity_, is_colored)),
       fmt::arg("pid", getpid_()), fmt::arg("card", []() {
         int dev_index = -1;

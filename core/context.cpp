@@ -30,7 +30,7 @@
 #include "kernels/kernel.h"
 
 #define DEP_CHECK_LOG(level)                                              \
-  mluop::logging::LogMessage(__FILE__, __LINE__, 4, level, "MLUOP", true, \
+  mluop::logging::LogMessage(__FILE__, __LINE__, 4, level, "MLU-OPS", true, \
                              true, true, true)                            \
       .stream()
 
