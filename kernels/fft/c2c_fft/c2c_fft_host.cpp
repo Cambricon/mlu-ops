@@ -1079,7 +1079,9 @@ static void configureFFT2dWorkspaceAddrs(mluOpHandle_t handle,
     fft_plan->mlu_addrs.buffer_buf = (uint8_t *)workspace + offset;
     offset += batch * in_c_dtype_size * _n0 * _n1 * 2;
 
-    if (fft_plan->is_input_contiguous) {
+    if ((fft_plan->is_input_contiguous &&
+         fft_plan->inembed[0] <= fft_plan->n[0] &&
+         fft_plan->inembed[1] <= fft_plan->n[1])) {
       fft_plan->mlu_addrs.input = input;
     } else {
       fft_plan->mlu_addrs.input = (uint8_t *)workspace + offset;
@@ -1180,9 +1182,11 @@ static mluOpStatus_t makeFFT2dContiguousInput(mluOpHandle_t handle,
     int64_t dims[in_dim_num] = {fft_plan->batch,
                                 std::min(fft_plan->n[0], fft_plan->inembed[0]),
                                 std::min(fft_plan->n[1], fft_plan->inembed[1])};
-    int64_t strides[in_dim_num] = {fft_plan->idist,
-                                   (fft_plan->istride * fft_plan->inembed[1]),
-                                   fft_plan->istride};
+
+    int64_t strides[3];
+    for (int i = 0; i < in_dim_num; i++) {
+      strides[i] = fft_plan->in_stride[i];
+    }
     status = mluOpSetTensorDescriptorEx_v2(input_desc, MLUOP_LAYOUT_ARRAY,
                                            fft_plan->input_dtype, in_dim_num,
                                            dims, strides);
@@ -1818,9 +1822,10 @@ static mluOpStatus_t makeFFT2dContiguousOutput(mluOpHandle_t handle,
     const int out_dim_num = 3;
     int64_t dims[out_dim_num] = {fft_plan->batch, fft_plan->n[0],
                                  fft_plan->n[1]};
-    int64_t strides[out_dim_num] = {fft_plan->odist,
-                                    fft_plan->ostride * fft_plan->onembed[1],
-                                    fft_plan->ostride};
+    int64_t strides[3];
+    for (int i = 0; i < out_dim_num; i++) {
+      strides[i] = fft_plan->out_stride[i];
+    }
     status = mluOpSetTensorDescriptor_v2(copy_src_desc, MLUOP_LAYOUT_ARRAY,
                                          out_c_dtype, out_dim_num, dims);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
@@ -2053,7 +2058,39 @@ mluOpStatus_t execFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
     fft_plan->mlu_addrs.input = fft_plan->mlu_addrs.input_pad_addr;
   }
 
-  status = execFFTc2c2d(handle, fft_plan, scale_factor, direction);
+  if (fft_plan->n[0] == 1 && fft_plan->n[1] == 1) {
+    mluOpTensorDescriptor_t c_desc = nullptr;
+    status = mluOpCreateTensorDescriptor(&c_desc);
+    const int out_dim_num = 3;
+    int64_t dims[out_dim_num] = {fft_plan->batch, fft_plan->n[0],
+                                 fft_plan->n[1]};
+    status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY,
+                                         fft_plan->output_dtype, 2, dims);
+    status = mluOpSetTensorDescriptorOnchipDataType(c_desc,
+                                                    fft_plan->execution_dtype);
+
+    DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
+                                      cnnl_handle);  // convert to cnnl_handle
+
+    DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_output_desc);
+
+    size_t workspace_size = 0;
+    CALL_CNNL(cnnlGetCopyWorkspaceSize(cnnl_handle, cnnl_output_desc,
+                                       cnnl_output_desc, &workspace_size));
+    void *workspace = nullptr;
+    if (workspace_size > 0) {
+      CNRT_CHECK(cnrtMalloc((void **)&workspace, workspace_size));
+    }
+
+    CALL_CNNL(cnnlCopy_v2(cnnl_handle, cnnl_output_desc,
+                          fft_plan->mlu_addrs.input, cnnl_output_desc,
+                          fft_plan->mlu_addrs.output, workspace,
+                          workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
+    DESTROY_CNNL_HANDLE(cnnl_handle);
+  } else {
+    status = execFFTc2c2d(handle, fft_plan, scale_factor, direction);
+  }
 
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
