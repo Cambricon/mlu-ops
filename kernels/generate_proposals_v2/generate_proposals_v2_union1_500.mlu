@@ -320,7 +320,8 @@ __mlu_func__ void ProposalForOneImage(
                       variances, min_size, pixel_offset, proposals_score,
                       proposals_box, proposals_temp, topk, hwa, collect_num,
                       &proposals_num);
-  rpn_rois_num[0] = 0;
+
+  int rpn_num = 0;
   if (proposals_num == 0) {
     rpn_rois_num[0] = 1;
     one_image_proposals_num[0] += rpn_rois_num[0];
@@ -330,11 +331,13 @@ __mlu_func__ void ProposalForOneImage(
   if (taskDim != 1) {
     __sync_all_ipu();
   }
-  nonMaximumSuppress(rpn_rois, rpn_roi_probs, rpn_rois_num, proposals_score,
+  nonMaximumSuppress(rpn_rois, rpn_roi_probs, &rpn_num, proposals_score,
                      proposals_box, proposals_temp, nms_thresh, post_nms_top_n,
                      proposals_num, pixel_offset, hwa);
-
-  one_image_proposals_num[0] += rpn_rois_num[0];
+  if (taskId == 0) {
+    rpn_rois_num[0] = rpn_num;
+    one_image_proposals_num[0] += rpn_num;
+  }
 }
 
 template <typename T>
@@ -373,7 +376,9 @@ __mlu_global__ void mluOpGenerateProposalsV2Kernel(
                         pixel_offset, hwa, topk);
     all_proposals_num += one_image_proposals_num;
   }
-  *rpn_rois_batch_size = all_proposals_num;
+  if (taskId == 0) {
+    *rpn_rois_batch_size = all_proposals_num;
+  }
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelGenerateProposalsV2(

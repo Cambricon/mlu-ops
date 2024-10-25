@@ -233,6 +233,7 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignForward(
           const int bboxes_offset = n * width * height * offset_rois +
                                     ph * width * offset_rois + pw * offset_rois;
           const T *cur_bboxes_next = bboxes + bboxes_offset;
+          __sync();
           __memcpy_async((T *)data_nram, cur_bboxes_next,
                          offset_rois * sizeof(T), GDRAM2NRAM);
         }
@@ -423,6 +424,7 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignForward(
                                     ph * width * offset_rois + pw * offset_rois;
           const T *cur_bboxes_next = bboxes + bboxes_offset;
           // load next bboxes
+          __sync();
           __memcpy_async((T *)data_nram, cur_bboxes_next,
                          offset_rois * sizeof(T), GDRAM2NRAM);
         }
