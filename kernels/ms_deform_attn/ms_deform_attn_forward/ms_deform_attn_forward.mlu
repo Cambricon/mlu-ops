@@ -245,12 +245,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
     // set handle dump mlu output
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "data_value", data_value, data_value_desc, 10, -10);
-    GEN_CASE_DATA(true, "data_spatial_shapes", data_spatial_shapes,
-                  data_spatial_shapes_desc, 10, -10);
-    GEN_CASE_DATA(true, "data_level_start_index", data_level_start_index,
-                  data_level_start_index_desc, 10, -10);
-    GEN_CASE_DATA(true, "data_sampling_loc", data_sampling_loc,
-                  data_sampling_loc_desc, 10, -10);
+    GEN_CASE_DATA_REAL_V2(true, "data_spatial_shapes", data_spatial_shapes,
+                          data_spatial_shapes_desc, 10, 0);
+    GEN_CASE_DATA_REAL_V2(true, "data_level_start_index",
+                          data_level_start_index, data_level_start_index_desc,
+                          10, 0);
+    GEN_CASE_DATA_REAL_V2(true, "data_sampling_loc", data_sampling_loc,
+                          data_sampling_loc_desc, 10, -10);
     GEN_CASE_DATA(true, "data_attn_weight", data_attn_weight,
                   data_attn_weight_desc, 10, -10);
     GEN_CASE_DATA(false, "data_col", data_col, data_col_desc, 0, 0);
