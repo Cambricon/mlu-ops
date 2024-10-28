@@ -197,13 +197,14 @@ __mlu_global__ void mluDynamicVoxelize(const float *points,
       contain_nan_inf ? INT_MIN : round((coors_z_max - coors_z_min) / voxel_z);
 
   const int32_t split_num = 9;
-  const int32_t deal_num =
-      FLOOR_ALIGN(MAX_NRAM_SIZE / split_num / sizeof(float), NFU_ALIGN_SIZE);
+  // voxel_size + coors_range need 36 bytes on nram.
+  const int32_t deal_num = FLOOR_ALIGN(
+      (MAX_NRAM_SIZE - 36) / split_num / sizeof(float), NFU_ALIGN_SIZE);
   const int32_t repeat = points_per_core / deal_num;
   const int32_t rem = points_per_core % deal_num;
   const int32_t ping_pong_gap = 3 * deal_num * sizeof(float);
 
-  int8_t *points_x = nram_buffer;
+  int8_t *points_x = nram_buffer + 36;
   int8_t *points_y = points_x + deal_num * sizeof(float);
   int8_t *points_z = points_y + deal_num * sizeof(float);
   int8_t *auxiliary_a = points_x + 2 * ping_pong_gap;
@@ -292,6 +293,7 @@ __mlu_global__ void mluDynamicVoxelize(const float *points,
                    deal_num * sizeof(int32_t), NRAM2GDRAM);
   }
   if (rem > 0) {
+    __sync();
     __memcpy_async(points_x + (repeat % 2) * ping_pong_gap,
                    points + (points_start + repeat * deal_num) * num_features,
                    sizeof(float), GDRAM2NRAM, sizeof(float),
@@ -509,6 +511,7 @@ __mlu_global__ void mluCalcPointsPerVoxel(
       int32_t deal_num_align8 = PAD_UP(deal_num, 8);
 
       // step1: load p2p/p2v data.
+      __sync_compute();
       __memcpy_async(nram_p2p_idx, point_to_pointidx + points_offset,
                      deal_num * sizeof(int32_t), GDRAM2NRAM);
       __memcpy(nram_p2v_idx, point_to_voxelidx + points_offset,

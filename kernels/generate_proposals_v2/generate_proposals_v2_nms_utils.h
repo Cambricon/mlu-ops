@@ -309,7 +309,7 @@ __mlu_func__ void nonMaximumSuppress(
 
   // inter_y1| inter_x2 | inter_y2 |
   // |   N   |   N      |   N      |
-  int32_t *loop_end_flag = (int32_t *)(sram_buffer + 28);
+  int32_t *loop_end_flag = (int32_t *)(sram_buffer + 128);
   loop_end_flag[0] = 0;
   // scores, boxes, x1, y1, x2, y2, inter_x1, inter_y1, inter_x2, inter_y2
   const int memory_block = 13;
