@@ -313,17 +313,15 @@ kernel 内对分支进行如下划分。
 
 1. `steps`为 1，直接计算 $base^{start}$；
 
-2. `start`与`end`同时为 0 或同时为 inf，或者`base`为 1。结果均为 1 或 nan，填充数值；
+2. `start`与`end`同时为 0 或至少 1 个为 inf，或者`base`为 1。结果分为四段，填充 0，1，inf，nan 的组合；
 
-3. `start`与`end`仅有 1 个为 inf，根据 cuda 的输出，结果填充 0，inf，nan 的组合；
+3. `base`等于0，根据`start`与`end`的正负，在结果中填充 0，inf，nan 的组合；
 
-4. `base`等于0，根据`start`与`end`的正负，在结果中填充 0 和 inf 的组合；
+4. 间隔 step 等于 0，或在 half 类型下间隔过小。前一半结果为 $base^{start}$ ，后一半为 $base^{end}$；
 
-5. 间隔 step 等于 0，或在 half 类型下间隔过小。前一半结果为 $base^{start}$ ，后一半为 $base^{end}$；
+5. 负底数分支，见 3.1.2；
 
-6. 负底数分支，见 3.1.2；
-
-7. 正底数以及底数为 nan 分支，见 3.1.1。
+6. 正底数以及底数为 nan 分支，见 3.1.1。
 
 ### 3.2 伪代码实现
 
@@ -342,17 +340,15 @@ kernel 内对分支进行如下划分。
 
 2. `steps`为 1，直接计算并返回 $base^{start}$；
 
-3. `start`与`end`同时为 0 或同时为 inf，或者`base`为 1。结果均为 1 或 nan，填充数值；
+3. `start`与`end`同时为 0 或至少 1 个为 inf，或者`base`为 1。结果为 0，1，inf，nan 的组合，分为4段计算并填充数值；
 
-4. `start`与`end`仅有 1 个为 inf，结果中填充 0，inf，nan 的组合；
+4. `base`等于 0 ，此时根据`start`与`end`的正负，结果中填充 0，inf，nan 的组合；
 
-5. `base`等于 0 ，此时根据`start`与`end`的正负，结果中填充 0 和 inf 的组合；
+5. 间隔 step 等于 0，或在 half 类型下间隔过小。结果中前一半填充 $base^{start}$ ，后一半填充 $base^{end}$；
 
-6. 间隔 step 等于 0，或在 half 类型下间隔过小。结果中前一半填充 $base^{start}$ ，后一半填充 $base^{end}$；
+6. `base`小于 0。指数为整数时，pow(x,y) = (-1)^y * 2 ^(y * log2 |x|)；指数为小数时，pow(x,y) = nan；
 
-7. `base`小于 0。指数为整数时，pow(x,y) = (-1)^y * 2 ^(y * log2 |x|)；指数为小数时，pow(x,y) = nan；
-
-8. `base`大于 0，以及输入中存在 nan。直接计算 pow(x,y) = 2 ^(y * log2 (x))。
+7. `base`大于 0，以及输入中存在 nan。直接计算 pow(x,y) = 2 ^(y * log2 (x))。
 
 
 

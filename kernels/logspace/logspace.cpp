@@ -92,6 +92,8 @@ mluOpLogspace(mluOpHandle_t handle, const float start, const float end,
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("logspace", "LOGSPACE");
     GEN_CASE_HANDLE(handle);
+    GEN_CASE_DATA(true, "input", nullptr, nullptr, 0, 0);
+    GEN_CASE_DATA(false, "res", res, res_desc, 0, 0);
     GEN_CASE_OP_PARAM_SINGLE(0, "logspace", "start", start);
     GEN_CASE_OP_PARAM_SINGLE(1, "logspace", "end", end);
     GEN_CASE_OP_PARAM_SINGLE(2, "logspace", "steps", steps);

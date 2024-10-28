@@ -84,60 +84,28 @@ __mlu_func__ void dealStep1(const float start, const float base, T *res) {
 }
 
 template <typename T>
-__mlu_func__ void dealAll1Nan(const float start, const float end,
-                              const int64_t steps, T *res) {
-  float all_the_result = 1;
-  if ((abs(start) == INFINITY) && (abs(end) == INFINITY)) {
-    all_the_result = NAN;
-  }
-  setResult(res, steps, (T)all_the_result);
-}
+__mlu_func__ void dealAllResultsOneOrNanOrHalfSpecial(const float start,
+                                                      const float end,
+                                                      const int64_t steps,
+                                                      const float base,
+                                                      T *res) {
+  float step = (float)(end - start) / (steps - 1);
+  float base_start = powf(base, start + step * 0);
+  float base_first_half = powf(base, start + step * 1);
+  float base_second_half = powf(base, end - step * 1);
+  float base_end = powf(base, end - step * 0);
 
-template <typename T>
-__mlu_func__ void dealStartEndInfinity(const float start, const float end,
-                                       const int64_t steps, const float base,
-                                       T *res) {
-  if (abs(start) == INFINITY) {
-    if (steps > 2) {
-      float part_result = powf(base, start);
-      if (std::is_same<T, half>::value) {
-        if (base < 0) {
-          part_result = INFINITY;
-        } else {
-          part_result = NAN;
-        }
-      }
-      setResult(res + steps / 2, (steps - 1) / 2, (T)part_result);
-    }
-    setResult(res, steps / 2, (T)NAN);
-    setResult(res + steps - 1, 1, (T)NAN);
-  } else if (abs(end) == INFINITY) {
-    if (steps > 2) {
-      float part_result = powf(base, end);
-      if (std::is_same<T, half>::value) {
-        if (base < 0) {
-          part_result = INFINITY;
-        } else {
-          part_result = NAN;
-        }
-      }
-      setResult(res + 1, (steps - 1) / 2, (T)part_result);
-    }
-    setResult(res, 1, (T)NAN);
-    setResult(res + (steps + 1) / 2, steps / 2, (T)NAN);
-  }
+  int64_t halfway = steps / 2;
+  setResult(res, 1, (T)base_start);
+  setResult(res + 1, halfway - 1, (T)base_first_half);
+  setResult(res + halfway, (steps + 1) / 2 - 1, (T)base_second_half);
+  setResult(res + steps - 1, 1, (T)base_end);
 }
 
 template <typename T>
 __mlu_func__ void dealBase0(const float start, const float end,
                             const int64_t steps, T *res) {
-  if (start * end > 0) {
-    if (start > 0) {
-      setResult(res, steps, (T)0);
-    } else {
-      setResult(res, steps, (T)INFINITY);
-    }
-  } else {
+  if (start * end <= 0) {
     float step = (float)(end - start) / (steps - 1);
     int numbers_form_start_to_0 = abs(start / step) + 1;
     if (start > 0) {
@@ -149,6 +117,18 @@ __mlu_func__ void dealBase0(const float start, const float end,
       setResult(res + numbers_form_start_to_0, steps - numbers_form_start_to_0,
                 (T)0);
     }
+  } else {
+    float step = (float)(end - start) / (steps - 1);
+    float base_start = powf(0, start + step * 0);
+    float base_first_half = powf(0, start + step * 1);
+    float base_second_half = powf(0, end - step * 1);
+    float base_end = powf(0, end - step * 0);
+
+    int64_t halfway = steps / 2;
+    setResult(res, 1, (T)base_start);
+    setResult(res + 1, halfway - 1, (T)base_first_half);
+    setResult(res + halfway, (steps + 1) / 2 - 1, (T)base_second_half);
+    setResult(res + steps - 1, 1, (T)base_end);
   }
 }
 
@@ -354,11 +334,9 @@ __mlu_global__ void MLUKernelLogspace(const float start, const float end,
   if (steps == 1) {
     dealStep1(scalar_start, base, res);
   } else if ((scalar_start == 0 && scalar_end == 0) || base == 1 ||
-             ((abs(scalar_start) == INFINITY) &&
-              (abs(scalar_end) == INFINITY))) {
-    dealAll1Nan(scalar_start, scalar_end, steps, res);
-  } else if (abs(scalar_start) == INFINITY || abs(scalar_end) == INFINITY) {
-    dealStartEndInfinity(scalar_start, scalar_end, steps, base, res);
+             (abs(scalar_start) == INFINITY) || (abs(scalar_end) == INFINITY)) {
+    dealAllResultsOneOrNanOrHalfSpecial(scalar_start, scalar_end, steps, base,
+                                        res);
   } else if (base == 0) {
     dealBase0(scalar_start, scalar_end, steps, res);
   } else if ((abs((float)(scalar_end - scalar_start) / (steps - 1) == 0)) ||
