@@ -305,7 +305,11 @@ const int32_t remain_steps = cur_core_num % max_deal_num;
 
 #### 3.1.3 其他计算逻辑
 
-考虑到与 cuda 对齐，除上述 2 个主要分支外，还进行如下划分：
+考虑到与 cuda nan/inf 对齐，设计了其他分支。
+
+cuda powf 计算逻辑：https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__SINGLE.html#group__cuda__math__single_1gab519b517c0036b3604d602f716a919dd
+
+除前述 2 个主要分支外，还进行如下划分：
 
 `steps`为 0，不调用 kernel ，直接返回。
 
@@ -313,17 +317,59 @@ kernel 内对分支进行如下划分。
 
 1. `steps`为 1，直接计算 $base^{start}$；
 
-2. `start`与`end`同时为 0 或同时为 inf，或者`base`为 1。结果均为 1 或 nan，填充数值；
+2. `start`与`end`同时为 0 ，或至少 1 个为 inf，或者`base`为 1。
 
-3. `start`与`end`仅有 1 个为 inf，根据 cuda 的输出，结果填充 0，inf，nan 的组合；
+    ```c++
+    else if ((scalar_start == 0 && scalar_end == 0) || base == 1 ||
+             (abs(scalar_start) == INFINITY) || (abs(scalar_end) == INFINITY)) {
+        dealAllResultsOneOrNanOrHalfSpecial(scalar_start, scalar_end, steps, base, 
+                                            res);
+    }
+    ```
 
-4. `base`等于0，根据`start`与`end`的正负，在结果中填充 0 和 inf 的组合；
+    结果分为四段，根据分段计算结果填充 0，1，inf，nan 的组合。
+    
+    ```c++
+    float step = (float)(end - start) / (steps - 1);
+    float base_start = powf(base, start + step * 0);
+    float base_first_half = powf(base, start + step * 1);
+    float base_second_half = powf(base, end - step * 1);
+    float base_end = powf(base, end - step * 0);
 
-5. 间隔 step 等于 0，或在 half 类型下间隔过小。前一半结果为 $base^{start}$ ，后一半为 $base^{end}$；
+    int64_t halfway = steps / 2;
+    setResult(res, 1, (T)base_start);
+    setResult(res + 1, halfway - 1, (T)base_first_half);
+    setResult(res + halfway, (steps + 1) / 2 - 1, (T)base_second_half);
+    setResult(res + steps - 1, 1, (T)base_end);
+    ```
+    
+    理由如下：Pytorch 中，logspace 算子分为前后两段计算。
 
-6. 负底数分支，见 3.1.2；
+        index 小于 steps / 2 时，计算 pow(base, start + step * index)；
+        
+        index 大于等于 steps / 2 时，计算 pow(base, end - step * (steps - index - 1))。
+    
+    对应上述代码中的 base_first_half 与 base_second_half。    
+    
+    另外，当间隔 step 为 inf 时，对于起始位置有
+    
+        step*index =  inf*0 = nan
 
-7. 正底数以及底数为 nan 分支，见 3.1.1。
+    对于结束位置
+
+        step*(steps - index - 1) = inf*0 = nan
+   
+    因此起始位置与结束位置单独计算，对应上述代码的 base_start 与 base_end。
+
+    综上，本分支分为 4 段，根据分段计算结果填充 0，1，inf，nan 的组合；
+
+3. `base`等于0，根据`start`与`end`的正负，在结果中填充 0，inf，nan 的组合；
+
+4. 间隔 step 等于 0，或在 half 类型下间隔过小。前一半结果为 $base^{start}$ ，后一半为 $base^{end}$；
+
+5. 负底数分支，见 3.1.2；
+
+6. 正底数以及底数为 nan 分支，见 3.1.1。
 
 ### 3.2 伪代码实现
 
@@ -342,17 +388,15 @@ kernel 内对分支进行如下划分。
 
 2. `steps`为 1，直接计算并返回 $base^{start}$；
 
-3. `start`与`end`同时为 0 或同时为 inf，或者`base`为 1。结果均为 1 或 nan，填充数值；
+3. `start`与`end`同时为 0 或至少 1 个为 inf，或者`base`为 1。结果为 0，1，inf，nan 的组合，分为4段计算并填充数值；
 
-4. `start`与`end`仅有 1 个为 inf，结果中填充 0，inf，nan 的组合；
+4. `base`等于 0 ，此时根据`start`与`end`的正负，结果中填充 0，inf，nan 的组合；
 
-5. `base`等于 0 ，此时根据`start`与`end`的正负，结果中填充 0 和 inf 的组合；
+5. 间隔 step 等于 0，或在 half 类型下间隔过小。结果中前一半填充 $base^{start}$ ，后一半填充 $base^{end}$；
 
-6. 间隔 step 等于 0，或在 half 类型下间隔过小。结果中前一半填充 $base^{start}$ ，后一半填充 $base^{end}$；
+6. `base`小于 0。指数为整数时，pow(x,y) = (-1)^y * 2 ^(y * log2 |x|)；指数为小数时，pow(x,y) = nan；
 
-7. `base`小于 0。指数为整数时，pow(x,y) = (-1)^y * 2 ^(y * log2 |x|)；指数为小数时，pow(x,y) = nan；
-
-8. `base`大于 0，以及输入中存在 nan。直接计算 pow(x,y) = 2 ^(y * log2 (x))。
+7. `base`大于 0，以及输入中存在 nan。直接计算 pow(x,y) = 2 ^(y * log2 (x))。
 
 
 
