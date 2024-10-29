@@ -39,8 +39,8 @@
 #define MLUOP_GEN_CASE_ON_NEW (mluop::gen_case::genCaseModeGet(true) > 0)
 
 #define GEN_CASE_START(op_name, op_type) \
-  mluop::gen_case::PbNode *node = mluop::gen_case::genCaseStart(op_name, \
-                                                                op_type)
+  mluop::gen_case::PbNode *node =        \
+      mluop::gen_case::genCaseStart(op_name, op_type)
 
 #define GEN_CASE_DATA(is_input, id, data, data_desc, upper_bound, lower_bound) \
   mluop::gen_case::genCaseData(node, is_input, id, data, data_desc,            \
@@ -252,7 +252,10 @@ class PbNode {
     op_param.name = param_node_name;
     if (dtype == MLUOP_DTYPE_HALF) {
       op_param.params.push_back(
-          {param_name, std::to_string(castHalfToFloat32(param_value))});
+          {param_name, get_float_string_of_half_or_bf16(&param_value, dtype)});
+    } else if (dtype == MLUOP_DTYPE_BFLOAT16) {
+      op_param.params.push_back(
+          {param_name, get_float_string_of_half_or_bf16(&param_value, dtype)});
     } else if (std::is_same<paramType, int8_t>::value ||
                std::is_same<paramType, uint8_t>::value) {
       op_param.params.push_back(
@@ -360,11 +363,28 @@ class PbNode {
         return "  value_i: ";
     }
   }
+
+  inline std::string get_float_string_of_half_or_bf16(void *data,
+                                                      mluOpDataType_t dtype) {
+    char buffer[128];
+    float dst = 0.0;
+    if (MLUOP_DTYPE_HALF == dtype) {
+      cnrtCastDataType_V2(data, cnrtHalf, &dst, cnrtFloat, 1, nullptr,
+                          cnrtRounding_rm);
+    } else if (MLUOP_DTYPE_BFLOAT16 == dtype) {
+      cnrtCastDataType_V2(data, cnrtBfloat, &dst, cnrtFloat, 1, nullptr,
+                          cnrtRounding_rm);
+    }
+    std::snprintf(buffer, sizeof(buffer), "%.9g", dst);
+    return std::string(buffer);
+  }
+
   inline std::string get_data_string(mluOpDataType_t dtype, void *data,
                                      uint64_t offset) {
     switch (dtype) {
       case MLUOP_DTYPE_HALF:
-        return std::to_string(castHalfToFloat32(((int16_t *)data)[offset]));
+        return get_float_string_of_half_or_bf16(((int16_t *)data) + offset,
+                                                dtype);
       case MLUOP_DTYPE_BFLOAT16:
         return std::to_string(((uint16_t *)data)[offset]);
       case MLUOP_DTYPE_FLOAT:
@@ -372,7 +392,8 @@ class PbNode {
       case MLUOP_DTYPE_DOUBLE:
         return std::to_string(((double *)data)[offset]);
       case MLUOP_DTYPE_COMPLEX_HALF:
-        return std::to_string(castHalfToFloat32(((int16_t *)data)[offset]));
+        return get_float_string_of_half_or_bf16(((int16_t *)data) + offset,
+                                                dtype);
       case MLUOP_DTYPE_COMPLEX_FLOAT:
         return std::to_string(((float *)data)[offset]);
       case MLUOP_DTYPE_INT8:
@@ -474,9 +495,9 @@ class PbNode {
         (tensors[index].desc->pointer_mode == MLUOP_POINTER_MODE_HOST
              ? cnrtMemcpyHostToHost
              : cnrtMemcpyDevToHost);
-    if (cnrtSuccess ==
-        cnrtMemcpy(data, const_cast<void *>(tensors[index].device_ptr),
-                   data_size, memcpy_dir)) {
+    if (cnrtSuccess == cnrtMemcpy(data,
+                                  const_cast<void *>(tensors[index].device_ptr),
+                                  data_size, memcpy_dir)) {
       return data;
     } else {
       LOG(ERROR) << "[gen_case] Dump data failed! cnrtMemcpy data size is "
@@ -539,8 +560,7 @@ inline void PbNode::appendOpParam<const void *>(std::string param_name,
   if (attr.type == cnrtMemTypeDevice) {
     void *data = malloc(data_width);
     if (cnrtSuccess == cnrtMemcpy(data, const_cast<void *>(param_value),
-                                       data_width,
-                                       cnrtMemcpyDevToHost)) {
+                                  data_width, cnrtMemcpyDevToHost)) {
       op_param.params.push_back({param_name, get_data_string(dtype, data, 0)});
     } else {
       LOG(ERROR) << "[gen_case] dump op param failed, param_name is "
