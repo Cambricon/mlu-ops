@@ -305,7 +305,11 @@ const int32_t remain_steps = cur_core_num % max_deal_num;
 
 #### 3.1.3 其他计算逻辑
 
-考虑到与 cuda 对齐，除上述 2 个主要分支外，还进行如下划分：
+考虑到与 cuda nan/inf 对齐，设计了其他分支。
+
+cuda powf 计算逻辑：https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__SINGLE.html#group__cuda__math__single_1gab519b517c0036b3604d602f716a919dd
+
+除前述 2 个主要分支外，还进行如下划分：
 
 `steps`为 0，不调用 kernel ，直接返回。
 
@@ -313,7 +317,51 @@ kernel 内对分支进行如下划分。
 
 1. `steps`为 1，直接计算 $base^{start}$；
 
-2. `start`与`end`同时为 0 或至少 1 个为 inf，或者`base`为 1。结果分为四段，填充 0，1，inf，nan 的组合；
+2. `start`与`end`同时为 0 ，或至少 1 个为 inf，或者`base`为 1。
+
+    ```c++
+    else if ((scalar_start == 0 && scalar_end == 0) || base == 1 ||
+             (abs(scalar_start) == INFINITY) || (abs(scalar_end) == INFINITY)) {
+        dealAllResultsOneOrNanOrHalfSpecial(scalar_start, scalar_end, steps, base, 
+                                            res);
+    }
+    ```
+
+    结果分为四段，根据分段计算结果填充 0，1，inf，nan 的组合。
+    
+    ```c++
+    float step = (float)(end - start) / (steps - 1);
+    float base_start = powf(base, start + step * 0);
+    float base_first_half = powf(base, start + step * 1);
+    float base_second_half = powf(base, end - step * 1);
+    float base_end = powf(base, end - step * 0);
+
+    int64_t halfway = steps / 2;
+    setResult(res, 1, (T)base_start);
+    setResult(res + 1, halfway - 1, (T)base_first_half);
+    setResult(res + halfway, (steps + 1) / 2 - 1, (T)base_second_half);
+    setResult(res + steps - 1, 1, (T)base_end);
+    ```
+    
+    理由如下：Pytorch 中，logspace 算子分为前后两段计算。
+
+        index 小于 steps / 2 时，计算 pow(base, start + step * index)；
+        
+        index 大于等于 steps / 2 时，计算 pow(base, end - step * (steps - index - 1))。
+    
+    对应上述代码中的 base_first_half 与 base_second_half。    
+    
+    另外，当间隔 step 为 inf 时，对于起始位置有
+    
+        step*index =  inf*0 = nan
+
+    对于结束位置
+
+        step*(steps - index - 1) = inf*0 = nan
+   
+    因此起始位置与结束位置单独计算，对应上述代码的 base_start 与 base_end。
+
+    综上，本分支分为 4 段，根据分段计算结果填充 0，1，inf，nan 的组合；
 
 3. `base`等于0，根据`start`与`end`的正负，在结果中填充 0，inf，nan 的组合；
 
