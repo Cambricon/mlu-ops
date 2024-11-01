@@ -49,10 +49,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
   }
 
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("lgamma", "Lgamma");
+    GEN_CASE_START("lgamma", "LGAMMA");
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "x", x, x_desc, 100, 0.1);
-    GEN_CASE_DATA(true, "y", y, y_desc, 0, 0);
+    GEN_CASE_DATA(false, "y", y, y_desc, 0, 0);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
 
