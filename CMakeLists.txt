@@ -6,7 +6,7 @@ set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/test")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wdeprecated-declarations -fPIC -std=c++11 -pthread -pipe")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wdeprecated-declarations -fPIC -std=c++17 -pthread -pipe")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-sections -fPIC")
 
 ################################################################################
@@ -123,7 +123,7 @@ endif()
 
 find_package(fmt REQUIRED)
 # setup cncc flags
-set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Werror -Wdeprecated-declarations -Wall -std=c++11 -fPIC -pthread --neuware-path=${NEUWARE_HOME}")
+set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Werror -Wdeprecated-declarations -Wall -std=c++17 -fPIC -pthread --neuware-path=${NEUWARE_HOME}")
 if(${_CMAKE_BUILD_TYPE_LOWER} MATCHES "debug")
   message(STATUS "build debug version")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -g3 -O0")
@@ -175,7 +175,7 @@ endif()
 
 list(SORT build_kernel)
 message(STATUS "build_kernel:[${build_kernel}]")
- 
+
 file(GLOB all_kernels "${CMAKE_CURRENT_LIST_DIR}/kernels/*")
 foreach(kernel ${build_kernel} )
   set(kernel_parent_dir '')
@@ -197,7 +197,7 @@ foreach(kernel ${build_kernel} )
     continue()
   endif()
 endforeach()
- 
+
 file(GLOB_RECURSE src_helper_files ${src_helper_files} "${CMAKE_CURRENT_SOURCE_DIR}/kernels/utils/cnnl_helper.cpp")
 file(GLOB_RECURSE core_src_files ${core_src_files} "${CMAKE_CURRENT_SOURCE_DIR}/core/*.cpp")
 # set(src_files ${src_files} "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")
