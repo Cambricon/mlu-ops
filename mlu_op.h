@@ -14575,57 +14575,7 @@ mluOpSgetrf2(mluOpHandle_t handle,
              int *ipiv,
              int *info,
              int mode);
-/*!
- * @brief Calculates the size of the workspace required for the LU decomposition and initializes a workspace pointer.
- * This function must be called before performing LU decomposition using mluOpSgetrf2.
- *
- * @param[in] handle
- * Handle to a Cambricon MLUOP context that is used to manage MLU devices and
- * queues in the deformable convolution backward data operation. For detailed information,
- * see ::mluOpHandle_t.
- *
- * @param[in] input_desc
- * The descriptor for the input tensor for which the LU decomposition will be performed.
- *
- * @param[out] workspace_size
- * Pointer to a variable where the size of the required workspace will be stored.
- *
- * @par Return
- * - ::MLUOP_STATUS_SUCCESS if the workspace size is successfully calculated and the workspace is successfully
- * allocated,
- * - ::MLUOP_STATUS_EXECUTION_FAILED if there are issues during the calculation or memory allocation.
- *
- * @par Data Type
- * - None.
- *
- * @par Data Layout
- * - The supported combinations of data types are shown below:
- * - size_t(size)
- *
- * @par Scale Limitation
- * - The dimension of input tensor must be either 2, 3 or 4.
- *
- * @par API Dependency
- * - The allocated extra workspace should be passed to ::mluOpSgetrf2 to perform the LU operation.
- *
- * @par Note
- * - None.
- *
- * @par Example
- * - None.
- *
- * @par Reference
- * - None.
- */
-<<<<<<< HEAD
-  mluOpStatus_t MLUOP_WIN_API mluOpFreeLUWorkspace(void **workspace);
->>>>>>> fix workspace problem and some bugs
-=======
-mluOpStatus_t MLUOP_WIN_API
-mluOpGetLUWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc, size_t *workspace_size);
->>>>>>> [Fix](mluOpSgetrf2): fix some bugs, reset workspace and update docs
 
->>>>>>> finish all types LU operator
 #if defined(__cplusplus)
 }
 #endif

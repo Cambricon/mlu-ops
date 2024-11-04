@@ -45,13 +45,8 @@ mluOpStatus_t MLUOP_WIN_API MyCnrtMemcpy2D(mluOpHandle_t handle, int batch,
     k_type = CNRT_FUNC_TYPE_UNION8;
     dim_x = ROUNDUP(handle->core_num_per_cluster * batch, 32);
   } else {
-    if (taskType == 1) {
-      k_type = CNRT_FUNC_TYPE_UNION1;
-      dim_x = handle->core_num_per_cluster * 1;
-    } else if (taskType == 8) {
-      k_type = CNRT_FUNC_TYPE_UNION1;
-      dim_x = handle->core_num_per_cluster * 1;
-    }
+    k_type = CNRT_FUNC_TYPE_UNION1;
+    dim_x = handle->core_num_per_cluster * 1;
   }
   k_dim.x = dim_x;
   k_dim.y = 1;
@@ -78,13 +73,8 @@ MatrixInverse(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
     func_type = CNRT_FUNC_TYPE_UNION8;
     dim_x = ROUNDUP(handle->core_num_per_cluster * batch, 32);
   } else {
-    if (taskType == 1) {
-      func_type = CNRT_FUNC_TYPE_UNION1;
-      dim_x = handle->core_num_per_cluster * 1;
-    } else if (taskType == 8) {
-      func_type = CNRT_FUNC_TYPE_UNION1;
-      dim_x = handle->core_num_per_cluster * 1;
-    }
+    func_type = CNRT_FUNC_TYPE_UNION1;
+    dim_x = handle->core_num_per_cluster * 1;
   }
   dim.x = dim_x;
   dim.y = 1;
@@ -112,13 +102,8 @@ CMatrixInverse(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
     func_type = CNRT_FUNC_TYPE_UNION8;
     dim_x = ROUNDUP(handle->core_num_per_cluster * batch, 32);
   } else {
-    if (taskType == 1) {
-      func_type = CNRT_FUNC_TYPE_UNION1;
-      dim_x = handle->core_num_per_cluster * 1;
-    } else if (taskType == 8) {
-      func_type = CNRT_FUNC_TYPE_UNION1;
-      dim_x = handle->core_num_per_cluster * 1;
-    }
+    func_type = CNRT_FUNC_TYPE_UNION1;
+    dim_x = handle->core_num_per_cluster * 1;
   }
   dim.x = dim_x;
   dim.y = 1;
@@ -588,7 +573,7 @@ int sgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
 
   minmn = MIN(m, n);
   nb = get_sgetrf_native_nb(m, n);
-  nb = 32;
+  nb = 16;
 
   liwork = m + m + 1;
   diwork = (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
@@ -649,6 +634,7 @@ int sgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
                 d_iA(j, j), ldda, d_rA(j, j + nb), d_iA(j, j + nb), ldda,
                 (float *)workspace, handle->queue);
 
+          printf("gemm %d %d %d \n", m - (j + nb), n - j - nb, nb);
           cgemm(handle, dtype, m - (j + nb), n - j - nb, nb, batch, m, n,
                 d_rA(j + nb, j), d_iA(j + nb, j), ldda, d_rA(j, j + nb),
                 d_iA(j, j + nb), ldda, d_rA(j + nb, j + nb),
@@ -666,7 +652,7 @@ int sgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
           ctrsm(handle, dtype, batch, m, n, nb, n - (j + nb), d_rA(j, j),
                 d_iA(j, j), ldda, d_rA(j, j + nb), d_iA(j, j + nb), ldda,
                 (float *)workspace, handle->queue);
-
+          printf("gemm %d %d %d \n", m - (j + nb), n - j - nb, nb);
           cgemm(handle, dtype, m - (j + nb), n - (j + nb), nb, batch, m, n,
                 d_rA(j + nb, j), d_iA(j + nb, j), ldda, d_rA(j, j + nb),
                 d_iA(j, j + nb), ldda, d_rA(j + nb, j + nb),

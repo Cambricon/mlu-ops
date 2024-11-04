@@ -43,13 +43,8 @@ MatrixInverse(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
     func_type = CNRT_FUNC_TYPE_UNION8;
     dim_x = ROUNDUP(handle->core_num_per_cluster * batch, 32);
   } else {
-    if (taskType == 1) {
-      func_type = CNRT_FUNC_TYPE_UNION1;
-      dim_x = handle->core_num_per_cluster * 1;
-    } else if (taskType == 8) {
-      func_type = CNRT_FUNC_TYPE_UNION1;
-      dim_x = handle->core_num_per_cluster * 1;
-    }
+    func_type = CNRT_FUNC_TYPE_UNION1;
+    dim_x = handle->core_num_per_cluster * 1;
   }
   dim.x = dim_x;
   dim.y = 1;
@@ -76,13 +71,8 @@ CMatrixInverse(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
     func_type = CNRT_FUNC_TYPE_UNION8;
     dim_x = ROUNDUP(handle->core_num_per_cluster * batch, 32);
   } else {
-    if (taskType == 1) {
-      func_type = CNRT_FUNC_TYPE_UNION1;
-      dim_x = handle->core_num_per_cluster * 1;
-    } else if (taskType == 8) {
-      func_type = CNRT_FUNC_TYPE_UNION1;
-      dim_x = handle->core_num_per_cluster * 1;
-    }
+    func_type = CNRT_FUNC_TYPE_UNION1;
+    dim_x = handle->core_num_per_cluster * 1;
   }
   dim.x = dim_x;
   dim.y = 1;
@@ -141,62 +131,81 @@ static mluOpStatus_t trsm(mluOpHandle_t handle, mluOpDataType_t dtype,
   return MLUOP_STATUS_SUCCESS;
 }
 
-static mluOpStatus_t MLUOP_WIN_API
-cal_ger(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int M_size,
-         int N_size, int ib, int J, int m, int n, int step, 
-         float *dA, float *d_rA, float *d_iA,
-         int lda,
-         int stride_a, float *workspace, int *dipiv, int *dipiv2, int *info,
-         int gbstep, int mode, cnrtQueue_t queue) {
-  if(m==0 || n==0)
-    return MLUOP_STATUS_BAD_PARAM;
+static mluOpStatus_t MLUOP_WIN_API cal_ger(
+    mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int M_size,
+    int N_size, int ib, int J, int m, int n, int step, float *dA, float *d_rA,
+    float *d_iA, int lda, int stride_a, float *workspace, int *dipiv,
+    int *dipiv2, int *info, int gbstep, int mode, cnrtQueue_t queue) {
+  if (m == 0 || n == 0) return MLUOP_STATUS_BAD_PARAM;
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   int dim_x;
 
-  if (batch > 1) {
-    k_type = CNRT_FUNC_TYPE_UNION8;
-    dim_x = ROUNDUP(handle->core_num_per_cluster * batch, 32);
-  } else {
-    if (taskType == 1) {
-      k_type = CNRT_FUNC_TYPE_UNION1;
-      dim_x = handle->core_num_per_cluster * 1;
-    } else if (taskType == 8) {
-      if (mode == 1) {
-        if (m <= MAX_M_SIZE1 * TaskUnion1 || m > MAX_M_SIZE1 * TaskUnion8) {
-          k_type = CNRT_FUNC_TYPE_UNION1;
-          dim_x = handle->core_num_per_cluster * 1;
+  if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
+    if (batch > 1) {
+      k_type = CNRT_FUNC_TYPE_UNION8;
+      dim_x = ROUNDUP(handle->core_num_per_cluster * batch, 32);
+    } else {
+      if (taskType == 1) {
+        k_type = CNRT_FUNC_TYPE_UNION1;
+        dim_x = handle->core_num_per_cluster * 1;
+      } else if (taskType == 8) {
+        if (mode == 1) {
+          if (m <= MAX_M_SIZE_COMPLEX_PIVOT * TaskUnion1 ||
+              m > MAX_M_SIZE_COMPLEX_PIVOT * TaskUnion8) {
+            k_type = CNRT_FUNC_TYPE_UNION1;
+            dim_x = handle->core_num_per_cluster * 1;
+          } else {
+            k_type = CNRT_FUNC_TYPE_UNION8;
+            dim_x = handle->core_num_per_cluster * 8;
+          }
         } else {
           k_type = CNRT_FUNC_TYPE_UNION8;
           dim_x = handle->core_num_per_cluster * 8;
         }
-      } else {
-        k_type = CNRT_FUNC_TYPE_UNION8;
-        dim_x = handle->core_num_per_cluster * 8;
       }
     }
+    k_dim.x = dim_x;
+    k_dim.y = 1;
+    k_dim.z = 1;
+    CHECK_RETURN(
+        "[KernelCcal_ger]",
+        KernelCcal_ger(k_dim, k_type, queue, dtype, batch, M_size, N_size, ib,
+                       J, m, n, step, d_rA, d_iA, lda, stride_a, workspace,
+                       dipiv, dipiv2, info, gbstep, mode));
+  } else if (dtype == MLUOP_DTYPE_FLOAT) {
+    if (batch > 1) {
+      k_type = CNRT_FUNC_TYPE_UNION8;
+      dim_x = ROUNDUP(handle->core_num_per_cluster * batch, 32);
+    } else {
+      if (taskType == 1) {
+        k_type = CNRT_FUNC_TYPE_UNION1;
+        dim_x = handle->core_num_per_cluster * 1;
+      } else if (taskType == 8) {
+        if (mode == 1) {
+          if (m <= MAX_M_SIZE1 * TaskUnion1 || m > MAX_M_SIZE1 * TaskUnion8) {
+            k_type = CNRT_FUNC_TYPE_UNION1;
+            dim_x = handle->core_num_per_cluster * 1;
+          } else {
+            k_type = CNRT_FUNC_TYPE_UNION8;
+            dim_x = handle->core_num_per_cluster * 8;
+          }
+        } else {
+          k_type = CNRT_FUNC_TYPE_UNION8;
+          dim_x = handle->core_num_per_cluster * 8;
+        }
+      }
+    }
+    k_dim.x = dim_x;
+    k_dim.y = 1;
+    k_dim.z = 1;
+    CHECK_RETURN("[KernelScal_ger]",
+                 KernelScal_ger(k_dim, k_type, queue, dtype, batch, M_size,
+                                N_size, ib, J, m, n, step, dA, lda, stride_a,
+                                workspace, dipiv, dipiv2, info, gbstep, mode));
   }
 
-  k_dim.x = dim_x;
-  k_dim.y = 1;
-  k_dim.z = 1;
-  if(dtype==MLUOP_DTYPE_COMPLEX_FLOAT)
-  {
-    CHECK_RETURN(
-      "[KernelCcal_ger]",
-      KernelCcal_ger(k_dim, k_type, queue, dtype, batch, M_size, N_size, ib, J,
-                     m, n, step, d_rA, d_iA, lda, stride_a, workspace, dipiv,
-                     dipiv2, info, gbstep, mode));
-  }
-  else if(dtype==MLUOP_DTYPE_FLOAT)
-  {
-    CHECK_RETURN("[KernelScal_ger]",
-               KernelScal_ger(k_dim, k_type, queue, dtype, batch, M_size,
-                              N_size, ib, J, m, n, step, dA, lda, stride_a,
-                              workspace, dipiv, dipiv2, info, gbstep, mode));
-  }
-  
   CNRT_CHECK(cnrtQueueSync(queue));
   return MLUOP_STATUS_SUCCESS;
 }
@@ -257,7 +266,7 @@ int sgetrf2_native(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
   if (m == 0 || n == 0) {
     return arginfo;
   }
-  int nb = 16;
+  int nb = 8;
   int min_mn = MIN(m, n);
   int gbj, j, step, ib;
   int *dipiv2;
@@ -271,9 +280,9 @@ int sgetrf2_native(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
   for (j = 0; j < min_mn; j += nb) {
     ib = MIN(nb, min_mn - j);
     if (dtype == MLUOP_DTYPE_FLOAT) {
-      arginfo = cal_ger(handle, dtype, batch, m, n, ib, j, m - j, ib, j, dA,NULL,NULL,
-                         ldda, gbm * ldda, (float *)workspace, dipiv + j,
-                         dipiv2, dinfo, gbstep, mode, queue);
+      arginfo = cal_ger(handle, dtype, batch, m, n, ib, j, m - j, ib, j, dA,
+                        NULL, NULL, ldda, gbm * ldda, (float *)workspace,
+                        dipiv + j, dipiv2, dinfo, gbstep, mode, queue);
       if (mode == 1) {
         if (gbn - (j + ib) - gbstep > 0) {
           swap(handle, dtype, batch, m, n, ib, j, m - j,
@@ -288,9 +297,9 @@ int sgetrf2_native(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
         }
       }
     } else if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
-      arginfo = cal_ger(handle, dtype, batch, m, n, ib, j, m - j, ib, j, NULL, d_rA,
-                         d_iA, ldda, gbm * ldda, (float *)workspace, dipiv + j,
-                         dipiv2, dinfo, gbstep, mode, queue);
+      arginfo = cal_ger(handle, dtype, batch, m, n, ib, j, m - j, ib, j, NULL,
+                        d_rA, d_iA, ldda, gbm * ldda, (float *)workspace,
+                        dipiv + j, dipiv2, dinfo, gbstep, mode, queue);
       if (mode == 1) {
         if (gbn - (j + ib) - gbstep > 0) {
           swap(handle, dtype, batch, m, n, ib, j, m - j,
@@ -313,7 +322,7 @@ int sgetrf2_native(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
         ctrsm(handle, dtype, batch, gbm, ldda, ib, n - j - ib, d_rA(j, j),
               d_iA(j, j), ldda, d_rA(j, j + ib), d_iA(j, j + ib), ldda,
               (float *)workspace, queue);
-
+        printf("gemm %d %d %d \n", m - (j + ib), n - (j + ib), ib);
         cgemm(handle, dtype, m - (j + ib), n - (j + ib), ib, batch, gbm, n,
               d_rA(ib + j, j), d_iA(ib + j, j), ldda, d_rA(j, j + ib),
               d_iA(j, j + ib), ldda, d_rA(j + ib, j + ib), d_iA(j + ib, j + ib),

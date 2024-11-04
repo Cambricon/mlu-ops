@@ -4,13 +4,8 @@ input {
   shape: {
     dims: 1
     dims: 1
-<<<<<<< HEAD
-    dims: 65536
-    dims: 30
-=======
     dims: 1024
     dims: 1024
->>>>>>> fix workspace problem and some bugs
  
   }
   layout: LAYOUT_ARRAY
@@ -27,23 +22,19 @@ output {
   shape: {
     dims: 1
     dims: 1
-<<<<<<< HEAD
-    dims: 65536
-    dims: 30
-=======
     dims: 1024
     dims: 1024
->>>>>>> fix workspace problem and some bugs
    
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_FLOAT
 }
+sgetrf2_param{
+    mode: 0
+}
 test_param: {
   error_func: DIFF1
   error_func: DIFF2
-  error_func: DIFF3_2
-  error_threshold: 0.003
   error_threshold: 0.003
   error_threshold: 0.003
   baseline_device: CPU

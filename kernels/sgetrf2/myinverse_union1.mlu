@@ -176,6 +176,38 @@ __mlu_global__ void complex_inverse_kernel(int batch, float *rd_input,
     __nramset(idiag_start + (m - 1) * m + m - 1, 1, 0.f, m, 0);
   }
 
+  // ///------------------------------------------------///
+  // float *nram_diag_real = i_nram_dst+ m * m;          // 对角线实部
+  // float *nram_diag_imag = nram_diag_real + m;         // 对角线虚部
+  // float *result=nram_diag_imag+ m;                    //对角线运算结果
+
+  // for (int i = 0; i < height; i++) {
+  //     __memcpy(nram_diag_real + i, rdiag_start + i * m + i, 1 *
+  //     sizeof(float), NRAM2NRAM);  // 提取实部
+  // }
+
+  // // 每个核负责计算其分配的对角线部分
+  // for (int i = 0; i < height; i++) {
+  //     result[i] = nram_diag_real[i];
+  //     result[i] = 1.0 / result[i];
+  //     // int off = i * m + i;
+  //     // result = rdiag_start[off];
+  //     // result = 1.0 / result;
+  //     // r_nram_src1[i * height + i] = result;
+  //     // r_nram_dst[i * span + i] = result;
+  // }
+
+  //   for (int i = 0; i < height; i++) {
+  //       __memcpy(r_nram_src1 + i * height + i, result + i, 1 * sizeof(float),
+  //       NRAM2NRAM);
+  //       __memcpy(rdiag_start + i * m + i, result + i, 1 * sizeof(float),
+  //       NRAM2NRAM);
+  //       __memcpy(r_nram_dst + i * span + i, result + i, 1 * sizeof(float),
+  //       NRAM2NRAM);
+  //   }
+
+  // ///------------------------------------------------///
+
   float result = 0.0;
   for (int i = 0; i < height; i++) {
     int off = i * m + i;
@@ -195,12 +227,36 @@ __mlu_global__ void complex_inverse_kernel(int batch, float *rd_input,
       float r_temp = 0.0;
       float i_temp = 0.0;
 
+      // float *sum_src = i_nram_dst+ m * m;
+      // float *sum_dst = sum_src + m;
+      // __memset_nram(r_temp1, 2*m, (float)ZERO);
+
       __bang_mul(r_mul_result, r_nram_src2, r_nram_src1 + j * height, i);
       __bang_mul(i_mul_result, r_nram_src2, i_nram_src1 + j * height, i);
       for (int k = 0; k < i; k++) {
         r_temp += r_mul_result[k];
         i_temp += i_mul_result[k];
       }
+      // if(taskId==0)
+      // {
+      //   printf("array[%d]: ",i);
+      //   for(int j=0;j<i;j++)
+      //   {
+      //     printf("%.f ",r_mul_result[j]);
+      //   }
+      //   printf("\n");
+      // }
+      // __bang_reduce_sum(i_temp1, r_mul_result, r_temp1, i, i);
+      // if(taskId==0)
+      // {
+      //   printf("a = %.f\n",r_temp);
+      //   printf("b = ");
+      //   for(int j=0;j<i;j++)
+      //   {
+      //     printf("%.f ",i_temp1[j]);
+      //   }
+      //   printf("\n");
+      // }
 
       __bang_mul(r_mul_result, i_nram_src2, i_nram_src1 + j * height, i);
       __bang_mul(i_mul_result, i_nram_src2, r_nram_src1 + j * height, i);

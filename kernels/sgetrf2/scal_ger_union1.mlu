@@ -26,10 +26,7 @@
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 
-#define N 16
-#define MAX_NRAM_ROW 1024
-#define MAX_SRAM_ROW 16000
-#define MAX_SRAM_ROW_PER_CORE 4000
+#define N 8
 #define MAX_M_SIZE 1024
 
 #define MAX_M_SIZE_PIVOT 512
@@ -1727,8 +1724,8 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
     mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
     // int seg = CEILDIV(mp, MAX_M_SIZE_COMPLEX_PIVOT);
     // seg = seg == 0 ? 1 : 1;
-    int k=0;
-    if (mp>0) {
+    int k = 0;
+    if (mp > 0) {
       int m_per_core = mp;
       const int m_per_core_ = m_per_core;
 

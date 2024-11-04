@@ -30,7 +30,7 @@
 #include "core/type.h"
 #include "kernels/unary_op/unary_op_host.h"
 
-mluOpStatus_t MLUOP_WIN_API mluOpGetLUWorkspaceSize(
+mluOpStatus_t MLUOP_WIN_API mluOpGetSgetrf2WorkspaceSize(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc,
     size_t *workspace_size) {
   PARAM_CHECK("mluOpSgetrf2", x_desc != NULL);
