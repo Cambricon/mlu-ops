@@ -215,7 +215,7 @@ __mlu_func__ void nms_detection(
 
     // suppress max_box's score as -inf
     if (!__is_mpu()) {
-      input_data_score[global_max_index] = IN_DT(-INFINITY);
+      storeGpr(input_data_score + global_max_index, IN_DT(-INFINITY));
     }
 
     // prepare box1, also is the max_box
@@ -233,7 +233,7 @@ __mlu_func__ void nms_detection(
     // angle
     if (!__is_mpu()) {
       __bang_write_value((float *)box1 + 4 * max_seg_iou_pad, max_seg_iou_pad,
-                         float(input_angle_ptr[global_max_index]));
+                         (float)loadGpr(input_angle_ptr + global_max_index));
     }
 
     // box1 5xN
@@ -438,34 +438,42 @@ __mlu_global__ void MLUKernelNmsRotated(const T *boxes, T *input_boxes,
   int32_t output_box_num = 0;
   int32_t cluster_score_size = box_num * sizeof(T);
   int32_t cluster_boxes_size = box_num * SINGLE_BOX_DIM * sizeof(T);
+  T *scores_data_sram = NULL;
+  T *boxes_data_sram = NULL;
 
   if (clusterDim == 1 &&
       (SIZE_SRAM_BUF - REDUCE_NUM * sizeof(T)) > cluster_score_size) {
-    scores_data = sram + REDUCE_NUM * coreDim;
+    scores_data_sram = sram + REDUCE_NUM * coreDim;
     scores_load_dir = SRAM2NRAM;
     scores_store_dir = NRAM2SRAM;
     if (__is_mpu()) {
-      __memcpy(scores_data, scores, cluster_score_size, GDRAM2SRAM);
+      __memcpy(scores_data_sram, scores, cluster_score_size, GDRAM2SRAM);
     }
   } else {
     if (taskId == 0) {
       __memcpy(scores_data, scores, cluster_score_size, GDRAM2GDRAM);
     }
   }
-
   if (clusterDim == 1 && (SIZE_SRAM_BUF - REDUCE_NUM * sizeof(T) -
                           cluster_score_size) >= cluster_boxes_size) {
     boxes_load_dir = SRAM2NRAM;
-    boxes_data = sram + REDUCE_NUM * coreDim + box_num;
+    boxes_data_sram = sram + REDUCE_NUM * coreDim + box_num;
     if (__is_mpu()) {
-      __memcpy(boxes_data, input_boxes, cluster_boxes_size, GDRAM2SRAM);
+      __memcpy(boxes_data_sram, input_boxes, cluster_boxes_size, GDRAM2SRAM);
     }
   }
   __sync_cluster();
 
-  nms_detection(output_box_num, output, scores_data, boxes_data, sram, taskDim,
-                box_num, iou_threshold, scores_load_dir, scores_store_dir,
-                boxes_load_dir, exit);
+  if (clusterDim == 1 && (SIZE_SRAM_BUF - REDUCE_NUM * sizeof(T) -
+                          cluster_score_size) >= cluster_boxes_size) {
+    nms_detection(output_box_num, output, scores_data_sram, boxes_data_sram,
+                  sram, taskDim, box_num, iou_threshold, scores_load_dir,
+                  scores_store_dir, boxes_load_dir, exit);
+  } else {
+    nms_detection(output_box_num, output, scores_data, boxes_data, sram,
+                  taskDim, box_num, iou_threshold, scores_load_dir,
+                  scores_store_dir, boxes_load_dir, exit);
+  }
 
   result_num[0] = output_box_num;
   // PERF_TIME_END();

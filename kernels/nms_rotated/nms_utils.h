@@ -44,6 +44,42 @@ __nram__ int16_t table_half[TABLE_LENGTH] = {0, static_cast<int16_t>(0xffff)};
 __nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename IN_DT>
+__mlu_func__ IN_DT loadGpr(IN_DT *p_value) {
+  bool b = __is_dram(p_value);
+  if (std::is_same<IN_DT, half>::value) {
+    if (b) {
+      return __load_gdram((half *)p_value);
+    } else {
+      return __load_sram((half *)p_value);
+    }
+  } else {
+    if (b) {
+      return __load_gdram((float *)p_value);
+    } else {
+      return __load_sram((float *)p_value);
+    }
+  }
+}
+
+template <typename IN_DT>
+__mlu_func__ void storeGpr(IN_DT *dst, IN_DT p_value) {
+  bool b = __is_dram(dst);
+  if (std::is_same<IN_DT, half>::value) {
+    if (b) {
+      __store_gdram((half *)dst, (half)p_value);
+    } else {
+      __store_sram((half *)dst, (half)p_value);
+    }
+  } else {
+    if (b) {
+      __store_gdram((float *)dst, (float)p_value);
+    } else {
+      __store_sram((float *)dst, (float)p_value);
+    }
+  }
+}
+
+template <typename IN_DT>
 __mlu_func__ void findCoreMaxBox(
     IN_DT *input_score_ptr, IN_DT *score, IN_DT *temp, IN_DT *max_box,
     const IN_DT *input_x1_ptr, const IN_DT *input_y1_ptr,
@@ -88,10 +124,10 @@ __mlu_func__ void findCoreMaxBox(
     }
   }  // for repeat
   // the max box's x1, y1, x2, y2 on every core
-  max_box[1] = input_x1_ptr[max_index];
-  max_box[2] = input_y1_ptr[max_index];
-  max_box[3] = input_x2_ptr[max_index];
-  max_box[4] = input_y2_ptr[max_index];
+  max_box[1] = loadGpr(input_x1_ptr + max_index);
+  max_box[2] = loadGpr(input_y1_ptr + max_index);
+  max_box[3] = loadGpr(input_x2_ptr + max_index);
+  max_box[4] = loadGpr(input_y2_ptr + max_index);
   ((uint32_t *)(max_box + 5))[0] = max_index;
 }
 
