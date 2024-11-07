@@ -313,7 +313,7 @@ struct mluOpTensorDescriptorQueueStruct {
   // cleanup headers
   ~mluOpTensorDescriptorQueueStruct() {
     for (auto header : headers) {
-      delete[] header;
+      free(header);
     }
   }
 
@@ -323,15 +323,15 @@ struct mluOpTensorDescriptorQueueStruct {
   }
   inline void unlock() { flag.clear(std::memory_order_release); }
   inline void extend(size_t n) {
-    mluOpTensorStruct *header = new (std::nothrow) mluOpTensorStruct[n];
+    auto header = malloc(sizeof(mluOpTensorStruct) * n);
     for (size_t i = 0; i < n; ++i) {
-      queue.push_front(header + i);
+      queue.push_front((mluOpTensorDescriptor_t)header + i);
     }
     headers.push_back(header);
   }
   size_t extend_num = 128;
   std::deque<mluOpTensorDescriptor_t> queue;
-  std::vector<mluOpTensorStruct *> headers;
+  std::vector<void *> headers;
   std::atomic_flag flag = ATOMIC_FLAG_INIT;
 };
 
