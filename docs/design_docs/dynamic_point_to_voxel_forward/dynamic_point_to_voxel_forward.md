@@ -76,9 +76,9 @@ grid\_z = round((coors\_z\_max - coors\_z\_min) / voxel\_z)
 
 利用点云的位置信息可进一步获取其在三维空间中对应的体素坐标。其计算公式如下:
 
-1）feats: [N, C], 表示有 N 个点云数据，每个点云有 C 个特征；
+1）`feats`: [N, C], 表示有 N 个点云数据，每个点云有 C 个特征；
 
-2）point_coors: [N, 3], 表示 N 个点云数据对应在三维空间中具体坐标信息；
+2）`point_coors`: [N, 3], 表示 N 个点云数据对应在三维空间中具体坐标信息，`feats`与`coors` 中数据是一一对应的
 
 将点云所在三维空间坐标信息转为三维体素网格坐标，则该点所在体素坐标 (c_x, c_y, c_z) 的计算公式为：
 
@@ -100,39 +100,56 @@ c\_z = floorf((point_coors[idx][2] - coors\_z\_min) / voxel\_z)
 1）对 `coors` 体素坐标进行有效值检查，如果 `coors` 中 x、y、z 的值有一个小于 0 则都赋值为 -1;
 
 ```c++
-coors: [[-3,5,2],[-2,1,4],[6,7,8],[2,4,6]]
+coors: [[-3,5,2],[-2,1,4],[6,7,8],[6,7,8],[2,4,6]]
 result:
-coors: [[-1,-1,-1],[-1,-1,-1],[6,7,8],[2,4,6]]
+coors: [[-1,-1,-1],[-1,-1,-1],[6,7,8],[6,7,8],[2,4,6]]
 ```
 
 2）将体素坐标 `coors` 进行排序、去重，得到新的体素坐标 `voxel_coors`; 保存去重后体素的个数 num_voxels 到 `voxel_num`; 保存 `coors` 中每个体素坐标在 `voxel_coors` 中对应的索引到 `point2voxel_map`; 保存 `voxel_coors` 中每个体素坐标在 `coors` 中出现的个数到 `voxel_points_count`;
 
  ![point2voxel](./point2voxel.png) 
 
+该步骤其实是 `unique` 操作：
+- `mode = sort`
+- `input` 为 `coors`
+- `output` 为 `voxel_coors`
+- `indices` 为 `point2voxel_map`
+- `count` 为 `voxel_num`
+
  ```c++
- coors: [[-1,-1,-1],[-1,-1,-1],[6,7,8],[2,4,6]]
+ coors: [[-1,-1,-1],[-1,-1,-1],[6,7,8],[6,7,8],[2,4,6]]
+
  result:
- voxel_coors: [[-1,-1,-1],[6,7,8],[2,4,6]]
- point2voxel_map:[0,0,1,2]
- voxel_points_count: [2,1,1]
+ voxel_coors: [[-1,-1,-1],[2,4,6],[6,7,8]]  // 坐标 coors 进行排序、去重
+ point2voxel_map:[0,0,2,1,1]                // 记录 coors 中元素在 voxel_coors 中的 idx
+ voxel_points_count: [2,1,2]                // 记录 voxel_coors 每个元素的 count
  voxel_num:[3]
  ```
 
-3）如果 `voxel_coors[0][0]` 小于 0，则对 2）中输出进行修整;
+3）如果 `voxel_coors[i,:], i=0,1,2,...` 中包含小于 `0` 元素，则删除 `voxel_coors[i,:]` 以及 `voxel_points_count` 中对应 `count`，同时 `point2voxel_map -= 1`
 
 ```c++
-voxel_coors: [[-1,-1,-1],[6,7,8],[2,4,6]]
-point2voxel_map:[0,0,1,2]
-voxel_points_count: [2,1,1]
-voxel_num:[3]
 result:
-voxel_coors: [[6,7,8],[2,4,6]]
-point2voxel_map:[-1,-1,0,1]
-voxel_points_count: [1,1]
+voxel_coors: [[2,4,6],[6,7,8]]
+point2voxel_map:[-1,-1,1,1,0]
+voxel_points_count: [1,2]
 voxel_num:[2]
 ```
 
 4）遍历 `feats` 中每个点，在特征维度上，对每个值根据 `reduce_type` 的方法进行计算，将结果保存到 `voxel_feats` 中; 当 `reduce_type` = `max`, 在特征维度上对每个值取最大的值; 当 `reduce_type` = `mean`, 将特征维度每个值都累加到 `voxel_feats` 对应位置中，再利用 `voxel_points_count` 获取该体素位置在原始体素中出现的个数，再对 `voxel_feats` 的特征维度求平均。
+
+```c++
+coors: [[-1,-1,-1],[-1,-1,-1],[6,7,8],[6,7,8],[2,4,6]]
+voxel_coors: [[2,4,6],[6,7,8]]
+point2voxel_map:[-1,-1,1,1,0]
+
+// point2voxel_map 中 0,1 为-1，表示该位置 feats 数据无效
+// 以 reduce_type=max 为例:
+//    voxel_feats[0] 为 point2voxel_map 中 0 值对应的 feats 进行reduce
+//    voxel_feats[1] 为 point2voxel_map 中 1 值对应的 feats 进行reduce
+voxel_feats[0, i] = max(feats[2,i], feats[3,i]) 
+voxel_feats[1]    = feats[4]                          
+```
 
 - #### nan/inf
 
