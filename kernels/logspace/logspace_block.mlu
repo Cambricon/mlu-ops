@@ -117,6 +117,11 @@ __mlu_func__ void dealBase0(const float start, const float end,
       setResult(res + numbers_form_start_to_0, steps - numbers_form_start_to_0,
                 (T)0);
     }
+    int index_y_closest_to_0 = (0 - start) / steps;
+    float y_closest_to_0 = start + index_y_closest_to_0 * steps;
+    if (floor(y_closest_to_0) == y_closest_to_0) {
+      setResult(res + index_y_closest_to_0, 1, (T)1);
+    }
   } else {
     float step = (float)(end - start) / (steps - 1);
     float base_start = powf(0, start + step * 0);
@@ -332,7 +337,7 @@ __mlu_global__ void MLUKernelLogspace(const float start, const float end,
   float scalar_start = (T)start;
   float scalar_end = (T)end;
   if (steps == 1) {
-    dealStep1(scalar_start, base, res);
+    dealStep1(start, base, res);
   } else if ((scalar_start == 0 && scalar_end == 0) || base == 1 ||
              (abs(scalar_start) == INFINITY) || (abs(scalar_end) == INFINITY)) {
     dealAllResultsOneOrNanOrHalfSpecial(scalar_start, scalar_end, steps, base,
