@@ -117,10 +117,12 @@ __mlu_func__ void dealBase0(const float start, const float end,
       setResult(res + numbers_form_start_to_0, steps - numbers_form_start_to_0,
                 (T)0);
     }
-    int index_y_closest_to_0 = (0 - start) / steps;
-    float y_closest_to_0 = start + index_y_closest_to_0 * steps;
-    if (floor(y_closest_to_0) == y_closest_to_0) {
-      setResult(res + index_y_closest_to_0, 1, (T)1);
+    float index_y_closest_to_0 = (0 - start) / steps;
+    if (floor(index_y_closest_to_0) == index_y_closest_to_0) {
+      float y_closest_to_0 = start + (int)index_y_closest_to_0 * steps;
+      if (floor(y_closest_to_0) == y_closest_to_0) {
+        setResult(res + (int)index_y_closest_to_0, 1, (T)1);
+      }
     }
   } else {
     float step = (float)(end - start) / (steps - 1);
