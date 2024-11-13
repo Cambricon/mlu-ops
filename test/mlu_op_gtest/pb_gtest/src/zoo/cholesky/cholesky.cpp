@@ -28,7 +28,7 @@ namespace mluoptest {
 
 void CholeskyExecutor::paramCheck() {
   if (parser_->getInputNum() != 1) {
-    LOG(ERROR) << "cholesky input number is wrong. ";
+    LOG(ERROR) << "cholesky  input number is wrong. ";
   }
   if (parser_->getOutputNum() != 1) {
     LOG(ERROR) << "cholesky output number is wrong. ";

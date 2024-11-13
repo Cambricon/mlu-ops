@@ -76,7 +76,7 @@ mluOpStatus_t sgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k,
                     float* d_b, int ldb, int stride_b, float* d_c, int ldc,
                     int stride_c, mluOpHandle_t handle, float* workspace);
 
-// side:true->right
+// side: true->right
 //     false->left
 mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n,
                     float* d_a, int ldda, float* d_b, int lddb,
