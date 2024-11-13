@@ -89,7 +89,7 @@ static void indiceConvFilterGencase(
   GEN_CASE_DATA_REAL(false, "diff_w", filters_grad, filters_grad_desc);
   GEN_CASE_OP_PARAM_SINGLE(0, "indice_convolution_backward", "inverse",
                            inverse);
-  GEN_CASE_OP_PARAM_SINGLE(1, "indice_convolution_backward", "subm", subm);
+  GEN_CASE_OP_PARAM_SINGLE(1, "indice_convolution_backward", "sub_m", subm);
   GEN_CASE_OP_PARAM_ARRAY(1, "indice_convolution_backward", "indice_num",
                           indice_num, indice_pairs_desc->dims[0]);
   GEN_CASE_HANDLE_PARAM();
