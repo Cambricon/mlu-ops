@@ -45,15 +45,15 @@ __nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename IN_DT>
 __mlu_func__ IN_DT loadGpr(IN_DT *p_value) {
-  bool b = __is_dram(p_value);
+  bool is_dram = __is_dram(p_value);
   if (std::is_same<IN_DT, half>::value) {
-    if (b) {
+    if (is_dram) {
       return __load_gdram((half *)p_value);
     } else {
       return __load_sram((half *)p_value);
     }
   } else {
-    if (b) {
+    if (is_dram) {
       return __load_gdram((float *)p_value);
     } else {
       return __load_sram((float *)p_value);
