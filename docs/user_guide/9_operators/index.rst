@@ -793,7 +793,7 @@ mluOpLgamma
 
 - ``x`` 为输入张量。
 
-.. cholesky::
+.. Sgetrf2::
 
 mluOpSgetrf2
 ---------------

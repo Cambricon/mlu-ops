@@ -14465,7 +14465,6 @@ mluOpExecFFT(mluOpHandle_t handle,
  * @par Reference.
  * - None.
  */
-<<<<<<< HEAD
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
 
@@ -14524,15 +14523,89 @@ mluOpLgamma(mluOpHandle_t handle,
             const mluOpTensorDescriptor_t y_desc,
             void *y);
 
-=======
->>>>>>> [WIP] add new operator LU factorization
-=======
-=======
 /*!
- * @brief Calculates the size of the workspace required for the LU decomposition and initializes a workspace pointer. 
- * This function must be called before performing LU decomposition using mluOpCholesky.
-=======
->>>>>>> [Fix](mluOpSgetrf2): fix some bugs, reset workspace and update docs
+ * @brief Calculates the size of the workspace required for the LU decomposition and initializes a workspace pointer.
+ * This function must be called before performing LU decomposition using mluOpSgetrf2.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ * queues in the deformable convolution backward data operation. For detailed information,
+ * see ::mluOpHandle_t.
+ *
+ * @param[in] input_desc
+ * The descriptor for the input tensor for which the LU decomposition will be performed.
+ *
+ * @param[out] workspace_size
+ * Pointer to a variable where the size of the required workspace will be stored.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS if the workspace size is successfully calculated and the workspace is successfully
+ * allocated,
+ * - ::MLUOP_STATUS_EXECUTION_FAILED if there are issues during the calculation or memory allocation.
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - The supported combinations of data types are shown below:
+ * - size_t(size)
+ *
+ * @par Scale Limitation
+ * - The dimension of input tensor must be either 2, 3 or 4.
+ *
+ * @par API Dependency
+ * - The allocated extra workspace should be passed to ::mluOpSgetrf2 to perform the LU operation.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetSgetrf2WorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc, size_t *workspace_size);
+/*!
+ * @brief Computes the LU decomposition of a matrix using the input tensor descriptor \p input_desc and writes the
+ result to the output tensor descriptor \p output_desc.
+
+ * @param[in] handle
+ *   Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ *   queues in the deformable convolution backward data operation. For detailed information,
+ *   see ::mluOpHandle_t.
+ *
+ * @param[in] x_desc
+ *   The descriptor of the input tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ *
+ * @param[in] x
+ *   Pointer to the MLU memory that stores the input tensor.
+ *
+ * @param[in] y_desc
+ *   The descriptor of the output tensor. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ *
+ * @param[out] y
+ *   Pointer to the MLU memory that stores the output tensor.
+ *
+ * @param[in, out] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the
+ * ::mluOpSgetrf2.
+ *
+ * @param[in, out] ipiv
+ * INTEGER array, dimension (m);
+ * The pivot indices; row i of the matrix was interchanged with row IPIV(i)
+ *
+ * @param[out] info
+ *     -     = 0:  successful exit
+ *     -     < 0:  if INFO = -i, the i-th argument had an illegal value
+ *                 or another error occured, such as memory allocation failed.
+ *     -     > 0:  if INFO = i, U(i,i) is exactly zero. The factorization
+ *                 has been completed, but the factor U is exactly
+ *                 singular, and division by zero will occur if it is used
+ *                 to solve a system of equations.
  *
  * @param[in] mode
  *   option to perform operation with pivoting/no pivoting versions
