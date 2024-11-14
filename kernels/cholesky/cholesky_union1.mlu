@@ -23,6 +23,9 @@
 
 #include "cholesky.h"
 #include <cmath>
+#include <cstdio>
+#include <algorithm>
+#include <string>
 
 unsigned int next_power_of_2(unsigned int n) {
   if (n == 0) {
@@ -163,7 +166,7 @@ static __mlu_func__ void spotf2_sminout_fixsize_device(int m, float* A,
 
     factor = diag[iter * POTF_NB + iter];
     if (factor <= 0) {
-      printf("The input matrix is not positive definite.\n");
+      VLOG(1) << "The input matrix is not positive definite.\n";
       exit(-1);
     }
     factor = std::sqrt(factor);
@@ -254,7 +257,7 @@ static __mlu_func__ void spotf2_sminout_anysize_device(int m, float* A,
   for (int iter = 0; iter < iter_num; iter++) {
     factor = A[iter * lda + iter];
     if (factor <= 0) {
-      printf("The input matrix is not positive definite.\n");
+      VLOG(1) << "The input matrix is not positive definite.\n";
       exit(-1);
     }
     factor = sqrt(factor);
@@ -414,7 +417,7 @@ __mlu_func__ void small_sminout_batch(int m, int width, float* dst,
   for (int iter = 0; iter < width; iter++) {
     factor = diag[iter * width + iter];
     if (factor <= 0) {
-      printf("The input matrix is not positive definite.\n");
+      VLOG(1) << "The input matrix is not positive definite.\n";
       exit(-1);
     }
     factor = sqrt(factor);
@@ -845,24 +848,26 @@ mluOpStatus_t sgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k,
   int requested_algo_count = 1, return_algo_count = 0;
   size_t workspace_size;
 
-  cnnlGetStrideBatchMatMulAlgoHeuristic(
+  cnnlGetStrideBatchMatMulAlgoHeuristic_v2(
       cnnl_handle, stride_bmm_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc,
-      cnnl_d_desc, trans_a, trans_b, false, &(alpha), &(beta), m, n, k, lda,
-      ldb, ldc, batch_size_arr, stride_a_arr, stride_b_arr, stride_c_arr,
-      nullptr, requested_algo_count, &heuristic_result, &return_algo_count);
+      cnnl_d_desc, trans_a, trans_b,  &(alpha), &(beta), m, n, k, lda,
+      ldb, ldc, ldc, batch_size_arr, stride_a_arr, stride_b_arr, stride_c_arr,
+      stride_c_arr, nullptr, requested_algo_count, &heuristic_result,
+      &return_algo_count);
 
   cnnlGetStrideBatchMatMulHeuristicResult(heuristic_result, &algo,
                                           &workspace_size);
 
   if (workspace_size > 0) {
-    VLOG(0) << "sgemm workspace size:" << workspace_size;
+    VLOG(1) << "sgemm workspace size:" << workspace_size;
   }
 
-  CALL_CNNL(cnnlStrideBatchMatMul_v2(
-      cnnl_handle, stride_bmm_desc, algo, trans_a, trans_b, false, m, n, k,
+  CALL_CNNL(cnnlStrideBatchMatMul_v3(
+      cnnl_handle, stride_bmm_desc, algo, trans_a, trans_b, m, n, k,
       batch_size_arr, &(alpha), cnnl_a_desc, d_a, lda, stride_a_arr,
       cnnl_b_desc, d_b, ldb, stride_b_arr, &(beta), cnnl_c_desc, d_c, ldc,
-      stride_c_arr, cnnl_d_desc, d_c, workspace, workspace_size));
+      stride_c_arr, workspace, workspace_size, cnnl_d_desc, d_c, ldc,
+      stride_c_arr));
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -1069,7 +1074,9 @@ mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n,
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_b_desc, cnnl_b_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(info_desc, cnnl_info_desc);
 
-  float* sgemm_workspace = workspace + batch * m * m;
+  float* temp_result = workspace + batch * m * m*2;
+  float* sgemm_workspace = temp_result + batch * m * n*2;
+
   CNRT_CHECK(cnrtMemset(workspace, 0.0, batch * m * m * sizeof(float)));
 
   float* h_i;
@@ -1120,9 +1127,20 @@ mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n,
         sgemm_workspace);
   cnrtQueueSync(queue);
 
-  cnnlStrideBatchMatMul(cnnl_handle, false, true, n, m, m, batch, 1.0,
-                        cnnl_b_desc, d_b, ldb, stride, cnnl_a_desc, workspace,
-                        m, m * m, 0.0f, cnnl_b_desc, d_b, ldb, stride);
+  sgemm(batch, false, true, n, m, m, 1.0f, 0.0f, d_b, ldb, stride,
+        workspace, m, m * m, temp_result, m, m*n, handle, sgemm_workspace);
+
+
+
+
+  cnrtQueueSync(queue);
+
+  for (int i = 0; i < batch; i++) {
+    CNRT_CHECK(cnrtMemcpy2D(d_b + i * stride, ldb * sizeof(float),
+                            temp_result + i * m * n, m * sizeof(float),
+                            m * sizeof(float), n, CNRT_MEM_TRANS_DIR_DEV2DEV));
+  }
+  cnrtQueueSync(queue);
 
   return MLUOP_STATUS_SUCCESS;
 }
