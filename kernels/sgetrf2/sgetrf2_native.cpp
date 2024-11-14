@@ -93,17 +93,36 @@ static mluOpStatus_t trsm(mluOpHandle_t handle, mluOpDataType_t dtype,
                           int lda, float *d_b, int ldb, float *work_space,
                           cnrtQueue_t queue) {
   if (n == 0) return MLUOP_STATUS_BAD_PARAM;
-  mluOpTensorDescriptor_t matmul_a_desc, matmul_b_desc, info_desc;
-  std::string api_name = "LU";
 
   int32_t *info;
   CNRT_CHECK(cnrtMalloc((void **)&info, sizeof(int32_t)));
 
+  cnnlStrideBatchMatMulDescriptor_t matmul_desc;
+  int tf32_flag_int = 1;
+  int max_batch_dim = 1;
+  CALL_CNNL(cnnlStrideBatchMatMulDescCreate(&matmul_desc));
+  CALL_CNNL(
+      cnnlSetStrideBatchMatMulDescAttr(matmul_desc, CNNL_STRIDE_BMM_ALLOW_TF32,
+                                       &(tf32_flag_int), sizeof(int32_t)));
+  CALL_CNNL(cnnlSetStrideBatchMatMulDescAttr(
+      matmul_desc, CNNL_STRIDE_BMM_MAX_BATCH_DIM, &(max_batch_dim),
+      sizeof(int32_t)));
+
+  cnnlStrideBatchMatMulHeuristicResult_t cnnl_heuristic_result;
+  cnnlStrideBatchMatMulAlgo_t cnnl_matmul_algo;
+  CALL_CNNL(cnnlCreateStrideBatchMatMulHeuristicResult(&cnnl_heuristic_result));
+  CALL_CNNL(cnnlStrideBatchMatMulAlgoCreate(&cnnl_matmul_algo));
+
+  mluOpTensorDescriptor_t matmul_a_desc, matmul_b_desc, matmul_d_desc,
+      info_desc;
+  std::string api_name = "LU";
   CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_a_desc));
   CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_b_desc));
+  CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_d_desc));
   CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&info_desc));
   int32_t matmul_a_shape[2] = {batch * m, m};
   int32_t matmul_b_shape[2] = {batch * M, ldb};
+  int32_t matmul_d_shape[2] = {batch * M, ldb};  // not for real use
   int32_t info_shape[1] = {1};
 
   CHECK_RETURN(api_name,
@@ -113,19 +132,32 @@ static mluOpStatus_t trsm(mluOpHandle_t handle, mluOpDataType_t dtype,
                mluOpSetTensorDescriptor(matmul_b_desc, MLUOP_LAYOUT_ARRAY,
                                         MLUOP_DTYPE_FLOAT, 2, matmul_b_shape));
   CHECK_RETURN(api_name,
+               mluOpSetTensorDescriptor(matmul_d_desc, MLUOP_LAYOUT_ARRAY,
+                                        MLUOP_DTYPE_FLOAT, 2, matmul_d_shape));
+  CHECK_RETURN(api_name,
                mluOpSetTensorDescriptor(info_desc, MLUOP_LAYOUT_ARRAY,
                                         MLUOP_DTYPE_INT32, 1, info_shape));
 
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_a_desc, cnnl_a_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_b_desc, cnnl_b_desc);
+  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_d_desc, cnnl_d_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(info_desc, cnnl_info_desc);
 
   MatrixInverse(handle, dtype, batch, m, d_a, lda, M * lda, work_space, m,
                 m * m, queue);
-  cnnlStrideBatchMatMul(cnnl_handle, false, false, m, n, m, batch, 1.0,
-                        cnnl_a_desc, work_space, m, m * m, cnnl_b_desc, d_b,
-                        ldb, M * ldb, 0.0f, cnnl_b_desc, d_b, ldb, M * ldb);
+
+  const int32_t batch_size_arr[1] = {batch};
+  float alpha_gemm = 1.0f, beta_gemm = 0.0f;
+  const int64_t stride_a_arr[1] = {m * m};
+  const int64_t stride_b_arr[1] = {M * ldb};
+  const int64_t stride_c_arr[1] = {M * ldb};
+  const int64_t stride_d_arr[1] = {M * ldb};
+  cnnlStrideBatchMatMul_v3(
+      cnnl_handle, matmul_desc, cnnl_matmul_algo, false, false, m, n, m,
+      batch_size_arr, &alpha_gemm, cnnl_a_desc, work_space, m, stride_a_arr,
+      cnnl_b_desc, d_b, ldb, stride_b_arr, &beta_gemm, cnnl_b_desc, d_b, ldb,
+      stride_c_arr, NULL, 0, cnnl_d_desc, d_b, ldb, stride_d_arr);
 
   CNRT_CHECK(cnrtQueueSync(queue));
   return MLUOP_STATUS_SUCCESS;
@@ -322,7 +354,6 @@ int sgetrf2_native(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
         ctrsm(handle, dtype, batch, gbm, ldda, ib, n - j - ib, d_rA(j, j),
               d_iA(j, j), ldda, d_rA(j, j + ib), d_iA(j, j + ib), ldda,
               (float *)workspace, queue);
-        printf("gemm %d %d %d \n", m - (j + ib), n - (j + ib), ib);
         cgemm(handle, dtype, m - (j + ib), n - (j + ib), ib, batch, gbm, n,
               d_rA(ib + j, j), d_iA(ib + j, j), ldda, d_rA(j, j + ib),
               d_iA(j, j + ib), ldda, d_rA(j + ib, j + ib), d_iA(j + ib, j + ib),
