@@ -312,25 +312,7 @@ mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     size_c = output_desc->dims[1];
     ldc = output_desc->dims[2];
   }
-
-  uint64_t type_size, total_size;
-  uint64_t size_limit = 1024 * 1024 * 1024 * ((uint64_t)7);
-  uint32_t batch_limit = 16;
-  MLUOP_CHECK(mluOpGetSizeOfDataType(dtype, &type_size));
-  total_size = type_size * size_a * lda * ((uint64_t)batch_size);
-  PARAM_CHECK("mluOpCholesky", total_size < size_limit);
-  if (type_size == 8 && batch_size > batch_limit && size_a > 2000) {
-    int stride = 2 * size_a * lda;
-    calculate_body(handle, batch_limit, input_desc, d_input, output_desc,
-                   d_output, upper, (float*)workspace);
-    cnrtQueueSync(queue);
-    calculate_body(handle, ((uint64_t)batch_size) - batch_limit, input_desc,
-                   d_input + batch_limit * stride, output_desc,
-                   d_output + batch_limit * stride, upper, (float*)workspace);
-  } else {
-    calculate_body(handle, batch_size, input_desc, d_input, output_desc,
-                   d_output, upper, (float*)workspace);
-  }
-
+  calculate_body(handle, ((uint64_t)batch_size), input_desc, d_input,
+    output_desc, d_output, upper, (float*)workspace);
   return MLUOP_STATUS_SUCCESS;
 }
