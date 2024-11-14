@@ -166,7 +166,6 @@ static __mlu_func__ void spotf2_sminout_fixsize_device(int m, float* A,
 
     factor = diag[iter * POTF_NB + iter];
     if (factor <= 0) {
-      VLOG(1) << "The input matrix is not positive definite.\n";
       exit(-1);
     }
     factor = std::sqrt(factor);
@@ -257,7 +256,6 @@ static __mlu_func__ void spotf2_sminout_anysize_device(int m, float* A,
   for (int iter = 0; iter < iter_num; iter++) {
     factor = A[iter * lda + iter];
     if (factor <= 0) {
-      VLOG(1) << "The input matrix is not positive definite.\n";
       exit(-1);
     }
     factor = sqrt(factor);
@@ -417,7 +415,6 @@ __mlu_func__ void small_sminout_batch(int m, int width, float* dst,
   for (int iter = 0; iter < width; iter++) {
     factor = diag[iter * width + iter];
     if (factor <= 0) {
-      VLOG(1) << "The input matrix is not positive definite.\n";
       exit(-1);
     }
     factor = sqrt(factor);
@@ -1151,16 +1148,6 @@ mluOpStatus_t set_half_zero(int batch, int stride, float* d_a, int lda, int m,
   mluOpGetQueue(handle, &queue);
   cnrtDim3_t dim;
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
-  int carry_batch = 0;
-  if (batch == 1) {
-    carry_batch = 1;
-  } else if (batch == 2) {
-    carry_batch = 2;
-  } else if (batch <= 4) {
-    carry_batch = 4;
-  } else if (batch <= 8) {
-    carry_batch = 8;
-  }
   dim.x = 4 * batch;
   dim.y = 1;
   dim.z = 1;

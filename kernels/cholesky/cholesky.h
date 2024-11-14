@@ -24,8 +24,6 @@
 #ifndef __CHOLESKY_H
 #define __CHOLESKY_H
 
-#define DEBUG
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <random>
@@ -45,11 +43,13 @@
 #include "kernels/debug.h"
 #include "kernels/utils/cnnl_helper.h"
 
+#define CORE_PER_CLUSTER (4)
+
 #define CNB (32)
 #define REC_NB (16)
-#define POTF_NB ((REC_NB) / 4)
+#define POTF_NB ((REC_NB) / (CORE_PER_CLUSTER))
 #define CREC_NB (16)
-#define CPOTF_NB ((CREC_NB) / 4)
+#define CPOTF_NB ((CREC_NB) / (CORE_PER_CLUSTER))
 // #define CPOTF_NB ((CREC_NB))
 #define __CNRT_FUNC_TYPE__ CNRT_FUNC_TYPE_UNION1
 #define TASK_NUM (4)
