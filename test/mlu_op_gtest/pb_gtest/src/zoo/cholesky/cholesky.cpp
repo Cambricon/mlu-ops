@@ -31,7 +31,7 @@ void CholeskyExecutor::paramCheck() {
     LOG(ERROR) << "cholesky  input number is wrong. ";
   }
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "cholesky output number is wrong. ";
+    LOG(ERROR) << "cholesky  output number is wrong. ";
   }
   flag_quant_mode_ = NO_QUANT;
 }
