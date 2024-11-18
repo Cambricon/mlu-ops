@@ -87,10 +87,6 @@ void FftExecutor::workspaceFree() {
   workspace_.clear();
 }
 
-void FftExecutor::cpuCompute() {
-  // TODO(sunhui): use fftw? librosa? OTFFT? other thrid-party library.
-}
-
 int64_t FftExecutor::getTheoryOps() {
   auto input_tensor = tensor_desc_[0].tensor;
   auto fft_param = parser_->getProtoNode()->fft_param();
