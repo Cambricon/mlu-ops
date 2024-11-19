@@ -56,10 +56,10 @@ mluOpStatus_t mluOpBorderAlignBackward(
   PARAM_CHECK(API, argmax_idx_desc != nullptr);
   PARAM_CHECK(API, grad_input_desc != nullptr);
 
-  PARAM_CHECK(API, grad_output_desc->dim == 4);
-  PARAM_CHECK(API, boxes_desc->dim == 3);
-  PARAM_CHECK(API, argmax_idx_desc->dim == 4);
-  PARAM_CHECK(API, grad_input_desc->dim == 4);
+  PARAM_CHECK(API, grad_output_desc->getDim() == 4);
+  PARAM_CHECK(API, boxes_desc->getDim() == 3);
+  PARAM_CHECK(API, argmax_idx_desc->getDim() == 4);
+  PARAM_CHECK(API, grad_input_desc->getDim() == 4);
 
   // stride check
   STRIDE_TENSOR_CHECK("[mluOpBorderAlignBackward]:", grad_output_desc,
@@ -73,52 +73,52 @@ mluOpStatus_t mluOpBorderAlignBackward(
 
   const int32_t border_num = 4;
   const int32_t coord_num = 4;
-  const int32_t origin_n = grad_input_desc->dims[0];
-  const int32_t origin_h = grad_input_desc->dims[1];
-  const int32_t origin_w = grad_input_desc->dims[2];
-  const int32_t origin_c = grad_input_desc->dims[3] / border_num;
-  const int32_t origin_k = boxes_desc->dims[1];
+  const int32_t origin_n = grad_input_desc->getDimIndex(0);
+  const int32_t origin_h = grad_input_desc->getDimIndex(1);
+  const int32_t origin_w = grad_input_desc->getDimIndex(2);
+  const int32_t origin_c = grad_input_desc->getDimIndex(3) / border_num;
+  const int32_t origin_k = boxes_desc->getDimIndex(1);
 
-  PARAM_CHECK(API, grad_output_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                       grad_output_desc->dtype == MLUOP_DTYPE_HALF);
-  PARAM_CHECK(API, argmax_idx_desc->dtype == MLUOP_DTYPE_INT32);
-  PARAM_CHECK(API, boxes_desc->dtype == grad_output_desc->dtype);
-  PARAM_CHECK(API, grad_input_desc->dtype == grad_output_desc->dtype);
+  PARAM_CHECK(API, grad_output_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
+                       grad_output_desc->getDtype() == MLUOP_DTYPE_HALF);
+  PARAM_CHECK(API, argmax_idx_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(API, boxes_desc->getDtype() == grad_output_desc->getDtype());
+  PARAM_CHECK(API, grad_input_desc->getDtype() == grad_output_desc->getDtype());
 
-  PARAM_CHECK(API, grad_output_desc->layout == MLUOP_LAYOUT_NHWC);
-  PARAM_CHECK(API, argmax_idx_desc->layout == MLUOP_LAYOUT_NHWC);
-  PARAM_CHECK(API, grad_input_desc->layout == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(API, grad_output_desc->getLayout() == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(API, argmax_idx_desc->getLayout() == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(API, grad_input_desc->getLayout() == MLUOP_LAYOUT_NHWC);
 
-  PARAM_CHECK(API, grad_input_desc->dims[3] % 4 == 0,
+  PARAM_CHECK(API, grad_input_desc->getDimIndex(3) % 4 == 0,
               "(4 represents the number of borders).");
-  PARAM_CHECK_NE(API, grad_input_desc->dims[0], 0);
-  PARAM_CHECK_NE(API, grad_input_desc->dims[3] / 4, 0,
+  PARAM_CHECK_NE(API, grad_input_desc->getDimIndex(0), 0);
+  PARAM_CHECK_NE(API, grad_input_desc->getDimIndex(3) / 4, 0,
                  "(4 represents the number of borders).");
-  PARAM_CHECK_NE(API, grad_input_desc->dims[1], 0);
-  PARAM_CHECK_NE(API, grad_input_desc->dims[2], 0);
-  PARAM_CHECK(API, grad_input_desc->dims[1] * grad_input_desc->dims[2] ==
-                       boxes_desc->dims[1]);
-  PARAM_CHECK(API, boxes_desc->dim == 3);
-  PARAM_CHECK(API, boxes_desc->dims[2] == border_num, "(border_num = 4).");
-  PARAM_CHECK_NE(API, boxes_desc->dims[1], 0);
+  PARAM_CHECK_NE(API, grad_input_desc->getDimIndex(1), 0);
+  PARAM_CHECK_NE(API, grad_input_desc->getDimIndex(2), 0);
+  PARAM_CHECK(API, grad_input_desc->getDimIndex(1) * grad_input_desc->getDimIndex(2) ==
+                       boxes_desc->getDimIndex(1));
+  PARAM_CHECK(API, boxes_desc->getDim() == 3);
+  PARAM_CHECK(API, boxes_desc->getDimIndex(2) == border_num, "(border_num = 4).");
+  PARAM_CHECK_NE(API, boxes_desc->getDimIndex(1), 0);
   PARAM_CHECK_GT(API, pool_size, 0);
 
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[0], grad_input_desc->dims[0]);
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[1], boxes_desc->dims[1]);
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[2], border_num,
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(0), grad_input_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(1), boxes_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(2), border_num,
                  "(border_num = 4).");
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[3], grad_input_desc->dims[3] / 4,
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(3), grad_input_desc->getDimIndex(3) / 4,
                  "(4 represents the number of borders).");
 
-  PARAM_CHECK_EQ(API, boxes_desc->dims[0], grad_input_desc->dims[0]);
-  PARAM_CHECK_EQ(API, boxes_desc->dims[1], boxes_desc->dims[1]);
-  PARAM_CHECK_EQ(API, boxes_desc->dims[2], border_num, "(border_num = 4).");
+  PARAM_CHECK_EQ(API, boxes_desc->getDimIndex(0), grad_input_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, boxes_desc->getDimIndex(1), boxes_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, boxes_desc->getDimIndex(2), border_num, "(border_num = 4).");
 
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[0], grad_input_desc->dims[0]);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[1], boxes_desc->dims[1]);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[2], border_num,
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(0), grad_input_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(1), boxes_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(2), border_num,
                  "(border_num = 4).");
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[3], grad_input_desc->dims[3] / 4,
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(3), grad_input_desc->getDimIndex(3) / 4,
                  "(4 represents the number of borders).");
 
   TENSOR_NUM_CHECK(API, mluOpGetTensorElementNum(grad_output_desc),
@@ -161,7 +161,7 @@ mluOpStatus_t mluOpBorderAlignBackward(
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
   VLOG(5) << "[mluOpBorderAlignBackward] cnnlFill_v3 end.";
-  mluOpDataType_t input_dtype = grad_output_desc->dtype;
+  mluOpDataType_t input_dtype = grad_output_desc->getDtype();
 
   VLOG(5) << "Launch Kernel KernelBorderAlignBackward<<<Union"
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "

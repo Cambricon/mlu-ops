@@ -163,8 +163,8 @@ void DcnBackwardWeightExecutor::workspaceMalloc() {
         parser_->getOutputNum() == 1 ? nullptr : tensor_desc_[5].tensor;
   }
 
-  input_desc->onchip_dtype = input_onchip_dtype;
-  grad_output_desc->onchip_dtype = grad_output_onchip_dtype;
+  input_desc->setOnchipDtype(input_onchip_dtype);
+  grad_output_desc->setOnchipDtype(grad_output_onchip_dtype);
   MLUOP_CHECK(mluOpGetDCNBackwardWeightWorkspaceSize(
       handle_, dcn_desc, input_desc, offset_desc, mask_desc, grad_output_desc,
       grad_weight_desc, grad_bias_desc, &workspace_size));
@@ -191,7 +191,7 @@ void DcnBackwardWeightExecutor::compute() {
   if (dcn_param.has_compute_type()) {
     compute_type = cvtProtoDtypeToMluOp(dcn_param.compute_type());
   } else {
-    compute_type = input_desc->dtype;
+    compute_type = input_desc->getDtype();
   }
 
   mluOpDCNDescriptor_t dcn_desc = cpu_runtime_.allocate(
@@ -226,8 +226,8 @@ void DcnBackwardWeightExecutor::compute() {
         parser_->getOutputNum() == 1 ? nullptr : data_vector_[5].device_ptr;
   }
 
-  input_desc->onchip_dtype = input_onchip_dtype;
-  grad_output_desc->onchip_dtype = grad_output_onchip_dtype;
+  input_desc->setOnchipDtype(input_onchip_dtype);
+  grad_output_desc->setOnchipDtype(grad_output_onchip_dtype);
 
   VLOG(4) << "call mluOpDCNBackwardWeight()";
   interface_timer_.start();
@@ -444,15 +444,15 @@ void DcnBackwardWeightExecutor::computeDCNBackwardWeightCPU(
     const mluOpTensorDescriptor_t grad_bias_desc, void *cpu_grad_bias,
     float *buffer, int pad[], int stride[], int dilation[],
     int64_t &theory_ops) {
-  const int N = input_desc->dims[0];
-  const int hi = input_desc->dims[1];
-  const int wi = input_desc->dims[2];
-  const int ci = input_desc->dims[3];
-  const int ho = offset_desc->dims[1];
-  const int wo = offset_desc->dims[2];
-  const int co = grad_output_desc->dims[3];
-  const int kh = grad_weight_desc->dims[1];
-  const int kw = grad_weight_desc->dims[2];
+  const int N = input_desc->getDimIndex(0);
+  const int hi = input_desc->getDimIndex(1);
+  const int wi = input_desc->getDimIndex(2);
+  const int ci = input_desc->getDimIndex(3);
+  const int ho = offset_desc->getDimIndex(1);
+  const int wo = offset_desc->getDimIndex(2);
+  const int co = grad_output_desc->getDimIndex(3);
+  const int kh = grad_weight_desc->getDimIndex(1);
+  const int kw = grad_weight_desc->getDimIndex(2);
   const int pt = pad[0];
   const int pb = pad[1];
   const int pl = pad[2];
@@ -579,12 +579,12 @@ void DcnBackwardWeightExecutor::cpuCompute() {
         parser_->getOutputNum() == 1 ? nullptr : cpu_fp32_output_[1];
   }
 
-  const int ho = offset_desc->dims[1];
-  const int wo = offset_desc->dims[2];
-  const int kh = grad_weight_desc->dims[1];
-  const int kw = grad_weight_desc->dims[2];
-  const int ci = input_desc->dims[3];
-  const int co = grad_output_desc->dims[3];
+  const int ho = offset_desc->getDimIndex(1);
+  const int wo = offset_desc->getDimIndex(2);
+  const int kh = grad_weight_desc->getDimIndex(1);
+  const int kw = grad_weight_desc->getDimIndex(2);
+  const int ci = input_desc->getDimIndex(3);
+  const int co = grad_output_desc->getDimIndex(3);
 
   size_t cpu_buffer_size = 0;
   if (g == 1) {
@@ -634,15 +634,15 @@ int64_t DcnBackwardWeightExecutor::getTheoryOps() {
       grad_bias_desc =
           parser_->getOutputNum() == 1 ? nullptr : tensor_desc_[5].tensor;
     }
-    const int N = input_desc->dims[0];
-    const int hi = input_desc->dims[1];
-    const int wi = input_desc->dims[2];
-    const int ci = input_desc->dims[3];
-    const int ho = offset_desc->dims[1];
-    const int wo = offset_desc->dims[2];
-    const int co = grad_output_desc->dims[3];
-    const int kh = grad_weight_desc->dims[1];
-    const int kw = grad_weight_desc->dims[2];
+    const int N = input_desc->getDimIndex(0);
+    const int hi = input_desc->getDimIndex(1);
+    const int wi = input_desc->getDimIndex(2);
+    const int ci = input_desc->getDimIndex(3);
+    const int ho = offset_desc->getDimIndex(1);
+    const int wo = offset_desc->getDimIndex(2);
+    const int co = grad_output_desc->getDimIndex(3);
+    const int kh = grad_weight_desc->getDimIndex(1);
+    const int kw = grad_weight_desc->getDimIndex(2);
     int coeff = getCoefficientOfLT2CT();
     const int k = im2col_step * ho * wo;
     const int m = co / g;

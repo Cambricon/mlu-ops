@@ -2400,11 +2400,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
   }
 
   // dimension check
-  fft_plan->idim = input_desc->dim;
-  fft_plan->odim = output_desc->dim;
+  fft_plan->idim = input_desc->getDim();
+  fft_plan->odim = output_desc->getDim();
   fft_plan->inum = mluOpGetTensorElementNum(input_desc);
   fft_plan->onum = mluOpGetTensorElementNum(output_desc);
-  PARAM_CHECK_GT(make_plan_api, input_desc->dim, 0);
+  PARAM_CHECK_GT(make_plan_api, input_desc->getDim(), 0);
   PARAM_CHECK_EQ(make_plan_api, fft_plan->idim, fft_plan->odim,
                  ": input and output dimension mismatch.");
 
@@ -2419,8 +2419,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
   if (fft_plan->idim == rank) {
     fft_plan->batch = 1;
   } else {  // idim == rank + 1
-    fft_plan->batch = input_desc->dims[0];
-    PARAM_CHECK_EQ(make_plan_api, fft_plan->batch, output_desc->dims[0],
+    fft_plan->batch = input_desc->getDimIndex(0);
+    PARAM_CHECK_EQ(make_plan_api, fft_plan->batch, output_desc->getDimIndex(0),
                    ": batch size mismatch.");
   }
 
@@ -2440,8 +2440,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
   // data layout with tensor dim strides. 2-D and 3-D should pay attention.
   // stride check, if an in-place fft is adopted check, `istride` should be
   // equal to `ostride`.
-  fft_plan->istride = input_desc->strides[fft_plan->idim - 1];
-  fft_plan->ostride = output_desc->strides[fft_plan->odim - 1];
+  fft_plan->istride = input_desc->getStrideIndex(fft_plan->idim - 1);
+  fft_plan->ostride = output_desc->getStrideIndex(fft_plan->odim - 1);
 
   PARAM_CHECK_GE(make_plan_api, fft_plan->istride, 0,
                  ": input stride should be greater than or equal to 0.");
@@ -2449,18 +2449,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
                  ": output stride should be greater than or equal to 0.");
 
   for (auto i = 0; i < fft_plan->rank; i++) {
-    fft_plan->inembed[i] = input_desc->dims[fft_plan->idim - rank + i];
-    fft_plan->onembed[i] = output_desc->dims[fft_plan->odim - rank + i];
+    fft_plan->inembed[i] = input_desc->getDimIndex(fft_plan->idim - rank + i);
+    fft_plan->onembed[i] = output_desc->getDimIndex(fft_plan->odim - rank + i);
   }
   for (auto i = 0; i < fft_plan->idim; i++) {
-    fft_plan->in_stride[i] = input_desc->strides[i];
+    fft_plan->in_stride[i] = input_desc->getStrideIndex(i);
   }
   for (auto i = 0; i < fft_plan->odim; i++) {
-    fft_plan->out_stride[i] = output_desc->strides[i];
+    fft_plan->out_stride[i] = output_desc->getStrideIndex(i);
   }
   if (fft_plan->idim == rank + 1) {
-    fft_plan->idist = input_desc->strides[0];
-    fft_plan->odist = output_desc->strides[0];
+    fft_plan->idist = input_desc->getStrideIndex(0);
+    fft_plan->odist = output_desc->getStrideIndex(0);
   } else {  // batch == 1
     fft_plan->idist = mluOpGetTensorElementNum(input_desc) / fft_plan->batch;
     fft_plan->odist = mluOpGetTensorElementNum(output_desc) / fft_plan->batch;
@@ -2470,8 +2470,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       !mluop::ifNeedTensorStrideProcess(output_desc);
 
   // dtype check
-  mluOpDataType_t input_dtype = input_desc->dtype;
-  mluOpDataType_t output_dtype = output_desc->dtype;
+  mluOpDataType_t input_dtype = input_desc->getDtype();
+  mluOpDataType_t output_dtype = output_desc->getDtype();
   const mluOpDataType_t f_c_dtype = MLUOP_DTYPE_COMPLEX_FLOAT;
   const mluOpDataType_t f_r_dtype = MLUOP_DTYPE_FLOAT;
   const mluOpDataType_t hf_c_dtype = MLUOP_DTYPE_COMPLEX_HALF;
@@ -2497,9 +2497,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  fft_plan->input_dtype = input_desc->dtype;
-  fft_plan->output_dtype = output_desc->dtype;
-  fft_plan->execution_dtype = input_desc->onchip_dtype;
+  fft_plan->input_dtype = input_desc->getDtype();
+  fft_plan->output_dtype = output_desc->getDtype();
+  fft_plan->execution_dtype = input_desc->getOnchipDtype();
 
   VLOG(5) << "input data type: "
           << mluOpGetNameOfDataType(fft_plan->input_dtype);
@@ -2617,17 +2617,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
                                     MLUOP_STATUS_SUCCESS);
   INTERNAL_CHECK(make_plan_api,
                  mluOpSetTensorDescriptorEx_v2(
-                     fft_input_desc, input_desc->layout, input_desc->dtype,
-                     input_desc->dim, input_desc->dims,
-                     input_desc->strides) == MLUOP_STATUS_SUCCESS);
+                     fft_input_desc, input_desc->getLayout(), input_desc->getDtype(),
+                     input_desc->getDim(), input_desc->getDims(),
+                     input_desc->getStrides()) == MLUOP_STATUS_SUCCESS);
   INTERNAL_CHECK(make_plan_api, mluOpSetTensorDescriptorOnchipDataType(
-                                    fft_input_desc, input_desc->onchip_dtype) ==
+                                    fft_input_desc, input_desc->getOnchipDtype()) ==
                                     MLUOP_STATUS_SUCCESS);
   INTERNAL_CHECK(make_plan_api,
                  mluOpSetTensorDescriptorEx_v2(
-                     fft_output_desc, output_desc->layout, output_desc->dtype,
-                     output_desc->dim, output_desc->dims,
-                     output_desc->strides) == MLUOP_STATUS_SUCCESS);
+                     fft_output_desc, output_desc->getLayout(), output_desc->getDtype(),
+                     output_desc->getDim(), output_desc->getDims(),
+                     output_desc->getStrides()) == MLUOP_STATUS_SUCCESS);
   fft_plan->input_desc = fft_input_desc;
   fft_plan->output_desc = fft_output_desc;
 

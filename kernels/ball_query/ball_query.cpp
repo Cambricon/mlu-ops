@@ -51,7 +51,7 @@ void policyFuncBallQuery(const mluOpHandle_t &handle,
   size_t core_in_cluster = handle->core_num_per_cluster;
   VLOG(5) << "In current device, core_in_cluster:" << core_in_cluster;
 
-  size_t total_data_num = desc->total_element_num;
+  size_t total_data_num = desc->getTotalElementNum();
 
   // On a core, a lot of new_xyz data element can be stored; but only one data
   // element can be processed at a time. So a cluster can only process four data
@@ -84,21 +84,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   PARAM_CHECK("[mluOpBallQuery]", idx_desc != NULL);
 
   // check dims
-  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->dim == 3);
-  PARAM_CHECK("[mluOpBallQuery]", xyz_desc->dim == 3);
-  PARAM_CHECK("[mluOpBallQuery]", idx_desc->dim == 3);
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->getDim() == 3);
+  PARAM_CHECK("[mluOpBallQuery]", xyz_desc->getDim() == 3);
+  PARAM_CHECK("[mluOpBallQuery]", idx_desc->getDim() == 3);
 
   // check dim0
-  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->dims[0] == xyz_desc->dims[0]);
-  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->dims[0] == idx_desc->dims[0]);
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->getDimIndex(0) == xyz_desc->getDimIndex(0));
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->getDimIndex(0) == idx_desc->getDimIndex(0));
 
   // check dim1
-  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->dims[1] == idx_desc->dims[1]);
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->getDimIndex(1) == idx_desc->getDimIndex(1));
 
   // check dim2
-  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->dims[2] == 3);
-  PARAM_CHECK("[mluOpBallQuery]", xyz_desc->dims[2] == 3);
-  PARAM_CHECK("[mluOpBallQuery]", idx_desc->dims[2] == nsample);
+  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->getDimIndex(2) == 3);
+  PARAM_CHECK("[mluOpBallQuery]", xyz_desc->getDimIndex(2) == 3);
+  PARAM_CHECK("[mluOpBallQuery]", idx_desc->getDimIndex(2) == nsample);
 
   // check stride
   STRIDE_TENSOR_CHECK("[mluOpBallQuery]:", new_xyz_desc,
@@ -109,18 +109,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
                       "idx_desc must be contiguous");
 
   // check dtype
-  if (!isSupportType(new_xyz_desc->dtype, support_type, 2)) {
+  if (!isSupportType(new_xyz_desc->getDtype(), support_type, 2)) {
     LOG(ERROR) << "[mluOpBallQuery]:Only half and float are supported in input "
                   "new_xyz tensor, but the data type of tensor is "
-               << mluOpGetNameOfDataType(new_xyz_desc->dtype) << ".";
+               << mluOpGetNameOfDataType(new_xyz_desc->getDtype()) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  PARAM_CHECK_EQ("[mluOpBallQuery]", new_xyz_desc->dtype, xyz_desc->dtype);
+  PARAM_CHECK_EQ("[mluOpBallQuery]", new_xyz_desc->getDtype(), xyz_desc->getDtype());
 
-  if (idx_desc->dtype != MLUOP_DTYPE_INT32) {
+  if (idx_desc->getDtype() != MLUOP_DTYPE_INT32) {
     LOG(ERROR) << "[mluOpBallQuery]:Only int32 is supportedin output idx, but "
                   "data type of tensor is "
-               << mluOpGetNameOfDataType(idx_desc->dtype) << ".";
+               << mluOpGetNameOfDataType(idx_desc->getDtype()) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -155,17 +155,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   if (mluOpGetTensorElementNum(new_xyz_desc) == 0) {
     VLOG(5) << "[mluOpBallQuery] new_xyz tensor is a zero element tensor. The "
                "shape of new_xyz tensor is ["
-            << new_xyz_desc->dims[0] << ", " << new_xyz_desc->dims[1] << ", "
-            << new_xyz_desc->dims[2] << "].";
+            << new_xyz_desc->getDimIndex(0) << ", " << new_xyz_desc->getDimIndex(1) << ", "
+            << new_xyz_desc->getDimIndex(2) << "].";
     return MLUOP_STATUS_BAD_PARAM;
   }
   // the shape of xyz is [b, n, 3]. currently only n equal to 0 is supported
-  if (xyz_desc->dims[1] == 0) {
+  if (xyz_desc->getDimIndex(1) == 0) {
     return MLUOP_STATUS_SUCCESS;
   }
   // the shape of idx is [b, m, nsample]. currently only nsample equal to 0 is
   // supported
-  if (idx_desc->dims[2] == 0) {
+  if (idx_desc->getDimIndex(2) == 0) {
     return MLUOP_STATUS_SUCCESS;
   }
 
@@ -191,10 +191,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   policyFuncBallQuery(handle, new_xyz_desc, &k_dim, &k_type);
 
   // launch kernel
-  uint32_t b = new_xyz_desc->dims[0];
-  uint32_t m = new_xyz_desc->dims[1];
-  uint32_t n = xyz_desc->dims[1];
-  mluOpDataType_t d_type = new_xyz_desc->dtype;
+  uint32_t b = new_xyz_desc->getDimIndex(0);
+  uint32_t m = new_xyz_desc->getDimIndex(1);
+  uint32_t n = xyz_desc->getDimIndex(1);
+  mluOpDataType_t d_type = new_xyz_desc->getDtype();
   VLOG(5) << "[mluOpBallQuery] launch kernel KernelBallQuery[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "]";
   CHECK_RETURN(

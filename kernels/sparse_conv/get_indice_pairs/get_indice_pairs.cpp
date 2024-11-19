@@ -104,19 +104,19 @@ static mluOpStatus_t internalGetIndicePairs(
 
   // indices  indice_pairs out_indices indice_num
   // tensor dim check
-  PARAM_CHECK(interface_name, indices_desc->dim == 2);
-  PARAM_CHECK(interface_name, indice_pairs_desc->dim == 3);
-  PARAM_CHECK(interface_name, out_indices_desc->dim == 2);
-  PARAM_CHECK(interface_name, indice_num_desc->dim == 1);
-  PARAM_CHECK(interface_name, indices_desc->dims[1] == 4);
-  PARAM_CHECK(interface_name, out_indices_desc->dims[1] == 4);
-  PARAM_CHECK(interface_name, indice_pairs_desc->dims[1] == 2);
+  PARAM_CHECK(interface_name, indices_desc->getDim() == 2);
+  PARAM_CHECK(interface_name, indice_pairs_desc->getDim() == 3);
+  PARAM_CHECK(interface_name, out_indices_desc->getDim() == 2);
+  PARAM_CHECK(interface_name, indice_num_desc->getDim() == 1);
+  PARAM_CHECK(interface_name, indices_desc->getDimIndex(1) == 4);
+  PARAM_CHECK(interface_name, out_indices_desc->getDimIndex(1) == 4);
+  PARAM_CHECK(interface_name, indice_pairs_desc->getDimIndex(1) == 2);
 
   // check shape
   PARAM_CHECK(interface_name,
-              indice_pairs_desc->dims[2] == indices_desc->dims[0]);
+              indice_pairs_desc->getDimIndex(2) == indices_desc->getDimIndex(0));
   PARAM_CHECK(interface_name,
-              indice_pairs_desc->dims[0] == indice_num_desc->dims[0]);
+              indice_pairs_desc->getDimIndex(0) == indice_num_desc->getDimIndex(0));
   int kernel_volume = 1;
   for (int i = 0; i < sparse_conv_dimNb - 2; i++) {
     kernel_volume *= sparse_conv_desc->filter_space[i];
@@ -127,7 +127,7 @@ static mluOpStatus_t internalGetIndicePairs(
     output_spaces *= sparse_conv_desc->output_space[i];
     input_spaces *= sparse_conv_desc->input_space[i];
   }
-  PARAM_CHECK_LE(interface_name, indices_desc->dims[0], input_spaces);
+  PARAM_CHECK_LE(interface_name, indices_desc->getDimIndex(0), input_spaces);
   for (int i = 0; i < sparse_conv_dimNb - 2; i++) {
     std::string i_str = "i: " + std::to_string(i) + ".";
     PARAM_CHECK_V2(interface_name, sparse_conv_desc->pad[i] >= 0, << i_str);
@@ -142,9 +142,9 @@ static mluOpStatus_t internalGetIndicePairs(
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  PARAM_CHECK(interface_name, indice_pairs_desc->dims[0] == kernel_volume);
+  PARAM_CHECK(interface_name, indice_pairs_desc->getDimIndex(0) == kernel_volume);
   PARAM_CHECK_LE(interface_name, kernel_volume, 4096);
-  PARAM_CHECK_LE(interface_name, out_indices_desc->dims[0], output_spaces);
+  PARAM_CHECK_LE(interface_name, out_indices_desc->getDimIndex(0), output_spaces);
 
   // check stride
   STRIDE_TENSOR_CHECK("[mluOpGetIndicesPairs]:", indices_desc,
@@ -157,7 +157,7 @@ static mluOpStatus_t internalGetIndicePairs(
                       "indice_num_desc must be contiguous");
 
   // large tensor
-  PARAM_CHECK_LE(interface_name, indices_desc->dims[0],
+  PARAM_CHECK_LE(interface_name, indices_desc->getDimIndex(0),
                  INDICE_IN_LARGE_TENSOR_NUM);
   if (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(out_indices_desc) >= LARGE_TENSOR_NUM ||
@@ -169,10 +169,10 @@ static mluOpStatus_t internalGetIndicePairs(
   }
 
   // tensor  datatype check
-  PARAM_CHECK_EQ(interface_name, indices_desc->dtype, MLUOP_DTYPE_INT32);
-  PARAM_CHECK_EQ(interface_name, indice_pairs_desc->dtype, MLUOP_DTYPE_INT32);
-  PARAM_CHECK_EQ(interface_name, out_indices_desc->dtype, MLUOP_DTYPE_INT32);
-  PARAM_CHECK_EQ(interface_name, indice_num_desc->dtype, MLUOP_DTYPE_INT32);
+  PARAM_CHECK_EQ(interface_name, indices_desc->getDtype(), MLUOP_DTYPE_INT32);
+  PARAM_CHECK_EQ(interface_name, indice_pairs_desc->getDtype(), MLUOP_DTYPE_INT32);
+  PARAM_CHECK_EQ(interface_name, out_indices_desc->getDtype(), MLUOP_DTYPE_INT32);
+  PARAM_CHECK_EQ(interface_name, indice_num_desc->getDtype(), MLUOP_DTYPE_INT32);
   // special check
   int sub_m = sparse_conv_desc->sub_m;
   if (sub_m) {

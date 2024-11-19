@@ -66,18 +66,18 @@ static mluOpStatus_t yoloBoxParamCheck(
   PARAM_CHECK(op_name, scores_desc != NULL);
 
   // check shape
-  PARAM_CHECK(op_name, x_desc->dim == 4);
-  PARAM_CHECK(op_name, img_size_desc->dim == 2);
-  PARAM_CHECK(op_name, anchors_desc->dim == 1);
-  PARAM_CHECK(op_name, boxes_desc->dim == 4);
-  PARAM_CHECK(op_name, scores_desc->dim == 4);
+  PARAM_CHECK(op_name, x_desc->getDim() == 4);
+  PARAM_CHECK(op_name, img_size_desc->getDim() == 2);
+  PARAM_CHECK(op_name, anchors_desc->getDim() == 1);
+  PARAM_CHECK(op_name, boxes_desc->getDim() == 4);
+  PARAM_CHECK(op_name, scores_desc->getDim() == 4);
 
   // check data type
-  PARAM_CHECK(op_name, x_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(op_name, img_size_desc->dtype == MLUOP_DTYPE_INT32);
-  PARAM_CHECK(op_name, anchors_desc->dtype == MLUOP_DTYPE_INT32);
-  PARAM_CHECK(op_name, boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(op_name, scores_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, x_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, img_size_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(op_name, anchors_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(op_name, boxes_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, scores_desc->getDtype() == MLUOP_DTYPE_FLOAT);
 
   // check param except tensor
   if (iou_aware) {
@@ -89,13 +89,13 @@ static mluOpStatus_t yoloBoxParamCheck(
   }
 
   // check dim
-  PARAM_CHECK(op_name, (x_desc->dims[0] == img_size_desc->dims[0]));
-  PARAM_CHECK(op_name, (x_desc->dims[0] == boxes_desc->dims[0]));
-  PARAM_CHECK(op_name, (x_desc->dims[0] == scores_desc->dims[0]));
+  PARAM_CHECK(op_name, (x_desc->getDimIndex(0) == img_size_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name, (x_desc->getDimIndex(0) == boxes_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name, (x_desc->getDimIndex(0) == scores_desc->getDimIndex(0)));
 
-  const int anchors_num = anchors_desc->dims[0] / 2;
-  std::string anchors_num_str = "anchors_num = anchors_desc->dims[0] / 2.";
-  PARAM_CHECK(op_name, (anchors_desc->dims[0] % 2 == 0));
+  const int anchors_num = anchors_desc->getDimIndex(0) / 2;
+  std::string anchors_num_str = "anchors_num = anchors_desc->getDimIndex(0) / 2.";
+  PARAM_CHECK(op_name, (anchors_desc->getDimIndex(0) % 2 == 0));
   PARAM_CHECK_V2(op_name, anchors_num > 0, << anchors_num_str);
   PARAM_CHECK(op_name, class_num > 0);
 
@@ -106,18 +106,18 @@ static mluOpStatus_t yoloBoxParamCheck(
 
   const int dim_c =
       iou_aware ? anchors_num * (6 + class_num) : anchors_num * (5 + class_num);
-  PARAM_CHECK(op_name, (x_desc->dims[1] == dim_c));
-  PARAM_CHECK(op_name, (img_size_desc->dims[1] == 2));
-  PARAM_CHECK_V2(op_name, (boxes_desc->dims[1] == anchors_num),
+  PARAM_CHECK(op_name, (x_desc->getDimIndex(1) == dim_c));
+  PARAM_CHECK(op_name, (img_size_desc->getDimIndex(1) == 2));
+  PARAM_CHECK_V2(op_name, (boxes_desc->getDimIndex(1) == anchors_num),
                  << anchors_num_str);
-  PARAM_CHECK(op_name, (boxes_desc->dims[2] == 4));
+  PARAM_CHECK(op_name, (boxes_desc->getDimIndex(2) == 4));
   PARAM_CHECK(op_name,
-              (boxes_desc->dims[3] == (x_desc->dims[2] * x_desc->dims[3])));
-  PARAM_CHECK_V2(op_name, (scores_desc->dims[1] == anchors_num),
+              (boxes_desc->getDimIndex(3) == (x_desc->getDimIndex(2) * x_desc->getDimIndex(3))));
+  PARAM_CHECK_V2(op_name, (scores_desc->getDimIndex(1) == anchors_num),
                  << anchors_num_str);
-  PARAM_CHECK(op_name, (scores_desc->dims[2] == class_num));
+  PARAM_CHECK(op_name, (scores_desc->getDimIndex(2) == class_num));
   PARAM_CHECK(op_name,
-              (scores_desc->dims[3] == (x_desc->dims[2] * x_desc->dims[3])));
+              (scores_desc->getDimIndex(3) == (x_desc->getDimIndex(2) * x_desc->getDimIndex(3))));
 
   // large tensor
   if ((mluOpGetTensorElementNum(x_desc) >= LARGE_TENSOR_NUM) ||
@@ -199,11 +199,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpYoloBox(
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
 
-  const int n_in = x_desc->dims[0];
-  const int c_in = x_desc->dims[1];
-  const int h_in = x_desc->dims[2];
-  const int w_in = x_desc->dims[3];
-  const int anchor_s = anchors_desc->dims[0] / 2;
+  const int n_in = x_desc->getDimIndex(0);
+  const int c_in = x_desc->getDimIndex(1);
+  const int h_in = x_desc->getDimIndex(2);
+  const int w_in = x_desc->getDimIndex(3);
+  const int anchor_s = anchors_desc->getDimIndex(0) / 2;
   const int kw_num = h_in * w_in;
 
   cnrtDim3_t k_dim;

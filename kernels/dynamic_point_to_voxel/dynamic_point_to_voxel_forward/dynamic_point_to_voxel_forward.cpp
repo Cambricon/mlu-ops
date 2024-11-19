@@ -97,13 +97,13 @@ static mluOpStatus_t DynamicPointToVoxelForwardParamCheck(
   PARAM_CHECK(api, voxel_points_count_desc != NULL);
   PARAM_CHECK(api, voxel_num_desc != NULL);
   // check shape
-  PARAM_CHECK(api, feats_desc->dim == 2);
-  PARAM_CHECK(api, coors_desc->dim == 2);
-  PARAM_CHECK(api, voxel_feats_desc->dim == 2);
-  PARAM_CHECK(api, voxel_coors_desc->dim == 2);
-  PARAM_CHECK(api, point2voxel_map_desc->dim == 1);
-  PARAM_CHECK(api, voxel_points_count_desc->dim == 1);
-  PARAM_CHECK(api, voxel_num_desc->dim == 1);
+  PARAM_CHECK(api, feats_desc->getDim() == 2);
+  PARAM_CHECK(api, coors_desc->getDim() == 2);
+  PARAM_CHECK(api, voxel_feats_desc->getDim() == 2);
+  PARAM_CHECK(api, voxel_coors_desc->getDim() == 2);
+  PARAM_CHECK(api, point2voxel_map_desc->getDim() == 1);
+  PARAM_CHECK(api, voxel_points_count_desc->getDim() == 1);
+  PARAM_CHECK(api, voxel_num_desc->getDim() == 1);
   // check stride
   STRIDE_TENSOR_CHECK(api + ":", feats_desc, "feats_desc must be contiguous");
   STRIDE_TENSOR_CHECK(api + ":", coors_desc, "coors_desc must be contiguous");
@@ -118,25 +118,25 @@ static mluOpStatus_t DynamicPointToVoxelForwardParamCheck(
   STRIDE_TENSOR_CHECK(api + ":", voxel_num_desc,
                       "voxel_num_desc must be contiguous");
   // check data type
-  PARAM_CHECK_V2(api, (feats_desc->dtype == MLUOP_DTYPE_FLOAT),
+  PARAM_CHECK_V2(api, (feats_desc->getDtype() == MLUOP_DTYPE_FLOAT),
                  "Only float are supported in feats tensor, but the data "
                  "type of tensor is "
-                     << mluOpGetNameOfDataType(feats_desc->dtype) << ".");
-  PARAM_CHECK_V2(api, (coors_desc->dtype == MLUOP_DTYPE_INT32),
+                     << mluOpGetNameOfDataType(feats_desc->getDtype()) << ".");
+  PARAM_CHECK_V2(api, (coors_desc->getDtype() == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in coors tensor, but the data "
                  "type of tensor is "
-                     << mluOpGetNameOfDataType(coors_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(coors_desc->getDtype()) << ".");
   PARAM_CHECK_V2(
-      api, (point2voxel_map_desc->dtype == MLUOP_DTYPE_INT32),
+      api, (point2voxel_map_desc->getDtype() == MLUOP_DTYPE_INT32),
       "Only int32 are supported in point2voxel_map tensor, but the data "
       "type of tensor is "
-          << mluOpGetNameOfDataType(point2voxel_map_desc->dtype) << ".");
+          << mluOpGetNameOfDataType(point2voxel_map_desc->getDtype()) << ".");
 
-  PARAM_CHECK(api, voxel_feats_desc->dtype == feats_desc->dtype);
-  PARAM_CHECK(api, voxel_coors_desc->dtype == coors_desc->dtype);
+  PARAM_CHECK(api, voxel_feats_desc->getDtype() == feats_desc->getDtype());
+  PARAM_CHECK(api, voxel_coors_desc->getDtype() == coors_desc->getDtype());
   PARAM_CHECK(api,
-              voxel_points_count_desc->dtype == point2voxel_map_desc->dtype);
-  PARAM_CHECK(api, voxel_num_desc->dtype == point2voxel_map_desc->dtype);
+              voxel_points_count_desc->getDtype() == point2voxel_map_desc->getDtype());
+  PARAM_CHECK(api, voxel_num_desc->getDtype() == point2voxel_map_desc->getDtype());
 
   if (reduce_type != MLUOP_REDUCE_DMAX && reduce_type != MLUOP_REDUCE_DMEAN) {
     LOG(ERROR) << api << "Only support max and mean. "
@@ -145,16 +145,16 @@ static mluOpStatus_t DynamicPointToVoxelForwardParamCheck(
   }
 
   // check dim
-  PARAM_CHECK(api, feats_desc->dims[0] == coors_desc->dims[0]);
-  PARAM_CHECK(api, feats_desc->dims[0] == point2voxel_map_desc->dims[0]);
-  PARAM_CHECK(api, voxel_feats_desc->dims[0] == voxel_coors_desc->dims[0]);
+  PARAM_CHECK(api, feats_desc->getDimIndex(0) == coors_desc->getDimIndex(0));
+  PARAM_CHECK(api, feats_desc->getDimIndex(0) == point2voxel_map_desc->getDimIndex(0));
+  PARAM_CHECK(api, voxel_feats_desc->getDimIndex(0) == voxel_coors_desc->getDimIndex(0));
   PARAM_CHECK(api,
-              voxel_feats_desc->dims[0] == voxel_points_count_desc->dims[0]);
-  PARAM_CHECK(api, voxel_num_desc->dims[0] == 1);
-  PARAM_CHECK(api, feats_desc->dims[1] == voxel_feats_desc->dims[1]);
-  PARAM_CHECK(api, coors_desc->dims[1] == voxel_coors_desc->dims[1]);
-  PARAM_CHECK(api, coors_desc->dims[1] == 3);
-  PARAM_CHECK(api, feats_desc->dims[0] >= voxel_feats_desc->dims[0]);
+              voxel_feats_desc->getDimIndex(0) == voxel_points_count_desc->getDimIndex(0));
+  PARAM_CHECK(api, voxel_num_desc->getDimIndex(0) == 1);
+  PARAM_CHECK(api, feats_desc->getDimIndex(1) == voxel_feats_desc->getDimIndex(1));
+  PARAM_CHECK(api, coors_desc->getDimIndex(1) == voxel_coors_desc->getDimIndex(1));
+  PARAM_CHECK(api, coors_desc->getDimIndex(1) == 3);
+  PARAM_CHECK(api, feats_desc->getDimIndex(0) >= voxel_feats_desc->getDimIndex(0));
 
   // check large tensor
   const size_t feats_element_num = mluOpGetTensorElementNum(feats_desc);
@@ -273,8 +273,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
 
-  const int num_points = feats_desc->dims[0];
-  const int num_feats = feats_desc->dims[1];
+  const int num_points = feats_desc->getDimIndex(0);
+  const int num_feats = feats_desc->getDimIndex(1);
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFuncDynamicPointToVoxelForward(handle, &k_dim, &k_type, num_points);

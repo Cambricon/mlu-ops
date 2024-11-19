@@ -60,14 +60,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMoeDispatchBackwardGateWorkspaceSize(
   PARAM_CHECK("[mluOpMoeDispatchBackwardGate]", input_desc != NULL);
   PARAM_CHECK("[mluOpMoeDispatchBackwardGate]", workspace_size != NULL);
 
-  int samples = input_desc->dims[0];
+  int samples = input_desc->getDimIndex(0);
   *workspace_size = 0;
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFunc(handle, samples, &k_dim, &k_type);
   int taskNum = k_dim.x * k_dim.y * k_dim.z;
   if ((samples > 0) && (samples < taskNum)) {
-    *workspace_size = taskNum * mluop::getSizeOfDataType(input_desc->dtype);
+    *workspace_size = taskNum * mluop::getSizeOfDataType(input_desc->getDtype());
   }
 
   return MLUOP_STATUS_SUCCESS;
@@ -99,42 +99,42 @@ static mluOpStatus_t moeDispatchBackwardGateParamCheck(
   PARAM_CHECK(op_name, grad_gates_desc != NULL);
 
   // check shape
-  PARAM_CHECK(op_name, indices_desc->dim == 1);
-  PARAM_CHECK(op_name, locations_desc->dim == 1);
-  PARAM_CHECK(op_name, input_desc->dim == 2);
-  PARAM_CHECK(op_name, dispatch_desc->dim == 2);
-  PARAM_CHECK(op_name, grad_gates_desc->dim == 1);
+  PARAM_CHECK(op_name, indices_desc->getDim() == 1);
+  PARAM_CHECK(op_name, locations_desc->getDim() == 1);
+  PARAM_CHECK(op_name, input_desc->getDim() == 2);
+  PARAM_CHECK(op_name, dispatch_desc->getDim() == 2);
+  PARAM_CHECK(op_name, grad_gates_desc->getDim() == 1);
 
   // check data type
-  PARAM_CHECK_V2(op_name, (indices_desc->dtype == MLUOP_DTYPE_INT32),
+  PARAM_CHECK_V2(op_name, (indices_desc->getDtype() == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in indices tensor, but the data "
                  "type of tensor is "
-                     << mluOpGetNameOfDataType(indices_desc->dtype) << ".");
-  PARAM_CHECK_V2(op_name, (locations_desc->dtype == MLUOP_DTYPE_INT32),
+                     << mluOpGetNameOfDataType(indices_desc->getDtype()) << ".");
+  PARAM_CHECK_V2(op_name, (locations_desc->getDtype() == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in locations tensor, but the data "
                  "type of tensor is "
-                     << mluOpGetNameOfDataType(locations_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(locations_desc->getDtype()) << ".");
 
   // check tensor datatype, support float32
-  PARAM_CHECK_V2(op_name, (input_desc->dtype == MLUOP_DTYPE_FLOAT),
+  PARAM_CHECK_V2(op_name, (input_desc->getDtype() == MLUOP_DTYPE_FLOAT),
                  "Only float are supported in input tensor, but the "
                  "data type of tensor is "
-                     << mluOpGetNameOfDataType(input_desc->dtype) << ".");
-  PARAM_CHECK(op_name, input_desc->dtype == dispatch_desc->dtype);
-  PARAM_CHECK(op_name, input_desc->dtype == grad_gates_desc->dtype);
+                     << mluOpGetNameOfDataType(input_desc->getDtype()) << ".");
+  PARAM_CHECK(op_name, input_desc->getDtype() == dispatch_desc->getDtype());
+  PARAM_CHECK(op_name, input_desc->getDtype() == grad_gates_desc->getDtype());
 
   // check dim
   PARAM_CHECK(op_name, samples >= 0);
   PARAM_CHECK(op_name, capacity >= 0);
   PARAM_CHECK(op_name, hidden >= 0);
   PARAM_CHECK(op_name, num_experts >= 0);
-  PARAM_CHECK(op_name, (samples == indices_desc->dims[0]));
-  PARAM_CHECK(op_name, (samples == locations_desc->dims[0]));
-  PARAM_CHECK(op_name, (samples == input_desc->dims[0]));
-  PARAM_CHECK(op_name, (samples == grad_gates_desc->dims[0]));
-  PARAM_CHECK(op_name, ((num_experts * capacity) == dispatch_desc->dims[0]));
-  PARAM_CHECK(op_name, (hidden == input_desc->dims[1]));
-  PARAM_CHECK(op_name, (hidden == dispatch_desc->dims[1]));
+  PARAM_CHECK(op_name, (samples == indices_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name, (samples == locations_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name, (samples == input_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name, (samples == grad_gates_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name, ((num_experts * capacity) == dispatch_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name, (hidden == input_desc->getDimIndex(1)));
+  PARAM_CHECK(op_name, (hidden == dispatch_desc->getDimIndex(1)));
 
   // check stride
   STRIDE_TENSOR_CHECK(op_name + ":", indices_desc,
@@ -249,7 +249,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardGate(
   VLOG(5) << "Launch Kernel mluOpMoeDispatchBackwardGate<<<Union"
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
-  mluOpDataType_t data_type = input_desc->dtype;
+  mluOpDataType_t data_type = input_desc->getDtype();
   uint32_t taskNum = k_dim.x * k_dim.y * k_dim.z;
   if (samples <= taskNum) {
     VLOG(5) << "[mluOpMoeDispatchBackwardGate] launch "

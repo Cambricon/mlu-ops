@@ -57,10 +57,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetNmsRotatedWorkspaceSize(
   PARAM_CHECK("[mluOpGetNmsRotatedWorkspaceSize]", handle != nullptr);
   PARAM_CHECK("[mluOpGetNmsRotatedWorkspaceSize]", boxes_desc != nullptr);
   PARAM_CHECK("[mluOpGetNmsRotatedWorkspaceSize]", workspace_size != nullptr);
-  const uint64_t box_num = boxes_desc->dims[0];
-  const uint64_t box_dim = boxes_desc->dims[1];
+  const uint64_t box_num = boxes_desc->getDimIndex(0);
+  const uint64_t box_dim = boxes_desc->getDimIndex(1);
   uint64_t total_num = box_num * box_dim + box_num;
-  *workspace_size = total_num * mluop::getSizeOfDataType(boxes_desc->dtype);
+  *workspace_size = total_num * mluop::getSizeOfDataType(boxes_desc->getDtype());
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -78,14 +78,14 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   PARAM_CHECK("[mluOpNmsRotated]", output_desc != NULL);
 
   // datatype check
-  PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK_EQ("[mluOpNmsRotated]", boxes_desc->dtype, scores_desc->dtype);
-  PARAM_CHECK("[mluOpNmsRotated]", output_desc->dtype == MLUOP_DTYPE_INT32);
+  PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK_EQ("[mluOpNmsRotated]", boxes_desc->getDtype(), scores_desc->getDtype());
+  PARAM_CHECK("[mluOpNmsRotated]", output_desc->getDtype() == MLUOP_DTYPE_INT32);
 
   // dims and shape check
-  PARAM_CHECK_EQ("[mluOpNmsRotated]", boxes_desc->dim, 2);
-  PARAM_CHECK_EQ("[mluOpNmsRotated]", scores_desc->dim, 1);
-  PARAM_CHECK_EQ("[mluOpNmsRotated]", output_desc->dim, 1);
+  PARAM_CHECK_EQ("[mluOpNmsRotated]", boxes_desc->getDim(), 2);
+  PARAM_CHECK_EQ("[mluOpNmsRotated]", scores_desc->getDim(), 1);
+  PARAM_CHECK_EQ("[mluOpNmsRotated]", output_desc->getDim(), 1);
 
   // stride check
   STRIDE_TENSOR_CHECK("[mluOpNmsRotated]:", boxes_desc,
@@ -95,20 +95,20 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   STRIDE_TENSOR_CHECK("[mluOpNmsRotated]:", output_desc,
                       "output_desc must be contiguous");
 
-  PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->dims[0] == scores_desc->dims[0]);
-  PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->dims[0] == output_desc->dims[0]);
-  if (boxes_desc->dims[1] != SINGLE_BOX_DIM &&
-      boxes_desc->dims[1] != (SINGLE_BOX_DIM + 1)) {
+  PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->getDimIndex(0) == scores_desc->getDimIndex(0));
+  PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->getDimIndex(0) == output_desc->getDimIndex(0));
+  if (boxes_desc->getDimIndex(1) != SINGLE_BOX_DIM &&
+      boxes_desc->getDimIndex(1) != (SINGLE_BOX_DIM + 1)) {
     LOG(ERROR) << "[mluOpNmsRotated] Check failed: The Boxes' last dimenstion "
                   "should be 5 or 6. Now is "
-               << boxes_desc->dims[1] << ".";
+               << boxes_desc->getDimIndex(1) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   const uint64_t tensor_boxes_num = mluOpGetTensorElementNum(boxes_desc);
   TENSOR_NUM_CHECK("[mluOpNmsRotated]", tensor_boxes_num, LARGE_TENSOR_NUM, "");
   // 0-element check, after dim and shape check
-  if (boxes_desc->dims[0] == 0) {
+  if (boxes_desc->getDimIndex(0) == 0) {
     VLOG(5) << "[mluOpNmsRotated] Skip zero element boxes.";
     return MLUOP_STATUS_SUCCESS;
   }
@@ -140,8 +140,8 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
     p = INFINITY;
   }
 
-  int32_t box_num = boxes_desc->dims[0];
-  int32_t box_dim = boxes_desc->dims[1];
+  int32_t box_num = boxes_desc->getDimIndex(0);
+  int32_t box_dim = boxes_desc->getDimIndex(1);
   // Choose the best task dimension.
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
@@ -151,7 +151,7 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   int8_t *box_workspace = (int8_t *)workspace;
   int8_t *scores_workspace =
       box_workspace +
-      mluop::getSizeOfDataType(boxes_desc->dtype) * box_num * box_dim;
+      mluop::getSizeOfDataType(boxes_desc->getDtype()) * box_num * box_dim;
 
   VLOG(5) << "[mluOpNmsRotated] launch kernel [" << k_dim.x << ", " << k_dim.y
           << ", " << k_dim.z << "].";

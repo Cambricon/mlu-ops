@@ -101,8 +101,8 @@ void DcnBackwardDataExecutor::workspaceMalloc() {
   grad_offset_desc_ = parser_->outputs()[1].tensor;
   grad_mask_desc_ = use_grad_mask_ ? parser_->outputs()[2].tensor : nullptr;
 
-  grad_output_desc_->onchip_dtype = grad_output_oc_dt_;
-  weight_desc_->onchip_dtype = weight_oc_dt_;
+  grad_output_desc_->setOnchipDtype(grad_output_oc_dt_);
+  weight_desc_->setOnchipDtype(weight_oc_dt_);
 
   dcn_desc_ = cpu_runtime_.allocate(mluOpCreateDCNDescriptor,
                                     mluOpDestroyDCNDescriptor);
@@ -153,8 +153,8 @@ void DcnBackwardDataExecutor::compute() {
   void *dev_grad_mask =
       use_mask_ ? data_vector_[6 + use_mask_].device_ptr : nullptr;
 
-  grad_output_desc_->onchip_dtype = grad_output_oc_dt_;
-  weight_desc_->onchip_dtype = weight_oc_dt_;
+  grad_output_desc_->setOnchipDtype(grad_output_oc_dt_);
+  weight_desc_->setOnchipDtype(weight_oc_dt_);
 
   VLOG(4) << "call mluOpDCNBackwardData()";
   interface_timer_.start();

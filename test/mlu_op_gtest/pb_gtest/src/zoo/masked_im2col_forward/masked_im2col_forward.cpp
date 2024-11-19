@@ -47,11 +47,11 @@ void MaskedIm2colForwardExecutor::paramCheck() {
 void MaskedIm2colForwardExecutor::init() {
   auto input_desc = tensor_desc_[0].tensor;
   auto mask_desc = tensor_desc_[1].tensor;
-  batchs_ = input_desc->dims[0];
-  channels_ = input_desc->dims[1];
-  height_ = input_desc->dims[2];
-  width_ = input_desc->dims[3];
-  mask_cnt_ = mask_desc->dims[0];
+  batchs_ = input_desc->getDimIndex(0);
+  channels_ = input_desc->getDimIndex(1);
+  height_ = input_desc->getDimIndex(2);
+  width_ = input_desc->getDimIndex(3);
+  mask_cnt_ = mask_desc->getDimIndex(0);
   auto masked_im2col_forward_proto_desc =
       parser_->getProtoNode()->masked_im2col_forward_param();
   kernel_h = masked_im2col_forward_proto_desc.kernel_h();

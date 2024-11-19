@@ -170,7 +170,7 @@ mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   } else if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type) &&
-             c_desc->dtype == MLUOP_DTYPE_HALF) {
+             c_desc->getDtype() == MLUOP_DTYPE_HALF) {
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   } else {
@@ -316,7 +316,7 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   } else if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type) &&
-             c_desc->dtype == MLUOP_DTYPE_HALF) {
+             c_desc->getDtype() == MLUOP_DTYPE_HALF) {
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
   } else {
@@ -367,7 +367,7 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
     CALL_CNNL(cnnlMatMulDescDestroy(matmul_desc));
     CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo));
   } else {
-    c_desc->onchip_dtype = MLUOP_DTYPE_FLOAT;
+    c_desc->setOnchipDtype(MLUOP_DTYPE_FLOAT);
     cnnlMatMulDescriptor_t matmul_desc;
     cnnlMatMulAlgo_t matmul_algo;
     cnnlMatMulHeuristicResult_t heuristic_result;
@@ -472,7 +472,7 @@ mluOpStatus_t fftGetBatchMatMulBcastWorkspaceSize(
   status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY, data_type, 3,
                                        c_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  c_desc->onchip_dtype = MLUOP_DTYPE_FLOAT;
+  c_desc->setOnchipDtype(MLUOP_DTYPE_FLOAT);
 
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
                                     cnnl_handle);  // convert to cnnl_handle
@@ -569,7 +569,7 @@ mluOpStatus_t fftBatchMatMulBcast(
   status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY, data_type, 3,
                                        c_dims);
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-  c_desc->onchip_dtype = MLUOP_DTYPE_FLOAT;
+  c_desc->setOnchipDtype(MLUOP_DTYPE_FLOAT);
 
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
                                     cnnl_handle);  // convert to cnnl_handle

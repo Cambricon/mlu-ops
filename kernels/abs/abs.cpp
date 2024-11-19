@@ -45,19 +45,19 @@ static mluOpStatus_t mluOpAbsParamCheck(mluOpHandle_t handle,
   PARAM_CHECK(op_name, x_desc != NULL);
   PARAM_CHECK(op_name, y_desc != NULL);
   // check dim and dtype
-  if (x_desc->dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
-    PARAM_CHECK_EQ(op_name, y_desc->dtype, MLUOP_DTYPE_FLOAT);
+  if (x_desc->getDtype() == MLUOP_DTYPE_COMPLEX_FLOAT) {
+    PARAM_CHECK_EQ(op_name, y_desc->getDtype(), MLUOP_DTYPE_FLOAT);
   } else {
-    PARAM_CHECK_EQ(op_name, x_desc->dtype, y_desc->dtype);
+    PARAM_CHECK_EQ(op_name, x_desc->getDtype(), y_desc->getDtype());
   }
-  PARAM_CHECK_EQ(op_name, x_desc->dim, y_desc->dim);
+  PARAM_CHECK_EQ(op_name, x_desc->getDim(), y_desc->getDim());
   // check data type
   mluOpStatus_t param_check;
   if (handle->arch >= MLUOP_MLU590) {
     mluOpDataType_t support_type[5] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_BFLOAT16,
                                        MLUOP_DTYPE_FLOAT, MLUOP_DTYPE_INT32,
                                        MLUOP_DTYPE_COMPLEX_FLOAT};
-    if (!isAbsSupportType(x_desc->dtype, support_type, 5)) {
+    if (!isAbsSupportType(x_desc->getDtype(), support_type, 5)) {
       LOG(ERROR) << op_name << ":x_desc's data type is not supported.";
       return MLUOP_STATUS_BAD_PARAM;
     }
@@ -65,20 +65,20 @@ static mluOpStatus_t mluOpAbsParamCheck(mluOpHandle_t handle,
     mluOpDataType_t support_type[4] = {MLUOP_DTYPE_HALF, MLUOP_DTYPE_FLOAT,
                                        MLUOP_DTYPE_INT32,
                                        MLUOP_DTYPE_COMPLEX_FLOAT};
-    if (!isAbsSupportType(x_desc->dtype, support_type, 4)) {
+    if (!isAbsSupportType(x_desc->getDtype(), support_type, 4)) {
       LOG(ERROR) << op_name << ":x_desc's data type is not supported.";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
 
-  PARAM_CHECK_GT(op_name, x_desc->dim, 0);
-  PARAM_CHECK_GT(op_name, y_desc->dim, 0);
-  for (int i = 0; i < x_desc->dim; i++) {
-    if (x_desc->dims[i] != y_desc->dims[i]) {
+  PARAM_CHECK_GT(op_name, x_desc->getDim(), 0);
+  PARAM_CHECK_GT(op_name, y_desc->getDim(), 0);
+  for (int i = 0; i < x_desc->getDim(); i++) {
+    if (x_desc->getDimIndex(i) != y_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << ":The shape of x should be equal to y"
                  << ". But now x_desc's shape[" << i << "] is "
-                 << x_desc->dims[i] << ", y_desc's shape[" << i << "] is "
-                 << y_desc->dims[i] << ".";
+                 << x_desc->getDimIndex(i) << ", y_desc's shape[" << i << "] is "
+                 << y_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -98,7 +98,7 @@ static mluOpStatus_t mluOpAbsParamCheck(mluOpHandle_t handle,
   }
 
   if (needStrideProcess(x_desc, y_desc)) {
-    PARAM_CHECK(op_name, x_desc->dim <= MLUOP_DIM_MAX);
+    PARAM_CHECK(op_name, x_desc->getDim() <= MLUOP_DIM_MAX);
     if (handle->arch < MLUOP_MLU590) {
       // num_with_stride affects offset (related with mul op, which cannot
       // exceed 32-bit on MLU300)
@@ -154,18 +154,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
   }
   if (if_stride_kernel) {
     VLOG(5) << "kernel Kernel3StagePipelineWithStrideAbs";
-    PARAM_CHECK(op_name, x_desc->dim <= MLUOP_DIM_MAX);
+    PARAM_CHECK(op_name, x_desc->getDim() <= MLUOP_DIM_MAX);
     mluop::TensorShape x_shape;
     mluop::TensorShape y_shape;
     mluop::getTensorShape(x_desc, &x_shape);
     mluop::getTensorShape(y_desc, &y_shape);
     CHECK_RETURN(op_name, Kernel3StagePipelineWithStrideAbs(
-                              k_dim, k_type, handle->queue, x_desc->dtype, x,
+                              k_dim, k_type, handle->queue, x_desc->getDtype(), x,
                               x_shape, y, y_shape, dim_x));
   } else {
     VLOG(5) << "kernel Kernel3StagePipelineAbs";
     CHECK_RETURN(op_name, Kernel3StagePipelineAbs(k_dim, k_type, handle->queue,
-                                                  x_desc->dtype, x, y, dim_x));
+                                                  x_desc->getDtype(), x, y, dim_x));
   }
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

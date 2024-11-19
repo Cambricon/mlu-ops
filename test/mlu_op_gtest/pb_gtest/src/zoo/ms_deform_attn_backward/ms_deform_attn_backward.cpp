@@ -152,15 +152,15 @@ void MsDeformAttnBackwardExecutor::cpuCompute() {
 
   mluOpTensorDescriptor_t value_desc = tensor_desc_[0].tensor;
   mluOpTensorDescriptor_t sampling_loc_desc = tensor_desc_[3].tensor;
-  const int32_t batch = value_desc->dims[0];
-  const int32_t channels = value_desc->dims[3];
+  const int32_t batch = value_desc->getDimIndex(0);
+  const int32_t channels = value_desc->getDimIndex(3);
 
-  const int32_t num_query = sampling_loc_desc->dims[1];
-  const int32_t num_heads = sampling_loc_desc->dims[2];
-  const int32_t num_levels = sampling_loc_desc->dims[3];
-  const int32_t num_point = sampling_loc_desc->dims[4];
+  const int32_t num_query = sampling_loc_desc->getDimIndex(1);
+  const int32_t num_heads = sampling_loc_desc->getDimIndex(2);
+  const int32_t num_levels = sampling_loc_desc->getDimIndex(3);
+  const int32_t num_point = sampling_loc_desc->getDimIndex(4);
   const int32_t qid_stride = num_heads * channels;
-  const int32_t spatial_size = value_desc->dims[1];
+  const int32_t spatial_size = value_desc->getDimIndex(1);
 
   const int32_t grad_weight_stride = 1;
   const int32_t grad_loc_stride = 2;
@@ -226,12 +226,12 @@ int64_t MsDeformAttnBackwardExecutor::getTheoryOps() {
   auto grad_value_desc = tensor_desc_[6].tensor;
   auto grad_sampling_loc_desc = tensor_desc_[7].tensor;
 
-  const int32_t batch = grad_value_desc->dims[0];
-  const int32_t channels = grad_value_desc->dims[3];
-  const int32_t num_query = grad_sampling_loc_desc->dims[1];
-  const int32_t num_heads = grad_sampling_loc_desc->dims[2];
-  const int32_t num_levels = grad_sampling_loc_desc->dims[3];
-  const int32_t num_point = grad_sampling_loc_desc->dims[4];
+  const int32_t batch = grad_value_desc->getDimIndex(0);
+  const int32_t channels = grad_value_desc->getDimIndex(3);
+  const int32_t num_query = grad_sampling_loc_desc->getDimIndex(1);
+  const int32_t num_heads = grad_sampling_loc_desc->getDimIndex(2);
+  const int32_t num_levels = grad_sampling_loc_desc->getDimIndex(3);
+  const int32_t num_point = grad_sampling_loc_desc->getDimIndex(4);
 
   const int64_t count = 48;
   const int64_t theory_ops =

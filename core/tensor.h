@@ -103,6 +103,15 @@ struct alignas(64) mluOpTensorStruct {
   inline bool isCpuScalar() const;
 
  public:
+  /* Offset - 52 */
+  /* To be removed*/
+  int position = 0;
+  float scale = 1;
+  int offset = 0;
+  std::vector<int> positions;
+  std::vector<float> scales;
+  std::vector<int> offsets;
+
   inline mluOpTensorLayout_t getLayout() const { return this->layout; }
   inline void setLayout(mluOpTensorLayout_t newLayout) {
     this->layout = newLayout;
@@ -203,35 +212,35 @@ struct alignas(64) mluOpTensorStruct {
       mluOpPointerMode_t *pointer_mode);
 
   uint64_t getTensorElementNum() { return this->total_element_num; }
-  // private:
-  /* Try to pack and align the struct */
-  /*  ------------------- 64 Bytes - 1 -------------------*/
-  int64_t normal_dims[MLUOP_DIM_MAX];
+  private:
+    /* Try to pack and align the struct */
+    /*  ------------------- 64 Bytes - 1 -------------------*/
+    int64_t normal_dims[MLUOP_DIM_MAX];
 
-  /*  ------------------- 64 Bytes - 2 -------------------*/
-  int64_t normal_strides[MLUOP_DIM_MAX];
+    /*  ------------------- 64 Bytes - 2 -------------------*/
+    int64_t normal_strides[MLUOP_DIM_MAX];
 
-  /*  ------------------- 64 Bytes - 3 -------------------*/
-  /* Offset - 0 */
-  uint64_t total_element_num = 0;
-  uint64_t total_tensor_size = 0;
-  int64_t *dims = normal_dims;        // point the normal dims as default
-  int64_t *strides = normal_strides;  // point the normal strides as default
-  /* Offset - 32 */
-  int dim = 0;
-  mluOpDataType_t dtype = MLUOP_DTYPE_FLOAT;
-  mluOpDataType_t onchip_dtype = MLUOP_DTYPE_INVALID;
-  mluOpTensorLayout_t layout = MLUOP_LAYOUT_ARRAY;
-  mluOpPointerMode_t pointer_mode = MLUOP_POINTER_MODE_DEVICE;
+    /*  ------------------- 64 Bytes - 3 -------------------*/
+    /* Offset - 0 */
+    uint64_t total_element_num = 0;
+    uint64_t total_tensor_size = 0;
+    int64_t *dims = normal_dims;        // point the normal dims as default
+    int64_t *strides = normal_strides;  // point the normal strides as default
+    /* Offset - 32 */
+    int dim = 0;
+    mluOpDataType_t dtype = MLUOP_DTYPE_FLOAT;
+    mluOpDataType_t onchip_dtype = MLUOP_DTYPE_INVALID;
+    mluOpTensorLayout_t layout = MLUOP_LAYOUT_ARRAY;
+    mluOpPointerMode_t pointer_mode = MLUOP_POINTER_MODE_DEVICE;
 
-  /* Offset - 52 */
-  /* To be removed*/
-  int position = 0;
-  float scale = 1;
-  int offset = 0;
-  std::vector<int> positions;
-  std::vector<float> scales;
-  std::vector<int> offsets;
+    // /* Offset - 52 */
+    // /* To be removed*/
+    // int position = 0;
+    // float scale = 1;
+    // int offset = 0;
+    // std::vector<int> positions;
+    // std::vector<float> scales;
+    // std::vector<int> offsets;
 };
 
 // dim_set(rnn)     [layer_num, direction, cap_of_cell]
@@ -450,6 +459,7 @@ inline int64_t mluOpGetTensordimH(const mluOpTensorDescriptor_t desc) {
     case MLUOP_LAYOUT_NCHW:
     case MLUOP_LAYOUT_NDHWC:
       return desc->getDimIndex(2);
+      return desc->getDimIndex(2);
     case MLUOP_LAYOUT_NCDHW:
       return desc->getDimIndex(3);
     default:
@@ -467,6 +477,7 @@ inline int64_t mluOpGetTensordimW(const mluOpTensorDescriptor_t desc) {
       return desc->getDimIndex(2);
     case MLUOP_LAYOUT_NCHW:
     case MLUOP_LAYOUT_NDHWC:
+      return desc->getDimIndex(3);
       return desc->getDimIndex(3);
     case MLUOP_LAYOUT_NCDHW:
       return desc->getDimIndex(4);

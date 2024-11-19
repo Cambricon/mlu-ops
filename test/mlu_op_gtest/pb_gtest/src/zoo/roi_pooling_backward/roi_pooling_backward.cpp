@@ -78,20 +78,20 @@ void RoiPoolingBackwardExecutor::cpuCompute() {
   PoolingForwardMode mode =
       parser_->getProtoNode()->roi_pooling_backward_param().mode();
 
-  size_t grads_n = grads_desc->dims[0];
-  size_t grads_h = grads_desc->dims[1];
-  size_t grads_w = grads_desc->dims[2];
-  size_t grads_c = grads_desc->dims[3];
-  size_t num1 = rois_desc->dims[0];
-  size_t num2 = rois_desc->dims[1];
-  size_t argmax_n = argmax_desc->dims[0];
-  size_t argmax_h = argmax_desc->dims[1];
-  size_t argmax_w = argmax_desc->dims[2];
-  size_t argmax_c = argmax_desc->dims[3];
-  size_t grads_image_n = grads_image_desc->dims[0];
-  size_t grads_image_h = grads_image_desc->dims[1];
-  size_t grads_image_w = grads_image_desc->dims[2];
-  size_t grads_image_c = grads_image_desc->dims[3];
+  size_t grads_n = grads_desc->getDimIndex(0);
+  size_t grads_h = grads_desc->getDimIndex(1);
+  size_t grads_w = grads_desc->getDimIndex(2);
+  size_t grads_c = grads_desc->getDimIndex(3);
+  size_t num1 = rois_desc->getDimIndex(0);
+  size_t num2 = rois_desc->getDimIndex(1);
+  size_t argmax_n = argmax_desc->getDimIndex(0);
+  size_t argmax_h = argmax_desc->getDimIndex(1);
+  size_t argmax_w = argmax_desc->getDimIndex(2);
+  size_t argmax_c = argmax_desc->getDimIndex(3);
+  size_t grads_image_n = grads_image_desc->getDimIndex(0);
+  size_t grads_image_h = grads_image_desc->getDimIndex(1);
+  size_t grads_image_w = grads_image_desc->getDimIndex(2);
+  size_t grads_image_c = grads_image_desc->getDimIndex(3);
 
   const int batch_size = grads_image_n;
   const int channels = grads_image_c;
@@ -192,7 +192,7 @@ int64_t RoiPoolingBackwardExecutor::getTheoryOps() {
   Device device = parser_->device();
   if (device != Device::CPU) {
     auto argmax_desc = tensor_desc_[2].tensor;
-    auto argmax_dtype = argmax_desc->dtype;
+    auto argmax_dtype = argmax_desc->getDtype();
     size_t argmax_num = parser_->getInputDataCount(2);
     float *argmax = (float *)cpu_runtime_.allocate(argmax_num * sizeof(float));
     castDataOut(data_vector_[2].host_ptr, argmax_dtype, (float *)argmax,
@@ -205,14 +205,14 @@ int64_t RoiPoolingBackwardExecutor::getTheoryOps() {
 
   auto grads_desc = parser_->getMetaTensor(0).tensor;
   auto grads_image_desc = parser_->getMetaTensor(3).tensor;
-  size_t grads_n = grads_desc->dims[0];
-  size_t grads_h = grads_desc->dims[1];
-  size_t grads_w = grads_desc->dims[2];
-  size_t grads_c = grads_desc->dims[3];
-  size_t grads_image_n = grads_image_desc->dims[0];
-  size_t grads_image_h = grads_image_desc->dims[1];
-  size_t grads_image_w = grads_image_desc->dims[2];
-  size_t grads_image_c = grads_image_desc->dims[3];
+  size_t grads_n = grads_desc->getDimIndex(0);
+  size_t grads_h = grads_desc->getDimIndex(1);
+  size_t grads_w = grads_desc->getDimIndex(2);
+  size_t grads_c = grads_desc->getDimIndex(3);
+  size_t grads_image_n = grads_image_desc->getDimIndex(0);
+  size_t grads_image_h = grads_image_desc->getDimIndex(1);
+  size_t grads_image_w = grads_image_desc->getDimIndex(2);
+  size_t grads_image_c = grads_image_desc->getDimIndex(3);
 
   theory_ops += grads_image_n * grads_image_h * grads_image_w * grads_image_c;
   for (size_t i = 0; i < grads_n * grads_h * grads_w * grads_c; i++) {

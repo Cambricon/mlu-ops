@@ -57,15 +57,15 @@ static mluOpStatus_t foolProof(
   }
 
   // data type check
-  PARAM_CHECK(api_name, features_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                            features_desc->dtype == MLUOP_DTYPE_HALF);
-  PARAM_CHECK(api_name, filters_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                            filters_desc->dtype == MLUOP_DTYPE_HALF);
-  PARAM_CHECK(api_name, indice_pairs_desc->dtype == MLUOP_DTYPE_INT32);
-  PARAM_CHECK(api_name, features_out_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                            features_out_desc->dtype == MLUOP_DTYPE_HALF);
-  PARAM_CHECK(api_name, features_desc->dtype == features_out_desc->dtype &&
-                            features_desc->dtype == filters_desc->dtype);
+  PARAM_CHECK(api_name, features_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
+                            features_desc->getDtype() == MLUOP_DTYPE_HALF);
+  PARAM_CHECK(api_name, filters_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
+                            filters_desc->getDtype() == MLUOP_DTYPE_HALF);
+  PARAM_CHECK(api_name, indice_pairs_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(api_name, features_out_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
+                            features_out_desc->getDtype() == MLUOP_DTYPE_HALF);
+  PARAM_CHECK(api_name, features_desc->getDtype() == features_out_desc->getDtype() &&
+                            features_desc->getDtype() == filters_desc->getDtype());
 
   // inverse not supported now
   PARAM_CHECK(api_name, sub_m == 0 || sub_m == 1);
@@ -78,30 +78,30 @@ static mluOpStatus_t foolProof(
 
   // layout check
   // DHWCN layout not supported yet, use ARRAY temporarily
-  // PARAM_CHECK(api_name, filters_desc->layout == MLUOP_LAYOUT_DHWCN);
-  if (filters_desc->layout != MLUOP_LAYOUT_NDHWC &&
-      filters_desc->layout != MLUOP_LAYOUT_NCDHW &&
-      filters_desc->layout != MLUOP_LAYOUT_ARRAY) {
+  // PARAM_CHECK(api_name, filters_desc->getLayout() == MLUOP_LAYOUT_DHWCN);
+  if (filters_desc->getLayout() != MLUOP_LAYOUT_NDHWC &&
+      filters_desc->getLayout() != MLUOP_LAYOUT_NCDHW &&
+      filters_desc->getLayout() != MLUOP_LAYOUT_ARRAY) {
     LOG(ERROR) << api_name << "The layout of filters is: "
-               << mluOpGetNameOfTensorLayout(filters_desc->layout)
+               << mluOpGetNameOfTensorLayout(filters_desc->getLayout())
                << ", which is not supported now.";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   // shape check
-  PARAM_CHECK(api_name, features_desc->dim == 2);
-  PARAM_CHECK(api_name, indice_pairs_desc->dim == 3);
-  PARAM_CHECK(api_name, features_out_desc->dim == 2);
-  if (indice_pairs_desc->dims[2] > INDICE_IN_LARGE_TENSOR_NUM) {
+  PARAM_CHECK(api_name, features_desc->getDim() == 2);
+  PARAM_CHECK(api_name, indice_pairs_desc->getDim() == 3);
+  PARAM_CHECK(api_name, features_out_desc->getDim() == 2);
+  if (indice_pairs_desc->getDimIndex(2) > INDICE_IN_LARGE_TENSOR_NUM) {
     LOG(ERROR) << api_name << " Check failed: "
-               << "indice_pairs_desc->dims[2] cannot be greater than "
+               << "indice_pairs_desc->getDimIndex(2) cannot be greater than "
                << INDICE_IN_LARGE_TENSOR_NUM << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  if (filters_desc->dim != 5) {
+  if (filters_desc->getDim() != 5) {
     LOG(ERROR) << api_name
                << "The filters dimension number only support 5 currently,"
-               << " but filters dimension number is :" << filters_desc->dim
+               << " but filters dimension number is :" << filters_desc->getDim()
                << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
@@ -129,11 +129,11 @@ static mluOpStatus_t foolProof(
   auto ci = 0;
   auto num_filter = 0;
   auto co = 0;
-  if (filters_desc->layout == MLUOP_LAYOUT_ARRAY) {
-    ci = filters_desc->dims[3];
+  if (filters_desc->getLayout() == MLUOP_LAYOUT_ARRAY) {
+    ci = filters_desc->getDimIndex(3);
     num_filter =
-        filters_desc->dims[0] * filters_desc->dims[1] * filters_desc->dims[2];
-    co = filters_desc->dims[4];
+        filters_desc->getDimIndex(0) * filters_desc->getDimIndex(1) * filters_desc->getDimIndex(2);
+    co = filters_desc->getDimIndex(4);
   } else {
     ci = mluOpGetTensordimC(filters_desc);
     num_filter = mluOpGetTensordimD(filters_desc) *
@@ -143,22 +143,22 @@ static mluOpStatus_t foolProof(
   }
 
   // features shape check
-  PARAM_CHECK(api_name, features_desc->dims[0] == indice_pairs_desc->dims[2]);
-  PARAM_CHECK(api_name, features_desc->dims[1] == ci);
+  PARAM_CHECK(api_name, features_desc->getDimIndex(0) == indice_pairs_desc->getDimIndex(2));
+  PARAM_CHECK(api_name, features_desc->getDimIndex(1) == ci);
 
   // indice_pairs shape check
-  PARAM_CHECK(api_name, indice_pairs_desc->dims[0] == num_filter);
-  PARAM_CHECK(api_name, indice_pairs_desc->dims[1] == 2);
+  PARAM_CHECK(api_name, indice_pairs_desc->getDimIndex(0) == num_filter);
+  PARAM_CHECK(api_name, indice_pairs_desc->getDimIndex(1) == 2);
 
   // features_out shape check
-  PARAM_CHECK(api_name, features_out_desc->dims[0] == num_act_out);
-  PARAM_CHECK(api_name, features_out_desc->dims[1] == co);
+  PARAM_CHECK(api_name, features_out_desc->getDimIndex(0) == num_act_out);
+  PARAM_CHECK(api_name, features_out_desc->getDimIndex(1) == co);
 
   // indice_num[] check
   for (int i = 0; i < num_filter; ++i) {
     std::string i_str = "i: " + std::to_string(i) + ".";
     PARAM_CHECK_V2(
-        api_name, indice_num[i] >= 0 && indice_num[i] <= features_desc->dims[0],
+        api_name, indice_num[i] >= 0 && indice_num[i] <= features_desc->getDimIndex(0),
         << i_str);
   }
 
@@ -179,21 +179,21 @@ static mluOpStatus_t mainIndiceConvolutionForward(
   int32_t ci = 0;
   int32_t co = 0;
   // MLUOP_LAYOUT_DHWCN not supported yet.
-  if (filters_desc->layout == MLUOP_LAYOUT_ARRAY) {
+  if (filters_desc->getLayout() == MLUOP_LAYOUT_ARRAY) {
     filters_need_trans = false;
-    ci = filters_desc->dims[3];
-    co = filters_desc->dims[4];
+    ci = filters_desc->getDimIndex(3);
+    co = filters_desc->getDimIndex(4);
   } else {
     ci = mluOpGetTensordimC(filters_desc);
     co = mluOpGetTensordimN(filters_desc);
   }
-  int32_t num_filter = indice_pairs_desc->dims[0];
+  int32_t num_filter = indice_pairs_desc->getDimIndex(0);
 
-  int64_t num_act_in = indice_pairs_desc->dims[2];
+  int64_t num_act_in = indice_pairs_desc->getDimIndex(2);
   int64_t elementSize_filters =
-      ci * co * mluop::getSizeOfDataType(filters_desc->dtype);
+      ci * co * mluop::getSizeOfDataType(filters_desc->getDtype());
   int64_t elementSize_indice_pairs =
-      num_act_in * mluop::getSizeOfDataType(indice_pairs_desc->dtype);
+      num_act_in * mluop::getSizeOfDataType(indice_pairs_desc->getDtype());
 
   int32_t max_indice_num = 0;
   for (int i = 0; i < num_filter; ++i) {
@@ -201,17 +201,17 @@ static mluOpStatus_t mainIndiceConvolutionForward(
         indice_num[i] > max_indice_num ? indice_num[i] : max_indice_num;
   }
   size_t workspaceSize_gather =
-      max_indice_num * ci * mluop::getSizeOfDataType(features_desc->dtype);
+      max_indice_num * ci * mluop::getSizeOfDataType(features_desc->getDtype());
   size_t workspaceSize_matmul =
-      max_indice_num * co * mluop::getSizeOfDataType(features_out_desc->dtype);
+      max_indice_num * co * mluop::getSizeOfDataType(features_out_desc->getDtype());
   size_t workspaceSize_transpose = 0;
   size_t workspaceSize_transposeExtra = 0;
   if (filters_need_trans) {
     workspaceSize_transpose =
-        num_filter * ci * co * mluop::getSizeOfDataType(filters_desc->dtype);
+        num_filter * ci * co * mluop::getSizeOfDataType(filters_desc->getDtype());
   }
   size_t workspaceSize_scatter =
-      num_act_out * co * mluop::getSizeOfDataType(features_out_desc->dtype);
+      num_act_out * co * mluop::getSizeOfDataType(features_out_desc->getDtype());
   size_t workspaceSize_matmulExtra = 0;
   size_t tempSize_matmulExtra = 0;
   size_t workspaceSize_addNExtra = 0;
@@ -225,7 +225,7 @@ static mluOpStatus_t mainIndiceConvolutionForward(
   int matmul_is_transA = 0;
   int matmul_is_transB = 0;
   uint32_t matmul_allow_TF32 = 0;
-  uint32_t matmul_computetype = (uint32_t)filters_desc->dtype;
+  uint32_t matmul_computetype = (uint32_t)filters_desc->getDtype();
 
   // allocate workspace segment for intermediate data
   void *validFilters_ptr = filters_need_trans ? workspace : (void *)filters;
@@ -267,7 +267,7 @@ static mluOpStatus_t mainIndiceConvolutionForward(
     int trans_in_shape[3] = {0, 0, 0};
     int trans_out_shape[3] = {num_filter, ci, co};
     int permute[3] = {0, 0, 0};
-    if (MLUOP_LAYOUT_NDHWC == filters_desc->layout) {
+    if (MLUOP_LAYOUT_NDHWC == filters_desc->getLayout()) {
       trans_in_shape[0] = co;
       trans_in_shape[1] = num_filter;
       trans_in_shape[2] = ci;
@@ -275,7 +275,7 @@ static mluOpStatus_t mainIndiceConvolutionForward(
       permute[1] = 2;
       permute[2] = 0;
     } else {
-      // MLUOP_LAYOUT_NCDHW == filters_desc->layout
+      // MLUOP_LAYOUT_NCDHW == filters_desc->getLayout()
       trans_in_shape[0] = co;
       trans_in_shape[1] = ci;
       trans_in_shape[2] = num_filter;
@@ -290,10 +290,10 @@ static mluOpStatus_t mainIndiceConvolutionForward(
     CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                trans_in_desc, MLUOP_LAYOUT_ARRAY,
-                               filters_desc->dtype, 3, trans_in_shape));
+                               filters_desc->getDtype(), 3, trans_in_shape));
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                trans_out_desc, MLUOP_LAYOUT_ARRAY,
-                               filters_desc->dtype, 3, trans_out_shape));
+                               filters_desc->getDtype(), 3, trans_out_shape));
     CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, 3, permute));
     {
       DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
@@ -347,16 +347,16 @@ static mluOpStatus_t mainIndiceConvolutionForward(
     matmul_c_shape[0] = active_point_num;
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                active_indice_desc, MLUOP_LAYOUT_ARRAY,
-                               indice_pairs_desc->dtype, 2, active_indice));
+                               indice_pairs_desc->getDtype(), 2, active_indice));
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                matmul_a_desc, MLUOP_LAYOUT_ARRAY,
-                               features_desc->dtype, 2, matmul_a_shape));
+                               features_desc->getDtype(), 2, matmul_a_shape));
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                matmul_b_desc, MLUOP_LAYOUT_ARRAY,
-                               features_out_desc->dtype, 2, matmul_b_shape));
+                               features_out_desc->getDtype(), 2, matmul_b_shape));
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                matmul_c_desc, MLUOP_LAYOUT_ARRAY,
-                               features_desc->dtype, 2, matmul_c_shape));
+                               features_desc->getDtype(), 2, matmul_c_shape));
     {
       DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
       DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_a_desc, cnnl_a_desc);
@@ -632,7 +632,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionForward(
                              inverse);
     GEN_CASE_OP_PARAM_SINGLE(1, "indice_convolution_forward", "sub_m", sub_m);
     GEN_CASE_OP_PARAM_ARRAY(1, "indice_convolution_forward", "indice_num",
-                            indice_num, indice_pairs_desc->dims[0]);
+                            indice_num, indice_pairs_desc->getDimIndex(0));
     GEN_CASE_OP_PARAM_SINGLE(1, "indice_convolution_forward", "num_active_out",
                              num_act_out);
     GEN_CASE_HANDLE_PARAM();

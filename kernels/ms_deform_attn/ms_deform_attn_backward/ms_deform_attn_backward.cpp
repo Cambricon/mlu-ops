@@ -120,15 +120,15 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
   PARAM_CHECK(API, grad_attn_weight_desc != NULL);
 
   // check dim
-  PARAM_CHECK(API, value_desc->dim == 4);
-  PARAM_CHECK(API, spatial_shapes_desc->dim == 2);
-  PARAM_CHECK(API, level_start_index_desc->dim == 1);
-  PARAM_CHECK(API, sampling_loc_desc->dim == 6);
-  PARAM_CHECK(API, attn_weight_desc->dim == 5);
-  PARAM_CHECK(API, grad_output_desc->dim == 4);
-  PARAM_CHECK(API, grad_value_desc->dim == 4);
-  PARAM_CHECK(API, grad_sampling_loc_desc->dim == 6);
-  PARAM_CHECK(API, grad_attn_weight_desc->dim == 5);
+  PARAM_CHECK(API, value_desc->getDim() == 4);
+  PARAM_CHECK(API, spatial_shapes_desc->getDim() == 2);
+  PARAM_CHECK(API, level_start_index_desc->getDim() == 1);
+  PARAM_CHECK(API, sampling_loc_desc->getDim() == 6);
+  PARAM_CHECK(API, attn_weight_desc->getDim() == 5);
+  PARAM_CHECK(API, grad_output_desc->getDim() == 4);
+  PARAM_CHECK(API, grad_value_desc->getDim() == 4);
+  PARAM_CHECK(API, grad_sampling_loc_desc->getDim() == 6);
+  PARAM_CHECK(API, grad_attn_weight_desc->getDim() == 5);
 
   // check stride
   STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", value_desc,
@@ -151,86 +151,86 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
                       "grad_attn_weight_desc must be contiguous");
 
   // check datatype
-  PARAM_CHECK(API, value_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(API, spatial_shapes_desc->dtype == MLUOP_DTYPE_INT32);
-  PARAM_CHECK(API, level_start_index_desc->dtype == MLUOP_DTYPE_INT32);
-  PARAM_CHECK(API, sampling_loc_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(API, attn_weight_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(API, grad_output_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(API, grad_value_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(API, grad_sampling_loc_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(API, grad_attn_weight_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, value_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, spatial_shapes_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(API, level_start_index_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(API, sampling_loc_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, attn_weight_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, grad_output_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, grad_value_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, grad_sampling_loc_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, grad_attn_weight_desc->getDtype() == MLUOP_DTYPE_FLOAT);
 
-  const int32_t num_key = value_desc->dims[1];
-  const int32_t channels = value_desc->dims[3];
-  const int32_t batch = attn_weight_desc->dims[0];
-  const int32_t num_query = attn_weight_desc->dims[1];
-  const int32_t num_heads = attn_weight_desc->dims[2];
-  const int32_t num_levels = attn_weight_desc->dims[3];
-  const int32_t num_points = attn_weight_desc->dims[4];
+  const int32_t num_key = value_desc->getDimIndex(1);
+  const int32_t channels = value_desc->getDimIndex(3);
+  const int32_t batch = attn_weight_desc->getDimIndex(0);
+  const int32_t num_query = attn_weight_desc->getDimIndex(1);
+  const int32_t num_heads = attn_weight_desc->getDimIndex(2);
+  const int32_t num_levels = attn_weight_desc->getDimIndex(3);
+  const int32_t num_points = attn_weight_desc->getDimIndex(4);
   // check input param
   const int32_t im2col_step_ = MIN(batch, im2col_step);
   std::string im2col_step_str =
-      "batch = attn_weight_desc->dims[0], "
+      "batch = attn_weight_desc->getDimIndex(0), "
       "im2col_step_ = MIN(batch, im2col_step).";
   PARAM_CHECK_V2(API, im2col_step_ > 0, << im2col_step_str);
   PARAM_CHECK_V2(API, batch % im2col_step_ == 0, << im2col_step_str);
 
   // check all the input relationship
-  for (int32_t i = 0; i < value_desc->dim; ++i) {
-    if (value_desc->dims[i] != grad_value_desc->dims[i]) {
+  for (int32_t i = 0; i < value_desc->getDim(); ++i) {
+    if (value_desc->getDimIndex(i) != grad_value_desc->getDimIndex(i)) {
       LOG(ERROR) << "[mluOpMsDeformAttnBackward] The shape of value should be "
                     "the same as grad_value."
-                 << " But now value_desc->dims[" << i << "] is "
-                 << value_desc->dims[i] << ", and grad_value_desc->dims[" << i
-                 << "] is " << grad_value_desc->dims[i] << ".";
+                 << " But now value_desc->getDimIndex(" << i << ") is "
+                 << value_desc->getDimIndex(i) << ", and grad_value_desc->dims[" << i
+                 << "] is " << grad_value_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  for (int32_t i = 0; i < sampling_loc_desc->dim; ++i) {
-    if (sampling_loc_desc->dims[i] != grad_sampling_loc_desc->dims[i]) {
+  for (int32_t i = 0; i < sampling_loc_desc->getDim(); ++i) {
+    if (sampling_loc_desc->getDimIndex(i) != grad_sampling_loc_desc->getDimIndex(i)) {
       LOG(ERROR) << "[mluOpMsDeformAttnBackward] The shape of "
                     "sampling_loc_desc should be the "
                     "same as grad_sampling_loc_desc."
-                 << " But now sampling_loc_desc->dims[" << i << "] is "
-                 << sampling_loc_desc->dims[i]
-                 << ", and grad_sampling_loc_desc->dims[" << i << "] is "
-                 << grad_sampling_loc_desc->dims[i] << ".";
+                 << " But now sampling_loc_desc->getDimIndex(" << i << ") is "
+                 << sampling_loc_desc->getDimIndex(i)
+                 << ", and grad_sampling_loc_desc->getDimIndex(" << i << ") is "
+                 << grad_sampling_loc_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  for (int32_t i = 0; i < attn_weight_desc->dim; ++i) {
-    if (attn_weight_desc->dims[i] != grad_attn_weight_desc->dims[i]) {
+  for (int32_t i = 0; i < attn_weight_desc->getDim(); ++i) {
+    if (attn_weight_desc->getDimIndex(i) != grad_attn_weight_desc->getDimIndex(i)) {
       LOG(ERROR) << "[mluOpMsDeformAttnBackward] The shape of "
                     "attn_weight_desc should be the "
                     "same as grad_attn_weight_desc."
-                 << " But now attn_weight_desc->dims[" << i << "] is "
-                 << attn_weight_desc->dims[i]
-                 << ", and grad_attn_weight_desc->dims[" << i << "] is "
-                 << grad_attn_weight_desc->dims[i] << ".";
+                 << " But now attn_weight_desc->getDimIndex(" << i << ") is "
+                 << attn_weight_desc->getDimIndex(i)
+                 << ", and grad_attn_weight_desc->getDimIndex(" << i << ") is "
+                 << grad_attn_weight_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  PARAM_CHECK_EQ(API, value_desc->dims[0], attn_weight_desc->dims[0]);
-  PARAM_CHECK_EQ(API, value_desc->dims[2], attn_weight_desc->dims[2]);
+  PARAM_CHECK_EQ(API, value_desc->getDimIndex(0), attn_weight_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, value_desc->getDimIndex(2), attn_weight_desc->getDimIndex(2));
 
-  PARAM_CHECK_EQ(API, spatial_shapes_desc->dims[0], attn_weight_desc->dims[3]);
-  PARAM_CHECK_EQ(API, spatial_shapes_desc->dims[1], 2);
+  PARAM_CHECK_EQ(API, spatial_shapes_desc->getDimIndex(0), attn_weight_desc->getDimIndex(3));
+  PARAM_CHECK_EQ(API, spatial_shapes_desc->getDimIndex(1), 2);
 
-  PARAM_CHECK_EQ(API, level_start_index_desc->dims[0],
-                 attn_weight_desc->dims[3]);
+  PARAM_CHECK_EQ(API, level_start_index_desc->getDimIndex(0),
+                 attn_weight_desc->getDimIndex(3));
 
-  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[0], attn_weight_desc->dims[0]);
-  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[1], attn_weight_desc->dims[1]);
-  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[2], attn_weight_desc->dims[2]);
-  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[3], attn_weight_desc->dims[3]);
-  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[4], attn_weight_desc->dims[4]);
-  PARAM_CHECK_EQ(API, sampling_loc_desc->dims[5], 2);
+  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(0), attn_weight_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(1), attn_weight_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(2), attn_weight_desc->getDimIndex(2));
+  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(3), attn_weight_desc->getDimIndex(3));
+  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(4), attn_weight_desc->getDimIndex(4));
+  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(5), 2);
 
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[0], attn_weight_desc->dims[0]);
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[1], attn_weight_desc->dims[1]);
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[2], attn_weight_desc->dims[2]);
-  PARAM_CHECK_EQ(API, grad_output_desc->dims[3], value_desc->dims[3]);
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(0), attn_weight_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(1), attn_weight_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(2), attn_weight_desc->getDimIndex(2));
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(3), value_desc->getDimIndex(3));
 
   TENSOR_NUM_CHECK(API, mluOpGetTensorElementNum(value_desc), LARGE_TENSOR_NUM,
                    "");
@@ -396,13 +396,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnBackward(
   VLOG(5) << "[mluOpMsDeformAttnBackward] cnnlFill_v3 end.";
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
-  const int32_t spatial_size = value_desc->dims[1];
-  const int32_t batch = attn_weight_desc->dims[0];
-  const int32_t channels = value_desc->dims[3];
-  const int32_t num_query = attn_weight_desc->dims[1];
-  const int32_t num_heads = attn_weight_desc->dims[2];
-  const int32_t num_levels = attn_weight_desc->dims[3];
-  const int32_t num_points = attn_weight_desc->dims[4];
+  const int32_t spatial_size = value_desc->getDimIndex(1);
+  const int32_t batch = attn_weight_desc->getDimIndex(0);
+  const int32_t channels = value_desc->getDimIndex(3);
+  const int32_t num_query = attn_weight_desc->getDimIndex(1);
+  const int32_t num_heads = attn_weight_desc->getDimIndex(2);
+  const int32_t num_levels = attn_weight_desc->getDimIndex(3);
+  const int32_t num_points = attn_weight_desc->getDimIndex(4);
   // generate mluOpMsDeformAttnBackward prototxt start!
 
   VLOG(5) << "[mluOpMsDeformAttnBackward]        batch: " << batch;

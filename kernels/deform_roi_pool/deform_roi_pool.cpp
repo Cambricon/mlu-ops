@@ -39,9 +39,9 @@ void policyFunc(const mluOpHandle_t handle,
       mluop::runtime::getClusterLimitCapability(handle);
   const size_t core_limit =
       mluop::runtime::getCoreNumOfEachUnionCapability(handle);
-  const size_t num_rois = output_desc->dims[0];
-  const size_t pooled_height = output_desc->dims[1];
-  const size_t pooled_width = output_desc->dims[2];
+  const size_t num_rois = output_desc->getDimIndex(0);
+  const size_t pooled_height = output_desc->getDimIndex(1);
+  const size_t pooled_width = output_desc->getDimIndex(2);
   const size_t num_bins =
       CEIL_ALIGN(num_rois * pooled_height * pooled_width, core_limit);
   k_dim->x = core_limit;
@@ -58,9 +58,9 @@ static mluOpStatus_t DeformRoiPoolForwardPreCheck(
     const mluOpTensorDescriptor_t output_desc, const int pooled_height,
     const int pooled_width) {
   PARAM_CHECK("[mluOpDeformRoiPoolForward]",
-              input_desc->layout == MLUOP_LAYOUT_NHWC);
+              input_desc->getLayout() == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK("[mluOpDeformRoiPoolForward]",
-              output_desc->layout == MLUOP_LAYOUT_NHWC);
+              output_desc->getLayout() == MLUOP_LAYOUT_NHWC);
 
   STRIDE_TENSOR_CHECK("[mluOpDeformRoiPoolForward]:", input_desc,
                       "input_desc must be contiguous");
@@ -72,49 +72,49 @@ static mluOpStatus_t DeformRoiPoolForwardPreCheck(
                       "output_desc must be contiguous");
 
   PARAM_CHECK("[mluOpDeformRoiPoolForward]",
-              input_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                  input_desc->dtype == MLUOP_DTYPE_HALF);
+              input_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
+                  input_desc->getDtype() == MLUOP_DTYPE_HALF);
   PARAM_CHECK("[mluOpDeformRoiPoolForward]",
-              input_desc->dtype == rois_desc->dtype);
+              input_desc->getDtype() == rois_desc->getDtype());
   PARAM_CHECK("[mluOpDeformRoiPoolForward]",
-              input_desc->dtype == output_desc->dtype);
+              input_desc->getDtype() == output_desc->getDtype());
 
-  PARAM_CHECK("[mluOpDeformRoiPoolForward]", rois_desc->dim == 2);
-  PARAM_CHECK("[mluOpDeformRoiPoolForward]", rois_desc->dims[1] == 5);
+  PARAM_CHECK("[mluOpDeformRoiPoolForward]", rois_desc->getDim() == 2);
+  PARAM_CHECK("[mluOpDeformRoiPoolForward]", rois_desc->getDimIndex(1) == 5);
 
   PARAM_CHECK("[mluOpDeformRoiPoolForward]", pooled_height > 0);
   PARAM_CHECK("[mluOpDeformRoiPoolForward]", pooled_width > 0);
   PARAM_CHECK("[mluOpDeformRoiPoolForward]",
-              output_desc->dims[1] == pooled_height);
+              output_desc->getDimIndex(1) == pooled_height);
   PARAM_CHECK("[mluOpDeformRoiPoolForward]",
-              output_desc->dims[2] == pooled_width);
+              output_desc->getDimIndex(2) == pooled_width);
 
   if (offset_desc != NULL) {
     PARAM_CHECK("[mluOpDeformRoiPoolForward]",
-                offset_desc->dtype == input_desc->dtype);
-    PARAM_CHECK("[mluOpDeformRoiPoolForward]", offset_desc->dim == 4);
+                offset_desc->getDtype() == input_desc->getDtype());
+    PARAM_CHECK("[mluOpDeformRoiPoolForward]", offset_desc->getDim() == 4);
     PARAM_CHECK("[mluOpDeformRoiPoolForward]",
-                offset_desc->dims[0] == rois_desc->dims[0]);
-    PARAM_CHECK("[mluOpDeformRoiPoolForward]", offset_desc->dims[1] == 2);
+                offset_desc->getDimIndex(0) == rois_desc->getDimIndex(0));
+    PARAM_CHECK("[mluOpDeformRoiPoolForward]", offset_desc->getDimIndex(1) == 2);
     PARAM_CHECK("[mluOpDeformRoiPoolForward]",
-                offset_desc->dims[2] == pooled_height);
+                offset_desc->getDimIndex(2) == pooled_height);
     PARAM_CHECK("[mluOpDeformRoiPoolForward]",
-                offset_desc->dims[3] == pooled_width);
+                offset_desc->getDimIndex(3) == pooled_width);
     const size_t offset_element_num = mluOpGetTensorElementNum(offset_desc);
     TENSOR_NUM_CHECK("[mluOpDeformRoiPoolForward]", offset_element_num,
                      LARGE_TENSOR_NUM, "");
   }
-  if (rois_desc->dims[0] != output_desc->dims[0]) {
+  if (rois_desc->getDimIndex(0) != output_desc->getDimIndex(0)) {
     LOG(ERROR) << "[mluOpDeformRoiPoolForward] rois number = "
-               << rois_desc->dims[0]
-               << ", output batch = " << output_desc->dims[0]
+               << rois_desc->getDimIndex(0)
+               << ", output batch = " << output_desc->getDimIndex(0)
                << ", they should be equal.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (input_desc->dims[3] != output_desc->dims[3]) {
+  if (input_desc->getDimIndex(3) != output_desc->getDimIndex(3)) {
     LOG(ERROR) << "[mluOpDeformRoiPoolForward] input channel = "
-               << input_desc->dims[3]
-               << ", output channel = " << output_desc->dims[3]
+               << input_desc->getDimIndex(3)
+               << ", output channel = " << output_desc->getDimIndex(3)
                << ", they should be equal.";
     return MLUOP_STATUS_BAD_PARAM;
   }
@@ -139,11 +139,11 @@ static mluOpStatus_t DeformRoiPoolBackwardPreCheck(
     const mluOpTensorDescriptor_t grad_offset_desc, const int pooled_height,
     const int pooled_width) {
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-              grad_output_desc->layout == MLUOP_LAYOUT_NHWC);
+              grad_output_desc->getLayout() == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-              input_desc->layout == MLUOP_LAYOUT_NHWC);
+              input_desc->getLayout() == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-              grad_input_desc->layout == MLUOP_LAYOUT_NHWC);
+              grad_input_desc->getLayout() == MLUOP_LAYOUT_NHWC);
 
   STRIDE_TENSOR_CHECK("[mluOpDeformRoiPoolBackward]:", input_desc,
                       "input_desc must be contiguous");
@@ -159,33 +159,33 @@ static mluOpStatus_t DeformRoiPoolBackwardPreCheck(
                       "grad_offset_desc must be contiguous");
 
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-              input_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                  input_desc->dtype == MLUOP_DTYPE_HALF);
+              input_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
+                  input_desc->getDtype() == MLUOP_DTYPE_HALF);
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-              input_desc->dtype == grad_output_desc->dtype);
+              input_desc->getDtype() == grad_output_desc->getDtype());
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-              input_desc->dtype == rois_desc->dtype);
+              input_desc->getDtype() == rois_desc->getDtype());
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-              input_desc->dtype == grad_input_desc->dtype);
+              input_desc->getDtype() == grad_input_desc->getDtype());
 
-  PARAM_CHECK("[mluOpDeformRoiPoolBackward]", rois_desc->dim == 2);
-  PARAM_CHECK("[mluOpDeformRoiPoolBackward]", rois_desc->dims[1] == 5);
+  PARAM_CHECK("[mluOpDeformRoiPoolBackward]", rois_desc->getDim() == 2);
+  PARAM_CHECK("[mluOpDeformRoiPoolBackward]", rois_desc->getDimIndex(1) == 5);
 
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]", pooled_height > 0);
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]", pooled_width > 0);
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-              grad_output_desc->dims[1] == pooled_height);
+              grad_output_desc->getDimIndex(1) == pooled_height);
   PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-              grad_output_desc->dims[2] == pooled_width);
+              grad_output_desc->getDimIndex(2) == pooled_width);
 
-  for (int i = 0; i < input_desc->dim; ++i) {
-    if (input_desc->dims[i] != grad_input_desc->dims[i]) {
+  for (int i = 0; i < input_desc->getDim(); ++i) {
+    if (input_desc->getDimIndex(i) != grad_input_desc->getDimIndex(i)) {
       LOG(ERROR) << "[mluOpDeformRoiPoolBackward] input's shape is ["
-                 << input_desc->dims[0] << " " << input_desc->dims[1] << " "
-                 << input_desc->dims[2] << " " << input_desc->dims[3]
-                 << "], grad_input's shape is [" << grad_input_desc->dims[0]
-                 << " " << grad_input_desc->dims[1] << " "
-                 << grad_input_desc->dims[2] << " " << grad_input_desc->dims[3]
+                 << input_desc->getDimIndex(0) << " " << input_desc->getDimIndex(1) << " "
+                 << input_desc->getDimIndex(2) << " " << input_desc->getDimIndex(3)
+                 << "], grad_input's shape is [" << grad_input_desc->getDimIndex(0)
+                 << " " << grad_input_desc->getDimIndex(1) << " "
+                 << grad_input_desc->getDimIndex(2) << " " << grad_input_desc->getDimIndex(3)
                  << "]. They should be the same.";
       return MLUOP_STATUS_BAD_PARAM;
     }
@@ -226,25 +226,25 @@ static mluOpStatus_t DeformRoiPoolBackwardPreCheck(
       return MLUOP_STATUS_BAD_PARAM;
     }
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-                offset_desc->dtype == input_desc->dtype);
-    PARAM_CHECK("[mluOpDeformRoiPoolBackward]", offset_desc->dim == 4);
+                offset_desc->getDtype() == input_desc->getDtype());
+    PARAM_CHECK("[mluOpDeformRoiPoolBackward]", offset_desc->getDim() == 4);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-                offset_desc->dims[0] == rois_desc->dims[0]);
-    PARAM_CHECK("[mluOpDeformRoiPoolBackward]", offset_desc->dims[1] == 2);
+                offset_desc->getDimIndex(0) == rois_desc->getDimIndex(0));
+    PARAM_CHECK("[mluOpDeformRoiPoolBackward]", offset_desc->getDimIndex(1) == 2);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-                offset_desc->dims[2] == pooled_height);
+                offset_desc->getDimIndex(2) == pooled_height);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-                offset_desc->dims[3] == pooled_width);
+                offset_desc->getDimIndex(3) == pooled_width);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-                grad_offset_desc->dtype == input_desc->dtype);
-    PARAM_CHECK("[mluOpDeformRoiPoolBackward]", grad_offset_desc->dim == 4);
+                grad_offset_desc->getDtype() == input_desc->getDtype());
+    PARAM_CHECK("[mluOpDeformRoiPoolBackward]", grad_offset_desc->getDim() == 4);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-                grad_offset_desc->dims[0] == rois_desc->dims[0]);
-    PARAM_CHECK("[mluOpDeformRoiPoolBackward]", grad_offset_desc->dims[1] == 2);
+                grad_offset_desc->getDimIndex(0) == rois_desc->getDimIndex(0));
+    PARAM_CHECK("[mluOpDeformRoiPoolBackward]", grad_offset_desc->getDimIndex(1) == 2);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-                grad_offset_desc->dims[2] == pooled_height);
+                grad_offset_desc->getDimIndex(2) == pooled_height);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
-                grad_offset_desc->dims[3] == pooled_width);
+                grad_offset_desc->getDimIndex(3) == pooled_width);
     const size_t offset_element_num = mluOpGetTensorElementNum(offset_desc);
     const size_t grad_offset_element_num =
         mluOpGetTensorElementNum(grad_offset_desc);
@@ -259,17 +259,17 @@ static mluOpStatus_t DeformRoiPoolBackwardPreCheck(
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  if (rois_desc->dims[0] != grad_output_desc->dims[0]) {
+  if (rois_desc->getDimIndex(0) != grad_output_desc->getDimIndex(0)) {
     LOG(ERROR) << "[mluOpDeformRoiPoolBackward] rois number = "
-               << rois_desc->dims[0]
-               << ", grad_output batch = " << grad_output_desc->dims[0]
+               << rois_desc->getDimIndex(0)
+               << ", grad_output batch = " << grad_output_desc->getDimIndex(0)
                << ", they should be equal.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (input_desc->dims[3] != grad_output_desc->dims[3]) {
+  if (input_desc->getDimIndex(3) != grad_output_desc->getDimIndex(3)) {
     LOG(ERROR) << "[mluOpDeformRoiPoolBackward] input channel = "
-               << input_desc->dims[3]
-               << ", output channel = " << grad_output_desc->dims[3]
+               << input_desc->getDimIndex(3)
+               << ", output channel = " << grad_output_desc->getDimIndex(3)
                << ", they should be equal.";
     return MLUOP_STATUS_BAD_PARAM;
   }
@@ -321,7 +321,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(
                   "offset is NULL.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (input_desc->dims[0] == 0 || mluOpGetTensorElementNum(rois_desc) == 0 ||
+  if (input_desc->getDimIndex(0) == 0 || mluOpGetTensorElementNum(rois_desc) == 0 ||
       mluOpGetTensorElementNum(output_desc) == 0) {
     LOG(ERROR) << "[mluOpDeformRoiPoolForward] Zero element tensor failure";
     return MLUOP_STATUS_BAD_PARAM;
@@ -363,12 +363,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(
 
   policyFunc(handle, output_desc, &k_dim, &k_type);
 
-  const int batches = input_desc->dims[0];
-  const int height = input_desc->dims[1];
-  const int width = input_desc->dims[2];
-  const int channels = input_desc->dims[3];
-  const int num_rois = output_desc->dims[0];
-  mluOpDataType_t data_dtype = input_desc->dtype;
+  const int batches = input_desc->getDimIndex(0);
+  const int height = input_desc->getDimIndex(1);
+  const int width = input_desc->getDimIndex(2);
+  const int channels = input_desc->getDimIndex(3);
+  const int num_rois = output_desc->getDimIndex(0);
+  mluOpDataType_t data_dtype = input_desc->getDtype();
   VLOG(5) << "[mluOpDeformRoiPoolForward] Launch kernel policyFunc[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "].";
   CHECK_RETURN(
@@ -407,7 +407,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolBackward(
   }
 
   if (mluOpGetTensorElementNum(grad_output_desc) == 0 ||
-      input_desc->dims[0] == 0 || mluOpGetTensorElementNum(rois_desc) == 0) {
+      input_desc->getDimIndex(0) == 0 || mluOpGetTensorElementNum(rois_desc) == 0) {
     LOG(ERROR) << "[mluOpDeformRoiPoolBackward] Zero element tensor failure";
     return MLUOP_STATUS_BAD_PARAM;
   }
@@ -473,12 +473,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolBackward(
 
   policyFunc(handle, grad_output_desc, &k_dim, &k_type);
 
-  const int batches = input_desc->dims[0];
-  const int height = input_desc->dims[1];
-  const int width = input_desc->dims[2];
-  const int channels = input_desc->dims[3];
-  const int num_rois = rois_desc->dims[0];
-  mluOpDataType_t data_dtype = input_desc->dtype;
+  const int batches = input_desc->getDimIndex(0);
+  const int height = input_desc->getDimIndex(1);
+  const int width = input_desc->getDimIndex(2);
+  const int channels = input_desc->getDimIndex(3);
+  const int num_rois = rois_desc->getDimIndex(0);
+  mluOpDataType_t data_dtype = input_desc->getDtype();
   VLOG(5) << "[mluOpDeformRoiPoolBackward] Launch kernel policyFunc[" << k_dim.x
           << ", " << k_dim.y << ", " << k_dim.z << "].";
   CHECK_RETURN("[mluOpDeformRoiPoolBackward]",
