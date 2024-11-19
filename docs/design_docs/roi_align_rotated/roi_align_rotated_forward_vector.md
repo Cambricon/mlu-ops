@@ -71,6 +71,8 @@
 
 - features, rois, output数据类型要相同。
 
+- 仅支持 5xx 以上系列
+
 ### 1.5 验收标准
 
 #### 1.5.1 精度验收标准
@@ -177,11 +179,12 @@ bangC 实现为 [筛选有效点](#322-筛选有效点)。<br>
 在不支持 gather.vector 的机器上，一次最大只能取一个 channel，max_once_c = 1。<br>
 在支持 gather.vector 的机器上，unique * max_once_c 要不超过 NRAM 空间限制，详细见[拆分](#33-拆分)。<br>
 - 从 input 中根据坐标信息去取值（对性能影响最大的一步） <br>
+双线性插值的四个点构成四个向量，将四个坐标向量合并成一个，将四个权重向量合并成一个。这种做法在 gather 时可以同时处理更多的数据，更容易将 outstanding 打满，有约 10%~20% 性能收益。<br>
 pos 需要变成字节偏移，即乘以 channels * sizeof(T)。<br>
 input 可能不按 64B 对齐，需要做对齐处理，pos 还需加上 input 对齐的偏移。<br>
 - 计算双线性插值结果
-取数后 v([unique_num, once_c])，w([unique_num])，要进行广播乘法（目前只能先转置再调用__bang_cycle_mul），得到 val([unique_num, once_c])。<br>
-使用 __bang_sumpool 对 val 做累加得到 val_sum([once_c]) 。val_sum 加到 output_channels 中。<br>
+取数后 v([unique_num, once_c])，w([unique_num])，要进行广播乘法（目前只能先转置再调用__bang_cycle_mul），得到 v * w([unique_num, once_c])。<br>
+使用 __bang_sumpool 对 v * w 做累加得到 val_sum([once_c]) 。val_sum 加到 output_channels 中。<br>
 注：mmcv 的累加顺序一定是从前往后，而 sumpool 累加顺序不是，会使得精度有偏差，inf/nan 无法对齐。<br>
 
 

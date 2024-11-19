@@ -190,7 +190,7 @@ template <typename T>
 __mlu_func__ void bilinearInterpolatePosWeight(
     const int height, const int width, T *nram_y, T *nram_x,
     const uint32_t valid_num, uint32_t *pos1, uint32_t *pos2, uint32_t *pos3,
-    uint32_t *pos4, T *w1, T *w2, T *w3, T *w4, uint32_t &unique_num) {
+    uint32_t *pos4, T *w1, T *w2, T *w3, T *w4) {
   for (uint32_t i = 0; i < valid_num; ++i) {
     T y = nram_y[i];
     T x = nram_x[i];
@@ -263,9 +263,14 @@ __mlu_func__ void bilinearInterpolatePosWeight(
   __bang_mul(w3, nram_y, w4, valid_num);
   // w4[i] = ly * lx;
   __bang_mul(w4, nram_y, nram_x, valid_num);
+}
 
+template <typename T>
+__mlu_func__ void getUniquePos(const uint32_t valid_num, uint32_t *pos1,
+                               uint32_t *pos2, uint32_t *pos3, uint32_t *pos4,
+                               T *w1, T *w2, T *w3, T *w4,
+                               uint32_t &unique_num) {
   // unique
-  unique_num = 0;
   for (int i = 0; i < valid_num; ++i) {
     if (w1[i] < 0) {
       continue;
@@ -278,6 +283,10 @@ __mlu_func__ void bilinearInterpolatePosWeight(
         w3[i] += w3[j];
         w4[i] += w4[j];
         w1[j] = -1;
+      } else {
+        // if the dot is not at the same position,
+        // follow-up dots are not at the same positon
+        break;
       }
     }
     if (unique_num != i) {
@@ -296,71 +305,29 @@ __mlu_func__ void bilinearInterpolatePosWeight(
 
 template <typename T>
 __mlu_func__ void handleChannels(const T *input, uint32_t deal_channels,
-                                 uint32_t valid_num, T *w1, T *w2, T *w3, T *w4,
-                                 uint32_t *pos1, uint32_t *pos2, uint32_t *pos3,
-                                 uint32_t *pos4, int32_t &pos_offset, T *v,
-                                 T *v_t, T *val) {
+                                 uint32_t vec_num, T *w, uint32_t *pos,
+                                 int32_t &pos_offset, T *val, T *v_t) {
   // gather dst,src,offset must 64B align
   int32_t align_offset = ((int64_t)input & 0x3f);
   if (align_offset != 0) {
     input = (T *)((int64_t)input - align_offset);
   }
   if (align_offset != pos_offset) {
-    __bang_add_scalar(pos1, pos1, align_offset - pos_offset, valid_num);
-    __bang_add_scalar(pos2, pos2, align_offset - pos_offset, valid_num);
-    __bang_add_scalar(pos3, pos3, align_offset - pos_offset, valid_num);
-    __bang_add_scalar(pos4, pos4, align_offset - pos_offset, valid_num);
+    __bang_add_scalar(pos, pos, align_offset - pos_offset, vec_num);
     pos_offset = align_offset;
   }
-  uint32_t hwc_num = deal_channels * valid_num;
+  uint32_t hwc_num = deal_channels * vec_num;
 
-  __gather(v, input, pos1, deal_channels * sizeof(T), GDRAM2NRAM,
-           deal_channels * sizeof(T), valid_num);
-  if (deal_channels == 1) {
-    __bang_mul(val, v, w1, valid_num);
-  } else {
-    __bang_transpose(val, v, valid_num, deal_channels);
-    __bang_cycle_mul(val, val, w1, hwc_num, valid_num);
-  }
-
-  __gather(v, input, pos2, deal_channels * sizeof(T), GDRAM2NRAM,
-           deal_channels * sizeof(T), valid_num);
-  if (deal_channels == 1) {
-    __bang_mul(v_t, v, w2, valid_num);
-  } else {
-    __bang_transpose(v_t, v, valid_num, deal_channels);
-    __bang_cycle_mul(v_t, v_t, w2, hwc_num, valid_num);
-  }
-  __bang_add(val, val, v_t, hwc_num);
-
-  __gather(v, input, pos3, deal_channels * sizeof(T), GDRAM2NRAM,
-           deal_channels * sizeof(T), valid_num);
-  if (deal_channels == 1) {
-    __bang_mul(v_t, v, w3, valid_num);
-  } else {
-    __bang_transpose(v_t, v, valid_num, deal_channels);
-    __bang_cycle_mul(v_t, v_t, w3, hwc_num, valid_num);
-  }
-  __bang_add(val, val, v_t, hwc_num);
-
-  __gather(v, input, pos4, deal_channels * sizeof(T), GDRAM2NRAM,
-           deal_channels * sizeof(T), valid_num);
-  if (deal_channels == 1) {
-    __bang_mul(v_t, v, w4, valid_num);
-  } else {
-    __bang_transpose(v_t, v, valid_num, deal_channels);
-    __bang_cycle_mul(v_t, v_t, w4, hwc_num, valid_num);
-  }
-  __bang_add(val, val, v_t, hwc_num);
-
+  __gather(val, input, pos, deal_channels * sizeof(T), GDRAM2NRAM,
+           deal_channels * sizeof(T), vec_num);
   if (deal_channels != 1) {
-    __bang_transpose(v_t, val, deal_channels, valid_num);
-    __bang_sumpool(v, v_t, deal_channels, 1, valid_num, 1, valid_num,
-                   valid_num, 1);
+    __bang_transpose(v_t, val, vec_num, deal_channels);
+    __bang_cycle_mul(v_t, v_t, w, hwc_num, vec_num);
+    __bang_transpose(val, v_t, deal_channels, vec_num);
   } else {
-    __bang_sumpool(v, val, deal_channels, 1, valid_num, 1, valid_num,
-                   valid_num, 1);
+    __bang_mul(val, val, w, vec_num);
   }
+  __bang_sumpool(v_t, val, deal_channels, 1, vec_num, 1, vec_num, vec_num, 1);
 }
 
 template <typename T, bool sr_gt0>
@@ -394,10 +361,10 @@ __mlu_global__ void roiAlignRotatedForward(
   T *output_channels = order + NFU_ALIGN_SIZE / sizeof(T);
   /*
   bilinear_interpolate, coordinates can be reused
-  |          |                                           | volatile |
-  | name     | bin_h,bin_w,y,x,w1,w2,w3,w4 | p1,p2,p3,p4 | v1,v2,v3 |
-  | type     | T                           | uint32_t    | T        |
-  | num      | bin_hw_order_num                          |          |
+  |          |                                           | volatile   |
+  | name     | bin_h,bin_w,y,x,w1,w2,w3,w4 | p1,p2,p3,p4 | val, val_t |
+  | type     | T                           | uint32_t    | T          |
+  | num      | bin_hw_order_num                          |            |
   */
   T *bin_h_order = output_channels + cache_channels_num;
   T *bin_w_order = bin_h_order + bin_hw_order_num;
@@ -416,11 +383,10 @@ __mlu_global__ void roiAlignRotatedForward(
                         8 * bin_hw_order_num * sizeof(T) +
                         4 * bin_hw_order_num * sizeof(uint32_t);
   uint32_t max_v_size =
-      FLOOR_ALIGN((MAX_NRAM_SIZE - fixed_size) / 3, NFU_ALIGN_SIZE);
+      FLOOR_ALIGN((MAX_NRAM_SIZE - fixed_size) / 2, NFU_ALIGN_SIZE);
 
-  T *nram_vi = (T *)(nram_pos4 + bin_hw_order_num);
-  T *nram_vi_t = nram_vi + max_v_size / sizeof(T);
-  T *nram_val = nram_vi_t + max_v_size / sizeof(T);
+  T *nram_val = (T *)(nram_pos4 + bin_hw_order_num);
+  T *nram_val_t = nram_val + max_v_size / sizeof(T);
 
   // If dynamic creation of sequences
   bool construct_order = true;
@@ -511,36 +477,50 @@ __mlu_global__ void roiAlignRotatedForward(
           }
 
           // bilinearInterpolate
-          uint32_t unique_num = 0;
-          bilinearInterpolatePosWeight(height, width, nram_y, nram_x, valid_num,
-                                       nram_pos1, nram_pos2, nram_pos3,
-                                       nram_pos4, nram_w1, nram_w2, nram_w3,
-                                       nram_w4, unique_num);
+          bilinearInterpolatePosWeight(
+              height, width, nram_y, nram_x, valid_num, nram_pos1, nram_pos2,
+              nram_pos3, nram_pos4, nram_w1, nram_w2, nram_w3, nram_w4);
 
+          // pos de-duplication
+          uint32_t unique_num = 0;
+          getUniquePos(valid_num, nram_pos1, nram_pos2, nram_pos3, nram_pos4,
+                       nram_w1, nram_w2, nram_w3, nram_w4, unique_num);
+
+          // Combine Four Discrete Data Sets into One
+          if (bin_hw_order_num != unique_num) {
+            __sync();
+            __memcpy_async(nram_w1 + unique_num, nram_w2,
+                           unique_num * sizeof(T), NRAM2NRAM);
+            __memcpy_async(nram_pos1 + unique_num, nram_pos2,
+                           unique_num * sizeof(uint32_t), NRAM2NRAM);
+            __memcpy_async(nram_w1 + 2 * unique_num, nram_w3,
+                           unique_num * sizeof(T), NRAM2NRAM);
+            __memcpy_async(nram_pos1 + 2 * unique_num, nram_pos3,
+                           unique_num * sizeof(uint32_t), NRAM2NRAM);
+            __memcpy_async(nram_w1 + 3 * unique_num, nram_w4,
+                           unique_num * sizeof(T), NRAM2NRAM);
+            __memcpy_async(nram_pos1 + 3 * unique_num, nram_pos4,
+                           unique_num * sizeof(uint32_t), NRAM2NRAM);
+            __sync();
+          }
+          uint32_t vec_num = 4 * unique_num;
           __bang_mul_scalar(nram_pos1, nram_pos1, channels * sizeof(T),
-                            unique_num);
-          __bang_mul_scalar(nram_pos2, nram_pos2, channels * sizeof(T),
-                            unique_num);
-          __bang_mul_scalar(nram_pos3, nram_pos3, channels * sizeof(T),
-                            unique_num);
-          __bang_mul_scalar(nram_pos4, nram_pos4, channels * sizeof(T),
-                            unique_num);
+                            vec_num);
 
           int pos_offset = 0;
-          uint32_t max_once_c = max_v_size / sizeof(T) / unique_num;
-         // Same coordinates in different channels
+          uint32_t max_once_c = max_v_size / sizeof(T) / vec_num;
+
+          // Same coordinates in different channels
           for (uint32_t ci = 0; ci < cur_cache_c; ci += max_once_c) {
             uint32_t cur_c = max_once_c;
             if (cur_c + ci > cur_cache_c) {
               cur_c = cur_cache_c - ci;
             }
-            handleChannels(
-                input_dram + roi_batch_ind * height * width * channels +
-                    c_cache_i + ci,
-                cur_c, unique_num, nram_w1, nram_w2, nram_w3, nram_w4,
-                nram_pos1, nram_pos2, nram_pos3, nram_pos4, pos_offset,
-                nram_vi, nram_vi_t, nram_val);
-            __bang_add(output_channels + ci, output_channels + ci, nram_vi,
+            handleChannels(input_dram + c_cache_i + ci +
+                               roi_batch_ind * height * width * channels,
+                           cur_c, vec_num, nram_w1, nram_pos1, pos_offset,
+                           nram_val, nram_val_t);
+            __bang_add(output_channels + ci, output_channels + ci, nram_val_t,
                        cur_c);
           }
         }
