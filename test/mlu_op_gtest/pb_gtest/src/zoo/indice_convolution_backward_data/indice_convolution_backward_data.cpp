@@ -30,44 +30,44 @@ namespace mluoptest {
 
 void IndiceConvolutionBackwardDataExecutor::getFilterDims() {
   const mluOpTensorDescriptor_t filters_desc = tensor_desc_[1].tensor;
-  const mluOpTensorLayout_t layout = filters_desc->layout;
+  const mluOpTensorLayout_t layout = filters_desc->getLayout();
   kd = 1;
   filter_4d = true;
   if (layout == MLUOP_LAYOUT_NCHW) {
-    dyc = filters_desc->dims[0];
-    dxc = filters_desc->dims[1];
-    kh = filters_desc->dims[2];
-    kw = filters_desc->dims[3];
+    dyc = filters_desc->getDimIndex(0);
+    dxc = filters_desc->getDimIndex(1);
+    kh = filters_desc->getDimIndex(2);
+    kw = filters_desc->getDimIndex(3);
   } else if (layout == MLUOP_LAYOUT_NHWC) {
-    dyc = filters_desc->dims[0];
-    dxc = filters_desc->dims[3];
-    kh = filters_desc->dims[1];
-    kw = filters_desc->dims[2];
+    dyc = filters_desc->getDimIndex(0);
+    dxc = filters_desc->getDimIndex(3);
+    kh = filters_desc->getDimIndex(1);
+    kw = filters_desc->getDimIndex(2);
   } else if (layout == MLUOP_LAYOUT_HWCN) {
-    dyc = filters_desc->dims[3];
-    dxc = filters_desc->dims[2];
-    kh = filters_desc->dims[0];
-    kw = filters_desc->dims[1];
+    dyc = filters_desc->getDimIndex(3);
+    dxc = filters_desc->getDimIndex(2);
+    kh = filters_desc->getDimIndex(0);
+    kw = filters_desc->getDimIndex(1);
   } else if (layout == MLUOP_LAYOUT_NDHWC) {
-    dyc = filters_desc->dims[0];
-    dxc = filters_desc->dims[4];
-    kd = filters_desc->dims[1];
-    kh = filters_desc->dims[2];
-    kw = filters_desc->dims[3];
+    dyc = filters_desc->getDimIndex(0);
+    dxc = filters_desc->getDimIndex(4);
+    kd = filters_desc->getDimIndex(1);
+    kh = filters_desc->getDimIndex(2);
+    kw = filters_desc->getDimIndex(3);
     filter_4d = false;
   } else if (layout == MLUOP_LAYOUT_NCDHW) {
-    dyc = filters_desc->dims[0];
-    dxc = filters_desc->dims[1];
-    kd = filters_desc->dims[2];
-    kh = filters_desc->dims[3];
-    kw = filters_desc->dims[4];
+    dyc = filters_desc->getDimIndex(0);
+    dxc = filters_desc->getDimIndex(1);
+    kd = filters_desc->getDimIndex(2);
+    kh = filters_desc->getDimIndex(3);
+    kw = filters_desc->getDimIndex(4);
     filter_4d = false;
   } else if (layout == MLUOP_LAYOUT_ARRAY) {
-    dyc = filters_desc->dims[4];
-    dxc = filters_desc->dims[3];
-    kd = filters_desc->dims[0];
-    kh = filters_desc->dims[1];
-    kw = filters_desc->dims[2];
+    dyc = filters_desc->getDimIndex(4);
+    dxc = filters_desc->getDimIndex(3);
+    kd = filters_desc->getDimIndex(0);
+    kh = filters_desc->getDimIndex(1);
+    kw = filters_desc->getDimIndex(2);
     filter_4d = false;
   }
 }
@@ -262,7 +262,7 @@ void IndiceConvolutionBackwardDataExecutor::cpuCompute() {
   int K = kd * kh * kw;
   int filter_num = K * dyc * dxc;
   const mluOpTensorDescriptor_t filters_desc = tensor_desc_[1].tensor;
-  const mluOpTensorLayout_t layout = filters_desc->layout;
+  const mluOpTensorLayout_t layout = filters_desc->getLayout();
   float *filter_transpose_cpu;
   if (!(layout == MLUOP_LAYOUT_HWCN)) {
     filter_transpose_cpu =
@@ -282,17 +282,17 @@ void IndiceConvolutionBackwardDataExecutor::cpuCompute() {
 
   // get index pair param
   const mluOpTensorDescriptor_t indice_pairs_desc = tensor_desc_[2].tensor;
-  int L = indice_pairs_desc->dims[2];
+  int L = indice_pairs_desc->getDimIndex(2);
 
   // main calculation
   // set input data to 0
   int input_grad_data_count = parser_->getOutputDataCount(0);
   memset(cpu_fp32_output_[0], 0x00,
-         mluOpDataTypeBytes(indice_pairs_desc->dtype) * input_grad_data_count);
+         mluOpDataTypeBytes(indice_pairs_desc->getDtype()) * input_grad_data_count);
   float *output_grad = cpu_fp32_input_[0];
   float *indice_pairs = cpu_fp32_input_[2];
   float *input_grad = cpu_fp32_output_[0];
-  bool is_float = (filters_desc->dtype == MLUOP_DTYPE_FLOAT);
+  bool is_float = (filters_desc->getDtype() == MLUOP_DTYPE_FLOAT);
   for (int i = 0; i < input_grad_data_count; ++i) {
     input_grad[i] = 0;
   }

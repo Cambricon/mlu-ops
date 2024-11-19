@@ -222,33 +222,33 @@ void SyncBatchnormGatherStatsWithCountsExecutor::cpuCompute() {
                        ->sync_batchnorm_gather_stats_with_counts_param()
                        .momentum();
 
-  int idx_c = tensor_desc_[0].tensor->dim - 1;
-  int len_c = tensor_desc_[0].tensor->dims[idx_c];
+  int idx_c = tensor_desc_[0].tensor->getDim() - 1;
+  int len_c = tensor_desc_[0].tensor->getDimIndex(idx_c);
   int len_count_all = 1;
   int len_mean_all = 1;
   int len_invstd_all = 1;
   if (parser_->getInputNum() == 3) {
-    len_count_all = tensor_desc_[2].tensor->dims[0];
+    len_count_all = tensor_desc_[2].tensor->getDimIndex(0);
   } else if (parser_->getInputNum() == 4) {
-    len_count_all = tensor_desc_[3].tensor->dims[0];
+    len_count_all = tensor_desc_[3].tensor->getDimIndex(0);
   } else if (parser_->getInputNum() == 5) {
-    len_count_all = tensor_desc_[4].tensor->dims[0];
+    len_count_all = tensor_desc_[4].tensor->getDimIndex(0);
   } else if (parser_->getInputNum() == 6) {
-    len_count_all = tensor_desc_[5].tensor->dims[0];
+    len_count_all = tensor_desc_[5].tensor->getDimIndex(0);
   }
   if (parser_->getInputNum() == 3 || parser_->getInputNum() == 5) {
-    for (int i = 0; i < tensor_desc_[0].tensor->dim; ++i) {
-      len_mean_all *= tensor_desc_[0].tensor->dims[i];
+    for (int i = 0; i < tensor_desc_[0].tensor->getDim(); ++i) {
+      len_mean_all *= tensor_desc_[0].tensor->getDimIndex(i);
     }
-    for (int i = 0; i < tensor_desc_[1].tensor->dim; ++i) {
-      len_invstd_all *= tensor_desc_[1].tensor->dims[i];
+    for (int i = 0; i < tensor_desc_[1].tensor->getDim(); ++i) {
+      len_invstd_all *= tensor_desc_[1].tensor->getDimIndex(i);
     }
   } else {
-    for (int i = 0; i < tensor_desc_[1].tensor->dim; ++i) {
-      len_mean_all *= tensor_desc_[1].tensor->dims[i];
+    for (int i = 0; i < tensor_desc_[1].tensor->getDim(); ++i) {
+      len_mean_all *= tensor_desc_[1].tensor->getDimIndex(i);
     }
-    for (int i = 0; i < tensor_desc_[2].tensor->dim; ++i) {
-      len_invstd_all *= tensor_desc_[2].tensor->dims[i];
+    for (int i = 0; i < tensor_desc_[2].tensor->getDim(); ++i) {
+      len_invstd_all *= tensor_desc_[2].tensor->getDimIndex(i);
     }
   }
   if (len_mean_all == 0 || len_c == 0 || len_count_all == 0 ||

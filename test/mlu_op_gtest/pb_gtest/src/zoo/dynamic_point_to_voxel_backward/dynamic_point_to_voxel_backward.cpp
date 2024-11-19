@@ -119,8 +119,8 @@ void DynamicPointToVoxelBackwardExecutor::cpuCompute() {
 
   auto feats_desc = tensor_desc_[1].tensor;
   int M = voxel_num[0];
-  int C = feats_desc->dims[1];
-  int N = feats_desc->dims[0];
+  int C = feats_desc->getDimIndex(1);
+  int N = feats_desc->getDimIndex(0);
   VLOG(5) << "M=" << M;
   VLOG(5) << "C=" << C;
   VLOG(5) << "N=" << N;

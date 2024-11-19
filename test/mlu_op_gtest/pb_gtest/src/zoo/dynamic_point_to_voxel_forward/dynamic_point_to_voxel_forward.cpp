@@ -117,9 +117,9 @@ void DynamicPointToVoxelForwardExecutor::cpuCompute() {
   auto coors = cpu_fp32_input_[1];
   auto feats_desc = tensor_desc_[0].tensor;
   auto coors_desc = tensor_desc_[1].tensor;
-  const int32_t N = coors_desc->dims[0];
-  const int32_t num_coors = coors_desc->dims[1];
-  const int32_t num_features = feats_desc->dims[1];
+  const int32_t N = coors_desc->getDimIndex(0);
+  const int32_t num_coors = coors_desc->getDimIndex(1);
+  const int32_t num_features = feats_desc->getDimIndex(1);
 
   // Get output
   auto voxel_feats = cpu_fp32_output_[0];
@@ -224,7 +224,7 @@ void DynamicPointToVoxelForwardExecutor::cpuCompute() {
 
   // 5. Calculate voxel_feats
   const float fill_value = reduce_mode == REDUCE_MODE_MAX ? -1.17549e038 : 0x0;
-  for (int32_t i = 0; i < voxel_feats_desc->dims[0] * num_features; ++i) {
+  for (int32_t i = 0; i < voxel_feats_desc->getDimIndex(0) * num_features; ++i) {
     voxel_feats[i] = fill_value;
   }
 

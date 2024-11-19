@@ -40,13 +40,13 @@ void RoiCropForwardExecutor::initData() {
   input_desc_ = tensor_desc_[0].tensor;
   grid_desc_ = tensor_desc_[1].tensor;
   output_desc_ = tensor_desc_[2].tensor;
-  input_batch_ = input_desc_->dims[0];
-  input_h_ = input_desc_->dims[1];
-  input_w_ = input_desc_->dims[2];
-  input_c_ = input_desc_->dims[3];
-  grid_batch_roi_ = grid_desc_->dims[0];
-  output_h_ = output_desc_->dims[1];
-  output_w_ = output_desc_->dims[2];
+  input_batch_ = input_desc_->getDimIndex(0);
+  input_h_ = input_desc_->getDimIndex(1);
+  input_w_ = input_desc_->getDimIndex(2);
+  input_c_ = input_desc_->getDimIndex(3);
+  grid_batch_roi_ = grid_desc_->getDimIndex(0);
+  output_h_ = output_desc_->getDimIndex(1);
+  output_w_ = output_desc_->getDimIndex(2);
   VLOG(4) << "[RoiCropForwardExecutor] call initData() End.";
 }
 

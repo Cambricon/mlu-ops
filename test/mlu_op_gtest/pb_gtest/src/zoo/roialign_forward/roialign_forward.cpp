@@ -51,8 +51,8 @@ void RoialignForwardExecutor::compute() {
   auto input_desc = parser_->getMetaTensor(0).tensor;
   auto input_rois_desc = parser_->getMetaTensor(1).tensor;
   auto output_desc = parser_->getMetaTensor(2).tensor;
-  int pooled_height = output_desc->dims[1];
-  int pooled_width = output_desc->dims[2];
+  int pooled_height = output_desc->getDimIndex(1);
+  int pooled_width = output_desc->getDimIndex(2);
 
   mluOpRoiAlignForwardDescriptor_t roialign_desc;
   mluOpCreateRoiAlignForwardDescriptor(&roialign_desc);
@@ -136,14 +136,14 @@ void RoialignForwardExecutor::cpuCompute() {
   int verison = parser_->getProtoNode()->roialign_param().version();
   int pool_mode = parser_->getProtoNode()->roialign_param().pool_mode();
 
-  int input_height = input_desc->dims[1];
-  int input_width = input_desc->dims[2];
-  int pooled_height = output_desc->dims[1];
-  int pooled_width = output_desc->dims[2];
-  int channels = input_desc->dims[3];
-  int num_rois = input_rois_desc->dims[0];
-  int roi_offset = input_rois_desc->dims[1];
-  int input_n = input_desc->dims[0];
+  int input_height = input_desc->getDimIndex(1);
+  int input_width = input_desc->getDimIndex(2);
+  int pooled_height = output_desc->getDimIndex(1);
+  int pooled_width = output_desc->getDimIndex(2);
+  int channels = input_desc->getDimIndex(3);
+  int num_rois = input_rois_desc->getDimIndex(0);
+  int roi_offset = input_rois_desc->getDimIndex(1);
+  int input_n = input_desc->getDimIndex(0);
 
   float *input = cpu_fp32_input_[0];
   float *input_rois = cpu_fp32_input_[1];  // (n, 5) { n, x0, y0, x1, y1}
@@ -383,20 +383,20 @@ int64_t RoialignForwardExecutor::getTheoryOps() {
   auto input_rois_desc = parser_->getMetaTensor(1).tensor;
   auto output_desc = parser_->getMetaTensor(2).tensor;
 
-  int input_height = input_desc->dims[1];
-  int input_width = input_desc->dims[2];
-  int pooled_height = output_desc->dims[1];
-  int pooled_width = output_desc->dims[2];
-  int channels = input_desc->dims[3];
-  int num_rois = input_rois_desc->dims[0];
-  int roi_offset = input_rois_desc->dims[1];
+  int input_height = input_desc->getDimIndex(1);
+  int input_width = input_desc->getDimIndex(2);
+  int pooled_height = output_desc->getDimIndex(1);
+  int pooled_width = output_desc->getDimIndex(2);
+  int channels = input_desc->getDimIndex(3);
+  int num_rois = input_rois_desc->getDimIndex(0);
+  int roi_offset = input_rois_desc->getDimIndex(1);
   int64_t theory_ops = 0;
 
   Device device = parser_->device();
   float *input_rois = NULL;
 
-  auto rois_dtype = input_rois_desc->dtype;
-  int rois_count_num = num_rois * input_rois_desc->dims[1];
+  auto rois_dtype = input_rois_desc->getDtype();
+  int rois_count_num = num_rois * input_rois_desc->getDimIndex(1);
   float *rois_host =
       (float *)cpu_runtime_.allocate(rois_count_num * sizeof(float));
   castDataOut(data_vector_[1].host_ptr, rois_dtype, (float *)rois_host,
@@ -465,20 +465,20 @@ int64_t RoialignForwardExecutor::getTheoryIoSize() {
   auto output_desc = parser_->getMetaTensor(2).tensor;
   int pool_mode = parser_->getProtoNode()->roialign_param().pool_mode();
 
-  int input_height = input_desc->dims[1];
-  int input_width = input_desc->dims[2];
-  int pooled_height = output_desc->dims[1];
-  int pooled_width = output_desc->dims[2];
-  int channels = input_desc->dims[3];
-  int num_rois = input_rois_desc->dims[0];
-  int roi_offset = input_rois_desc->dims[1];
+  int input_height = input_desc->getDimIndex(1);
+  int input_width = input_desc->getDimIndex(2);
+  int pooled_height = output_desc->getDimIndex(1);
+  int pooled_width = output_desc->getDimIndex(2);
+  int channels = input_desc->getDimIndex(3);
+  int num_rois = input_rois_desc->getDimIndex(0);
+  int roi_offset = input_rois_desc->getDimIndex(1);
   int64_t theory_io_size = 0;
 
   Device device = parser_->device();
   float *input_rois = NULL;
 
-  auto rois_dtype = input_rois_desc->dtype;
-  int rois_count_num = num_rois * input_rois_desc->dims[1];
+  auto rois_dtype = input_rois_desc->getDtype();
+  int rois_count_num = num_rois * input_rois_desc->getDimIndex(1);
   float *rois_host =
       (float *)cpu_runtime_.allocate(rois_count_num * sizeof(float));
   castDataOut(data_vector_[1].host_ptr, rois_dtype, (float *)rois_host,

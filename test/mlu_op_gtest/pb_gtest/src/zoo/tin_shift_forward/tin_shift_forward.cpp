@@ -55,12 +55,12 @@ void TinShiftForwardExecutor::cpuCompute() {
   auto x = tensor_desc_[0].tensor;
   auto x1 = tensor_desc_[1].tensor;
   auto count1 = parser_->getInputDataCount(0);
-  int batch_size = x->dims[0];
-  int t_size = x->dims[1];
-  int channels = x->dims[2];
-  int hw_size = x->dims[3];
-  int group_batch = x1->dims[0];
-  int group_size = x1->dims[1];
+  int batch_size = x->getDimIndex(0);
+  int t_size = x->getDimIndex(1);
+  int channels = x->getDimIndex(2);
+  int hw_size = x->getDimIndex(3);
+  int group_batch = x1->getDimIndex(0);
+  int group_size = x1->getDimIndex(1);
   int group_channel = channels / group_size;
 
   for (int index = 0; index < count1; index++) {

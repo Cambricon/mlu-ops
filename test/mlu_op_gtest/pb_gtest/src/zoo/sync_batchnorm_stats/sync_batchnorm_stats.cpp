@@ -117,11 +117,11 @@ void cpuSyncBatchNormStats(const float *x, const float eps, float *mean,
 void SyncBatchnormStatsExecutor::cpuCompute() {
   float eps = parser_->getProtoNode()->sync_batchnorm_stats_param().eps();
 
-  int idx_c = tensor_desc_[0].tensor->dim - 1;
-  int len_c = tensor_desc_[0].tensor->dims[idx_c];
+  int idx_c = tensor_desc_[0].tensor->getDim() - 1;
+  int len_c = tensor_desc_[0].tensor->getDimIndex(idx_c);
   int len_x = 1;
-  for (int i = 0; i < tensor_desc_[0].tensor->dim; ++i) {
-    len_x *= tensor_desc_[0].tensor->dims[i];
+  for (int i = 0; i < tensor_desc_[0].tensor->getDim(); ++i) {
+    len_x *= tensor_desc_[0].tensor->getDimIndex(i);
   }
   if (len_x == 0 || len_c == 0) {
     return;
