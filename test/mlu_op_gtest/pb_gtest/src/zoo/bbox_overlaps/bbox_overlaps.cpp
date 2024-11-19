@@ -152,8 +152,8 @@ void BboxOverlapsExecutor::cpuCompute() {
   auto bbox1_desc = tensor_desc_[0].tensor;
   auto bbox2_desc = tensor_desc_[1].tensor;
 
-  int rows = bbox1_desc->dims[0];
-  int cols = bbox2_desc->dims[0];
+  int rows = bbox1_desc->getDimIndex(0);
+  int cols = bbox2_desc->getDimIndex(0);
 
   // get struct param
   int mode = parser_->getProtoNode()->bbox_overlaps_param().mode();

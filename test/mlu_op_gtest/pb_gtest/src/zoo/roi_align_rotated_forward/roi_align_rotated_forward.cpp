@@ -184,11 +184,11 @@ void RoiAlignRotatedForwardExecutor::cpuCompute() {
   float *rois = cpu_fp32_input_[1];  // (n, 6) [batch_id, x, y, w, h, Θ]
   float *output = cpu_fp32_output_[0];
 
-  const int channel = features_desc->dims[3];
-  const int width = features_desc->dims[2];
-  const int height = features_desc->dims[1];
-  const int batch = features_desc->dims[0];
-  const int rois_nums = rois_desc->dims[0];
+  const int channel = features_desc->getDimIndex(3);
+  const int width = features_desc->getDimIndex(2);
+  const int height = features_desc->getDimIndex(1);
+  const int batch = features_desc->getDimIndex(0);
+  const int rois_nums = rois_desc->getDimIndex(0);
 
   if (mluOpGetTensorElementNum(features_desc) == 0) {
     return;
@@ -288,7 +288,7 @@ int64_t RoiAlignRotatedForwardExecutor::getTheoryOps() {
       if (unlikely(ts->empty())) {
             return 0;
       }
-      if (ts->dtype == MLUOP_DTYPE_FLOAT) {
+      if (ts->getDtype() == MLUOP_DTYPE_FLOAT) {
         ts->cpu_ptr =
             (float *)cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
         parser_->getInputTensorValue(i, (void *)ts->cpu_ptr, ts->shape_count);
@@ -297,7 +297,7 @@ int64_t RoiAlignRotatedForwardExecutor::getTheoryOps() {
         parser_->getInputTensorValue(i, temp, ts->shape_count);
         ts->cpu_ptr =
             (float *)cpu_runtime_.allocate(ts->shape_count * sizeof(float));
-        castDataOut(temp, ts->dtype, ts->cpu_ptr, MLUOP_DTYPE_FLOAT,
+        castDataOut(temp, ts->getDtype(), ts->cpu_ptr, MLUOP_DTYPE_FLOAT,
                         ts->shape_count, NO_QUANT);
       }
       cpu_fp32_input_.push_back(ts->cpu_ptr);
@@ -307,7 +307,7 @@ int64_t RoiAlignRotatedForwardExecutor::getTheoryOps() {
       if (unlikely(ts->empty())) {
             return 0;
       }
-      if (ts->dtype == MLUOP_DTYPE_FLOAT) {
+      if (ts->getDtype() == MLUOP_DTYPE_FLOAT) {
         ts->cpu_ptr =
             (float *)cpu_runtime_.allocate(ts->shape_count * ts->sizeof_dtype);
         parser_->getOutputTensorValue(i, (void *)ts->cpu_ptr, ts->shape_count);
@@ -316,7 +316,7 @@ int64_t RoiAlignRotatedForwardExecutor::getTheoryOps() {
         parser_->getOutputTensorValue(i, temp, ts->shape_count);
         ts->cpu_ptr =
             (float *)cpu_runtime_.allocate(ts->shape_count * sizeof(float));
-        castDataOut(temp, ts->dtype, ts->cpu_ptr, MLUOP_DTYPE_FLOAT,
+        castDataOut(temp, ts->getDtype(), ts->cpu_ptr, MLUOP_DTYPE_FLOAT,
                         ts->shape_count, NO_QUANT);
       }
       cpu_fp32_output_.push_back(ts->cpu_ptr);

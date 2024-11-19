@@ -158,8 +158,8 @@ void DcnForwardExecutor::workspaceMalloc() {
     output_desc = tensor_desc_[5].tensor;
   }
 
-  input_desc->onchip_dtype = input_onchip_dtype;
-  weight_desc->onchip_dtype = weight_onchip_dtype;
+  input_desc->setOnchipDtype(input_onchip_dtype);
+  weight_desc->setOnchipDtype(weight_onchip_dtype);
 
   MLUOP_CHECK(mluOpGetDCNForwardWorkspaceSize(
       handle_, dcn_desc, input_desc, offset_desc, mask_desc, weight_desc,
@@ -236,8 +236,8 @@ void DcnForwardExecutor::compute() {
     output = data_vector_[5].device_ptr;
   }
 
-  input_desc->onchip_dtype = input_onchip_dtype;
-  weight_desc->onchip_dtype = weight_onchip_dtype;
+  input_desc->setOnchipDtype(input_onchip_dtype);
+  weight_desc->setOnchipDtype(weight_onchip_dtype);
   VLOG(4) << "call mluOpDCNForward()";
   interface_timer_.start();
 
@@ -447,15 +447,15 @@ void DcnForwardExecutor::computeDCNForwardCPU(
     const mluOpTensorDescriptor_t output_desc, const void *cpu_output,
     float *buffer, int pad[], int stride[], int dilation[],
     int64_t &theory_ops) {
-  const int N = input_desc->dims[0];
-  const int hi = input_desc->dims[1];
-  const int wi = input_desc->dims[2];
-  const int ci = input_desc->dims[3];
-  const int ho = offset_desc->dims[1];
-  const int wo = offset_desc->dims[2];
-  const int co = output_desc->dims[3];
-  const int kh = weight_desc->dims[1];
-  const int kw = weight_desc->dims[2];
+  const int N = input_desc->getDimIndex(0);
+  const int hi = input_desc->getDimIndex(1);
+  const int wi = input_desc->getDimIndex(2);
+  const int ci = input_desc->getDimIndex(3);
+  const int ho = offset_desc->getDimIndex(1);
+  const int wo = offset_desc->getDimIndex(2);
+  const int co = output_desc->getDimIndex(3);
+  const int kh = weight_desc->getDimIndex(1);
+  const int kw = weight_desc->getDimIndex(2);
   const int pt = pad[0];
   const int pb = pad[1];
   const int pl = pad[2];
@@ -594,12 +594,12 @@ void DcnForwardExecutor::cpuCompute() {
     cpu_output = cpu_fp32_output_[0];
   }
 
-  const int ho = offset_desc->dims[1];
-  const int wo = offset_desc->dims[2];
-  const int kh = weight_desc->dims[1];
-  const int kw = weight_desc->dims[2];
-  const int ci = input_desc->dims[3];
-  const int co = output_desc->dims[3];
+  const int ho = offset_desc->getDimIndex(1);
+  const int wo = offset_desc->getDimIndex(2);
+  const int kh = weight_desc->getDimIndex(1);
+  const int kw = weight_desc->getDimIndex(2);
+  const int ci = input_desc->getDimIndex(3);
+  const int co = output_desc->getDimIndex(3);
 
   size_t cpu_buffer_size = 0;
   if (g == 1) {
@@ -652,15 +652,15 @@ int64_t DcnForwardExecutor::getTheoryOps() {
       output_desc = tensor_desc_[5].tensor;
     }
 
-    const int N = input_desc->dims[0];
-    const int hi = input_desc->dims[1];
-    const int wi = input_desc->dims[2];
-    const int ci = input_desc->dims[3];
-    const int ho = offset_desc->dims[1];
-    const int wo = offset_desc->dims[2];
-    const int co = output_desc->dims[3];
-    const int kh = weight_desc->dims[1];
-    const int kw = weight_desc->dims[2];
+    const int N = input_desc->getDimIndex(0);
+    const int hi = input_desc->getDimIndex(1);
+    const int wi = input_desc->getDimIndex(2);
+    const int ci = input_desc->getDimIndex(3);
+    const int ho = offset_desc->getDimIndex(1);
+    const int wo = offset_desc->getDimIndex(2);
+    const int co = output_desc->getDimIndex(3);
+    const int kh = weight_desc->getDimIndex(1);
+    const int kw = weight_desc->getDimIndex(2);
     int coeff = getCoefficientOfLT2CT();
     const int k = kh * kw * ci / g;
     const int m = im2col_step * ho * wo;

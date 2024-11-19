@@ -154,7 +154,7 @@ void RoiawarePool3dBackwardExecutor::initData() {
   max_pts_each_voxel_ =
       roiaware_pool3d_backward_proto_desc.max_pts_each_voxel();
 
-  pts_num_ = desc_grad_in_->dims[0];
+  pts_num_ = desc_grad_in_->getDimIndex(0);
 
   VLOG(4) << "RoiawarePool3dBackwardExecutor::initData() End.";
 }
