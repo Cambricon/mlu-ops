@@ -96,13 +96,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  const int channel = features_desc->dims[3];
-  const int width = features_desc->dims[2];
-  const int height = features_desc->dims[1];
-  const int batch = features_desc->dims[0];
-  const int rois_nums = rois_desc->dims[0];
-  mluOpDataType_t data_type = features_desc->dtype;
-
   PARAM_CHECK_GT(API, pooled_height, 0);
   PARAM_CHECK_GT(API, pooled_width, 0);
   PARAM_CHECK_GE(API, spatial_scale, 0);
@@ -117,10 +110,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(
   PARAM_CHECK(API, output != nullptr);
   PARAM_CHECK(API, rois != nullptr);
 
+  const int channel = features_desc->dims[3];
+  const int width = features_desc->dims[2];
+  const int height = features_desc->dims[1];
+  const int batch = features_desc->dims[0];
+  const int rois_nums = rois_desc->dims[0];
   VLOG(5) << "pool_height: " << pooled_height << ",pool_width: " << pooled_width
           << ",channel: " << channel << ",roi nums: " << rois_nums << ".";
   VLOG(5) << "batch: " << batch << ",height: " << height << ",width: " << width
-          << ".";
+          << ",sample_ratio: " << sample_ratio << ".";
 
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("roi_align_rotated_forward", "ROI_ALIGN_ROTATED_FORWARD");
@@ -142,18 +140,33 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(
                              clockwise);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
-  mluOpRoiAlignRotatedParams roiAlignRotatedParams{pooled_height, pooled_width,
-                                                   sample_ratio,  spatial_scale,
-                                                   aligned,       clockwise};
+  mluOpRoiAlignRotatedParams roiAlignRotatedParams{
+      aligned,      clockwise,    pooled_height,
+      pooled_width, sample_ratio, spatial_scale};
+
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFunc(handle, rois_nums * pooled_height * pooled_width, &k_dim, &k_type);
-  VLOG(5) << "[mluOpRoiAlignRotatedForward] launch kernel policyFunc["
-          << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "].";
-  CHECK_RETURN(API, KernelRoiAlignRotatedForward(
-                        k_dim, k_type, handle->queue, features_desc->dtype,
-                        features, rois, batch, height, width, channel,
-                        rois_nums, roiAlignRotatedParams, output));
+
+  uint32_t sample_ratio_split = 3, channels_split = 1024;
+  if (handle->arch >= MLUOP_MLU590 && channel <= channels_split &&
+      (sample_ratio >= sample_ratio_split || sample_ratio <= 0)
+      ) {
+    VLOG(5) << "[mluOpRoiAlignRotatedForwardVector] launch kernel policyFunc["
+            << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "].";
+    CHECK_RETURN(API, KernelRoiAlignRotatedForwardVector(
+                          k_dim, k_type, handle->queue, features_desc->dtype,
+                          features, rois, batch, height, width, channel,
+                          rois_nums, roiAlignRotatedParams, output));
+  } else {
+    VLOG(5) << "[mluOpRoiAlignRotatedForward] launch kernel policyFunc["
+            << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "].";
+    CHECK_RETURN(API, KernelRoiAlignRotatedForward(
+                          k_dim, k_type, handle->queue, features_desc->dtype,
+                          features, rois, batch, height, width, channel,
+                          rois_nums, roiAlignRotatedParams, output));
+  }
+
   VLOG(5) << "Kernel KernelRoiAlignRotatedForward.";
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
@@ -259,9 +272,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedBackward(
                              clockwise);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
-  mluOpRoiAlignRotatedParams roiAlignRotatedParams{pooled_height, pooled_width,
-                                                   sample_ratio,  spatial_scale,
-                                                   aligned,       clockwise};
+  mluOpRoiAlignRotatedParams roiAlignRotatedParams{
+      aligned,      clockwise,    pooled_height,
+      pooled_width, sample_ratio, spatial_scale};
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
