@@ -260,6 +260,8 @@ __mlu_global__ void mluBlockDefaultMutualInformationForward(
     return;
   }
 
+  // sync for boundary loadGE on NRAM
+  __sync();
   const int px_one_batch_num = S * (T + 1);
   const int py_one_batch_num = (S + 1) * T;
   const int p_one_batch_num = (S + 1) * (T + 1);
