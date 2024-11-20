@@ -361,6 +361,8 @@ __mlu_global__ void mluBlockDefaultMutualInformationBackward(
     return;
   }
 
+  // sync for boundary loadGE on NRAM
+  __sync();
   // px_grad and px, py_grad and py, p_grad and p, have the same shape
   const int px_one_batch_num = S * (T + 1);
   const int py_one_batch_num = (S + 1) * T;
