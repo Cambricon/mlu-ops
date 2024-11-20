@@ -119,9 +119,8 @@ __mlu_func__ void computePGrad(const int b, const int S, const int T,
   __bang_write_zero(nram_cur_term1, 3 * min_len + 1);
 
   // compute the last one: p_grad[b][s_end][t_end] = ans_grad[b]
-  __memcpy_async(nram_p_grad + s_end * (T + 1) + t_end, ans_grad + b,
+  __memcpy(nram_p_grad + s_end * (T + 1) + t_end, ans_grad + b,
                  sizeof(float), GDRAM2NRAM);
-  __sync();
   nram_cur_p_grad[0] = nram_p_grad[s_end * (T + 1) + t_end];
 
   int data_num = 0;
