@@ -36,7 +36,6 @@ class FftExecutor : public Executor {
   void paramCheck() override;
   void workspaceMalloc() override;
   void compute() override;
-  void cpuCompute() override;
   void workspaceFree() override;
   int64_t getTheoryOps() override;
   int64_t getTheoryIoSize() override;

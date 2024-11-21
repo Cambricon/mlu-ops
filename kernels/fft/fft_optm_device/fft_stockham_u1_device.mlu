@@ -481,9 +481,9 @@ __mlu_func__ void store(DT* output, DT* y_in_r, DT* x_out1_r,
     if (part == 0) {
       int dst_one_point_offset = b * out_n * 2 + n;
       int src_one_point_offset = pow_2_m * L_sub;
-      *(output + dst_one_point_offset) = *(out_nram + src_one_point_offset);
-      *(output + dst_one_point_offset + 1) =
-          *(out_nram + src_one_point_offset + 1);
+      __memcpy_async((DT *)output + dst_one_point_offset,
+                     (DT *)out_nram + src_one_point_offset, sizeof(DT) * 2,
+                     NRAM2GDRAM);
     }
   } else if (fft_flag == IRFFT) {
     int dst_offset = part * L_sub;
