@@ -72,7 +72,7 @@ __mlu_func__ void float2DifferentType(float *result_float, T *result,
                 (int16_t *)result_ge_half_max, num);
   }
   if (std::is_same<T, int>::value) {
-    __bang_float2int32_tz((int *)result, result_float, num, 0);
+    __cn_vector_cast_f32_to_s32(num, (int *)result, result_float);
   }
 }
 
