@@ -232,7 +232,7 @@ __mlu_func__ void coreCompute(int8_t *nram_input, const T *nram_weight,
       int32_t align_c = PAD_UP(total_c, c_align_num);
       int32_t target_value = ((int32_t *)nram_target)[n];
       if (target_value >= total_c || target_value < 0) continue;
-      T weight_value = nram_weight[target_value];
+      T weight_value = __load_nram(&nram_weight[target_value]);
       __bang_mul_scalar((T *)nram_output + n * align_c,
                         (T *)nram_output + n * align_c, weight_value, align_c);
     }
