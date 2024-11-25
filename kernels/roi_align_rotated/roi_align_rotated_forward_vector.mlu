@@ -130,14 +130,14 @@ __mlu_func__ void getXYorder(T *bh_order, T *bw_order, T h_offset, T w_offset,
   // x = h_idx_in_bin * sin_theta +
   //     w_idx_in_bin * cos_theta + roi_center_w
   if constexpr (std::is_same<T, half>::value) {
-    // calu y
+    // calculate y
     __bang_mul_scalar(aux3, aux2, sin_theta, deal_num);
     __asm__ volatile(
         "fuse.nram.f16 [%[dst]], %[num], [%[src0]], .mul(%[cos_v]), "
         ".sub([%[src1]]), .add(%[rh]);\n\t" ::[dst] "r"(nram_y),
         [ num ] "r"(deal_num), [ src0 ] "r"(aux1), [ cos_v ] "r"(cos_theta),
         [ src1 ] "r"(aux3), [ rh ] "r"(roi_center_h));
-    // calu x
+    // calculate x
     __bang_mul_scalar(aux3, aux2, cos_theta, deal_num);
     __asm__ volatile(
         "fuse.nram.f16 [%[dst]], %[num], [%[src0]], .mul(%[sin_v]), "
@@ -145,14 +145,14 @@ __mlu_func__ void getXYorder(T *bh_order, T *bw_order, T h_offset, T w_offset,
         [ num ] "r"(deal_num), [ src0 ] "r"(aux1), [ sin_v ] "r"(sin_theta),
         [ src1 ] "r"(aux3), [ rw ] "r"(roi_center_w));
   } else {
-    // calu y
+    // calculate y
     __bang_mul_scalar(aux3, aux2, sin_theta, deal_num);
     __asm__ volatile(
         "fuse.nram.f32 [%[dst]], %[num], [%[src0]], .mul(%[cos_v]), "
         ".sub([%[src1]]), .add(%[rh]);\n\t" ::[dst] "r"(nram_y),
         [ num ] "r"(deal_num), [ src0 ] "r"(aux1), [ cos_v ] "r"(cos_theta),
         [ src1 ] "r"(aux3), [ rh ] "r"(roi_center_h));
-    // calu x
+    // calculate x
     __bang_mul_scalar(aux3, aux2, cos_theta, deal_num);
     __asm__ volatile(
         "fuse.nram.f32 [%[dst]], %[num], [%[src0]], .mul(%[sin_v]), "
@@ -218,7 +218,7 @@ __mlu_func__ void bilinearInterpolatePosWeight(
     }
 
     // w1 cache x_low, w3 cache x_high
-    // pos1 cache y_low, pos2 cache y_high
+    // pos1 cache y_low, pos3 cache y_high
     ((uint32_t *)w1)[i] = x_low;
     ((uint32_t *)w3)[i] = x_high;
     pos1[i] = y_low;
@@ -237,7 +237,7 @@ __mlu_func__ void bilinearInterpolatePosWeight(
   // pos2 = y_low * width + x_high;
   __bang_add(pos2, pos2, (uint32_t *)w3, valid_num);
 
-  // pos3 = y_high * width;
+  // pos4 = y_high * width;
   __bang_mul_scalar(pos4, pos3, width, valid_num);
   // pos3 = y_high * width + x_low;
   __bang_add(pos3, pos4, (uint32_t *)w1, valid_num);
@@ -251,13 +251,13 @@ __mlu_func__ void bilinearInterpolatePosWeight(
   __bang_mul_scalar(w4, nram_x, -1.0, valid_num);
   __bang_add_scalar(w4, w4, 1.0, valid_num);
 
-  // w1[i] = hy * hx;
+  // w1 = hy * hx;
   __bang_mul(w1, w3, w4, valid_num);
-  // w2[i] = hy * lx;
+  // w2 = hy * lx;
   __bang_mul(w2, w3, nram_x, valid_num);
-  // w3[i] = ly * hx;
+  // w3 = ly * hx;
   __bang_mul(w3, nram_y, w4, valid_num);
-  // w4[i] = ly * lx;
+  // w4 = ly * lx;
   __bang_mul(w4, nram_y, nram_x, valid_num);
 }
 
