@@ -14404,7 +14404,7 @@ mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
 * - ::MLUOP_LAYOUT_ARRAY
 *
 * @par Scale Limitation
-* - None.
+* - The parameter "dim" must be within the scope [-input->dims, input->dims - 1].
 *
 * @par API Dependency
 * - None.
