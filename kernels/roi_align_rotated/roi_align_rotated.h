@@ -26,22 +26,29 @@
 #include "mlu_op.h"
 
 struct mluOpRoiAlignRotatedParams {
+  bool aligned;
+  bool clockwise;
   int pooled_height;
   int pooled_width;
   int sample_ratio;
   float spatial_scale;
-  bool aligned;
-  bool clockwise;
 };
 
-mluOpStatus_t MLUOP_WIN_API KernelRoiAlignRotatedForward(
+mluOpStatus_t KernelRoiAlignRotatedForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *features, const void *rois,
     const int batch, const int height, const int width, const int channel,
     const int rois_num, const mluOpRoiAlignRotatedParams rroiAlignParams,
     void *output);
 
-mluOpStatus_t MLUOP_WIN_API KernelRoiAlignRotatedBackward(
+mluOpStatus_t KernelRoiAlignRotatedForwardVector(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const void *features, const void *rois,
+    const int batch, const int height, const int width, const int channel,
+    const int rois_num, const mluOpRoiAlignRotatedParams rroiAlignParams,
+    void *output);
+
+mluOpStatus_t KernelRoiAlignRotatedBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, const void *top_grad, const void *rois,
     const int batch, const int height, const int width, const int channel,

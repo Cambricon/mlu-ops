@@ -1,0 +1,570 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "roi_align_rotated.h"
+
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+#include "mlu.h"
+
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
+
+#define ROI_OFFSET 6
+
+template <typename T>
+__mlu_func__ void mluopDivScalar(T *dst, T *src, T value, uint32_t num) {
+  if constexpr (std::is_same<T, half>::value) {
+    __asm__ volatile(
+        "div.scalar.nram.f16 [%[dst]], [%[src0]], "
+        "%[src1], %[num];\n\t" ::[dst] "r"(dst),
+        [ src0 ] "r"(src), [ src1 ] "r"(value),
+        [ num ] "r"(num));
+  } else {
+    __asm__ volatile(
+        "div.scalar.nram.f32 [%[dst]], [%[src0]], "
+        "%[src1], %[num];\n\t" ::[dst] "r"(dst),
+        [ src0 ] "r"(src), [ src1 ] "r"(value),
+        [ num ] "r"(num));
+  }
+}
+
+template <typename T, bool sr_gt0>
+__mlu_func__ void getRoiInfo(const T *rois_dram, int roi_idx,
+                             const mluOpRoiAlignRotatedParams &params,
+                             int &roi_batch_ind, T &roi_center_h,
+                             T &roi_center_w, T &bin_size_h, T &bin_size_w,
+                             int &roi_bin_grid_h, int &roi_bin_grid_w,
+                             T &roi_start_h, T &roi_start_w, T &cos_theta,
+                             T &sin_theta, T &count) {
+  const T *roi_info = rois_dram + roi_idx * ROI_OFFSET;
+  roi_batch_ind = (int)roi_info[0];
+  T offset = params.aligned ? (T)0.5 : (T)0.0;
+  roi_center_w = roi_info[1] * (T)params.spatial_scale - offset;
+  roi_center_h = roi_info[2] * (T)params.spatial_scale - offset;
+  T roi_width = roi_info[3] * (T)params.spatial_scale;
+  T roi_height = roi_info[4] * (T)params.spatial_scale;
+  T theta = roi_info[5];
+  if (params.clockwise) {
+    theta = -(theta);
+  }
+  if (!params.aligned) {
+    roi_width = fmaxf(roi_width, (T)1.0);
+    roi_height = fmaxf(roi_height, (T)1.0);
+  }
+
+  bin_size_h = roi_height / (T)params.pooled_height;
+  bin_size_w = roi_width / (T)params.pooled_width;
+
+  if constexpr (sr_gt0) {
+    roi_bin_grid_h = params.sample_ratio;
+    roi_bin_grid_w = params.sample_ratio;
+  } else {
+    if constexpr (std::is_same<T, half>::value) {
+      roi_bin_grid_h = __half2int_up(bin_size_h);
+      roi_bin_grid_w = __half2int_up(bin_size_w);
+    } else {
+      roi_bin_grid_h = __float2int_up(bin_size_h);
+      roi_bin_grid_w = __float2int_up(bin_size_w);
+    }
+  }
+
+  roi_start_h = roi_height / (T)-2.0;
+  roi_start_w = roi_width / (T)-2.0;
+
+  if constexpr (std::is_same<T, half>::value) {
+    cos_theta = __cn_scalar_cos_f16(theta);
+    sin_theta = __cn_scalar_sin_f16(theta);
+  } else {
+    cos_theta = __cn_scalar_cos_f32(theta);
+    sin_theta = __cn_scalar_sin_f32(theta);
+  }
+
+  count = fmaxf(T(roi_bin_grid_h * roi_bin_grid_w), (T)1.0);
+}
+
+template <typename T>
+__mlu_func__ void getXYorder(T *bh_order, T *bw_order, T h_offset, T w_offset,
+                             uint32_t deal_num, T *nram_y, T *nram_x, T *aux1,
+                             T *aux2, T *aux3, T bin_size_h, T bin_size_w,
+                             int roi_bin_grid_h, int roi_bin_grid_w, T h_bias,
+                             T w_bias, T roi_center_h, T roi_center_w,
+                             T cos_theta, T sin_theta) {
+  // h_idx_in_bin = (bh_order + h_offset）* bin_size_h /
+  //                roi_bin_grid_h + h_bias
+  // w_idx_in_bin = (bw_order + w_offset）* bin_size_w /
+  //                roi_bin_grid_w + w_bias
+  __bang_add_scalar(aux1, bh_order, h_offset, deal_num);
+  __bang_mul_scalar(aux1, aux1, bin_size_h, deal_num);
+  __bang_add_scalar(aux2, bw_order, w_offset, deal_num);
+  __bang_mul_scalar(aux2, aux2, bin_size_w, deal_num);
+  // Coordinate calculation requires high precision.
+  // must use div
+  mluopDivScalar(aux1, aux1, (T)roi_bin_grid_h, deal_num);
+  mluopDivScalar(aux2, aux2, (T)roi_bin_grid_w, deal_num);
+  __bang_add_scalar(aux1, aux1, h_bias, deal_num);
+  __bang_add_scalar(aux2, aux2, w_bias, deal_num);
+
+  // y = h_idx_in_bin * cos_theta -
+  //     w_idx_in_bin * sin_theta + roi_center_h
+  // x = h_idx_in_bin * sin_theta +
+  //     w_idx_in_bin * cos_theta + roi_center_w
+  if constexpr (std::is_same<T, half>::value) {
+    // calculate y
+    __bang_mul_scalar(aux3, aux2, sin_theta, deal_num);
+    __asm__ volatile(
+        "fuse.nram.f16 [%[dst]], %[num], [%[src0]], .mul(%[cos_v]), "
+        ".sub([%[src1]]), .add(%[rh]);\n\t" ::[dst] "r"(nram_y),
+        [ num ] "r"(deal_num), [ src0 ] "r"(aux1), [ cos_v ] "r"(cos_theta),
+        [ src1 ] "r"(aux3), [ rh ] "r"(roi_center_h));
+    // calculate x
+    __bang_mul_scalar(aux3, aux2, cos_theta, deal_num);
+    __asm__ volatile(
+        "fuse.nram.f16 [%[dst]], %[num], [%[src0]], .mul(%[sin_v]), "
+        ".add([%[src1]]), .add(%[rw]);\n\t" ::[dst] "r"(nram_x),
+        [ num ] "r"(deal_num), [ src0 ] "r"(aux1), [ sin_v ] "r"(sin_theta),
+        [ src1 ] "r"(aux3), [ rw ] "r"(roi_center_w));
+  } else {
+    // calculate y
+    __bang_mul_scalar(aux3, aux2, sin_theta, deal_num);
+    __asm__ volatile(
+        "fuse.nram.f32 [%[dst]], %[num], [%[src0]], .mul(%[cos_v]), "
+        ".sub([%[src1]]), .add(%[rh]);\n\t" ::[dst] "r"(nram_y),
+        [ num ] "r"(deal_num), [ src0 ] "r"(aux1), [ cos_v ] "r"(cos_theta),
+        [ src1 ] "r"(aux3), [ rh ] "r"(roi_center_h));
+    // calculate x
+    __bang_mul_scalar(aux3, aux2, cos_theta, deal_num);
+    __asm__ volatile(
+        "fuse.nram.f32 [%[dst]], %[num], [%[src0]], .mul(%[sin_v]), "
+        ".add([%[src1]]), .add(%[rw]);\n\t" ::[dst] "r"(nram_x),
+        [ num ] "r"(deal_num), [ src0 ] "r"(aux1), [ sin_v ] "r"(sin_theta),
+        [ src1 ] "r"(aux3), [ rw ] "r"(roi_center_w));
+  }
+}
+
+template <typename T>
+__mlu_func__ void selectValidPoint(const int height, const int width, T *nram_y,
+                                   T *nram_x, const uint32_t deal_num, T *aux1,
+                                   T *aux2, T *aux3, uint32_t &valid_num) {
+  // y < -1.0
+  __bang_lt_scalar(aux1, nram_y, (T)-1, deal_num);
+  // || y > height
+  __bang_gt_scalar(aux2, nram_y, (T)height, deal_num);
+  __bang_or(aux3, aux1, aux2, deal_num);
+  // || x < -1
+  __bang_lt_scalar(aux1, nram_x, (T)-1, deal_num);
+  __bang_or(aux3, aux3, aux1, deal_num);
+  // || x > width
+  __bang_gt_scalar(aux2, nram_x, (T)width, deal_num);
+  __bang_or(aux3, aux3, aux2, deal_num);
+  __bang_not(aux3, aux3, deal_num);
+  __bang_filter(nram_y, nram_y, aux3, deal_num);
+  valid_num = __bang_filter(nram_x, nram_x, aux3, deal_num);
+}
+
+template <typename T>
+__mlu_func__ void bilinearInterpolatePosWeight(
+    const int height, const int width, T *nram_y, T *nram_x,
+    const uint32_t valid_num, uint32_t *pos1, uint32_t *pos2, uint32_t *pos3,
+    uint32_t *pos4, T *w1, T *w2, T *w3, T *w4) {
+  for (uint32_t i = 0; i < valid_num; ++i) {
+    T y = nram_y[i];
+    T x = nram_x[i];
+
+    if (y <= 0) y = 0;
+    if (x <= 0) x = 0;
+
+    int y_low, x_low, y_high, x_high;
+    if constexpr (std::is_same<T, half>::value) {
+      y_low = __half2int(y);
+      x_low = __half2int(x);
+    } else {
+      y_low = __float2int(y);
+      x_low = __float2int(x);
+    }
+
+    if (y_low >= height - 1) {
+      y_high = y_low = height - 1;
+      y = (T)y_low;
+    } else {
+      y_high = y_low + 1;
+    }
+
+    if (x_low >= width - 1) {
+      x_high = x_low = width - 1;
+      x = (T)x_low;
+    } else {
+      x_high = x_low + 1;
+    }
+
+    // w1 cache x_low, w3 cache x_high
+    // pos1 cache y_low, pos3 cache y_high
+    ((uint32_t *)w1)[i] = x_low;
+    ((uint32_t *)w3)[i] = x_high;
+    pos1[i] = y_low;
+    pos3[i] = y_high;
+
+    // nram_y cache ly, nram_x cache lx
+    // T ly = y - y_low;
+    // T lx = x - x_low;
+    nram_y[i] = y - y_low;
+    nram_x[i] = x - x_low;
+  }
+  // pos2 = y_low * width;
+  __bang_mul_scalar(pos2, pos1, width, valid_num);
+  // pos1 = y_low * width + x_low;
+  __bang_add(pos1, pos2, (uint32_t *)w1, valid_num);
+  // pos2 = y_low * width + x_high;
+  __bang_add(pos2, pos2, (uint32_t *)w3, valid_num);
+
+  // pos4 = y_high * width;
+  __bang_mul_scalar(pos4, pos3, width, valid_num);
+  // pos3 = y_high * width + x_low;
+  __bang_add(pos3, pos4, (uint32_t *)w1, valid_num);
+  // pos4 = y_high * width + x_high;
+  __bang_add(pos4, pos4, (uint32_t *)w3, valid_num);
+
+  // w3 cache hy, w4 cache hx
+  // T hy = 1. - ly, hx = 1. - lx;
+  __bang_mul_scalar(w3, nram_y, -1.0, valid_num);
+  __bang_add_scalar(w3, w3, 1.0, valid_num);
+  __bang_mul_scalar(w4, nram_x, -1.0, valid_num);
+  __bang_add_scalar(w4, w4, 1.0, valid_num);
+
+  // w1 = hy * hx;
+  __bang_mul(w1, w3, w4, valid_num);
+  // w2 = hy * lx;
+  __bang_mul(w2, w3, nram_x, valid_num);
+  // w3 = ly * hx;
+  __bang_mul(w3, nram_y, w4, valid_num);
+  // w4 = ly * lx;
+  __bang_mul(w4, nram_y, nram_x, valid_num);
+}
+
+template <typename T>
+__mlu_func__ void getUniquePos(const uint32_t valid_num, uint32_t *pos1,
+                               uint32_t *pos2, uint32_t *pos3, uint32_t *pos4,
+                               T *w1, T *w2, T *w3, T *w4,
+                               uint32_t &unique_num) {
+  // unique
+  for (int i = 0; i < valid_num; ++i) {
+    if (w1[i] < 0) {
+      continue;
+    }
+    for (int j = i + 1; j < valid_num; ++j) {
+      if (pos1[i] == pos1[j]) {
+        // Points at the same position
+        w1[i] += w1[j];
+        w2[i] += w2[j];
+        w3[i] += w3[j];
+        w4[i] += w4[j];
+        w1[j] = -1;
+      } else {
+        // if the dot is not at the same position,
+        // follow-up dots are not at the same positon
+        break;
+      }
+    }
+    if (unique_num != i) {
+      pos1[unique_num] = pos1[i];
+      pos2[unique_num] = pos2[i];
+      pos3[unique_num] = pos3[i];
+      pos4[unique_num] = pos4[i];
+      w1[unique_num] = w1[i];
+      w2[unique_num] = w2[i];
+      w3[unique_num] = w3[i];
+      w4[unique_num] = w4[i];
+    }
+    unique_num += 1;
+  }
+}
+
+template <typename T>
+__mlu_func__ void handleChannels(const T *input, uint32_t deal_channels,
+                                 uint32_t vec_num, T *w, uint32_t *pos,
+                                 int32_t &pos_offset, T *val, T *v_t) {
+  // gather dst,src,offset must 64B align
+  int32_t align_offset = ((int64_t)input & 0x3f);
+  if (align_offset != 0) {
+    input = (T *)((int64_t)input - align_offset);
+  }
+  if (align_offset != pos_offset) {
+    __bang_add_scalar(pos, pos, align_offset - pos_offset, vec_num);
+    pos_offset = align_offset;
+  }
+  uint32_t hwc_num = deal_channels * vec_num;
+
+  __gather(val, input, pos, deal_channels * sizeof(T), GDRAM2NRAM,
+           deal_channels * sizeof(T), vec_num);
+  if (deal_channels != 1) {
+    __bang_transpose(v_t, val, vec_num, deal_channels);
+    __bang_cycle_mul(v_t, v_t, w, hwc_num, vec_num);
+    __bang_transpose(val, v_t, deal_channels, vec_num);
+  } else {
+    __bang_mul(val, val, w, vec_num);
+  }
+  __bang_sumpool(v_t, val, deal_channels, 1, vec_num, 1, vec_num, vec_num, 1);
+}
+
+template <typename T, bool sr_gt0>
+__mlu_global__ void roiAlignRotatedForward(
+    const T *input_dram, const T *rois_dram, const int batch, const int height,
+    const int width, const uint32_t channels, const int rois_num,
+    const mluOpRoiAlignRotatedParams params, T *output_dram) {
+#if __BANG_ARCH__ >= 592
+  if (coreId == 0x80) {
+    return;
+  }
+  /*
+  Cache
+  |         | order | output_channels    |
+  | size    | 128   | 1024 * sizeof(T)   |
+  */
+  T *order = (T *)nram_buffer;
+  // Construct order(0.5,1.5,2.5,...,31.5)
+  uint32_t bin_order_num = 8;
+  if (params.sample_ratio > 16) {
+    bin_order_num = 32;
+  } else if (params.sample_ratio > 8) {
+    bin_order_num = 16;
+  }
+
+  __mlu_op_gen_stage_index(order, bin_order_num, (T)0.5);
+  const uint32_t bin_hw_order_num = bin_order_num * bin_order_num;
+
+  const uint32_t cache_channels_num = 1024;
+  // use for store
+  T *output_channels = order + NFU_ALIGN_SIZE / sizeof(T);
+  /*
+  bilinear_interpolate, coordinates can be reused
+  |          |                                           | volatile   |
+  | name     | bin_h,bin_w,y,x,w1,w2,w3,w4 | p1,p2,p3,p4 | val, val_t |
+  | type     | T                           | uint32_t    | T          |
+  | num      | bin_hw_order_num                          |            |
+  */
+  T *bin_h_order = output_channels + cache_channels_num;
+  T *bin_w_order = bin_h_order + bin_hw_order_num;
+  T *nram_y = bin_w_order + bin_hw_order_num;
+  T *nram_x = nram_y + bin_hw_order_num;
+  T *nram_w1 = nram_x + bin_hw_order_num;
+  T *nram_w2 = nram_w1 + bin_hw_order_num;
+  T *nram_w3 = nram_w2 + bin_hw_order_num;
+  T *nram_w4 = nram_w3 + bin_hw_order_num;
+  uint32_t *nram_pos1 = (uint32_t *)(nram_w4 + bin_hw_order_num);
+  uint32_t *nram_pos2 = nram_pos1 + bin_hw_order_num;
+  uint32_t *nram_pos3 = nram_pos2 + bin_hw_order_num;
+  uint32_t *nram_pos4 = nram_pos3 + bin_hw_order_num;
+
+  uint32_t fixed_size = NFU_ALIGN_SIZE + cache_channels_num * sizeof(T) +
+                        8 * bin_hw_order_num * sizeof(T) +
+                        4 * bin_hw_order_num * sizeof(uint32_t);
+  uint32_t max_v_size =
+      FLOOR_ALIGN((MAX_NRAM_SIZE - fixed_size) / 2, NFU_ALIGN_SIZE);
+
+  T *nram_val = (T *)(nram_pos4 + bin_hw_order_num);
+  T *nram_val_t = nram_val + max_v_size / sizeof(T);
+
+  // If dynamic creation of sequences
+  bool construct_order = true;
+  // bin_order only needs to be calu once
+  if constexpr (sr_gt0) {
+    if (params.sample_ratio < bin_order_num) {
+      construct_order = false;
+      // construct bin_w_idx in bin_loop
+      __memcpy_async(bin_w_order, order, params.sample_ratio * sizeof(T),
+                     NRAM2NRAM, params.sample_ratio * sizeof(T), 0,
+                     params.sample_ratio - 1);
+      // construct bin_h_idx in bin_loop
+      __bang_write_value(nram_w1, params.sample_ratio,
+                         (uint8_t)params.sample_ratio);
+      __extension(bin_h_order, order, (uint8_t *)nram_w1, sizeof(T), NRAM2NRAM,
+                  params.sample_ratio);
+    }
+  }
+
+  // roi_info only needs to be calculated once
+  uint32_t last_roi_idx = -1;
+  int roi_batch_ind = 0, roi_bin_grid_h = 0, roi_bin_grid_w = 0;
+  T roi_center_h = 0, roi_center_w = 0, bin_size_h = 0, bin_size_w = 0,
+    roi_start_h = 0, roi_start_w = 0, cos_theta = 0, sin_theta = 0, count = 0;
+  uint32_t pooled_num = params.pooled_height * params.pooled_width;
+
+  // loop order [roi, pooled_height, pooled_width]
+  for (uint32_t bin_i = taskId; bin_i < rois_num * pooled_num;
+       bin_i += taskDim) {
+    uint32_t roi_idx = bin_i / pooled_num;
+    if (roi_idx != last_roi_idx) {
+      getRoiInfo<T, sr_gt0>(rois_dram, roi_idx, params, roi_batch_ind,
+                            roi_center_h, roi_center_w, bin_size_h, bin_size_w,
+                            roi_bin_grid_h, roi_bin_grid_w, roi_start_h,
+                            roi_start_w, cos_theta, sin_theta, count);
+      last_roi_idx = roi_idx;
+    }
+
+    uint32_t ph = bin_i % pooled_num / params.pooled_width;
+    uint32_t pw = bin_i % params.pooled_width;
+    T h_bias = roi_start_h + ph * bin_size_h;
+    T w_bias = roi_start_w + pw * bin_size_w;
+
+    // channels max cache 1024
+    for (uint32_t c_cache_i = 0; c_cache_i < channels;
+         c_cache_i += cache_channels_num) {
+      uint32_t cur_cache_c = cache_channels_num;
+      if (cur_cache_c + c_cache_i > channels) {
+        cur_cache_c = channels - c_cache_i;
+      }
+      __bang_write_zero(output_channels, cur_cache_c);
+
+      for (uint32_t h_idx = 0; h_idx < roi_bin_grid_h; h_idx += bin_order_num) {
+        uint32_t deal_bin_h = bin_order_num;
+        if (h_idx + deal_bin_h > roi_bin_grid_h) {
+          deal_bin_h = roi_bin_grid_h - h_idx;
+        }
+        for (uint32_t w_idx = 0; w_idx < roi_bin_grid_w;
+             w_idx += bin_order_num) {
+          uint32_t deal_bin_w = bin_order_num;
+          if (w_idx + deal_bin_w > roi_bin_grid_w) {
+            deal_bin_w = roi_bin_grid_w - w_idx;
+          }
+          uint32_t deal_num = deal_bin_h * deal_bin_w;
+
+          if (construct_order) {
+            // construct bin_w_idx in bin_loop
+            __memcpy_async(bin_w_order, order, deal_bin_w * sizeof(T),
+                           NRAM2NRAM, deal_bin_w * sizeof(T), 0,
+                           deal_bin_h - 1);
+            // construct bin_h_idx in bin_loop
+            __bang_write_value(nram_w1, deal_bin_h, (uint8_t)deal_bin_w);
+            __extension(bin_h_order, order, (uint8_t *)nram_w1, sizeof(T),
+                        NRAM2NRAM, deal_bin_h);
+          }
+
+          // getXYorder
+          getXYorder(bin_h_order, bin_w_order, (T)h_idx, (T)w_idx, deal_num,
+                     nram_y, nram_x, nram_w1, nram_w2, nram_w3, bin_size_h,
+                     bin_size_w, roi_bin_grid_h, roi_bin_grid_w, h_bias, w_bias,
+                     roi_center_h, roi_center_w, cos_theta, sin_theta);
+
+          uint32_t valid_num = 0;
+          selectValidPoint(height, width, nram_y, nram_x, deal_num, nram_w1,
+                           nram_w2, nram_w3, valid_num);
+          if (valid_num == 0) {
+            continue;
+          }
+
+          // bilinearInterpolate
+          bilinearInterpolatePosWeight(
+              height, width, nram_y, nram_x, valid_num, nram_pos1, nram_pos2,
+              nram_pos3, nram_pos4, nram_w1, nram_w2, nram_w3, nram_w4);
+
+          // pos de-duplication
+          uint32_t unique_num = 0;
+          getUniquePos(valid_num, nram_pos1, nram_pos2, nram_pos3, nram_pos4,
+                       nram_w1, nram_w2, nram_w3, nram_w4, unique_num);
+
+          // Combine Four Discrete Data Sets into One
+          if (bin_hw_order_num != unique_num) {
+            __sync();
+            __memcpy_async(nram_w1 + unique_num, nram_w2,
+                           unique_num * sizeof(T), NRAM2NRAM);
+            __memcpy_async(nram_pos1 + unique_num, nram_pos2,
+                           unique_num * sizeof(uint32_t), NRAM2NRAM);
+            __memcpy_async(nram_w1 + 2 * unique_num, nram_w3,
+                           unique_num * sizeof(T), NRAM2NRAM);
+            __memcpy_async(nram_pos1 + 2 * unique_num, nram_pos3,
+                           unique_num * sizeof(uint32_t), NRAM2NRAM);
+            __memcpy_async(nram_w1 + 3 * unique_num, nram_w4,
+                           unique_num * sizeof(T), NRAM2NRAM);
+            __memcpy_async(nram_pos1 + 3 * unique_num, nram_pos4,
+                           unique_num * sizeof(uint32_t), NRAM2NRAM);
+            __sync();
+          }
+          uint32_t vec_num = 4 * unique_num;
+          __bang_mul_scalar(nram_pos1, nram_pos1, channels * sizeof(T),
+                            vec_num);
+
+          int pos_offset = 0;
+          uint32_t max_once_c = max_v_size / sizeof(T) / vec_num;
+
+          // Same coordinates in different channels
+          for (uint32_t ci = 0; ci < cur_cache_c; ci += max_once_c) {
+            uint32_t cur_c = max_once_c;
+            if (cur_c + ci > cur_cache_c) {
+              cur_c = cur_cache_c - ci;
+            }
+            handleChannels(input_dram + c_cache_i + ci +
+                               roi_batch_ind * height * width * channels,
+                           cur_c, vec_num, nram_w1, nram_pos1, pos_offset,
+                           nram_val, nram_val_t);
+            __bang_add(output_channels + ci, output_channels + ci, nram_val_t,
+                       cur_c);
+          }
+        }
+      }
+      mluopDivScalar(output_channels, output_channels, (T)count,
+                     cur_cache_c);
+      __memcpy(output_dram + bin_i * channels + c_cache_i, output_channels,
+               cur_cache_c * sizeof(T), NRAM2GDRAM);
+    }
+  }
+#endif
+}
+
+mluOpStatus_t KernelRoiAlignRotatedForwardVector(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, const void *features, const void *rois,
+    const int batch, const int height, const int width, const int channel,
+    const int rois_num, const mluOpRoiAlignRotatedParams rroiAlignParams,
+    void *output) {
+  switch (d_type) {
+    case MLUOP_DTYPE_FLOAT: {
+      if (rroiAlignParams.sample_ratio > 0) {
+        KERNEL_CHECK(roiAlignRotatedForward<float, true>
+                     <<<k_dim, k_type, queue>>>(
+                         (float *)features, (float *)rois, batch, height, width,
+                         channel, rois_num, rroiAlignParams, (float *)output));
+      } else {
+        KERNEL_CHECK(roiAlignRotatedForward<float, false>
+                     <<<k_dim, k_type, queue>>>(
+                         (float *)features, (float *)rois, batch, height, width,
+                         channel, rois_num, rroiAlignParams, (float *)output));
+      }
+    } break;
+    case MLUOP_DTYPE_HALF: {
+      if (rroiAlignParams.sample_ratio > 0) {
+        KERNEL_CHECK(roiAlignRotatedForward<half, true>
+                     <<<k_dim, k_type, queue>>>(
+                         (half *)features, (half *)rois, batch, height, width,
+                         channel, rois_num, rroiAlignParams, (half *)output));
+      } else {
+        KERNEL_CHECK(roiAlignRotatedForward<half, false>
+                     <<<k_dim, k_type, queue>>>(
+                         (half *)features, (half *)rois, batch, height, width,
+                         channel, rois_num, rroiAlignParams, (half *)output));
+      }
+    } break;
+    default:
+      break;
+  }
+  return MLUOP_STATUS_SUCCESS;
+}

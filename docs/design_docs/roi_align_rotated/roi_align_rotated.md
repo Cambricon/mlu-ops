@@ -37,7 +37,7 @@ roi_align_rotated算子应用于FOTS网络结构中，以双线性插值的方�
 |是否需要支持原位        | 否   |
 | 是否需要支持stride机制  | 否       |
 | 是否需要支持广播  | 否                       |
-| 0元素检查是否直接返回  | 是                                            |                                                      |
+| 0元素检查是否直接返回  | 是                                            |
 
 ### 1.2 算子功能和应用场景描述
 
@@ -208,7 +208,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
 |---------|---------|---------|---------|
 |  input  |  output |  input  |  output |
 |---------|---------|---------|---------|
-    
+
 ```
 与前向类似，反向计算时把空间均分为4部分，保持每次处理的input和output的大小相同。
 ### 3.4 性能优化设计
@@ -252,7 +252,7 @@ RoiAlign类的算子是IO瓶颈，在一个bin中需要处理多个采样点，�
  6、output的HW维度需要分别与参数中的pooled_height和pooled_width保持一致。
 
  反向：
- 
+
  1、指针为空防呆；
 
  2、0元素检查防呆，VLOG(5)打印信息；

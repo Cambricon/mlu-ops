@@ -534,23 +534,19 @@ __mlu_vector__ void __mlu_op_arange_vv_(T *dst_nram, T start_index, T step) {
   const uint32_t vv_num = __vv_get_length() / sizeof(T);
 
 #if _BANG_ARCH_ <= 592
-  if (std::is_same<T, uint16_t>::value) {
-    MLUOP_ARANGE_VV_IMPL(vv_uint16, vv_num, dst_nram, start_index, step);
-  } else if (std::is_same<T, int16_t>::value) {
-    MLUOP_ARANGE_VV_IMPL(vv_int16, vv_num, dst_nram, start_index, step);
-  } else if (std::is_same<T, uint32_t>::value) {
+  if constexpr(std::is_same<T, uint32_t>::value) {
     MLUOP_ARANGE_VV_IMPL(vv_uint32, vv_num, dst_nram, start_index, step);
-  } else if (std::is_same<T, int32_t>::value) {
+  } else if constexpr(std::is_same<T, int32_t>::value) {
     MLUOP_ARANGE_VV_IMPL(vv_int32, vv_num, dst_nram, start_index, step);
   }
 #endif  // if _BANG_ARCH_ <= 592
-  if (std::is_same<T, uint16_t>::value) {
+  if constexpr(std::is_same<T, uint16_t>::value) {
     MLUOP_ARANGE_VV_IMPL(vv_uint16, vv_num, dst_nram, start_index, step);
-  } else if (std::is_same<T, int16_t>::value) {
+  } else if constexpr(std::is_same<T, int16_t>::value) {
     MLUOP_ARANGE_VV_IMPL(vv_int16, vv_num, dst_nram, start_index, step);
-  } else if (std::is_same<T, float>::value) {
+  } else if constexpr(std::is_same<T, float>::value) {
     MLUOP_ARANGE_VV_IMPL(vv_float, vv_num, dst_nram, start_index, step);
-  } else if (std::is_same<T, half>::value) {
+  } else if constexpr(std::is_same<T, half>::value) {
     MLUOP_ARANGE_VV_IMPL(vv_half, vv_num, dst_nram, start_index, step);
   }
   return;
