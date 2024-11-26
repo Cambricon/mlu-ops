@@ -187,7 +187,7 @@ output：
 - `feats`、`coors` 中数据是一一对应的
 - 该算子将全正坐标外坐标刷-1、去重、排序后，通过 `reduce_mode` ，对 `feats` 中数据进行处理
 
-根据 1.2 节算子功能，可将`dynamic_point_to_voxel_forwardcoors` 分为2个kernel来实现:
+根据 1.2 节算子功能，可将`dynamic_point_to_voxel_forward` 分为2个kernel来实现:
 
 - #### 计算逻辑层面
 

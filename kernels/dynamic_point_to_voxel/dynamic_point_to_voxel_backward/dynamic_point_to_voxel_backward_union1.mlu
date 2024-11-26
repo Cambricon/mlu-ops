@@ -59,7 +59,7 @@ __mlu_func__ void loadAsync(T *feats_nram, T *voxel_feats_nram,
                      size_feats, GDRAM2NRAM);
       // load voxel_feats
       // voxel_feats_nram = [voxel_feats[0],voxel_feats[0],voxel_feats[1],...]
-      //   when map=[0,0,1...]
+      //   when map = [0,0,1...]
       __memcpy_async(voxel_feats_nram + nram_offset,
                      voxel_feats + gdram_voxel_feat_offset, size_feats,
                      GDRAM2NRAM);
