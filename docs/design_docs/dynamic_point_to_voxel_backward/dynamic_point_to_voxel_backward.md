@@ -11,6 +11,7 @@
 | 版本号 | 修订人 | 修订日期 | 修订描述 |
 | ----- | ----- | ------ | ------- |
 | V1.0 | xuminjie | 2023 | 首次提交 |
+| V1.1 | wangyuan | 2024.11.08 | 修复sync、算法时序引入的潜在缺陷 |
 
 - #### 内容描述
 
@@ -80,10 +81,10 @@ max模式：根据point2voxel_map，分组找出feats和voxel_feats中值相同�
 | 输入限制 | 输入 `grad_voxel_feats`, `feats`, `voxel_feats`支持输入 nan 或 inf |
 | 输入参数限制 | 仅支持输入reduce_mode值为MLUOP_REDUCEMODE_MAX |
 | 数据类型限制 | 输入 `grad_voxel_feats`, `feats`, `voxel_feats` 输出 `grad_feats` 数据类型保持一致;`point2voxel_map`, `voxel_points_count`, `voxel_num`数据类型保持一致 |
-| 布局限制 | 无 |
-| 原位限制 | 不支持原位 |
+| 布局限制     | 无               |
+| 原位限制     | 不支持原位         |
 | stride 限制 | 不支持 stride 机制 |
-| 广播限制 | 不支持广播 |
+| 广播限制     | 不支持广播        |
 
 ### 1.5 验收标准
 
@@ -167,7 +168,26 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(
 
 #### 3.1.1 计算原理说明
 
-`dynamic_point_to_voxel_backward` 算子包含7个输入:`reduce_type`、`grad_voxel_feats`、`feats`、`voxel_feats`、`point2voxel_map`、`voxel_point2_count`、`voxel_num`，1个输出：`grad_feats`; 根据 1.2 节算子功能, 可将算子2部分分为2个kernel来实现:
+`dynamic_point_to_voxel_backward` 算子包含7个输入，1个输出。
+
+input:
+1. `grad_feats`，`shape=[N,C]`
+2. `grad_voxel_feats`，`shape=[M,C]`
+3. `voxel_feats`，`shape=[M,C]`
+4. `point2voxel_map`，`shape=[N]`
+5. `voxel_point2_count`，`shape=[M]`
+6. `voxel_num`，`hape=[1]`
+7. `reduce_type`
+
+output：
+1. `grad_feats`，`shape=[N,C]` 
+
+`dynamic_point_to_voxel_forward` 中:
+- `coor` 表示 N 个点云数据对应在三维（三维体素网格坐标）具体坐标信息，`feats` 表示有 N 个点云数据，每个点云有 C 个特征
+- `feats`、`coors` 中数据是一一对应的
+- 该算子将全正坐标外坐标刷-1、去重、排序后，通过 `reduce_mode` ，对 `feats` 中数据进行处理
+
+根据 1.2 节算子功能，可将`dynamic_point_to_voxel_forward` 分为2个kernel来实现:
 
 - #### 计算逻辑层面
 
@@ -176,7 +196,22 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(
 
 先将`voxel_from`初始化成最大值N;
 
-根据`point2voxel_map`中记录的“特征与体素特征的映射关系”。对比输入的特征`feats`和体素特征 `voxel_feats`，对于第i个体素特征`voxel_feats[i]`，如果第j个特征与之相等，则认为这个体素特征是由该特征得到的。在中间结果`voxel_from`中保存两者的下标关系，使`voxel_from[i]=j`，该中间结果使用workspace保存。
+根据`point2voxel_map`中记录的“特征与体素特征的映射关系”。对比输入的特征`feats`和体素特征 `voxel_feats`：
+1. 对于第 `i` 个体素特征中 `c(c=0,1,2,...,C-1)` 维特征 `voxel_feats[i,c]`，若与第 `j` 个特征的 `c` 维特征的 `feats[j, c]`相等，则认为这个体素特征是由该特征得到的
+2. 若 `voxel_feats[i,c]` 与多个特征 `feats[j, c]`、`feats[k, c]` 相等，此时认为下标靠前的特征`feats[j, c]`（`j<k`）是 `voxel_feats[i,c]` 对应点
+3. 新建 `voxel_from` 保存上述两者的下标关系
+4. 举个简单例子
+```c++
+// feats 中数据在 voxel_feats 中的映射如下
+point2voxel_map = [0, 0, 1, 1, 2, 3, ...]
+
+// 依据映射关系 load feats,voxel_feats
+deal_feats       = [feats[0], feats[1], feats[2], feats[3],...,]
+dead_voxel_feats = [voxel_feats[0], voxel_feats[0], voxel_feats[1], voxel_feats[1], voxel_feats[2],...]
+
+// 计算映射下标 voxel_from，对于多个 feats[j] 相同，取其中最小值
+voxel_from = [0, 2, 4, 5, ...]
+```
 
 - kernel2
 

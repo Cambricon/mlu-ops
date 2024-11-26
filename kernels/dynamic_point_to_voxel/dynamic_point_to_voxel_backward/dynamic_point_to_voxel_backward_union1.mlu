@@ -31,171 +31,183 @@ __nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
 template <typename T>
 __mlu_func__ void loadAsync(T *feats_nram, T *voxel_feats_nram,
-                            int *index_mask_nram, int *voxel_from_nram,
-                            int *point2voxel_map_real_nram,
-                            const int *point2voxel_map_nram,
-                            const int *index_col_nram, const T *feats,
-                            const T *voxel_feats, const int *voxel_from, int &x,
-                            int &n_real, const int n_limit, const int N,
-                            const int C) {
-  int invalid_index = -1;
-  int size_feats = C * sizeof(T);
-  int size_feats_idx = C * sizeof(int);
-  n_real = 0;
-  for (; x < N && n_real < n_limit; x++) {
-    int point_to = point2voxel_map_nram[x];
-    int input_offset = x * C;
-    int input_real_offset = n_real * C;
+                            int *feats_index_nram, int *voxel_from_nram,
+                            int *map_curr_ipu, const int *map_global,
+                            const int *dim_c_idx, const T *feats,
+                            const T *voxel_feats, const int *voxel_from,
+                            int &n_global, int &n_curr_ipu,
+                            const int n_deal_num, const int N, const int C) {
+  const int invalid_index = -1;
+  const int size_feats = C * sizeof(T);
+  const int size_feats_idx = C * sizeof(int);
+  n_curr_ipu = 0;
+  for (; n_global < N && n_curr_ipu < n_deal_num; ++n_global) {
+    // calculate offset
+    int gdram_voxel_feat_offset;
+    const int gdram_feat_offset = n_global * C;
+    const int nram_offset = n_curr_ipu * C;
+
+    const int point_to = map_global[n_global];
     if (taskId == point_to % taskDim) {
       if (point_to == invalid_index) {
         continue;
       }
-      int reduced_offset = point_to * C;
-      // load valid data to feats_nram
-      __memcpy_async(feats_nram + input_real_offset, feats + input_offset,
+      gdram_voxel_feat_offset = point_to * C;
+      // load feats
+      // feats_nram = [feats[0],feats[1],...,feats[n_curr_ipu-1]]
+      __memcpy_async(feats_nram + nram_offset, feats + gdram_feat_offset,
                      size_feats, GDRAM2NRAM);
-      // boradcast voxel_feats data to voxel_feats_nram via the same "point_to"
-      __memcpy_async(voxel_feats_nram + input_real_offset,
-                     voxel_feats + reduced_offset, size_feats, GDRAM2NRAM);
-      // boradcast voxel_from data to voxel_from_nram via the same "point_to"
-      __memcpy_async(voxel_from_nram + input_real_offset,
-                     voxel_from + reduced_offset, size_feats_idx, GDRAM2NRAM);
-      // record valid index of x in index_mask_nram
-      __bang_write_value(index_mask_nram + input_real_offset, C, x * C);
+      // load voxel_feats
+      // voxel_feats_nram = [voxel_feats[0],voxel_feats[0],voxel_feats[1],...]
+      //   when map = [0,0,1...]
+      __memcpy_async(voxel_feats_nram + nram_offset,
+                     voxel_feats + gdram_voxel_feat_offset, size_feats,
+                     GDRAM2NRAM);
+
+      // load voxel2point
+      __memcpy_async(voxel_from_nram + nram_offset,
+                     voxel_from + gdram_voxel_feat_offset, size_feats_idx,
+                     GDRAM2NRAM);
+
+      // set feat-points index
+      __bang_write_value(feats_index_nram + nram_offset, C, n_global * C);
+
       // point2voxel_map removed invalid data
-      point2voxel_map_real_nram[n_real] = point_to;
-      ++n_real;
+      map_curr_ipu[n_curr_ipu] = point_to;
+      ++n_curr_ipu;
     }
   }
-  if (n_real > 0) {
-    __bang_cycle_add(index_mask_nram, index_mask_nram, index_col_nram,
-                     n_real * C, C);
+  if (n_curr_ipu > 0) {
+    // update feat-points index
+    __bang_cycle_add(feats_index_nram, feats_index_nram, dim_c_idx,
+                     n_curr_ipu * C, C);
   }
 }
 
 template <typename T>
 __mlu_func__ void compute(T *feats_nram, T *voxel_feats_nram,
-                          int *index_mask_nram, int *voxel_from_nram,
-                          const int n_real, const int N, const int C) {
-  if (n_real > 0) {
-    // view [n_real, C] as [n_real * C]
-    int deal_num = n_real * C;
-    // if (feats[i] == voxel_feats[i]) {mask[i] = 1} else {mask[i] = 0}
+                          int *feats_index_nram, int *voxel_from_nram,
+                          const int n_curr_ipu, const int N, const int C) {
+  if (n_curr_ipu > 0) {
+    // feats[i] == voxel_feats[i] ? mask[i] = 1 : mask[i] = 0
+    const int deal_num = n_curr_ipu * C;
     __bang_eq(feats_nram, voxel_feats_nram, feats_nram, deal_num);
-    // change mask1's dtype to int32
     __bang_float2int32_tz((int *)feats_nram, feats_nram, deal_num, 0);
-    // mask2 = NOT mask1
+
+    // recover feats_index (local->global)
+    // recover !mask to N*C
     __bang_not((int *)voxel_feats_nram, (int *)feats_nram, deal_num);
-    // choose index of "feats[i] == voxel_feats[i]"
-    __bang_mul((int *)feats_nram, (int *)feats_nram, index_mask_nram, deal_num);
-    // mask2 *= N * C
+    __bang_mul((int *)feats_nram, (int *)feats_nram, feats_index_nram,
+               deal_num);
     __bang_mul_scalar((int *)voxel_feats_nram, (int *)voxel_feats_nram, N * C,
                       deal_num);
-    // mix choosed index and 'N * C'
-    __bang_add(index_mask_nram, (int *)voxel_feats_nram, (int *)feats_nram,
+
+    // mix mask and !mask, and choose the min index
+    __bang_add(feats_index_nram, (int *)voxel_feats_nram, (int *)feats_nram,
                deal_num);
-    // choose the min index
-    __bang_minequal(voxel_from_nram, voxel_from_nram, index_mask_nram,
+    __bang_minequal(voxel_from_nram, voxel_from_nram, feats_index_nram,
                     deal_num);
   }
 }
 
 __mlu_func__ void storeAsync(int *voxel_from, const int *voxel_from_nram,
-                             const int *point2voxel_map_real_nram,
-                             bool *voxel_from_flag_nram, int *index_mask_nram,
-                             const int n_real, const int N, const int C) {
-  int size_feats_idx = C * sizeof(int);
-  for (int i = 0; i < n_real; i++) {
-    int offset_real = point2voxel_map_real_nram[i];
-    // 1) use atomicmin, too slow
-    // __bang_atomic_reduce_min(voxel_from + offset_real * C,
-    //                          voxel_from_nram + i * C, C);
-    // 2) compare one by one, use voxel_from_flag_nram as flags to record
-    // whether dst idx has appeard
-    if (voxel_from_flag_nram[offset_real] == false) {
-      // if number of grad idx on offset_real == 1, use the idx value directly
-      __memcpy_async(voxel_from + offset_real * C, voxel_from_nram + i * C,
-                     size_feats_idx, NRAM2GDRAM);
-      // set voxel_from_flag to true
-      voxel_from_flag_nram[offset_real] = true;
-    } else {
-      __sync_io();
-      // load the idx appeard
-      __memcpy(index_mask_nram, voxel_from + offset_real * C, size_feats_idx,
-               GDRAM2NRAM);
-      // if number of grad idx on offset_real > 1, pick the min idx value
-      __bang_minequal(index_mask_nram, index_mask_nram, voxel_from_nram + i * C,
-                      C);
-      // store the new idx
-      __memcpy(voxel_from + offset_real * C, index_mask_nram, size_feats_idx,
-               NRAM2GDRAM);
+                             const int *map_curr_ipu, bool *voxel_count_flag,
+                             int *feats_index_nram, const int n_curr_ipu,
+                             const int N, const int C) {
+  for (int i = 0; i < n_curr_ipu; i++) {
+#if __BANG_ARCH__ >= 592
+    // better performance for mlu590
+    __bang_atomic_reduce_min(voxel_from + map_curr_ipu[i] * C,
+                             voxel_from_nram + i * C, C);
+#else
+    const int offset_local = map_curr_ipu[i];
+    if (taskId == offset_local % taskDim) {
+      if (!voxel_count_flag[offset_local]) {
+        __memcpy(voxel_from + offset_local * C, voxel_from_nram + i * C,
+                 C * sizeof(int), NRAM2GDRAM);
+        voxel_count_flag[offset_local] = true;
+      } else {
+        __memcpy(feats_index_nram, voxel_from + offset_local * C,
+                 C * sizeof(int), GDRAM2NRAM);
+        __bang_minequal(feats_index_nram, feats_index_nram,
+                        voxel_from_nram + i * C, C);
+        __memcpy(voxel_from + offset_local * C, feats_index_nram,
+                 C * sizeof(int), NRAM2GDRAM);
+      }
     }
+#endif
   }
 }
 
 template <typename T>
 __mlu_global__ void MLUKernelMaxReduceTracebackScatterIdx(
-    const T *feats, const T *voxel_feats, T *grad_feats, int *voxel_from,
+    const T *feats, const T *voxel_feats, int *voxel_from,
     const int *point2voxel_map, const int *voxel_num, const int N,
     const int C) {
   const int M = *voxel_num;
-  if (M == 0) {
+  if (__is_mpu() || M == 0) {
     return;
   }
-  int size_input = N * sizeof(int);
-  int size_reduced_flag = M * sizeof(bool);
-  int size_feats = C * sizeof(T);
-  int size_feats_idx = C * sizeof(int);
 
-  int nram_size = MAX_NRAM_SIZE;
-  int n_limit = (nram_size - size_input - size_reduced_flag - size_feats_idx) /
-                (2 * size_feats + 2 * size_feats_idx + sizeof(int));
-  int feats_limit = n_limit * C;
+  /*
+   * NRAM partition
+   *  |==================|============================|
+   *  | Semantics        | Size                       |
+   *  |==================|============================|
+   *  | feats            |    [n_deal_num, C], float  |
+   *  | voxel_feats      |    [n_deal_num, C], float  |
+   *  | index_mask       |    [n_deal_num, C], int    |
+   *  | voxel_from       |    [n_deal_num, C], int    |
+   *  | map_curr_ipu     |    [n_deal_num], int       |
+   *  | map_global       |    [N], int                |
+   *  | dim_c_idx        |    [C], int                |
+   *  | voxel_count_flag |    [M], bool               |
+   *  |==================|============================|
+   */
+  const int n_deal_num =
+      (MAX_NRAM_SIZE - N * sizeof(int) - M - C * sizeof(int)) /
+      (2 * C * sizeof(T) + 2 * C * sizeof(int) + sizeof(int));
+  const int feats_num = n_deal_num * C;
 
-  T *feats_nram = (T *)nram_buffer;                // [n_limit, C]
-  T *voxel_feats_nram = feats_nram + feats_limit;  // [n_limit, C]
-  int *index_mask_nram =
-      (int *)(voxel_feats_nram + feats_limit);                // [n_limit, C]
-  int *voxel_from_nram = index_mask_nram + feats_limit;       // [n_limit, C]
-  int *point2voxel_map_nram = voxel_from_nram + feats_limit;  // [N]
-  int *point2voxel_map_real_nram = point2voxel_map_nram + N;  // [n_limit]
-  bool *voxel_from_flag_nram =
-      (bool *)(point2voxel_map_real_nram + n_limit);        // [M]
-  int *index_col_nram = (int *)(voxel_from_flag_nram + M);  // [C]
+  T *feats_nram = (T *)nram_buffer;
+  T *voxel_feats_nram = feats_nram + feats_num;
+  int *feats_index_nram = (int *)(voxel_feats_nram + feats_num);
+  int *voxel_from_nram = feats_index_nram + feats_num;
+  int *map_global = voxel_from_nram + feats_num;
+  int *map_curr_ipu = map_global + N;
+  int *dim_c_idx = map_curr_ipu + n_deal_num;
+  bool *voxel_count_flag = (bool *)(dim_c_idx + C);
 
-  __sync_all();
+  // load point2voxel_map & init voxel_count_flag
+  __memcpy(map_global, point2voxel_map, N * sizeof(int), GDRAM2NRAM);
+  __memset_nram(voxel_count_flag, M, (int8_t) false);
 
-  // broadcast point2voxel_map to nram
-  __memcpy(point2voxel_map_nram, point2voxel_map, size_input, GDRAM2NRAM);
-  // initialze voxel_from_flag to false
-  __memset_nram(voxel_from_flag_nram, M, (int8_t) false);
+  // init dim_c_idx: 0,1,2,...,C-1
   for (int i = 0; i < C; i++) {
-    index_col_nram[i] = i;
+    dim_c_idx[i] = i;
   }
-  for (int x = 0, n_real = 0; x < N;) {
-    // load data, get x and n_real
-    loadAsync(feats_nram, voxel_feats_nram, index_mask_nram, voxel_from_nram,
-              point2voxel_map_real_nram, point2voxel_map_nram, index_col_nram,
-              feats, voxel_feats, voxel_from, x, n_real, n_limit, N, C);
+
+  for (int n_global = 0, n_curr_ipu = 0; n_global < N;) {
+    loadAsync(feats_nram, voxel_feats_nram, feats_index_nram, voxel_from_nram,
+              map_curr_ipu, map_global, dim_c_idx, feats, voxel_feats,
+              voxel_from, n_global, n_curr_ipu, n_deal_num, N, C);
     __sync();
-    // compute
-    compute(feats_nram, voxel_feats_nram, index_mask_nram, voxel_from_nram,
-            n_real, N, C);
-    // store
-    storeAsync(voxel_from, voxel_from_nram, point2voxel_map_real_nram,
-               voxel_from_flag_nram, index_mask_nram, n_real, N, C);
+    compute(feats_nram, voxel_feats_nram, feats_index_nram, voxel_from_nram,
+            n_curr_ipu, N, C);
+    __sync();
+    storeAsync(voxel_from, voxel_from_nram, map_curr_ipu, voxel_count_flag,
+               feats_index_nram, n_curr_ipu, N, C);
     __sync();
   }
 }
 
 mluOpStatus_t MLUOP_WIN_API KernelDynamicPointToVoxelBackward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *feats, const void *voxel_feats, void *grad_feats,
-    void *voxel_from, const void *point2voxel_map, const void *voxel_num,
-    const int N, const int C) {
+    const void *feats, const void *voxel_feats, void *voxel_from,
+    const void *point2voxel_map, const void *voxel_num, const int N,
+    const int C) {
   KERNEL_CHECK(MLUKernelMaxReduceTracebackScatterIdx<<<k_dim, k_type, queue>>>(
-      (const float *)feats, (const float *)voxel_feats, (float *)grad_feats,
-      (int *)voxel_from, (const int *)point2voxel_map, (const int *)voxel_num,
-      N, C));
+      (const float *)feats, (const float *)voxel_feats, (int *)voxel_from,
+      (const int *)point2voxel_map, (const int *)voxel_num, N, C));
   return MLUOP_STATUS_SUCCESS;
 }
