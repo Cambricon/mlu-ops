@@ -84,54 +84,54 @@ static mluOpStatus_t paramcheck(
     const mluOpTensorDescriptor_t data_col_desc) {
   // check tensor dim
   // params data_value: [bs, num_keys, num_heads, channels]
-  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_value_desc->dim, 4);
+  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_value_desc->getDim(), 4);
   // params data_spatial_shapes: [num_levels, 2]
-  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_spatial_shapes_desc->dim,
+  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_spatial_shapes_desc->getDim(),
                  2);
   PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]",
-                 data_spatial_shapes_desc->dims[1], 2);
+                 data_spatial_shapes_desc->getDimIndex(1), 2);
   // params data_level_start_index: [num_levels]
-  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_level_start_index_desc->dim,
+  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_level_start_index_desc->getDim(),
                  1);
   // params data_sampling_loc:
   // [bs, num_queries, num_heads, num_levels, num_points, 2]
-  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_sampling_loc_desc->dim, 6);
-  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_sampling_loc_desc->dims[5],
+  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_sampling_loc_desc->getDim(), 6);
+  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_sampling_loc_desc->getDimIndex(5),
                  2);
   // params data_attn_weight:
   // [bs, num_queries, num_heads, num_levels, num_points]
-  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_attn_weight_desc->dim, 5);
+  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_attn_weight_desc->getDim(), 5);
   // params data_col: [bs, num_queries, num_heads, channels]
-  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_col_desc->dim, 4);
+  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_col_desc->getDim(), 4);
   // check tensor shape
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_value_desc->dims[0] == data_col_desc->dims[0]);
+              data_value_desc->getDimIndex(0) == data_col_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_sampling_loc_desc->dims[0] == data_col_desc->dims[0]);
+              data_sampling_loc_desc->getDimIndex(0) == data_col_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_attn_weight_desc->dims[0] == data_col_desc->dims[0]);
+              data_attn_weight_desc->getDimIndex(0) == data_col_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_value_desc->dims[2] == data_col_desc->dims[2]);
+              data_value_desc->getDimIndex(2) == data_col_desc->getDimIndex(2));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_sampling_loc_desc->dims[2] == data_col_desc->dims[2]);
+              data_sampling_loc_desc->getDimIndex(2) == data_col_desc->getDimIndex(2));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_attn_weight_desc->dims[2] == data_col_desc->dims[2]);
+              data_attn_weight_desc->getDimIndex(2) == data_col_desc->getDimIndex(2));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_value_desc->dims[3] == data_col_desc->dims[3]);
+              data_value_desc->getDimIndex(3) == data_col_desc->getDimIndex(3));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_spatial_shapes_desc->dims[0] ==
-                  data_level_start_index_desc->dims[0]);
+              data_spatial_shapes_desc->getDimIndex(0) ==
+                  data_level_start_index_desc->getDimIndex(0));
   PARAM_CHECK(
       "[mluOpMsDeformAttnForward]",
-      data_spatial_shapes_desc->dims[0] == data_sampling_loc_desc->dims[3]);
-  PARAM_CHECK("[mluOpMsDeformAttnForward]", data_spatial_shapes_desc->dims[0] ==
-                                                data_attn_weight_desc->dims[3]);
+      data_spatial_shapes_desc->getDimIndex(0) == data_sampling_loc_desc->getDimIndex(3));
+  PARAM_CHECK("[mluOpMsDeformAttnForward]", data_spatial_shapes_desc->getDimIndex(0) ==
+                                                data_attn_weight_desc->getDimIndex(3));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_sampling_loc_desc->dims[1] == data_col_desc->dims[1]);
+              data_sampling_loc_desc->getDimIndex(1) == data_col_desc->getDimIndex(1));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_attn_weight_desc->dims[1] == data_col_desc->dims[1]);
-  PARAM_CHECK("[mluOpMsDeformAttnForward]", data_sampling_loc_desc->dims[4] ==
-                                                data_attn_weight_desc->dims[4]);
+              data_attn_weight_desc->getDimIndex(1) == data_col_desc->getDimIndex(1));
+  PARAM_CHECK("[mluOpMsDeformAttnForward]", data_sampling_loc_desc->getDimIndex(4) ==
+                                                data_attn_weight_desc->getDimIndex(4));
   // check stride
   STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnForward]:", data_value_desc,
                       "data_value_desc must be contiguous");
@@ -148,19 +148,19 @@ static mluOpStatus_t paramcheck(
                       "data_col_desc must be contiguous");
   // check tensor datatype
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_value_desc->dtype == MLUOP_DTYPE_FLOAT);
+              data_value_desc->getDtype() == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_spatial_shapes_desc->dtype == MLUOP_DTYPE_INT32);
+              data_spatial_shapes_desc->getDtype() == MLUOP_DTYPE_INT32);
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_level_start_index_desc->dtype == MLUOP_DTYPE_INT32);
+              data_level_start_index_desc->getDtype() == MLUOP_DTYPE_INT32);
   // data_value, data_sampling_loc, data_attn_weight,
   // data_col datatype must be the same
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_value_desc->dtype == data_col_desc->dtype);
+              data_value_desc->getDtype() == data_col_desc->getDtype());
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_sampling_loc_desc->dtype == data_col_desc->dtype);
+              data_sampling_loc_desc->getDtype() == data_col_desc->getDtype());
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_attn_weight_desc->dtype == data_col_desc->dtype);
+              data_attn_weight_desc->getDtype() == data_col_desc->getDtype());
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -203,13 +203,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
                    LARGE_TENSOR_NUM, "");
   TENSOR_NUM_CHECK("[mluOpMsDeformAttnForward]", data_col_element_num,
                    LARGE_TENSOR_NUM, "");
-  const int32_t batch_size = data_value_desc->dims[0];
-  const int32_t num_keys = data_value_desc->dims[1];
-  const int32_t num_heads = data_value_desc->dims[2];
-  const int32_t channels = data_value_desc->dims[3];
-  const int32_t num_levels = data_spatial_shapes_desc->dims[0];
-  const int32_t num_queries = data_sampling_loc_desc->dims[1];
-  const int32_t num_points = data_sampling_loc_desc->dims[4];
+  const int32_t batch_size = data_value_desc->getDimIndex(0);
+  const int32_t num_keys = data_value_desc->getDimIndex(1);
+  const int32_t num_heads = data_value_desc->getDimIndex(2);
+  const int32_t channels = data_value_desc->getDimIndex(3);
+  const int32_t num_levels = data_spatial_shapes_desc->getDimIndex(0);
+  const int32_t num_queries = data_sampling_loc_desc->getDimIndex(1);
+  const int32_t num_points = data_sampling_loc_desc->getDimIndex(4);
   // check element num zero
   if (batch_size == 0 || num_heads == 0 || channels == 0 || num_queries == 0) {
     LOG(ERROR) << "[mluOpMsDeformAttnForward] Check failed: element num zero.";

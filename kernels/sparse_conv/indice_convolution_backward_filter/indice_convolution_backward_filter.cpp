@@ -38,10 +38,10 @@ inline bool isFloatDtype(const mluOpDataType_t &dtype) {
 
 inline mluOpDataType_t getOnchipDataType(
     const mluOpTensorDescriptor_t tensor_desc) {
-  if (tensor_desc->onchip_dtype != MLUOP_DTYPE_INVALID) {
-    return tensor_desc->onchip_dtype;
+  if (tensor_desc->getOnchipDtype() != MLUOP_DTYPE_INVALID) {
+    return tensor_desc->getOnchipDtype();
   } else {
-    return tensor_desc->dtype;
+    return tensor_desc->getDtype();
   }
 }
 
@@ -65,10 +65,10 @@ inline mluOpStatus_t setMatmulDescInfo(const std::string api_name,
 inline std::string getTensorShapeString(const mluOpTensorDescriptor_t desc) {
   std::string res;
   res.push_back('[');
-  for (int32_t i = 0; i < desc->dim - 1; i++) {
-    res.append(std::to_string(desc->dims[i]) + ',');
+  for (int32_t i = 0; i < desc->getDim() - 1; i++) {
+    res.append(std::to_string(desc->getDimIndex(i)) + ',');
   }
-  res.append(std::to_string(desc->dims[desc->dim - 1]) + ']');
+  res.append(std::to_string(desc->getDimIndex(desc->getDim() - 1)) + ']');
   return res;
 }
 
@@ -91,7 +91,7 @@ static void indiceConvFilterGencase(
                            inverse);
   GEN_CASE_OP_PARAM_SINGLE(1, "indice_convolution_backward", "subm", subm);
   GEN_CASE_OP_PARAM_ARRAY(1, "indice_convolution_backward", "indice_num",
-                          indice_num, indice_pairs_desc->dims[0]);
+                          indice_num, indice_pairs_desc->getDimIndex(0));
   GEN_CASE_HANDLE_PARAM();
   GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
 }
@@ -102,10 +102,10 @@ static mluOpStatus_t indiceConvDtypeVaild(
     const mluOpTensorDescriptor_t output_grad_desc,
     const mluOpTensorDescriptor_t indice_pairs_desc,
     const mluOpTensorDescriptor_t filters_grad_desc) {
-  auto input_dtype = features_desc->dtype;
-  auto diffy_dtype = output_grad_desc->dtype;
-  auto filters_grad_dtype = filters_grad_desc->dtype;
-  auto pairs_dtype = indice_pairs_desc->dtype;
+  auto input_dtype = features_desc->getDtype();
+  auto diffy_dtype = output_grad_desc->getDtype();
+  auto filters_grad_dtype = filters_grad_desc->getDtype();
+  auto pairs_dtype = indice_pairs_desc->getDtype();
   if (pairs_dtype != MLUOP_DTYPE_INT32) {
     LOG(ERROR) << api_name
                << " indice_pairs_desc only supports data type int32. "
@@ -127,10 +127,10 @@ static mluOpStatus_t indiceConvDtypeVaild(
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  auto input_on_dtype = features_desc->onchip_dtype;
-  auto diffy_on_dtype = output_grad_desc->onchip_dtype;
-  auto filters_grad_on_dtype = filters_grad_desc->onchip_dtype;
-  auto pairs_on_dtype = indice_pairs_desc->onchip_dtype;
+  auto input_on_dtype = features_desc->getOnchipDtype();
+  auto diffy_on_dtype = output_grad_desc->getOnchipDtype();
+  auto filters_grad_on_dtype = filters_grad_desc->getOnchipDtype();
+  auto pairs_on_dtype = indice_pairs_desc->getOnchipDtype();
   if ((MLUOP_DTYPE_INVALID != input_on_dtype &&
        input_on_dtype != input_dtype) ||
       (MLUOP_DTYPE_INVALID != diffy_on_dtype &&
@@ -218,28 +218,28 @@ static mluOpStatus_t baseParamCheck(
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   bool shape_check = true;
-  if (2 != features_desc->dim || 2 != output_grad_desc->dim ||
-      3 != indice_pairs_desc->dim ||
-      (4 != filters_grad_desc->dim && 5 != filters_grad_desc->dim)) {
+  if (2 != features_desc->getDim() || 2 != output_grad_desc->getDim() ||
+      3 != indice_pairs_desc->getDim() ||
+      (4 != filters_grad_desc->getDim() && 5 != filters_grad_desc->getDim())) {
     shape_check = false;  // dimension check failed!
   }
 
   // only DHWCN/HWCN layout of filter_grad is supported, currently
-  int32_t filter_dim_len = filters_grad_desc->dim;
-  auto ci = filters_grad_desc->dims[filter_dim_len - 2];
-  auto co = filters_grad_desc->dims[filter_dim_len - 1];
-  auto kd = filter_dim_len == 4 ? 1 : filters_grad_desc->dims[0];
-  auto kh = filter_dim_len == 4 ? filters_grad_desc->dims[0]
-                                : filters_grad_desc->dims[1];
-  auto kw = filter_dim_len == 4 ? filters_grad_desc->dims[1]
-                                : filters_grad_desc->dims[2];
-  if (ci != features_desc->dims[1] || co != output_grad_desc->dims[1] ||
-      features_desc->dims[0] != indice_pairs_desc->dims[2] ||
-      2 != indice_pairs_desc->dims[1] ||
-      kd * kh * kw != indice_pairs_desc->dims[0]) {
+  int32_t filter_dim_len = filters_grad_desc->getDim();
+  auto ci = filters_grad_desc->getDimIndex(filter_dim_len - 2);
+  auto co = filters_grad_desc->getDimIndex(filter_dim_len - 1);
+  auto kd = filter_dim_len == 4 ? 1 : filters_grad_desc->getDimIndex(0);
+  auto kh = filter_dim_len == 4 ? filters_grad_desc->getDimIndex(0)
+                                : filters_grad_desc->getDimIndex(1);
+  auto kw = filter_dim_len == 4 ? filters_grad_desc->getDimIndex(1)
+                                : filters_grad_desc->getDimIndex(2);
+  if (ci != features_desc->getDimIndex(1) || co != output_grad_desc->getDimIndex(1) ||
+      features_desc->getDimIndex(0) != indice_pairs_desc->getDimIndex(2) ||
+      2 != indice_pairs_desc->getDimIndex(1) ||
+      kd * kh * kw != indice_pairs_desc->getDimIndex(0)) {
     shape_check = false;  // interdependent dimension check failed!
   }
-  PARAM_CHECK_LE(api_name, indice_pairs_desc->dims[2],
+  PARAM_CHECK_LE(api_name, indice_pairs_desc->getDimIndex(2),
                  INDICE_IN_LARGE_TENSOR_NUM);
 
   if (!shape_check) {
@@ -265,8 +265,8 @@ static mluOpStatus_t insertTranspose(
   int32_t trans_in_shape[3] = {kernel_volume, ci, co};
   int32_t trans_out_shape[3] = {co, kernel_volume, ci};  // NHWC or NDHWC
   int32_t permute[3] = {2, 0, 1};
-  if (MLUOP_LAYOUT_NCHW == filters_grad_desc->layout ||
-      MLUOP_LAYOUT_NCDHW == filters_grad_desc->layout) {
+  if (MLUOP_LAYOUT_NCHW == filters_grad_desc->getLayout() ||
+      MLUOP_LAYOUT_NCDHW == filters_grad_desc->getLayout()) {
     trans_out_shape[0] = co;
     trans_out_shape[1] = ci;
     trans_out_shape[2] = kernel_volume;
@@ -283,10 +283,10 @@ static mluOpStatus_t insertTranspose(
   CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
   CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                              trans_in_desc, MLUOP_LAYOUT_ARRAY,
-                             filters_grad_desc->dtype, 3, trans_in_shape));
+                             filters_grad_desc->getDtype(), 3, trans_in_shape));
   CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                              trans_out_desc, MLUOP_LAYOUT_ARRAY,
-                             filters_grad_desc->dtype, 3, trans_out_shape));
+                             filters_grad_desc->getDtype(), 3, trans_out_shape));
   CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, 3, permute));
   {
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
@@ -329,9 +329,9 @@ static mluOpStatus_t internalIndiceConvBackwardFilter(
   bool filters_grad_need_trans = false;
 
   // call gather_nd and matmul to finish indice conv.
-  int32_t kernel_volume = indice_pairs_desc->dims[0];
-  int32_t ci = features_desc->dims[1];
-  int32_t co = output_grad_desc->dims[1];
+  int32_t kernel_volume = indice_pairs_desc->getDimIndex(0);
+  int32_t ci = features_desc->getDimIndex(1);
+  int32_t co = output_grad_desc->getDimIndex(1);
   int32_t max_active_num = 0;
   for (int32_t i = 0; i < kernel_volume; ++i) {
     max_active_num =
@@ -339,11 +339,11 @@ static mluOpStatus_t internalIndiceConvBackwardFilter(
   }
 
   int64_t max_input_size =
-      max_active_num * ci * mluop::getSizeOfDataType(features_desc->dtype);
+      max_active_num * ci * mluop::getSizeOfDataType(features_desc->getDtype());
   int64_t max_diffy_size =
-      max_active_num * co * mluop::getSizeOfDataType(features_desc->dtype);
+      max_active_num * co * mluop::getSizeOfDataType(features_desc->getDtype());
   int64_t filters_grad_trans_size =
-      filters_grad_need_trans ? filters_grad_desc->total_tensor_size : 0;
+      filters_grad_need_trans ? filters_grad_desc->getTotalTensorSize() : 0;
 
   void *filters_grad_temp = filters_grad_need_trans ? workspace : filters_grad;
   void *input_temp = (int8_t *)workspace + filters_grad_trans_size;
@@ -382,11 +382,11 @@ static mluOpStatus_t internalIndiceConvBackwardFilter(
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
 
-  int64_t in_active_num = indice_pairs_desc->dims[2];
+  int64_t in_active_num = indice_pairs_desc->getDimIndex(2);
   int64_t cico_size =
-      ci * co * mluop::getSizeOfDataType(filters_grad_desc->dtype);
+      ci * co * mluop::getSizeOfDataType(filters_grad_desc->getDtype());
   int64_t pair_low_size =
-      in_active_num * mluop::getSizeOfDataType(indice_pairs_desc->dtype);
+      in_active_num * mluop::getSizeOfDataType(indice_pairs_desc->getDtype());
 
   for (int32_t i = 0; i < kernel_volume; ++i) {
     int32_t active_point_num = indice_num[i];
@@ -400,16 +400,16 @@ static mluOpStatus_t internalIndiceConvBackwardFilter(
     int32_t c_desc_dims[2] = {ci, co};
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                active_indice_desc, MLUOP_LAYOUT_ARRAY,
-                               indice_pairs_desc->dtype, 2, active_indices));
+                               indice_pairs_desc->getDtype(), 2, active_indices));
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                matmul_a_desc, MLUOP_LAYOUT_ARRAY,
-                               features_desc->dtype, 2, a_desc_dims));
+                               features_desc->getDtype(), 2, a_desc_dims));
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                matmul_b_desc, MLUOP_LAYOUT_ARRAY,
-                               output_grad_desc->dtype, 2, b_desc_dims));
+                               output_grad_desc->getDtype(), 2, b_desc_dims));
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                matmul_c_desc, MLUOP_LAYOUT_ARRAY,
-                               filters_grad_desc->dtype, 2, c_desc_dims));
+                               filters_grad_desc->getDtype(), 2, c_desc_dims));
     {
       DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
       DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_a_desc, cnnl_a_desc);
@@ -548,10 +548,10 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(
   }
 
   // zero element check
-  if (0 == features_desc->total_element_num ||
-      0 == output_grad_desc->total_element_num ||
-      0 == indice_pairs_desc->total_element_num ||
-      0 == filters_grad_desc->total_element_num) {
+  if (0 == features_desc->getTotalElementNum() ||
+      0 == output_grad_desc->getTotalElementNum() ||
+      0 == indice_pairs_desc->getTotalElementNum() ||
+      0 == filters_grad_desc->getTotalElementNum()) {
     VLOG(5) << api_name << " Skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }
@@ -581,10 +581,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardFilter(
   }
 
   // zero element check
-  if (0 == features_desc->total_element_num ||
-      0 == output_grad_desc->total_element_num ||
-      0 == indice_pairs_desc->total_element_num ||
-      0 == filters_grad_desc->total_element_num) {
+  if (0 == features_desc->getTotalElementNum() ||
+      0 == output_grad_desc->getTotalElementNum() ||
+      0 == indice_pairs_desc->getTotalElementNum() ||
+      0 == filters_grad_desc->getTotalElementNum()) {
     VLOG(5) << api_name << " Skip zero element tensor.";
     return MLUOP_STATUS_SUCCESS;
   }

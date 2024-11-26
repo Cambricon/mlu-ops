@@ -65,7 +65,7 @@ mluOpStatus_t LogspaceParamCheck(const mluOpHandle_t &handle, const float start,
   PARAM_CHECK("[mluOpLogspace]", steps <= element_num);
   mluOpDataType_t support_type[3] = {MLUOP_DTYPE_FLOAT, MLUOP_DTYPE_HALF,
                                      MLUOP_DTYPE_INT32};
-  if (!isSupportType(res_desc->dtype, support_type, 3)) {
+  if (!isSupportType(res_desc->getDtype(), support_type, 3)) {
     LOG(ERROR) << "[mluOpLogspace]"
                << ":res_desc's data type is not supported.";
     return MLUOP_STATUS_BAD_PARAM;
@@ -110,7 +110,7 @@ mluOpLogspace(mluOpHandle_t handle, const float start, const float end,
 
   VLOG(5) << "kernel KernelLogspace.";
   CHECK_RETURN("[mluOpLogspace] ",
-               KernelLogspace(k_dim, k_type, handle->queue, res_desc->dtype,
+               KernelLogspace(k_dim, k_type, handle->queue, res_desc->getDtype(),
                               start, end, steps, base, res));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

@@ -52,7 +52,7 @@ static void policyFuncThreeInterpolate(
   int64_t core_in_cluster = handle->core_num_per_cluster;
   int64_t cores_in_device = cluster_num * core_in_cluster;
   int64_t input_size = sizeof(float);
-  if (desc->dtype == MLUOP_DTYPE_HALF) {
+  if (desc->getDtype() == MLUOP_DTYPE_HALF) {
     input_size /= 2;
   }
   int64_t align_base_128 = NFU_ALIGN_SIZE / input_size;
@@ -270,51 +270,51 @@ mluOpStatus_t threeInterpolateForwardParamCheck(
   PARAM_CHECK(op_name, weights_desc != NULL);
   PARAM_CHECK(op_name, output_desc != NULL);
   // check dim
-  PARAM_CHECK(op_name, features_desc->dim == 3);
-  PARAM_CHECK(op_name, indices_desc->dim == 3);
-  PARAM_CHECK(op_name, weights_desc->dim == 3);
-  PARAM_CHECK(op_name, output_desc->dim == 3);
+  PARAM_CHECK(op_name, features_desc->getDim() == 3);
+  PARAM_CHECK(op_name, indices_desc->getDim() == 3);
+  PARAM_CHECK(op_name, weights_desc->getDim() == 3);
+  PARAM_CHECK(op_name, output_desc->getDim() == 3);
   // check layout
-  PARAM_CHECK(op_name, features_desc->layout == MLUOP_LAYOUT_ARRAY);
-  PARAM_CHECK(op_name, indices_desc->layout == MLUOP_LAYOUT_ARRAY);
-  PARAM_CHECK(op_name, weights_desc->layout == MLUOP_LAYOUT_ARRAY);
-  PARAM_CHECK(op_name, output_desc->layout == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(op_name, features_desc->getLayout() == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(op_name, indices_desc->getLayout() == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(op_name, weights_desc->getLayout() == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(op_name, output_desc->getLayout() == MLUOP_LAYOUT_ARRAY);
   // check data type
-  PARAM_CHECK(op_name, features_desc->dtype == weights_desc->dtype);
-  PARAM_CHECK(op_name, indices_desc->dtype == MLUOP_DTYPE_INT32);
-  PARAM_CHECK(op_name, weights_desc->dtype == output_desc->dtype);
-  PARAM_CHECK(op_name, (output_desc->dtype == MLUOP_DTYPE_HALF ||
-                        output_desc->dtype == MLUOP_DTYPE_FLOAT));
+  PARAM_CHECK(op_name, features_desc->getDtype() == weights_desc->getDtype());
+  PARAM_CHECK(op_name, indices_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(op_name, weights_desc->getDtype() == output_desc->getDtype());
+  PARAM_CHECK(op_name, (output_desc->getDtype() == MLUOP_DTYPE_HALF ||
+                        output_desc->getDtype() == MLUOP_DTYPE_FLOAT));
   // check shape
-  if (features_desc->dims[0] != indices_desc->dims[0]) {
+  if (features_desc->getDimIndex(0) != indices_desc->getDimIndex(0)) {
     LOG(ERROR) << op_name
-               << "Check failed: features_desc->dims[0] should be "
-                  "equal to indices_desc->dims[0].";
+               << "Check failed: features_desc->getDimIndex(0) should be "
+                  "equal to indices_desc->getDimIndex(0).";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  for (int64_t i = 0; i < indices_desc->dim; ++i) {
-    if (indices_desc->dims[i] != weights_desc->dims[i]) {
+  for (int64_t i = 0; i < indices_desc->getDim(); ++i) {
+    if (indices_desc->getDimIndex(i) != weights_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << " Check failed: indices_desc->dims[" << i
-                 << "] should be equal to weightss_desc->dims[" << i << "].";
+                 << "] should be equal to weightss_desc->getDimIndex(" << i << ").";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  if (weights_desc->dims[2] != 3) {
+  if (weights_desc->getDimIndex(2) != 3) {
     LOG(ERROR) << op_name
-               << " Check failed: weights_desc->dims[2] should be equal to 3.";
+               << " Check failed: weights_desc->getDimIndex(2) should be equal to 3.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  for (int64_t i = 0; i < output_desc->dim - 1; ++i) {
-    if (output_desc->dims[i] != features_desc->dims[i]) {
+  for (int64_t i = 0; i < output_desc->getDim() - 1; ++i) {
+    if (output_desc->getDimIndex(i) != features_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << " Check failed: output_desc->dims[" << i
-                 << "] should be equal to features_desc->dims[" << i << "].";
+                 << "] should be equal to features_desc->getDimIndex(" << i << ").";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  if (output_desc->dims[2] != indices_desc->dims[1]) {
+  if (output_desc->getDimIndex(2) != indices_desc->getDimIndex(1)) {
     LOG(ERROR) << op_name
-               << " Check failed: output_desc->dims[2] should be "
-                  "equal to indices_desc->dims[1].";
+               << " Check failed: output_desc->getDimIndex(2) should be "
+                  "equal to indices_desc->getDimIndex(1).";
     return MLUOP_STATUS_BAD_PARAM;
   }
   // check stride
@@ -344,7 +344,7 @@ mluOpStatus_t threeInterpolateForwardParamCheck(
   }
   // the shape of features is [B, C, M]. currently only M equal to 0 is
   // supported
-  if (features_desc->dims[2] == 0) {
+  if (features_desc->getDimIndex(2) == 0) {
     VLOG(5) << op_name << " Skip zero element tensor.";
     zero_element = true;
     return MLUOP_STATUS_SUCCESS;
@@ -371,52 +371,52 @@ mluOpStatus_t threeInterpolateBackwardParamCheck(
   PARAM_CHECK(op_name, weights_desc != NULL);
   PARAM_CHECK(op_name, grad_features_desc != NULL);
   // check dim
-  PARAM_CHECK(op_name, grad_output_desc->dim == 3);
-  PARAM_CHECK(op_name, indices_desc->dim == 3);
-  PARAM_CHECK(op_name, weights_desc->dim == 3);
-  PARAM_CHECK(op_name, grad_features_desc->dim == 3);
+  PARAM_CHECK(op_name, grad_output_desc->getDim() == 3);
+  PARAM_CHECK(op_name, indices_desc->getDim() == 3);
+  PARAM_CHECK(op_name, weights_desc->getDim() == 3);
+  PARAM_CHECK(op_name, grad_features_desc->getDim() == 3);
   // check layout
-  PARAM_CHECK(op_name, grad_output_desc->layout == MLUOP_LAYOUT_ARRAY);
-  PARAM_CHECK(op_name, indices_desc->layout == MLUOP_LAYOUT_ARRAY);
-  PARAM_CHECK(op_name, weights_desc->layout == MLUOP_LAYOUT_ARRAY);
-  PARAM_CHECK(op_name, grad_features_desc->layout == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(op_name, grad_output_desc->getLayout() == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(op_name, indices_desc->getLayout() == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(op_name, weights_desc->getLayout() == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(op_name, grad_features_desc->getLayout() == MLUOP_LAYOUT_ARRAY);
   // check data type
-  PARAM_CHECK(op_name, grad_output_desc->dtype == weights_desc->dtype);
-  PARAM_CHECK(op_name, indices_desc->dtype == MLUOP_DTYPE_INT32);
-  PARAM_CHECK(op_name, weights_desc->dtype == grad_features_desc->dtype);
-  PARAM_CHECK(op_name, (grad_output_desc->dtype == MLUOP_DTYPE_HALF ||
-                        grad_output_desc->dtype == MLUOP_DTYPE_FLOAT));
+  PARAM_CHECK(op_name, grad_output_desc->getDtype() == weights_desc->getDtype());
+  PARAM_CHECK(op_name, indices_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(op_name, weights_desc->getDtype() == grad_features_desc->getDtype());
+  PARAM_CHECK(op_name, (grad_output_desc->getDtype() == MLUOP_DTYPE_HALF ||
+                        grad_output_desc->getDtype() == MLUOP_DTYPE_FLOAT));
   // check shape
-  if (grad_output_desc->dims[0] != indices_desc->dims[0]) {
+  if (grad_output_desc->getDimIndex(0) != indices_desc->getDimIndex(0)) {
     LOG(ERROR) << op_name
-               << " Check failed: grad_output_desc->dims[0] should be "
-                  "equal to indices_desc->dims[0].";
+               << " Check failed: grad_output_desc->getDimIndex(0) should be "
+                  "equal to indices_desc->getDimIndex(0).";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  for (int64_t i = 0; i < indices_desc->dim; ++i) {
-    if (indices_desc->dims[i] != weights_desc->dims[i]) {
+  for (int64_t i = 0; i < indices_desc->getDim(); ++i) {
+    if (indices_desc->getDimIndex(i) != weights_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << " Check failed: indices_desc->dims[" << i
-                 << "] should be equal to weightss_desc->dims[" << i << "].";
+                 << "] should be equal to weightss_desc->getDimIndex(" << i << ").";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  if (weights_desc->dims[2] != 3) {
+  if (weights_desc->getDimIndex(2) != 3) {
     LOG(ERROR) << op_name
-               << " Check failed: weights_desc->dims[2] should be equal to 3.";
+               << " Check failed: weights_desc->getDimIndex(2) should be equal to 3.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  for (int64_t i = 0; i < grad_output_desc->dim - 1; ++i) {
-    if (grad_output_desc->dims[i] != grad_features_desc->dims[i]) {
+  for (int64_t i = 0; i < grad_output_desc->getDim() - 1; ++i) {
+    if (grad_output_desc->getDimIndex(i) != grad_features_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << " Check failed: grad_output_desc->dims[" << i
                  << "] should be equal to grad_features_desc->dims[" << i
                  << "].";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  if (grad_output_desc->dims[2] != indices_desc->dims[1]) {
+  if (grad_output_desc->getDimIndex(2) != indices_desc->getDimIndex(1)) {
     LOG(ERROR) << op_name
-               << " Check failed: grad_output_desc->dims[2] should be "
-                  "equal to indices_desc->dims[1].";
+               << " Check failed: grad_output_desc->getDimIndex(2) should be "
+                  "equal to indices_desc->getDimIndex(1).";
     return MLUOP_STATUS_BAD_PARAM;
   }
   // check stride
@@ -446,7 +446,7 @@ mluOpStatus_t threeInterpolateBackwardParamCheck(
   }
   // the shape of grad_features is [B, C, M]. currently only M equal to 0 is
   // supported
-  if (grad_features_desc->dims[2] == 0) {
+  if (grad_features_desc->getDimIndex(2) == 0) {
     VLOG(5) << op_name << " Skip zero element tensor.";
     zero_element = true;
     return MLUOP_STATUS_SUCCESS;
@@ -476,10 +476,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }
-  int64_t b = features_desc->dims[0];
-  int64_t c = features_desc->dims[1];
-  int64_t m = features_desc->dims[2];
-  int64_t n = output_desc->dims[2];
+  int64_t b = features_desc->getDimIndex(0);
+  int64_t c = features_desc->getDimIndex(1);
+  int64_t m = features_desc->getDimIndex(2);
+  int64_t n = output_desc->getDimIndex(2);
 
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("three_interpolate_forward", "THREE_INTERPOLATE_FORWARD");
@@ -494,7 +494,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   int64_t input_size = sizeof(float);
-  if (features_desc->dtype == MLUOP_DTYPE_HALF) {
+  if (features_desc->getDtype() == MLUOP_DTYPE_HALF) {
     input_size /= 2;
   }
   int64_t c_limit_size = NFU_ALIGN_SIZE / input_size;
@@ -508,7 +508,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateForward(
   VLOG(5) << "Kernel KernelThreeInterpolateForward";
   CHECK_RETURN("[mluOpThreeInterpolateForward]",
                KernelThreeInterpolateForward(
-                   k_dim, k_type, handle->queue, features_desc->dtype, features,
+                   k_dim, k_type, handle->queue, features_desc->getDtype(), features,
                    indices, weights, b, c, m, n, c_limit_size, m_limit_size,
                    n_limit_size, output));
 
@@ -533,10 +533,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(
   if (param_check != MLUOP_STATUS_SUCCESS) {
     return param_check;
   }
-  int64_t b = grad_output_desc->dims[0];
-  int64_t c = grad_output_desc->dims[1];
-  int64_t n = grad_output_desc->dims[2];
-  int64_t m = grad_features_desc->dims[2];
+  int64_t b = grad_output_desc->getDimIndex(0);
+  int64_t c = grad_output_desc->getDimIndex(1);
+  int64_t n = grad_output_desc->getDimIndex(2);
+  int64_t m = grad_features_desc->getDimIndex(2);
 
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("three_interpolate_backward", "THREE_INTERPOLATE_BACKWARD");
@@ -552,7 +552,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   int64_t input_size = sizeof(float);
-  if (grad_output_desc->dtype == MLUOP_DTYPE_HALF) {
+  if (grad_output_desc->getDtype() == MLUOP_DTYPE_HALF) {
     input_size /= 2;
   }
   int64_t c_limit_size = NFU_ALIGN_SIZE / input_size;
@@ -566,7 +566,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeInterpolateBackward(
   VLOG(5) << "Kernel KernelThreeInterpolateBackward";
   CHECK_RETURN("[mluOpThreeInterpolateBackward]",
                KernelThreeInterpolateBackward(
-                   k_dim, k_type, handle->queue, grad_output_desc->dtype,
+                   k_dim, k_type, handle->queue, grad_output_desc->getDtype(),
                    grad_output, indices, weights, b, c, m, n, c_limit_size,
                    m_limit_size, n_limit_size, grad_features));
   GEN_CASE_END();

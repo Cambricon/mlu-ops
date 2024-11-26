@@ -50,39 +50,39 @@ static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
     const mluOpTensorDescriptor_t weight_desc,
     const mluOpTensorDescriptor_t output_desc) {
   const std::string interface_name = "[mluOpFocalLossSigmoidForward] ";
-  const mluOpDataType_t input_dtype = input_desc->dtype;
-  const mluOpDataType_t target_dtype = target_desc->dtype;
-  const mluOpDataType_t output_dtype = output_desc->dtype;
+  const mluOpDataType_t input_dtype = input_desc->getDtype();
+  const mluOpDataType_t target_dtype = target_desc->getDtype();
+  const mluOpDataType_t output_dtype = output_desc->getDtype();
 
   // check shape
-  if (input_desc->dim != 2) {
+  if (input_desc->getDim() != 2) {
     LOG(ERROR) << interface_name << "Dimension num of input should be 2. "
-               << "But now it is " << input_desc->dim << ".";
+               << "But now it is " << input_desc->getDim() << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (target_desc->dim != 1) {
+  if (target_desc->getDim() != 1) {
     LOG(ERROR) << interface_name << "Dimension num of target should be 1. "
-               << "But now it is " << target_desc->dim << ".";
+               << "But now it is " << target_desc->getDim() << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (target_desc->dims[0] != input_desc->dims[0]) {
+  if (target_desc->getDimIndex(0) != input_desc->getDimIndex(0)) {
     LOG(ERROR) << interface_name << "Element num of target should be "
-               << input_desc->dims[0] << ", But now it is "
-               << target_desc->dims[0] << ".";
+               << input_desc->getDimIndex(0) << ", But now it is "
+               << target_desc->getDimIndex(0) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (output_desc->dim != 2) {
+  if (output_desc->getDim() != 2) {
     LOG(ERROR) << interface_name << "Dimension num of output should be 2. "
-               << "But now it is " << output_desc->dim << ".";
+               << "But now it is " << output_desc->getDim() << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (output_desc->dims[0] != input_desc->dims[0] ||
-      output_desc->dims[1] != input_desc->dims[1]) {
+  if (output_desc->getDimIndex(0) != input_desc->getDimIndex(0) ||
+      output_desc->getDimIndex(1) != input_desc->getDimIndex(1)) {
     LOG(ERROR) << interface_name << "Shape of output and input must be euqal. "
-               << "But now output.shape is [" << output_desc->dims[0] << ", "
-               << output_desc->dims[1] << "], "
-               << "and input.shape is [" << input_desc->dims[0] << ", "
-               << input_desc->dims[1] << "]. ";
+               << "But now output.shape is [" << output_desc->getDimIndex(0) << ", "
+               << output_desc->getDimIndex(1) << "], "
+               << "and input.shape is [" << input_desc->getDimIndex(0) << ", "
+               << input_desc->getDimIndex(1) << "]. ";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -112,24 +112,24 @@ static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
 
   // check weight
   if (weight_desc != NULL && mluOpGetTensorElementNum(weight_desc) != 0) {
-    if (weight_desc->dtype != input_dtype) {
+    if (weight_desc->getDtype() != input_dtype) {
       LOG(ERROR) << interface_name
                  << "Both data types of weight and input should be equal. "
                  << "But now input_dtype is "
                  << mluOpGetNameOfDataType(input_dtype) << ", "
                  << "weight_dtype is "
-                 << mluOpGetNameOfDataType(weight_desc->dtype) << ".";
+                 << mluOpGetNameOfDataType(weight_desc->getDtype()) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
-    if (weight_desc->dim != 1) {
+    if (weight_desc->getDim() != 1) {
       LOG(ERROR) << interface_name << "Dimension num of weight should be 1. "
-                 << "But now it is " << weight_desc->dim << ".";
+                 << "But now it is " << weight_desc->getDim() << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
-    if (weight_desc->dims[0] != input_desc->dims[1]) {
+    if (weight_desc->getDimIndex(0) != input_desc->getDimIndex(1)) {
       LOG(ERROR) << interface_name << "Element num of weight should be "
-                 << input_desc->dims[1] << ", But now it is "
-                 << weight_desc->dims[0] << ".";
+                 << input_desc->getDimIndex(1) << ", But now it is "
+                 << weight_desc->getDimIndex(0) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {
@@ -204,8 +204,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
                       "output_desc must be contiguous");
 
   // generate case prototxt.
-  const int32_t N = static_cast<int32_t>(input_desc->dims[0]);
-  const int32_t C = static_cast<int32_t>(input_desc->dims[1]);
+  const int32_t N = static_cast<int32_t>(input_desc->getDimIndex(0));
+  const int32_t C = static_cast<int32_t>(input_desc->getDimIndex(1));
 
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("focal_loss_sigmoid_forward", "FOCAL_LOSS_SIGMOID_FORWARD");
@@ -235,7 +235,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
   VLOG(5) << "Launch Kernel MLUKernelFocalLossSigmoidForward<<<Union"
           << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
-  if (input_desc->dtype == MLUOP_DTYPE_HALF) {
+  if (input_desc->getDtype() == MLUOP_DTYPE_HALF) {
     CHECK_RETURN("[mluOpBlockKernelFocalLossSigmoidForwardHalf]",
                  mluOpBlockKernelFocalLossSigmoidForwardHalf(
                      k_dim, k_type, handle->queue,
@@ -327,34 +327,34 @@ static mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
   const std::string interface_name = "[mluOpFocalLossSigmoidBackward]: ";
 
   // check shape
-  PARAM_CHECK(interface_name, input_desc->dim == output_desc->dim);
-  if (input_desc->dim != 2) {
-    LOG(ERROR) << interface_name << "input_desc->dim shoule be 2"
-               << "but now input_desc->dim is " << input_desc->dim << ".";
+  PARAM_CHECK(interface_name, input_desc->getDim() == output_desc->getDim());
+  if (input_desc->getDim() != 2) {
+    LOG(ERROR) << interface_name << "input_desc->getDim() shoule be 2"
+               << "but now input_desc->getDim() is " << input_desc->getDim() << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (target_desc->dim != 1) {
-    LOG(ERROR) << interface_name << "target_desc->dim shoule be 1"
-               << "but now target_desc->dim is " << target_desc->dim << ".";
+  if (target_desc->getDim() != 1) {
+    LOG(ERROR) << interface_name << "target_desc->getDim() shoule be 1"
+               << "but now target_desc->getDim() is " << target_desc->getDim() << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  for (int i = 0; i < input_desc->dim; ++i) {
-    if (input_desc->dims[i] != output_desc->dims[i]) {
+  for (int i = 0; i < input_desc->getDim(); ++i) {
+    if (input_desc->getDimIndex(i) != output_desc->getDimIndex(i)) {
       LOG(ERROR) << interface_name << "input_desc->dims[" << i
                  << "] should be equal to "
-                 << "output_desc->dims[" << i << "]. But now "
-                 << "input_desc->dims[" << i << "] is " << input_desc->dims[i]
+                 << "output_desc->getDimIndex(" << i << "). But now "
+                 << "input_desc->getDimIndex(" << i << ") is " << input_desc->getDimIndex(i)
                  << ", "
-                 << "output_desc->dims[" << i << "] is " << output_desc->dims[i]
+                 << "output_desc->getDimIndex(" << i << ") is " << output_desc->getDimIndex(i)
                  << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  if (input_desc->dims[0] != target_desc->dims[0]) {
-    LOG(ERROR) << interface_name << "input_desc->dims[0] should be equal to "
-               << "target_desc->dim[0]. But now "
-               << "input_desc->dims[0] is " << input_desc->dims[0] << ", "
-               << "target_desc->dims[0] is " << target_desc->dims[0] << ".";
+  if (input_desc->getDimIndex(0) != target_desc->getDimIndex(0)) {
+    LOG(ERROR) << interface_name << "input_desc->getDimIndex(0) should be equal to "
+               << "target_desc->getDim()[0]. But now "
+               << "input_desc->getDimIndex(0) is " << input_desc->getDimIndex(0) << ", "
+               << "target_desc->getDimIndex(0) is " << target_desc->getDimIndex(0) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -371,16 +371,16 @@ static mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
   }
 
   // check data type
-  auto input_dtype = input_desc->dtype;
-  auto target_dtype = target_desc->dtype;
-  PARAM_CHECK(interface_name, input_desc->dtype == output_desc->dtype);
+  auto input_dtype = input_desc->getDtype();
+  auto target_dtype = target_desc->getDtype();
+  PARAM_CHECK(interface_name, input_desc->getDtype() == output_desc->getDtype());
   if (input_dtype != MLUOP_DTYPE_FLOAT && input_dtype != MLUOP_DTYPE_HALF) {
     LOG(ERROR) << interface_name << "Types of input should be HALF or FLOAT. "
                << "But now input_dtype is "
                << mluOpGetNameOfDataType(input_dtype) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (target_desc->dtype != MLUOP_DTYPE_INT32) {
+  if (target_desc->getDtype() != MLUOP_DTYPE_INT32) {
     LOG(ERROR) << interface_name << "The data type of target should be int32, "
                << "but now target dtype is "
                << mluOpGetNameOfDataType(target_dtype) << ".";
@@ -389,25 +389,25 @@ static mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
 
   // check weight
   if (weight_desc != NULL && mluOpGetTensorElementNum(weight_desc) != 0) {
-    if (weight_desc->dim != 1) {
-      LOG(ERROR) << interface_name << "weight_desc->dim shoule be 1"
-                 << "but now weight_desc->dim is " << weight_desc->dim << ".";
+    if (weight_desc->getDim() != 1) {
+      LOG(ERROR) << interface_name << "weight_desc->getDim() shoule be 1"
+                 << "but now weight_desc->getDim() is " << weight_desc->getDim() << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
-    if (input_desc->dims[1] != weight_desc->dims[0]) {
-      LOG(ERROR) << interface_name << "input_desc->dims[1] should be equal to "
-                 << "weight_desc->dims[0]. But now "
-                 << "input_desc->dims[1] is " << input_desc->dims[1] << ", "
-                 << "weight_desc->dims[0] is " << weight_desc->dims[0] << ".";
+    if (input_desc->getDimIndex(1) != weight_desc->getDimIndex(0)) {
+      LOG(ERROR) << interface_name << "input_desc->getDimIndex(1) should be equal to "
+                 << "weight_desc->getDimIndex(0). But now "
+                 << "input_desc->getDimIndex(1) is " << input_desc->getDimIndex(1) << ", "
+                 << "weight_desc->getDimIndex(0) is " << weight_desc->getDimIndex(0) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
-    if (weight_desc->dtype != input_dtype) {
+    if (weight_desc->getDtype() != input_dtype) {
       LOG(ERROR) << interface_name
                  << "Both types of weight and output should be equal. "
                  << "But now input_dtype is "
                  << mluOpGetNameOfDataType(input_dtype) << ", "
                  << "weight_dtype is "
-                 << mluOpGetNameOfDataType(weight_desc->dtype) << ".";
+                 << mluOpGetNameOfDataType(weight_desc->getDtype()) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {
@@ -461,12 +461,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
 
   int deal_n = 0;
   int compute_data_bytes = sizeof(float);
-  int target_data_bytes = mluOpDataTypeBytes(target_desc->dtype);
+  int target_data_bytes = mluOpDataTypeBytes(target_desc->getDtype());
   int threshold_c = 0;
-  int dim_n = input_desc->dims[0];
-  int dim_c = input_desc->dims[1];
+  int dim_n = input_desc->getDimIndex(0);
+  int dim_c = input_desc->getDimIndex(1);
 
-  bool is_half = input_desc->dtype == MLUOP_DTYPE_HALF;
+  bool is_half = input_desc->getDtype() == MLUOP_DTYPE_HALF;
   // calculate deal_n and threshold_c
   getDealNAndThresholdC(handle, compute_data_bytes, target_data_bytes, dim_c,
                         &deal_n, &threshold_c, has_weight, is_half);
@@ -484,9 +484,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   // check C
   if (dim_c > threshold_c) {
     LOG(ERROR) << interface_name
-               << " input_desc->dims[1] should be in the range of "
+               << " input_desc->getDimIndex(1) should be in the range of "
                << "[0, " << threshold_c << "]. "
-               << "but now input_desc->dims[1] is " << dim_c;
+               << "but now input_desc->getDimIndex(1) is " << dim_c;
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 

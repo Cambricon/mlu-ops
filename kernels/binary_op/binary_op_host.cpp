@@ -45,7 +45,7 @@ void binaryOpPolicyFunc(mluOpHandle_t handle, const int pad_up_size,
   const uint64_t core_number = union_number * core_dim;
 
   const uint64_t dim = mluOpGetTensorElementNum(desc);
-  uint64_t size = dim * mluop::getSizeOfDataType(desc->dtype);
+  uint64_t size = dim * mluop::getSizeOfDataType(desc->getDtype());
   size = PAD_UP(size, pad_up_size);
 
   // Union1 policyFunc
@@ -70,7 +70,7 @@ void binaryOpBlockPolicyFunc(mluOpHandle_t handle,
   const uint32_t core_number =
       mluop::runtime::getMaxParallelJobNum(handle, k_type);
   const size_t element_num = mluOpGetTensorElementNum(desc);
-  const uint32_t dtype_size = mluop::getSizeOfDataType(desc->dtype);
+  const uint32_t dtype_size = mluop::getSizeOfDataType(desc->getDtype());
   if (MLUOP_MLU590 == handle->arch) {
     const uint32_t llc_pending_size = 512;
     pad_up_size = std::max(llc_pending_size, pad_up_size);
@@ -118,31 +118,31 @@ mluOpStatus_t binaryOpParamCheck(
   PARAM_CHECK(op_name, output_desc != NULL);
 
   // check dtype equal
-  PARAM_CHECK_EQ(op_name, input1_desc->dtype, input2_desc->dtype);
-  PARAM_CHECK_EQ(op_name, input1_desc->dtype, output_desc->dtype);
+  PARAM_CHECK_EQ(op_name, input1_desc->getDtype(), input2_desc->getDtype());
+  PARAM_CHECK_EQ(op_name, input1_desc->getDtype(), output_desc->getDtype());
 
   // check dim less than MLUOP_DIM_MAX
-  PARAM_CHECK_LE(op_name, input1_desc->dim, MLUOP_DIM_MAX);
-  PARAM_CHECK_LE(op_name, input2_desc->dim, MLUOP_DIM_MAX);
-  PARAM_CHECK_LE(op_name, output_desc->dim, MLUOP_DIM_MAX);
-  PARAM_CHECK_GT(op_name, input1_desc->dim, 0);
-  PARAM_CHECK_GT(op_name, input2_desc->dim, 0);
-  PARAM_CHECK_GT(op_name, output_desc->dim, 0);
+  PARAM_CHECK_LE(op_name, input1_desc->getDim(), MLUOP_DIM_MAX);
+  PARAM_CHECK_LE(op_name, input2_desc->getDim(), MLUOP_DIM_MAX);
+  PARAM_CHECK_LE(op_name, output_desc->getDim(), MLUOP_DIM_MAX);
+  PARAM_CHECK_GT(op_name, input1_desc->getDim(), 0);
+  PARAM_CHECK_GT(op_name, input2_desc->getDim(), 0);
+  PARAM_CHECK_GT(op_name, output_desc->getDim(), 0);
 
   // check data type support
-  if (!isSupportType(input1_desc->dtype, support_type, len)) {
+  if (!isSupportType(input1_desc->getDtype(), support_type, len)) {
     LOG(ERROR) << op_name << ":input1_desc's data type is not supported.";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   if (isSupportBroadcast) {
-    int32_t left_dim_num = input1_desc->dim;
-    int32_t right_dim_num = input2_desc->dim;
+    int32_t left_dim_num = input1_desc->getDim();
+    int32_t right_dim_num = input2_desc->getDim();
     int32_t max_dim = std::max(left_dim_num, right_dim_num);
-    std::vector<int> left_aligned_dims(input1_desc->dims,
-                                       input1_desc->dims + input1_desc->dim);
-    std::vector<int> right_aligned_dims(input2_desc->dims,
-                                        input2_desc->dims + input2_desc->dim);
+    std::vector<int> left_aligned_dims(input1_desc->getDims(),
+                                       input1_desc->getDims() + input1_desc->getDim());
+    std::vector<int> right_aligned_dims(input2_desc->getDims(),
+                                        input2_desc->getDims() + input2_desc->getDim());
 
     // aligning dimensions to max_dim
     if (left_dim_num < max_dim) {
@@ -155,7 +155,7 @@ mluOpStatus_t binaryOpParamCheck(
                                 max_dim - right_dim_num, 1);
     }
 
-    if (output_desc->dim != max_dim) {
+    if (output_desc->getDim() != max_dim) {
       LOG(ERROR)
           << op_name
           << " The dimension size of the output tensors does not meet the "
@@ -175,17 +175,17 @@ mluOpStatus_t binaryOpParamCheck(
       }
       int max_dim_value = std::max(left_aligned_dims[i], right_aligned_dims[i]);
       int min_dim_value = std::min(left_aligned_dims[i], right_aligned_dims[i]);
-      if ((min_dim_value > 0 && max_dim_value != output_desc->dims[i]) ||
-          (min_dim_value == 0 && output_desc->dims[i] != 0)) {
+      if ((min_dim_value > 0 && max_dim_value != output_desc->getDimIndex(i)) ||
+          (min_dim_value == 0 && output_desc->getDimIndex(i) != 0)) {
         LOG(ERROR) << op_name
                    << " The shape of the inferred tensors is not equal"
                    << " to the output tensor. In the broadcast shape"
                    << ", the shape of x is "
-                   << array2String(input1_desc->dim, input1_desc->dims)
+                   << array2String(input1_desc->getDim(), input1_desc->getDims())
                    << ", the shape of y is "
-                   << array2String(input2_desc->dim, input2_desc->dims)
+                   << array2String(input2_desc->getDim(), input2_desc->getDims())
                    << ", the shape of z is "
-                   << array2String(output_desc->dim, output_desc->dims);
+                   << array2String(output_desc->getDim(), output_desc->getDims());
         return MLUOP_STATUS_BAD_PARAM;
       }
     }
@@ -238,23 +238,23 @@ mluOpStatus_t binaryOpParamSameShapeCheck(
     const mluOpTensorDescriptor_t input2_desc,
     const mluOpTensorDescriptor_t output_desc) {
   // check dim
-  PARAM_CHECK_EQ("[" + op_name + "]", input1_desc->dim, input2_desc->dim);
-  PARAM_CHECK_EQ("[" + op_name + "]", input1_desc->dim, output_desc->dim);
+  PARAM_CHECK_EQ("[" + op_name + "]", input1_desc->getDim(), input2_desc->getDim());
+  PARAM_CHECK_EQ("[" + op_name + "]", input1_desc->getDim(), output_desc->getDim());
 
   // check shape
-  for (int i = 0; i < input1_desc->dim; i++) {
-    if (input1_desc->dims[i] != input2_desc->dims[i]) {
+  for (int i = 0; i < input1_desc->getDim(); i++) {
+    if (input1_desc->getDimIndex(i) != input2_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << ":The shape of input1 should be equal to input2"
                  << ". But now input1's shape[" << i << "] is "
-                 << input1_desc->dims[i] << ", input2's shape[" << i << "] is "
-                 << input2_desc->dims[i] << ".";
+                 << input1_desc->getDimIndex(i) << ", input2's shape[" << i << "] is "
+                 << input2_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
-    if (input1_desc->dims[i] != output_desc->dims[i]) {
+    if (input1_desc->getDimIndex(i) != output_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << ":The shape of input1 should be equal to output"
                  << ". But now input1's shape[" << i << "] is "
-                 << input1_desc->dims[i] << ", output's shape[" << i << "] is "
-                 << output_desc->dims[i] << ".";
+                 << input1_desc->getDimIndex(i) << ", output's shape[" << i << "] is "
+                 << output_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }

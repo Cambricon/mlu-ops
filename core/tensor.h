@@ -107,6 +107,152 @@ struct alignas(64) mluOpTensorStruct {
   inline bool isSameDims(const mluOpTensorStruct *other) const;
   inline bool isCpuScalar() const;
 
+ public:
+  inline float getOffset() const { return this->offset; }
+  inline void setOffset(float newOffset) { this->offset = newOffset; }
+
+  inline float getScale() const { return this->scale; }
+  inline void setScale(float newScale) { this->scale = newScale; }
+
+  inline mluOpTensorLayout_t getLayout() const { return this->layout; }
+  inline void setLayout(mluOpTensorLayout_t newLayout) {
+    this->layout = newLayout;
+  }
+
+  inline uint64_t getTotalTensorSize() const { return this->total_tensor_size; }
+  inline void setTotalTensorSize(uint64_t newSize) {
+    this->total_tensor_size = newSize;
+  }
+  inline uint64_t getTotalElementNum() const { return this->total_element_num; }
+  inline void setTotalElementNum(uint64_t newNum) {
+    this->total_element_num = newNum;
+  }
+
+  inline int getPosition() const { return this->position; }
+  inline void setPosition(int newPosition) { this->position = newPosition; }
+
+  inline mluOpDataType_t getDtype() const { return this->dtype; }
+  inline void setDtype(mluOpDataType_t newDtype) { this->dtype = newDtype; }
+  inline mluOpDataType_t getOnchipDtype() const { return this->onchip_dtype; }
+  inline void setOnchipDtype(mluOpDataType_t newDtype) {
+    this->onchip_dtype = newDtype;
+  }
+
+  inline int getDim() const { return this->dim; }
+  inline void setDim(int newDim) { this->dim = newDim; }
+  inline void releaseDims() { delete[] this->dims; }
+  inline int64_t *getDims() const { return this->dims; }
+  inline int64_t getDimIndex(size_t index) { return (this->dims)[index]; }
+  inline void setDims(int64_t *newDims) { this->dims = newDims; }
+
+  inline void releaseStrides() { delete[] this->strides; }
+  inline int64_t *getStrides() const { return this->strides; }
+  inline int64_t getStrideIndex(size_t index) const {
+    return (this->strides)[index];
+  }
+  inline void setStrideIndex(size_t index, int64_t newStride) {
+    this->strides[index] = newStride;
+  }
+
+  inline void setStrides(int64_t *newStrides) { this->strides = newStrides; }
+
+  inline mluOpPointerMode_t getPointerMode() const {
+    return this->pointer_mode;
+  }
+  inline void setPointerMode(mluOpPointerMode_t new_pointer_mode) {
+    this->pointer_mode = new_pointer_mode;
+  }
+
+  inline int64_t *getNormalDims() { return this->normal_dims; }
+  inline int64_t *getNormalStrides() { return this->normal_strides; }
+  // Definition of function in tensor.cpp
+  mluOpStatus_t setTensorDescriptor(mluOpTensorLayout_t layout,
+                                    mluOpDataType_t dtype, int dimNb,
+                                    const int *dimSize);
+
+  mluOpStatus_t setTensorDescriptor_v2(mluOpTensorLayout_t layout,
+                                       mluOpDataType_t dtype, int dimNb,
+                                       const int64_t *dimSize);
+
+  mluOpStatus_t setTensorDescriptorDim(int dimNb, const int *dimSize);
+
+  mluOpStatus_t setTensorDescriptorDim_v2(int dimNb, const int64_t *dimSize);
+
+  mluOpStatus_t resetTensorDescriptor();
+
+  mluOpStatus_t setTensorDescriptorEx(mluOpTensorLayout_t layout,
+                                      mluOpDataType_t dtype, int dimNb,
+                                      const int *dimSize, const int *dimStride);
+
+  mluOpStatus_t setTensorDescriptorEx_v2(mluOpTensorLayout_t layout,
+                                         mluOpDataType_t dtype, int dimNb,
+                                         const int64_t *dimSize,
+                                         const int64_t *dimStride);
+
+  mluOpStatus_t setTensorDescriptorOnchipDataType(mluOpDataType_t onchip_dtype);
+
+  mluOpStatus_t setTensorDescriptorPosition(int position);
+
+  mluOpStatus_t setTensorDescriptorPositionAndScale(int position, float scale);
+
+  mluOpStatus_t setTensorDescriptorPositionScaleAndOffset(int position,
+                                                          float scale,
+                                                          int offset);
+
+  mluOpStatus_t setTensorDescriptorPointerMode(mluOpPointerMode_t pointer_mode);
+
+  mluOpStatus_t getTensorDescriptorEx(mluOpTensorLayout_t *layout,
+                                      mluOpDataType_t *dtype, int *dimNb,
+                                      int *dimSize, int *dimStride);
+
+  mluOpStatus_t getTensorDescriptorEx_v2(mluOpTensorLayout_t *layout,
+                                         mluOpDataType_t *dtype, int *dimNb,
+                                         int64_t *dimSize, int64_t *dimStride);
+
+  mluOpStatus_t getTensorDescriptor(mluOpTensorLayout_t *layout,
+                                    mluOpDataType_t *dtype, int *dimNb,
+                                    int *dimSize);
+
+  mluOpStatus_t getTensorDescriptor_v2(mluOpTensorLayout_t *layout,
+                                       mluOpDataType_t *dtype, int *dimNb,
+                                       int64_t *dimSize);
+
+  mluOpStatus_t getTensorDescriptorOnchipDataType(
+      mluOpDataType_t *onchip_dtype);
+
+  mluOpStatus_t getTensorDescriptorPosition(int *position);
+
+  mluOpStatus_t getTensorDescriptorPositionAndScale(int *position,
+                                                    float *scale);
+
+  mluOpStatus_t getTensorDescriptorPositionScaleAndOffset(int *position,
+                                                          float *scale,
+                                                          int *offset);
+
+  mluOpStatus_t getTensorDescriptorPointerMode(
+      mluOpPointerMode_t *pointer_mode);
+
+  mluOpStatus_t destroyTensorDescriptor();
+
+  mluOpStatus_t destroyGroupTensorDescriptors(
+      mluOpTensorDescriptor_t **group_desc, const int desc_num);
+
+  uint64_t getTensorElementNum(mluOpTensorDescriptor_t desc);
+
+  mluOpStatus_t setGroupTensorDescriptors(
+      mluOpTensorDescriptor_t **group_desc,
+      const mluOpTensorLayout_t *group_layout,
+      const mluOpDataType_t *group_dtype, const int *group_dimNb,
+      const int *group_dimSize, const int desc_num);
+
+  mluOpStatus_t setGroupTensorDescriptors_v2(
+      mluOpTensorDescriptor_t **group_desc,
+      const mluOpTensorLayout_t *group_layout,
+      const mluOpDataType_t *group_dtype, const int *group_dimNb,
+      const int64_t *group_dimSize, const int desc_num);
+
+  uint64_t getTensorElementNum() { return this->total_element_num; }
+  private:
   /* Try to pack and align the struct */
   /*  ------------------- 64 Bytes - 1 -------------------*/
   int64_t normal_dims[MLUOP_DIM_MAX];
@@ -158,7 +304,7 @@ struct mluOpTensorSetStruct {
     CHECK(!this->tensor_set.empty());
     size_t tensor_set_size = 0;
     for (int i = 0; i < tensor_set.size(); i++) {
-      tensor_set_size += tensor_set[i]->total_tensor_size;
+      tensor_set_size += tensor_set[i]->getTotalTensorSize();
     }
     return tensor_set_size;
   }
@@ -175,7 +321,7 @@ struct mluOpTensorSetStruct {
     int64_t offset = 0;
     int index = this->getIndex(tensorIndex);
     for (int i = 0; i < index; i++) {
-      offset += tensor_set[i]->total_tensor_size;
+      offset += tensor_set[i]->getTotalTensorSize();
     }
     data_offset[index] = offset;
     return offset;
@@ -189,12 +335,12 @@ struct mluOpTensorSetStruct {
 
   inline mluOpDataType_t getDatatype() const {
     CHECK(!this->tensor_set.empty());
-    return this->tensor_set[0]->dtype;
+    return this->tensor_set[0]->getDtype();
   }
 
   inline mluOpTensorLayout_t getLayout() const {
     CHECK(!this->tensor_set.empty());
-    return this->tensor_set[0]->layout;
+    return this->tensor_set[0]->getLayout();
   }
 
   inline void checkDataOffset() const {
@@ -218,7 +364,7 @@ struct mluOpTensorSetStruct {
     int offset = 0;
     data_offset[0] = offset;
     for (int i = 0; i < tensor_num - 1; i++) {
-      offset += tensor_set[i]->total_tensor_size;
+      offset += tensor_set[i]->getTotalTensorSize();
       data_offset[i + 1] = offset;
     }
     return data_offset;
@@ -288,16 +434,16 @@ inline int mluOpDataTypeBytes(const mluOpDataType_t dt) {
 }
 
 inline int64_t mluOpGetTensordimN(const mluOpTensorDescriptor_t desc) {
-  switch (desc->layout) {
+  switch (desc->getLayout()) {
     case MLUOP_LAYOUT_NCHW:
     case MLUOP_LAYOUT_NHWC:
     case MLUOP_LAYOUT_NDHWC:
     case MLUOP_LAYOUT_NLC:
-      return desc->dims[0];
+      return desc->getDimIndex(0);
     case MLUOP_LAYOUT_NCDHW:
-      return desc->dims[0];
+      return desc->getDimIndex(0);
     case MLUOP_LAYOUT_HWCN:
-      return desc->dims[3];
+      return desc->getDimIndex(3);
     default:
       LOG(ERROR)
           << "Failed to call dimN, illegal layout in TensorDescriptor.\n";
@@ -306,11 +452,11 @@ inline int64_t mluOpGetTensordimN(const mluOpTensorDescriptor_t desc) {
 }
 
 inline int64_t mluOpGetTensordimD(const mluOpTensorDescriptor_t desc) {
-  switch (desc->layout) {
+  switch (desc->getLayout()) {
     case MLUOP_LAYOUT_NDHWC:
-      return desc->dims[1];
+      return desc->getDimIndex(1);
     case MLUOP_LAYOUT_NCDHW:
-      return desc->dims[2];
+      return desc->getDimIndex(2);
     default:
       LOG(ERROR)
           << "Failed to call dimD, illegal layout in TensorDescriptor.\n";
@@ -319,18 +465,18 @@ inline int64_t mluOpGetTensordimD(const mluOpTensorDescriptor_t desc) {
 }
 
 inline int64_t mluOpGetTensordimC(const mluOpTensorDescriptor_t desc) {
-  switch (desc->layout) {
+  switch (desc->getLayout()) {
     case MLUOP_LAYOUT_NCHW:
-      return desc->dims[1];
+      return desc->getDimIndex(1);
     case MLUOP_LAYOUT_NHWC:
-      return desc->dims[3];
+      return desc->getDimIndex(3);
     case MLUOP_LAYOUT_NDHWC:
-      return desc->dims[4];
+      return desc->getDimIndex(4);
     case MLUOP_LAYOUT_NCDHW:
-      return desc->dims[1];
+      return desc->getDimIndex(1);
     case MLUOP_LAYOUT_HWCN:
     case MLUOP_LAYOUT_NLC:
-      return desc->dims[2];
+      return desc->getDimIndex(2);
     default:
       LOG(ERROR)
           << "Failed to call dimC, illegal layout in TensorDescriptor.\n";
@@ -339,17 +485,17 @@ inline int64_t mluOpGetTensordimC(const mluOpTensorDescriptor_t desc) {
 }
 
 inline int64_t mluOpGetTensordimH(const mluOpTensorDescriptor_t desc) {
-  switch (desc->layout) {
+  switch (desc->getLayout()) {
     case MLUOP_LAYOUT_NCHW:
-      return desc->dims[2];
+      return desc->getDimIndex(2);
     case MLUOP_LAYOUT_NHWC:
-      return desc->dims[1];
+      return desc->getDimIndex(1);
     case MLUOP_LAYOUT_NDHWC:
-      return desc->dims[2];
+      return desc->getDimIndex(2);
     case MLUOP_LAYOUT_NCDHW:
-      return desc->dims[3];
+      return desc->getDimIndex(3);
     case MLUOP_LAYOUT_HWCN:
-      return desc->dims[0];
+      return desc->getDimIndex(0);
     default:
       LOG(ERROR)
           << "Failed to call dimH, illegal layout in TensorDescriptor.\n";
@@ -358,18 +504,18 @@ inline int64_t mluOpGetTensordimH(const mluOpTensorDescriptor_t desc) {
 }
 
 inline int64_t mluOpGetTensordimW(const mluOpTensorDescriptor_t desc) {
-  switch (desc->layout) {
+  switch (desc->getLayout()) {
     case MLUOP_LAYOUT_NCHW:
-      return desc->dims[3];
+      return desc->getDimIndex(3);
     case MLUOP_LAYOUT_NHWC:
-      return desc->dims[2];
+      return desc->getDimIndex(2);
     case MLUOP_LAYOUT_NDHWC:
-      return desc->dims[3];
+      return desc->getDimIndex(3);
     case MLUOP_LAYOUT_NCDHW:
-      return desc->dims[4];
+      return desc->getDimIndex(4);
     case MLUOP_LAYOUT_HWCN:
     case MLUOP_LAYOUT_NLC:
-      return desc->dims[1];
+      return desc->getDimIndex(1);
     default:
       LOG(ERROR)
           << "Failed to call dimW, illegal layout in TensorDescriptor.\n";
@@ -466,12 +612,12 @@ inline int64_t mluOpGetSeqDataDimC(const mluOpSeqDataDescriptor_t desc) {
 
 inline uint64_t shapeStrideCount(const mluOpTensorDescriptor_t desc) {
   uint64_t total = 1;
-  for (int i = 0; i < desc->dim; ++i) {
-    if (desc->dims[i] == 0) {
+  for (int i = 0; i < desc->getDim(); ++i) {
+    if (desc->getDimIndex(i) == 0) {
       total = 0;
       break;
     }
-    total += (desc->dims[i] - 1) * desc->strides[i];
+    total += (desc->getDimIndex(i) - 1) * desc->getStrideIndex(i);
   }
   return total;
 }

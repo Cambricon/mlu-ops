@@ -74,36 +74,36 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardData(
   PARAM_CHECK(API, grad_input_desc != NULL);
 
   // check dim
-  PARAM_CHECK_EQ(API, gates_desc->dim, 1);
-  PARAM_CHECK_EQ(API, indices_desc->dim, 1);
-  PARAM_CHECK_EQ(API, locations_desc->dim, 1);
-  PARAM_CHECK_EQ(API, dispatch_desc->dim, 2);
-  PARAM_CHECK_EQ(API, grad_input_desc->dim, 2);
+  PARAM_CHECK_EQ(API, gates_desc->getDim(), 1);
+  PARAM_CHECK_EQ(API, indices_desc->getDim(), 1);
+  PARAM_CHECK_EQ(API, locations_desc->getDim(), 1);
+  PARAM_CHECK_EQ(API, dispatch_desc->getDim(), 2);
+  PARAM_CHECK_EQ(API, grad_input_desc->getDim(), 2);
 
   // check shape
-  PARAM_CHECK_EQ(API, gates_desc->dims[0], samples);
-  PARAM_CHECK_EQ(API, indices_desc->dims[0], samples);
-  PARAM_CHECK_EQ(API, locations_desc->dims[0], samples);
-  PARAM_CHECK_EQ(API, dispatch_desc->dims[0], (num_experts * capacity));
-  PARAM_CHECK_EQ(API, dispatch_desc->dims[1], hidden);
-  PARAM_CHECK_EQ(API, grad_input_desc->dims[0], samples);
-  PARAM_CHECK_EQ(API, grad_input_desc->dims[1], hidden);
+  PARAM_CHECK_EQ(API, gates_desc->getDimIndex(0), samples);
+  PARAM_CHECK_EQ(API, indices_desc->getDimIndex(0), samples);
+  PARAM_CHECK_EQ(API, locations_desc->getDimIndex(0), samples);
+  PARAM_CHECK_EQ(API, dispatch_desc->getDimIndex(0), (num_experts * capacity));
+  PARAM_CHECK_EQ(API, dispatch_desc->getDimIndex(1), hidden);
+  PARAM_CHECK_EQ(API, grad_input_desc->getDimIndex(0), samples);
+  PARAM_CHECK_EQ(API, grad_input_desc->getDimIndex(1), hidden);
 
   // check dtype
-  PARAM_CHECK_V2(API, (gates_desc->dtype == MLUOP_DTYPE_FLOAT),
+  PARAM_CHECK_V2(API, (gates_desc->getDtype() == MLUOP_DTYPE_FLOAT),
                  "Only float are supported in input tensor, but the "
                  "data type of tensor is "
-                     << mluOpGetNameOfDataType(gates_desc->dtype) << ".");
-  PARAM_CHECK_V2(API, (indices_desc->dtype == MLUOP_DTYPE_INT32),
+                     << mluOpGetNameOfDataType(gates_desc->getDtype()) << ".");
+  PARAM_CHECK_V2(API, (indices_desc->getDtype() == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in indices tensor, but the data "
                  "type of tensor is "
-                     << mluOpGetNameOfDataType(indices_desc->dtype) << ".");
-  PARAM_CHECK_V2(API, (locations_desc->dtype == MLUOP_DTYPE_INT32),
+                     << mluOpGetNameOfDataType(indices_desc->getDtype()) << ".");
+  PARAM_CHECK_V2(API, (locations_desc->getDtype() == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in locations tensor, but the data "
                  "type of tensor is "
-                     << mluOpGetNameOfDataType(locations_desc->dtype) << ".");
-  PARAM_CHECK(API, dispatch_desc->dtype == gates_desc->dtype);
-  PARAM_CHECK(API, grad_input_desc->dtype == gates_desc->dtype);
+                     << mluOpGetNameOfDataType(locations_desc->getDtype()) << ".");
+  PARAM_CHECK(API, dispatch_desc->getDtype() == gates_desc->getDtype());
+  PARAM_CHECK(API, grad_input_desc->getDtype() == gates_desc->getDtype());
 
   // check tensor dim
   PARAM_CHECK(API, samples >= 0);
@@ -207,7 +207,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardData(
           << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>"
           << "core num per cluster: " << core_num_per_cluster;
 
-  mluOpDataType_t data_type = grad_input_desc->dtype;
+  mluOpDataType_t data_type = grad_input_desc->getDtype();
   uint32_t taskNum = k_dim.x * k_dim.y * k_dim.z;
 
   if (samples <= taskNum) {

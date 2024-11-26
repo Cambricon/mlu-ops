@@ -40,10 +40,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetThreeNNForwardWorkspaceSize(
   PARAM_CHECK("[mluOpThreeNNForwardWorkspace]", workspace_size != NULL);
 
   // check tensor dim
-  PARAM_CHECK("[mluOpThreeNNForwardWorkspace]", known_desc->dim == 3);
+  PARAM_CHECK("[mluOpThreeNNForwardWorkspace]", known_desc->getDim() == 3);
 
-  *workspace_size = known_desc->total_tensor_size;
-  const int known_dim = known_desc->dim;
+  *workspace_size = known_desc->getTotalTensorSize();
+  const int known_dim = known_desc->getDim();
   const int known_permute[3] = {0, 2, 1};
   size_t known_transpose_workspace_size = 0;
 
@@ -66,7 +66,7 @@ static mluOpStatus_t transposeTensor(
     const void *input, const int *permute,
     const mluOpTensorDescriptor_t workspace_dst_desc, void *workspace_dst,
     void *transpose_workspace, size_t transpose_workspace_size) {
-  const int input_dim = input_desc->dim;
+  const int input_dim = input_desc->getDim();
 
   cnnlTransposeDescriptor_t cnnl_trans_desc = NULL;
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
@@ -99,47 +99,47 @@ static mluOpStatus_t threeNNParamCheck(
   PARAM_CHECK("[mluOpThreeNNForward]", idx_desc != NULL);
 
   // check tensor dim
-  PARAM_CHECK("[mluOpThreeNNForward]", unknown_desc->dim == 3);
-  PARAM_CHECK("[mluOpThreeNNForward]", known_desc->dim == 3);
-  PARAM_CHECK("[mluOpThreeNNForward]", dist2_desc->dim == 3);
-  PARAM_CHECK("[mluOpThreeNNForward]", idx_desc->dim == 3);
+  PARAM_CHECK("[mluOpThreeNNForward]", unknown_desc->getDim() == 3);
+  PARAM_CHECK("[mluOpThreeNNForward]", known_desc->getDim() == 3);
+  PARAM_CHECK("[mluOpThreeNNForward]", dist2_desc->getDim() == 3);
+  PARAM_CHECK("[mluOpThreeNNForward]", idx_desc->getDim() == 3);
 
   // check dim0
   PARAM_CHECK("[mluOpThreeNNForward]",
-              unknown_desc->dims[0] == known_desc->dims[0]);
+              unknown_desc->getDimIndex(0) == known_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpThreeNNForward]",
-              unknown_desc->dims[0] == dist2_desc->dims[0]);
+              unknown_desc->getDimIndex(0) == dist2_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpThreeNNForward]",
-              unknown_desc->dims[0] == idx_desc->dims[0]);
+              unknown_desc->getDimIndex(0) == idx_desc->getDimIndex(0));
 
   // check dim1
   PARAM_CHECK("[mluOpThreeNNForward]",
-              unknown_desc->dims[1] == dist2_desc->dims[1]);
+              unknown_desc->getDimIndex(1) == dist2_desc->getDimIndex(1));
   PARAM_CHECK("[mluOpThreeNNForward]",
-              unknown_desc->dims[1] == idx_desc->dims[1]);
+              unknown_desc->getDimIndex(1) == idx_desc->getDimIndex(1));
 
   // check dim2
-  PARAM_CHECK("[mluOpThreeNNForward]", unknown_desc->dims[2] == 3);
-  PARAM_CHECK("[mluOpThreeNNForward]", known_desc->dims[2] == 3);
-  PARAM_CHECK("[mluOpThreeNNForward]", dist2_desc->dims[2] == 3);
-  PARAM_CHECK("[mluOpThreeNNForward]", idx_desc->dims[2] == 3);
+  PARAM_CHECK("[mluOpThreeNNForward]", unknown_desc->getDimIndex(2) == 3);
+  PARAM_CHECK("[mluOpThreeNNForward]", known_desc->getDimIndex(2) == 3);
+  PARAM_CHECK("[mluOpThreeNNForward]", dist2_desc->getDimIndex(2) == 3);
+  PARAM_CHECK("[mluOpThreeNNForward]", idx_desc->getDimIndex(2) == 3);
 
   // check tensor datatype，support float16 and float32
   PARAM_CHECK_V2("[mluOpThreeNNForward]",
-                 (unknown_desc->dtype == MLUOP_DTYPE_HALF) ||
-                     (unknown_desc->dtype == MLUOP_DTYPE_FLOAT),
+                 (unknown_desc->getDtype() == MLUOP_DTYPE_HALF) ||
+                     (unknown_desc->getDtype() == MLUOP_DTYPE_FLOAT),
                  "Only half and float are supported in input unknown tensor, "
                  "but the data type of tensor is "
-                     << mluOpGetNameOfDataType(unknown_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(unknown_desc->getDtype()) << ".");
   PARAM_CHECK("[mluOpThreeNNForward]",
-              unknown_desc->dtype == known_desc->dtype);
+              unknown_desc->getDtype() == known_desc->getDtype());
   PARAM_CHECK("[mluOpThreeNNForward]",
-              unknown_desc->dtype == dist2_desc->dtype);
+              unknown_desc->getDtype() == dist2_desc->getDtype());
 
   PARAM_CHECK_V2(
-      "[mluOpThreeNNForward]", (idx_desc->dtype == MLUOP_DTYPE_INT32),
+      "[mluOpThreeNNForward]", (idx_desc->getDtype() == MLUOP_DTYPE_INT32),
       "Only int32 are supported in output idx, but the data type of tensor is "
-          << mluOpGetNameOfDataType(idx_desc->dtype) << ".");
+          << mluOpGetNameOfDataType(idx_desc->getDtype()) << ".");
 
   const size_t unknown_element_num = mluOpGetTensorElementNum(unknown_desc);
   const size_t known_element_num = mluOpGetTensorElementNum(known_desc);
@@ -205,9 +205,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
     return status_paramcheck;
   }
 
-  const int b = unknown_desc->dims[0];
-  const int n = unknown_desc->dims[1];
-  const int m = known_desc->dims[1];
+  const int b = unknown_desc->getDimIndex(0);
+  const int n = unknown_desc->getDimIndex(1);
+  const int m = known_desc->getDimIndex(1);
 
   // generate mluOpThreeNNForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
@@ -221,10 +221,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
 
-  mluOpDataType_t input_dtype = unknown_desc->dtype;
+  mluOpDataType_t input_dtype = unknown_desc->getDtype();
   void *known_workspace = workspace;
   void *transpose_workspace =
-      (int8_t *)known_workspace + known_desc->total_tensor_size;
+      (int8_t *)known_workspace + known_desc->getTotalTensorSize();
 
   // start U1 task, occupy all available clusters
   cnrtDim3_t k_dims;
@@ -235,12 +235,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
 
   VLOG(5) << "[mluOpThreeNNForward] cnnlTranspose_v2 feature start.";
 
-  const int known_dim = known_desc->dim;
+  const int known_dim = known_desc->getDim();
   const int known_permute[3] = {0, 2, 1};
   int known_tmp_dims[3] = {0, 0, 0};
 
   for (int i = 0; i < known_dim; ++i) {
-    known_tmp_dims[i] = known_desc->dims[known_permute[i]];
+    known_tmp_dims[i] = known_desc->getDimIndex(known_permute[i]);
   }
 
   mluOpTensorDescriptor_t known_desc_tmp = NULL;
@@ -254,7 +254,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpThreeNNForward(
       "[mluOpThreeNNForward]",
       transposeTensor(handle, known_desc, known, known_permute, known_desc_tmp,
                       known_workspace, transpose_workspace,
-                      workspace_size - known_desc->total_tensor_size));
+                      workspace_size - known_desc->getTotalTensorSize()));
   CHECK_RETURN("[mluOpThreeNNForward]",
                mluOpDestroyTensorDescriptor(known_desc_tmp));
 

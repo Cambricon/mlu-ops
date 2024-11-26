@@ -91,9 +91,9 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
   PARAM_CHECK("[mluOpBoxIouRotated]", ious_desc != NULL);
 
   // datatype check
-  PARAM_CHECK("[mluOpBoxIouRotated]", box1_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK_EQ("[mluOpBoxIouRotated]", box1_desc->dtype, box2_desc->dtype);
-  PARAM_CHECK_EQ("[mluOpBoxIouRotated]", box1_desc->dtype, ious_desc->dtype);
+  PARAM_CHECK("[mluOpBoxIouRotated]", box1_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK_EQ("[mluOpBoxIouRotated]", box1_desc->getDtype(), box2_desc->getDtype());
+  PARAM_CHECK_EQ("[mluOpBoxIouRotated]", box1_desc->getDtype(), ious_desc->getDtype());
 
   // param check
   if (mode != 0 && mode != 1) {
@@ -104,71 +104,71 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
   }
 
   // dims and shape check
-  PARAM_CHECK_EQ("[mluOpBoxIouRotated]", box1_desc->dim, 2);
-  PARAM_CHECK_EQ("[mluOpBoxIouRotated]", box2_desc->dim, 2);
-  if (box1_desc->dims[box1_desc->dim - 1] != SINGLE_BOX_DIM &&
-      box1_desc->dims[0] != 0) {
+  PARAM_CHECK_EQ("[mluOpBoxIouRotated]", box1_desc->getDim(), 2);
+  PARAM_CHECK_EQ("[mluOpBoxIouRotated]", box2_desc->getDim(), 2);
+  if (box1_desc->getDimIndex(box1_desc->getDim() - 1) != SINGLE_BOX_DIM &&
+      box1_desc->getDimIndex(0) != 0) {
     LOG(ERROR)
         << "[mluOpBoxIouRotated] Check failed: The Boxes' last dimenstion "
            "should be 5 or "
         << "the first dimension should be 0. But now box1's last dimension is "
-        << box1_desc->dims[box1_desc->dim - 1] << ", box1's first dimension is "
-        << box1_desc->dims[0] << ".";
+        << box1_desc->getDimIndex(box1_desc->getDim() - 1) << ", box1's first dimension is "
+        << box1_desc->getDimIndex(0) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (box2_desc->dims[box2_desc->dim - 1] != SINGLE_BOX_DIM &&
-      box2_desc->dims[0] != 0) {
+  if (box2_desc->getDimIndex(box2_desc->getDim() - 1) != SINGLE_BOX_DIM &&
+      box2_desc->getDimIndex(0) != 0) {
     LOG(ERROR)
         << "[mluOpBoxIouRotated] Check failed: The Boxes' last dimenstion "
            "should be 5 or "
         << "the first dimension should be 0. But now box2's last dimension is "
-        << box2_desc->dims[box2_desc->dim - 1] << ", box2's first dimension is "
-        << box2_desc->dims[0] << ".";
+        << box2_desc->getDimIndex(box2_desc->getDim() - 1) << ", box2's first dimension is "
+        << box2_desc->getDimIndex(0) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (ious_desc->dims[0] != box1_desc->dims[0]) {
+  if (ious_desc->getDimIndex(0) != box1_desc->getDimIndex(0)) {
     LOG(ERROR)
         << "[mluOpBoxIouRotated] Check failed: Whether it is aligned or not,"
-        << "ious_desc->dims[0] should equal to box1_desc->dims[0]. But now "
-        << "ious_desc->dims[0] is " << ious_desc->dims[0]
-        << ", box1_desc->dims[0] is " << box1_desc->dims[0] << ".";
+        << "ious_desc->getDimIndex(0) should equal to box1_desc->getDimIndex(0). But now "
+        << "ious_desc->getDimIndex(0) is " << ious_desc->getDimIndex(0)
+        << ", box1_desc->getDimIndex(0) is " << box1_desc->getDimIndex(0) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (aligned) {
-    if (ious_desc->dim != 1) {
+    if (ious_desc->getDim() != 1) {
       LOG(ERROR) << "[mluOpBoxIouRotated] Check failed: If it is aligned mode, "
-                 << "ious_desc->dim should equal to 1. But now is "
-                 << ious_desc->dim << ".";
+                 << "ious_desc->getDim() should equal to 1. But now is "
+                 << ious_desc->getDim() << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
-    if (box1_desc->dims[0] != box2_desc->dims[0]) {
+    if (box1_desc->getDimIndex(0) != box2_desc->getDimIndex(0)) {
       LOG(ERROR)
           << "[mluOpBoxIouRotated] Check failed: If it is aligned mode, "
-          << "box1_desc->dims[0] should equal to box2_desc->dims[0]. But now "
-          << "box1_desc->dims[0] is " << box1_desc->dims[0]
-          << ", box2_desc->dims[0] is " << box2_desc->dims[0] << ".";
+          << "box1_desc->getDimIndex(0) should equal to box2_desc->getDimIndex(0). But now "
+          << "box1_desc->getDimIndex(0) is " << box1_desc->getDimIndex(0)
+          << ", box2_desc->getDimIndex(0) is " << box2_desc->getDimIndex(0) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
-    if (handle->arch < 592 && box1_desc->dims[0] > MAX_BOX_NUM) {
+    if (handle->arch < 592 && box1_desc->getDimIndex(0) > MAX_BOX_NUM) {
       LOG(ERROR) << "[mluOpBoxIouRotated] Check failed: If it is aligned mode, "
-                 << "on MLU300 box1_desc->dims[0] should less than or equal to "
-                 << "10,000,000 . But now is " << box1_desc->dims[0] << ".";
+                 << "on MLU300 box1_desc->getDimIndex(0) should less than or equal to "
+                 << "10,000,000 . But now is " << box1_desc->getDimIndex(0) << ".";
       return MLUOP_STATUS_NOT_SUPPORTED;
     }
   } else {
-    if (ious_desc->dim != 2) {
+    if (ious_desc->getDim() != 2) {
       LOG(ERROR)
           << "[mluOpBoxIouRotated] Check failed: If it is non-aligned mode, "
-          << "ious_desc->dim should equal to 2. But now is " << ious_desc->dim
+          << "ious_desc->getDim() should equal to 2. But now is " << ious_desc->getDim()
           << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
-    if (ious_desc->dims[1] != box2_desc->dims[0]) {
+    if (ious_desc->getDimIndex(1) != box2_desc->getDimIndex(0)) {
       LOG(ERROR)
           << "[mluOpBoxIouRotated] Check failed: If it is non-aligned mode, "
           << "ious_desc's last dim should equal to box2_desc's first dim "
-          << box2_desc->dims[0] << ", But now ious_desc's last dim is "
-          << ious_desc->dims[1] << ".";
+          << box2_desc->getDimIndex(0) << ", But now ious_desc's last dim is "
+          << ious_desc->getDimIndex(1) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -182,7 +182,7 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
                       "ious_desc must be contiguous");
 
   // 0-element check, after dim and shape check
-  if (box1_desc->dims[0] * box2_desc->dims[0] == 0) {
+  if (box1_desc->getDimIndex(0) * box2_desc->getDimIndex(0) == 0) {
     VLOG(5) << "[mluOpBoxIouRotated] Skip zero element boxes.";
     return MLUOP_STATUS_SUCCESS;
   }
@@ -228,7 +228,7 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
           << k_dim.y << ", " << k_dim.z << "].";
   CHECK_RETURN(
       "[mluOpBoxIouRotated]",
-      (KernelBoxIouRotated(k_dim, k_type, handle->queue, box1_desc->dtype, box1,
+      (KernelBoxIouRotated(k_dim, k_type, handle->queue, box1_desc->getDtype(), box1,
                            box2, ious, num_box1, num_box2, mode, aligned)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
