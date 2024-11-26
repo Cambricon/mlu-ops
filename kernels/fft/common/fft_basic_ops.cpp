@@ -240,6 +240,10 @@ mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(
         &return_algo_count));
     CALL_CNNL(cnnlGetMatMulHeuristicResult(heuristic_result, matmul_algo,
                                            &workspace_size));
+    DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_d_desc);
+    CALL_CNNL(cnnlMatMulDescDestroy(matmul_desc));
+    CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo));
+    CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
   }
 
   // destroy cnnl descriptor
@@ -397,6 +401,9 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
                             cnnl_c_desc, c_ptr, workspace, workspace_size,
                             cnnl_d_desc, c_ptr));
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_d_desc);
+    CALL_CNNL(cnnlMatMulDescDestroy(matmul_desc));
+    CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo));
+    CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
   }
 
   // destroy cnnl descriptor
@@ -497,6 +504,9 @@ mluOpStatus_t fftGetBatchMatMulBcastWorkspaceSize(
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+  CALL_CNNL(cnnlMatMulDescDestroy(bmm_bcast_desc));
+  CALL_CNNL(cnnlMatMulAlgoDestroy(algo));
+  CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
 
   DESTROY_CNNL_HANDLE(cnnl_handle);
 
@@ -604,6 +614,9 @@ mluOpStatus_t fftBatchMatMulBcast(
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
+  CALL_CNNL(cnnlMatMulDescDestroy(bmm_bcast_desc));
+  CALL_CNNL(cnnlMatMulAlgoDestroy(algo));
+  CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
 
   DESTROY_CNNL_HANDLE(cnnl_handle);
 
