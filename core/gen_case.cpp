@@ -761,7 +761,7 @@ std::string descToString(mluOpTensorDescriptor_t desc, char delimiter) {
   tensor_info << "  layout: " << mluop::getNameOfTensorLayout(layout)
               << delimiter;
   tensor_info << "  dtype: " << mluop::getNameOfDataType(dtype) << delimiter;
-  if (desc->pointer_mode == MLUOP_POINTER_MODE_HOST) {
+  if (desc->getPointerMode() == MLUOP_POINTER_MODE_HOST) {
     tensor_info << "  pointer_mode: POINTER_MODE_HOST" << delimiter;
     if ((total_element_num != 1) || (dim != 0)) {
       LOG(WARNING) << "[gen_case] Tensor has been set to POINTER_MODE_HOST, "
