@@ -311,7 +311,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelBackward(
     CHECK_RETURN("[mluOpDynamicPointToVoxelBackward]",
                  KernelDynamicPointToVoxelBackward(
                      k_dim, k_type, handle->queue, feats, voxel_feats,
-                     grad_feats, workspace, point2voxel_map, voxel_num, N, C));
+                     workspace, point2voxel_map, voxel_num, N, C));
     // 4. scatter
     cnnlScatterNdMode_t scatter_mode = CNNL_SCATTERND_ADD;
     mluOpTensorDescriptor_t updates_desc;
