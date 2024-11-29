@@ -3,6 +3,17 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V1.4.0
+
+  **Date:** October 21, 2024
+
+  **Changes:**
+
+  - Added the following new operations:
+
+      - mluOpLogspace
+      - mluOpLgamma
+
 * V1.3.2
 
   **Date:** October 21, 2024
