@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 
+
+#include <cstdio>
+#include <algorithm>
+#include <string>
 #include "cholesky.h"
+
 #define COMPLEX_OFFSET(A, off) (((float*)A) + (2 * (off)))
 #define COMPLEX_TYPE_SIZE ((2) * sizeof(float))
 __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];
@@ -145,7 +150,7 @@ __mlu_func__ void small_cminout(int m, int width, float* dst,
     for (int iter = 0; iter < width; iter++) {
       factor = rdiag[(iter * CPOTF_NB + iter)];
       if (factor <= 0) {
-        printf("The input matrix is not positive definite.\n");
+        VLOG(4) << "The input matrix is not positive definite." << endl;
         exit(-1);
       }
       factor = sqrt(factor);
@@ -290,7 +295,7 @@ __mlu_func__ void small_cminout_batch(int m, int width, float* r_dst,
   for (int iter = 0; iter < width; iter++) {
     factor = r_diag[iter * width + iter];
     if (factor <= 0) {
-      printf("The input matrix is not positive definite.\n");
+      VLOG(1) << "The input matrix is not positive definite." << endl;
       exit(-1);
     }
     factor = sqrt(factor);
@@ -387,19 +392,27 @@ __mlu_global__ void cpotf_batch_kernel(int batch, int stride, int m,
   }
 }
 
-mluOpStatus_t mlu_cpotf_lpin(int batch, int stride, int n, int lda, float* drA,
-                             float* diA, cnrtQueue_t queue) {
+cnrtDim3_t complex_policy_func(int batch) {
   cnrtDim3_t dim;
-  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   dim.y = 1;
   dim.z = 1;
   if (batch < 8) {
     dim.x = 4 * batch;
+  } else {
+    dim.x = batch;
+  }
+  return dim;
+}
+
+mluOpStatus_t mlu_cpotf_lpin(int batch, int stride, int n, int lda, float* drA,
+                             float* diA, cnrtQueue_t queue) {
+  cnrtDim3_t dim = complex_policy_func(batch);
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+  if (batch < 8) {
     KERNEL_CHECK(cpotf_kernel<<<dim, func_type, queue>>>(batch, stride, n, drA,
                                                          diA, lda));
   } else {
     func_type = CNRT_FUNC_TYPE_BLOCK;
-    dim.x = batch;
     KERNEL_CHECK(cpotf_batch_kernel<<<dim, func_type, queue>>>(batch, stride, n,
                                                                drA, diA, lda));
   }
@@ -697,17 +710,13 @@ mluOpStatus_t complex_inverse(int batch, float* rd_input, float* id_input,
   cnrtQueue_t queue;
   mluOpGetQueue(handle, &queue);
   if (m <= inverse_rec) {
-    cnrtDim3_t dim;
+    cnrtDim3_t dim = complex_policy_func(batch);
     cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_BLOCK;
-    dim.y = 1;
-    dim.z = 1;
     if (batch < 8) {
-      dim.x = 4 * batch;
       KERNEL_CHECK(complex_inverse_kernel<<<dim, func_type, queue>>>(
           batch, rd_input, id_input, ld_input, stride_input, rd_output,
           id_output, ld_output, stride_output, m));
     } else {
-      dim.x = batch;
       KERNEL_CHECK(complex_batch_inverse_kernel<<<dim, func_type, queue>>>(
           batch, rd_input, id_input, ld_input, stride_input, rd_output,
           id_output, ld_output, stride_output, m));
