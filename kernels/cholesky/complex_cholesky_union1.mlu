@@ -822,35 +822,3 @@ mluOpStatus_t cpotrf_recursion(int batch, int stride, int n, int recnb,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t conj_complex(int batch, int m, int n, float* d_input,
-                           float* d_output, mluOpHandle_t handle) {
-  if (m == 0) return MLUOP_STATUS_SUCCESS;
-  cnrtQueue_t queue;
-  mluOpGetQueue(handle, &queue);
-
-  mluOpTensorDescriptor_t input_desc, output_desc;
-  std::string api_name = "Cholesky";
-
-  CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&input_desc));
-  CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&output_desc));
-
-  int32_t input_shape[3] = {batch, m, n};
-  int32_t output_shape[3] = {batch, m, n};
-
-  CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
-                             input_desc, MLUOP_LAYOUT_ARRAY,
-                             MLUOP_DTYPE_COMPLEX_FLOAT, 3, input_shape));
-
-  CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
-                             output_desc, MLUOP_LAYOUT_ARRAY,
-                             MLUOP_DTYPE_COMPLEX_FLOAT, 3, output_shape));
-
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_in_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_out_desc);
-
-  CALL_CNNL(
-      cnnlConj(cnnl_handle, cnnl_in_desc, d_input, cnnl_out_desc, d_output));
-
-  return MLUOP_STATUS_SUCCESS;
-}
