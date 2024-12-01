@@ -27,6 +27,7 @@
 #include <string>
 #include "cholesky.h"
 
+// calculates the memory offset for complex numbers
 #define COMPLEX_OFFSET(A, off) (((float*)A) + (2 * (off)))
 #define COMPLEX_TYPE_SIZE ((2) * sizeof(float))
 __nram__ uint8_t nram_buffer[MAX_NRAM_SIZE];

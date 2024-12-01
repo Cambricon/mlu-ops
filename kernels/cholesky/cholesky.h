@@ -56,7 +56,8 @@
 #define CLUSTER_NUM 1
 #define M (TASKNUM * POTFNB)
 #define ZERO 0.0
-#define SHARED_MEM_SIZE (((M * POTFNB / TASKNUM * 4) + (POTFNB * POTFNB)))
+
+// computes the linear memory offset for accessing element A[i][j] or B[i][j]
 #define OFFSET_ROW(A, i, j) A + ((i) * (lda) + (j))
 #define OFFSET_B_ROW(B, i, j) B + ((i) * (ldb) + (j))
 
@@ -74,8 +75,8 @@ mluOpStatus_t sgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k,
                     float* d_b, int ldb, int stride_b, float* d_c, int ldc,
                     int stride_c, mluOpHandle_t handle, float* workspace);
 
-// side: true->right
-//     false->left
+// This function solves the equation op(A) * X = B or X * op(A) = B
+// for a batch of triangular matrices.
 mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n,
                     float* d_a, int ldda, float* d_b, int lddb,
                     mluOpHandle_t handle, float* workspace);

@@ -27,6 +27,9 @@
 #include <algorithm>
 #include <string>
 
+// This function computes the smallest power of 2 that is greater
+// than or equal to the input `n`. If `n` is 0, the result is 1.
+// The implementation uses bitwise operations for efficient calculation.
 unsigned int next_power_of_2(unsigned int n) {
   if (n == 0) {
     return 1;
@@ -58,6 +61,7 @@ __mlu_func__ float kahansum(float* input, int length) {
   return sum;
 }
 
+// This function computes the product of a matrix A and a fixed-width block.
 __mlu_func__ void sgemm_fixwidth_device(int m, int k, float* A0, const int lda,
                                         float* sC, float* sB) {
   int id = taskId % 4;
@@ -140,6 +144,7 @@ static __mlu_func__ void spotrf2_sminout_fixsize_device(int m, float* A,
       float* local_result = temp_result;
       float* local_diag = temp_result2;
 
+       // Compute matrix multiplications for update
       for (int i = 0; i < span; i++) {
         __bang_mul(local_result, temp_a, temp_b, iter);
         __bang_mul(local_diag, diag + i * span, temp_b, iter);
@@ -184,133 +189,165 @@ static __mlu_func__ void spotrf2_sminout_fixsize_device(int m, float* A,
   __sync_cluster();
 }
 
-__mlu_func__ void sgemm_anywidth_device(int m, int k, float* A0, const int lda,
-                                        float* sC, float* sB) {
-  int id = taskId % 4;
+__mlu_func__ void sgemm_anywidth_device(int m, int k, float* A0,
+              const int lda, float* sC, float* sB) {
+    // Calculate task ID and block parameters
+    int id = taskId % 4;
 
-  int remain = m - id * POTFNB;
-  bool if_execute = remain > 0;
-  int span = (remain > POTFNB || remain <= 0) ? POTFNB : remain;
+    int remain = m - id * POTFNB;               // Calculate remaining rows
+    bool if_execute = remain > 0;
+    int span = (remain > POTFNB || remain <= 0) ? POTFNB : remain;
 
-  float* rA = (float*)nram_buffer + id * NB * NB * 4;
+    // Allocate NRAM buffers for computation
+    float* rA = (float*)nram_buffer + id * NB * NB * 4;
+    float* rB = rA + NB * NB;
+    float* rC = rB + NB * NB;
+    float* rp = rC + NB * NB;
 
-  float* rB = rA + NB * NB;
+    // Calculate block size for B matrix
+    int span_b = POTFNB > m ? m : POTFNB;
 
-  float* rC = rB + NB * NB;
+    // Initialize result buffer to zero
+    __memset_nram(rC, span_b * span, (float)ZERO);
 
-  float* rp = rC + NB * NB;
+    // Load data into NRAM if this task should execute
+    if (if_execute) {
+        // Load block of matrix A with stride
+        if (k > 0) {
+            __memcpy(rA, A0 + id * POTFNB * lda, k * sizeof(float), SRAM2NRAM,
+                     NB * sizeof(float), lda * sizeof(float), span - 1);
+        }
+        // Load block of matrix C with stride
+        __memcpy(rp, sC + id * POTFNB * lda, span_b * sizeof(float),
+          SRAM2NRAM, span_b * sizeof(float), lda * sizeof(float), span - 1);
+    }
 
-  int span_b = POTFNB > m ? m : POTFNB;
-
-  __memset_nram(rC, span_b * span, (float)ZERO);
-
-  if (if_execute) {
+    // Load block of matrix B with stride
     if (k > 0) {
-      __memcpy(rA, A0 + id * POTFNB * lda, k * sizeof(float), SRAM2NRAM,
-               NB * sizeof(float), lda * sizeof(float), span - 1);
+        __memcpy(rB, A0, k * sizeof(float), SRAM2NRAM, NB * sizeof(float),
+                 lda * sizeof(float), span_b - 1);
     }
-    __memcpy(rp, sC + id * POTFNB * lda, span_b * sizeof(float), SRAM2NRAM,
-             span_b * sizeof(float), lda * sizeof(float), span - 1);
-  }
 
-  if (k > 0) {
-    __memcpy(rB, A0, k * sizeof(float), SRAM2NRAM, NB * sizeof(float),
-             lda * sizeof(float), span_b - 1);
-  }
+    __sync_cluster();    // Synchronize before computation
 
-  __sync_cluster();
-
-  for (int i = 0; i < span; i++) {
-    for (int j = 0; j < span_b; j++) {
-      for (int h = 0; h < k; h++) {
-        rC[i * span_b + j] += rA[i * NB + h] * rB[j * NB + h];
-      }
-    }
-  }
-
-  __bang_sub(rp, rp, rC, span_b * span);
-
-  __sync_cluster();
-
-  if (id == 0) {
+    // Perform block matrix multiplication
     for (int i = 0; i < span; i++) {
-      __memcpy(sC + (i * lda), rp + i * span_b, (i + 1) * sizeof(float),
-               NRAM2SRAM);
+        for (int j = 0; j < span_b; j++) {
+            for (int h = 0; h < k; h++) {
+                rC[i * span_b + j] += rA[i * NB + h] * rB[j * NB + h];
+            }
+        }
     }
 
-  } else if (if_execute) {
-    __memcpy(sC + (id * POTFNB * lda), rp, span_b * sizeof(float), NRAM2SRAM,
-             lda * sizeof(float), span_b * sizeof(float), span - 1);
-  }
+    // Subtract computed result from partial result
+    __bang_sub(rp, rp, rC, span_b * span);
+
+    __sync_cluster();    // Synchronize before writing results
+
+    // Write results back to SRAM
+    if (id == 0) {
+      // Special handling for first block (lower triangular part)
+      for (int i = 0; i < span; i++) {
+          __memcpy(sC + (i * lda), rp + i * span_b, (i + 1) * sizeof(float),
+                   NRAM2SRAM);
+      }
+    } else if (if_execute) {
+      // Write back other blocks with stride
+      __memcpy(sC + (id * POTFNB * lda), rp, span_b * sizeof(float),
+        NRAM2SRAM, lda * sizeof(float), span_b * sizeof(float), span - 1);
+    }
 }
 
 static __mlu_func__ void spotrf2_sminout_anysize_device(int m, float* A,
-                                                       int lda) {
-  float factor;
-  int id = coreId % 4;
-  int finish = id * POTFNB;
-  int remain = m - finish;
-  bool if_execute = remain > 0;
-  int span = remain > POTFNB ? POTFNB : remain;
-  int iter_num = m > POTFNB ? POTFNB : m;
-  for (int iter = 0; iter < iter_num; iter++) {
-    factor = A[iter * lda + iter];
-    if (factor <= 0) {
-      exit(-1);
-    }
-    factor = sqrt(factor);
-    factor = 1.0 / factor;
-    __sync_cluster();
-    for (int i = 0; i < span; i++) {
-      if (if_execute) A[i * lda + iter + id * POTFNB * lda] *= factor;
-    }
-    __sync_cluster();
+                                                        int lda) {
+    float factor;
+    int id = coreId % 4;               // Core ID (0-3) for parallel processing
+    int finish = id * POTFNB;          // Starting row for this core's block
+    int remain = m - finish;           // Remaining rows to process
+    bool if_execute = remain > 0;
 
-    if (if_execute) {
-      for (int i = iter + 1; i < iter_num; i++) {
-        for (int j = finish; j < finish + span; j++) {
-          if (j < i) continue;
-          A[j * lda + i] -= A[i * lda + iter] * A[j * lda + iter];
+    // Calculate the actual block size for this core
+    int span = remain > POTFNB ? POTFNB : remain;
+
+    // Calculate number of iterations needed
+    int iter_num = m > POTFNB ? POTFNB : m;
+
+    // Main decomposition loop
+    for (int iter = 0; iter < iter_num; iter++) {
+        // Get diagonal element and check for positive definiteness
+        factor = A[iter * lda + iter];
+        if (factor <= 0) {
+            exit(-1);    // Matrix is not positive definite
         }
-      }
-    }
 
-    __sync_cluster();
-  }
+        // Compute scaling factor (1/sqrt(diagonal))
+        factor = sqrt(factor);
+        factor = 1.0 / factor;
+
+        __sync_cluster();    // Synchronize before parallel update
+
+        // Scale current column in parallel across cores
+        for (int i = 0; i < span; i++) {
+            if (if_execute) {
+                A[i * lda + iter + id * POTFNB * lda] *= factor;
+            }
+        }
+
+        __sync_cluster();    // Synchronize after scaling
+
+        // Update trailing submatrix if this core has work to do
+        if (if_execute) {
+            for (int i = iter + 1; i < iter_num; i++) {
+                for (int j = finish; j < finish + span; j++) {
+                    if (j < i) continue;    // Skip upper triangular part
+
+                    // Update matrix element using outer product
+                    A[j * lda + i] -= A[i * lda + iter] * A[j * lda + iter];
+                }
+            }
+        }
+
+        __sync_cluster();    // Synchronize before next iteration
+    }
 }
 
 __mlu_func__ void spotrf2_smlpout_fixwidth_device(const int m, float* A0,
                                                  float* A, int lda,
                                                  const int localstep,
                                                  const int gbstep) {
+  // Initialize task ID and shared memory buffers
   int id = taskId % 4;
+  // Allocate SRAM buffers for computation
   float* shared_data = (float*)sram_buffer;
+  // Buffer A for intermediate results
   float* sdata_A = shared_data;
+  // Buffer B starts after A, size accounts for parallel tasks
   float* sdata_B = shared_data + m * POTFNB / TASKNUM * 4;
-
+  // Perform matrix multiplication using fixed width implementation
+  // Updates sdata_A with intermediate results
   sgemm_fixwidth_device(m, localstep, A0, lda, sdata_A, sdata_B);
-
-  __sync_cluster();
-
+  __sync_cluster();    // Ensure all tasks complete matrix multiplication
+  // Perform Cholesky decomposition on the intermediate results
   spotrf2_sminout_fixsize_device(m, sdata_A, POTFNB);
-
-  __sync_cluster();
-
-  int span = POTFNB;
-
+  __sync_cluster();    // Ensure Cholesky decomposition is complete
+  int span = POTFNB;   // Block size for memory operations
+  // Write results back to appropriate memory locations
   if (id == 0) {
-    for (int i = 0; i < span; i++) {
-      __memcpy(A + (i * lda), sdata_A + i * POTFNB, (i + 1) * sizeof(float),
-               SRAM2GDRAM);
-    }
-
+      // Task 0 handles the diagonal block (lower triangular part)
+      // Writes to Global DRAM (GDRAM)
+      for (int i = 0; i < span; i++) {
+          __memcpy(A + (i * lda), sdata_A + i * POTFNB,
+                  (i + 1) * sizeof(float), SRAM2GDRAM);
+      }
   } else if (id * span < m) {
-    __memcpy(A + (id * POTFNB * lda), sdata_A + coreId * POTFNB * POTFNB,
-             POTFNB * sizeof(float), SRAM2LDRAM, lda * sizeof(float),
-             POTFNB * sizeof(float), span - 1);
+      // Other tasks handle off-diagonal blocks
+      // Writes to Local DRAM (LDRAM) with stride
+      __memcpy(A + (id * POTFNB * lda), sdata_A + coreId * POTFNB * POTFNB,
+               POTFNB * sizeof(float), SRAM2LDRAM,
+               lda * sizeof(float), POTFNB * sizeof(float), span - 1);
   }
 
-  __sync_cluster();
+  __sync_cluster();    // Ensure all memory writes are complete
 }
 
 __mlu_func__ void spotrf2_smlpout_anywidth_device(const int m, float* A0,
