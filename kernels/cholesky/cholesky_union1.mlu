@@ -62,76 +62,76 @@ __mlu_func__ void sgemm_fixwidth_device(int m, int k, float* A0, const int lda,
                                         float* sC, float* sB) {
   int id = taskId % 4;
 
-  int span = POTF_NB;
+  int span = POTFNB;
 
   float* rC = (float*)nram_buffer;
-  float* rA = rC + M * POTF_NB / TASK_NUM;
-  float* rp = rA + M * POTF_NB / TASK_NUM;
+  float* rA = rC + M * POTFNB / TASKNUM;
+  float* rp = rA + M * POTFNB / TASKNUM;
 
-  float* rB = rp + M * POTF_NB / TASK_NUM;
+  float* rB = rp + M * POTFNB / TASKNUM;
 
-  float* temp_result = rB + POTF_NB * POTF_NB;
+  float* temp_result = rB + POTFNB * POTFNB;
   temp_result[0] = 0.0;
 
   if (id * span < m)
-    __memcpy(rp, OFFSET_ROW(A0, span * id, 0), POTF_NB * sizeof(float),
-             GDRAM2NRAM, POTF_NB * sizeof(float), lda * sizeof(float),
+    __memcpy(rp, OFFSET_ROW(A0, span * id, 0), POTFNB * sizeof(float),
+             GDRAM2NRAM, POTFNB * sizeof(float), lda * sizeof(float),
              span - 1);
-  __memset_nram(rC, POTF_NB * span, (float)ZERO);
+  __memset_nram(rC, POTFNB * span, (float)ZERO);
   __sync_cluster();
 
   if (id == 0) {
-    __memcpy(sB, rp, POTF_NB * POTF_NB * sizeof(float), NRAM2SRAM);
+    __memcpy(sB, rp, POTFNB * POTFNB * sizeof(float), NRAM2SRAM);
   }
 
   __sync_cluster();
 
-  for (int iter = 0; iter < k; iter += POTF_NB) {
-    __bang_move(rA, rp, POTF_NB * span * sizeof(float));
-    __memcpy(rB, sB, POTF_NB * POTF_NB * sizeof(float), SRAM2NRAM);
+  for (int iter = 0; iter < k; iter += POTFNB) {
+    __bang_move(rA, rp, POTFNB * span * sizeof(float));
+    __memcpy(rB, sB, POTFNB * POTFNB * sizeof(float), SRAM2NRAM);
 
     __sync_cluster();
     if (id * span < m)
-      __memcpy_async(rp, OFFSET_ROW(A0, span * id, iter + POTF_NB),
-                     POTF_NB * sizeof(float), GDRAM2NRAM,
-                     POTF_NB * sizeof(float), lda * sizeof(float), span - 1);
+      __memcpy_async(rp, OFFSET_ROW(A0, span * id, iter + POTFNB),
+                     POTFNB * sizeof(float), GDRAM2NRAM,
+                     POTFNB * sizeof(float), lda * sizeof(float), span - 1);
 
     for (int i = 0; i < span; i++) {
-      for (int j = 0; j < POTF_NB; j++) {
-        for (int h = 0; h < POTF_NB; h++) {
-          temp_result[h] = rA[i * POTF_NB + h] * rB[j * POTF_NB + h];
+      for (int j = 0; j < POTFNB; j++) {
+        for (int h = 0; h < POTFNB; h++) {
+          temp_result[h] = rA[i * POTFNB + h] * rB[j * POTFNB + h];
         }
 
-        rC[i * POTF_NB + j] += kahansum(temp_result, POTF_NB);
+        rC[i * POTFNB + j] += kahansum(temp_result, POTFNB);
       }
     }
 
     __sync_cluster();
-    if (id == 0) __memcpy(sB, rp, POTF_NB * POTF_NB * sizeof(float), NRAM2SRAM);
+    if (id == 0) __memcpy(sB, rp, POTFNB * POTFNB * sizeof(float), NRAM2SRAM);
     __sync_cluster();
   }
 
-  __bang_sub(rp, rp, rC, POTF_NB * span);
+  __bang_sub(rp, rp, rC, POTFNB * span);
 
   if (id * span < m)
-    __memcpy(sC + coreId * span * POTF_NB, rp, POTF_NB * span * sizeof(float),
+    __memcpy(sC + coreId * span * POTFNB, rp, POTFNB * span * sizeof(float),
              NRAM2SRAM);
   __sync_cluster();
 }
 
-static __mlu_func__ void spotf2_sminout_fixsize_device(int m, float* A,
+static __mlu_func__ void spotrf2_sminout_fixsize_device(int m, float* A,
                                                        int lda) {
   int id = coreId % 4;
-  int span = POTF_NB;
+  int span = POTFNB;
   float* diag = (float*)nram_buffer;
   float* nram_src = diag + span * span;
 
   __memcpy(diag, A, span * span * sizeof(float), SRAM2NRAM);
-  __memcpy(nram_src, A + id * span * POTF_NB, span * span * sizeof(float),
+  __memcpy(nram_src, A + id * span * POTFNB, span * span * sizeof(float),
            SRAM2NRAM);
 
   float factor;
-  for (int iter = 0; iter < POTF_NB; iter++) {
+  for (int iter = 0; iter < POTFNB; iter++) {
     if (iter > 0) {
       float* temp_result = nram_src + span * span;
       float* temp_result2 = temp_result + span * span;
@@ -164,22 +164,22 @@ static __mlu_func__ void spotf2_sminout_fixsize_device(int m, float* A,
       }
     }
 
-    factor = diag[iter * POTF_NB + iter];
+    factor = diag[iter * POTFNB + iter];
     if (factor <= 0) {
       exit(-1);
     }
     factor = std::sqrt(factor);
     factor = (1.0 / factor);
     for (int i = 0; i < span; i++) {
-      nram_src[i * POTF_NB + iter] *= factor;
-      diag[i * POTF_NB + iter] *= factor;
+      nram_src[i * POTFNB + iter] *= factor;
+      diag[i * POTFNB + iter] *= factor;
     }
     __sync();
   }
   __sync_cluster();
 
   if (id * span < m)
-    __memcpy(A + id * span * POTF_NB, nram_src, span * span * sizeof(float),
+    __memcpy(A + id * span * POTFNB, nram_src, span * span * sizeof(float),
              NRAM2SRAM);
   __sync_cluster();
 }
@@ -188,9 +188,9 @@ __mlu_func__ void sgemm_anywidth_device(int m, int k, float* A0, const int lda,
                                         float* sC, float* sB) {
   int id = taskId % 4;
 
-  int remain = m - id * POTF_NB;
+  int remain = m - id * POTFNB;
   bool if_execute = remain > 0;
-  int span = (remain > POTF_NB || remain <= 0) ? POTF_NB : remain;
+  int span = (remain > POTFNB || remain <= 0) ? POTFNB : remain;
 
   float* rA = (float*)nram_buffer + id * NB * NB * 4;
 
@@ -200,16 +200,16 @@ __mlu_func__ void sgemm_anywidth_device(int m, int k, float* A0, const int lda,
 
   float* rp = rC + NB * NB;
 
-  int span_b = POTF_NB > m ? m : POTF_NB;
+  int span_b = POTFNB > m ? m : POTFNB;
 
   __memset_nram(rC, span_b * span, (float)ZERO);
 
   if (if_execute) {
     if (k > 0) {
-      __memcpy(rA, A0 + id * POTF_NB * lda, k * sizeof(float), SRAM2NRAM,
+      __memcpy(rA, A0 + id * POTFNB * lda, k * sizeof(float), SRAM2NRAM,
                NB * sizeof(float), lda * sizeof(float), span - 1);
     }
-    __memcpy(rp, sC + id * POTF_NB * lda, span_b * sizeof(float), SRAM2NRAM,
+    __memcpy(rp, sC + id * POTFNB * lda, span_b * sizeof(float), SRAM2NRAM,
              span_b * sizeof(float), lda * sizeof(float), span - 1);
   }
 
@@ -239,20 +239,20 @@ __mlu_func__ void sgemm_anywidth_device(int m, int k, float* A0, const int lda,
     }
 
   } else if (if_execute) {
-    __memcpy(sC + (id * POTF_NB * lda), rp, span_b * sizeof(float), NRAM2SRAM,
+    __memcpy(sC + (id * POTFNB * lda), rp, span_b * sizeof(float), NRAM2SRAM,
              lda * sizeof(float), span_b * sizeof(float), span - 1);
   }
 }
 
-static __mlu_func__ void spotf2_sminout_anysize_device(int m, float* A,
+static __mlu_func__ void spotrf2_sminout_anysize_device(int m, float* A,
                                                        int lda) {
   float factor;
   int id = coreId % 4;
-  int finish = id * POTF_NB;
+  int finish = id * POTFNB;
   int remain = m - finish;
   bool if_execute = remain > 0;
-  int span = remain > POTF_NB ? POTF_NB : remain;
-  int iter_num = m > POTF_NB ? POTF_NB : m;
+  int span = remain > POTFNB ? POTFNB : remain;
+  int iter_num = m > POTFNB ? POTFNB : m;
   for (int iter = 0; iter < iter_num; iter++) {
     factor = A[iter * lda + iter];
     if (factor <= 0) {
@@ -262,7 +262,7 @@ static __mlu_func__ void spotf2_sminout_anysize_device(int m, float* A,
     factor = 1.0 / factor;
     __sync_cluster();
     for (int i = 0; i < span; i++) {
-      if (if_execute) A[i * lda + iter + id * POTF_NB * lda] *= factor;
+      if (if_execute) A[i * lda + iter + id * POTFNB * lda] *= factor;
     }
     __sync_cluster();
 
@@ -279,52 +279,52 @@ static __mlu_func__ void spotf2_sminout_anysize_device(int m, float* A,
   }
 }
 
-__mlu_func__ void spotf2_smlpout_fixwidth_device(const int m, float* A0,
+__mlu_func__ void spotrf2_smlpout_fixwidth_device(const int m, float* A0,
                                                  float* A, int lda,
                                                  const int localstep,
                                                  const int gbstep) {
   int id = taskId % 4;
   float* shared_data = (float*)sram_buffer;
   float* sdata_A = shared_data;
-  float* sdata_B = shared_data + m * POTF_NB / TASK_NUM * 4;
+  float* sdata_B = shared_data + m * POTFNB / TASKNUM * 4;
 
   sgemm_fixwidth_device(m, localstep, A0, lda, sdata_A, sdata_B);
 
   __sync_cluster();
 
-  spotf2_sminout_fixsize_device(m, sdata_A, POTF_NB);
+  spotrf2_sminout_fixsize_device(m, sdata_A, POTFNB);
 
   __sync_cluster();
 
-  int span = POTF_NB;
+  int span = POTFNB;
 
   if (id == 0) {
     for (int i = 0; i < span; i++) {
-      __memcpy(A + (i * lda), sdata_A + i * POTF_NB, (i + 1) * sizeof(float),
+      __memcpy(A + (i * lda), sdata_A + i * POTFNB, (i + 1) * sizeof(float),
                SRAM2GDRAM);
     }
 
   } else if (id * span < m) {
-    __memcpy(A + (id * POTF_NB * lda), sdata_A + coreId * POTF_NB * POTF_NB,
-             POTF_NB * sizeof(float), SRAM2LDRAM, lda * sizeof(float),
-             POTF_NB * sizeof(float), span - 1);
+    __memcpy(A + (id * POTFNB * lda), sdata_A + coreId * POTFNB * POTFNB,
+             POTFNB * sizeof(float), SRAM2LDRAM, lda * sizeof(float),
+             POTFNB * sizeof(float), span - 1);
   }
 
   __sync_cluster();
 }
 
-__mlu_func__ void spotf2_smlpout_anywidth_device(const int m, float* A0,
+__mlu_func__ void spotrf2_smlpout_anywidth_device(const int m, float* A0,
                                                  float* A, int lda,
                                                  const int localstep,
                                                  const int gbstep) {
   sgemm_anywidth_device(m, localstep, A0, lda, A, nullptr);
 
-  spotf2_sminout_anysize_device(m, A, lda);
+  spotrf2_sminout_anysize_device(m, A, lda);
 
   __sync_cluster();
 }
 
-__mlu_global__ void spotf2_smlpin_anywidth_kernel(int batch, int stride,
+__mlu_global__ void spotrf2_smlpin_anywidth_kernel(int batch, int stride,
                                                   bool trans, int m, float* dA,
                                                   int lda, int localstep,
                                                   int gbstep) {
@@ -337,8 +337,8 @@ __mlu_global__ void spotf2_smlpin_anywidth_kernel(int batch, int stride,
   float* shared_data = (float*)sram_buffer;
 
   if (m % 4 == 0) {
-    for (int i = 0; i < m; i += POTF_NB) {
-      spotf2_smlpout_fixwidth_device(
+    for (int i = 0; i < m; i += POTFNB) {
+      spotrf2_smlpout_fixwidth_device(
           m - i, OFFSET_ROW(dA, localstep + i, 0),
           OFFSET_ROW(dA, localstep + i, localstep + i), lda, localstep + i,
           gbstep);
@@ -350,8 +350,8 @@ __mlu_global__ void spotf2_smlpin_anywidth_kernel(int batch, int stride,
     }
     __sync_cluster();
 
-    for (int i = 0; i < m; i += POTF_NB) {
-      spotf2_smlpout_anywidth_device(m - i, shared_data + i * NB,
+    for (int i = 0; i < m; i += POTFNB) {
+      spotrf2_smlpout_anywidth_device(m - i, shared_data + i * NB,
                                      shared_data + i * NB + i, NB,
                                      localstep + i, gbstep);
     }
@@ -460,14 +460,14 @@ __mlu_func__ void smlpout_batch(const int m, float* A0, float* A, int lda,
   __sync();
 }
 
-__mlu_global__ void spotf2_batch_kernel(int batch, int stride, int m, float* dA,
-                                        int lda) {
+__mlu_global__ void spotrf2_batch_kernel(int batch, int stride, int m,
+                                          float* dA, int lda) {
   int id = taskId;
   int batch_id = id;
   if (batch_id >= batch) return;
   float* orignA = dA;
   dA = orignA + batch_id * stride;
-  int width = POTF_NB;
+  int width = POTFNB;
   int span = width;
 
   for (int i = 0; i < m; i += width) {
@@ -476,7 +476,7 @@ __mlu_global__ void spotf2_batch_kernel(int batch, int stride, int m, float* dA,
   }
 }
 
-mluOpStatus_t mlu_spotf2_lpin(int batch, int stride, bool trans, bool uplo,
+mluOpStatus_t mlu_spotrf2_lpin(int batch, int stride, bool trans, bool uplo,
                               int n, int ldda, float* dA, int gbstep,
                               cnrtQueue_t queue) {
   cnrtDim3_t dim;
@@ -485,23 +485,13 @@ mluOpStatus_t mlu_spotf2_lpin(int batch, int stride, bool trans, bool uplo,
   dim.z = 1;
   if (batch > 1) {
     dim.x = batch;
-    KERNEL_CHECK(spotf2_batch_kernel<<<dim, func_type, queue>>>(batch, stride,
+    KERNEL_CHECK(spotrf2_batch_kernel<<<dim, func_type, queue>>>(batch, stride,
                                                                 n, dA, ldda));
   } else {
     int carry_batch = batch;
-    if (batch == 1) {
-      func_type = CNRT_FUNC_TYPE_UNION1;
-    } else if (batch == 2) {
-      func_type = CNRT_FUNC_TYPE_UNION2;
-    } else if (batch <= 4) {
-      func_type = CNRT_FUNC_TYPE_UNION4;
-      carry_batch = 4;
-    } else {
-      func_type = CNRT_FUNC_TYPE_UNION8;
-      carry_batch = batch < 8 ? 8 : batch;
-    }
+    func_type = CNRT_FUNC_TYPE_UNION1;
     dim.x = carry_batch * 4;
-    KERNEL_CHECK(spotf2_smlpin_anywidth_kernel<<<dim, func_type, queue>>>(
+    KERNEL_CHECK(spotrf2_smlpin_anywidth_kernel<<<dim, func_type, queue>>>(
         batch, stride, trans, n, dA, ldda, 0, gbstep));
   }
   return MLUOP_STATUS_SUCCESS;
@@ -522,12 +512,12 @@ __mlu_entry__ void mlu_strsm_rectile_batch_kernel(int batch, int stride, int m,
   int start = 0;
 
   float* sA = (float*)nram_buffer;
-  float* rB = sA + 8 * POTF_NB;
-  float* rC = rB + 4 * POTF_NB * 8 * POTF_NB;
-  float* rBp = rC + 4 * POTF_NB * 8 * POTF_NB;
-  float* rA = rBp + 4 * POTF_NB;
-  int calc_length = (8 * POTF_NB) > m ? m : (8 * POTF_NB);
-  __memset_nram(rB, POTF_NB * calc_length, (float)ZERO);
+  float* rB = sA + 8 * POTFNB;
+  float* rC = rB + 4 * POTFNB * 8 * POTFNB;
+  float* rBp = rC + 4 * POTFNB * 8 * POTFNB;
+  float* rA = rBp + 4 * POTFNB;
+  int calc_length = (8 * POTFNB) > m ? m : (8 * POTFNB);
+  __memset_nram(rB, POTFNB * calc_length, (float)ZERO);
   __memset_nram(sA, calc_length * calc_length, (float)ZERO);
 
   float temp_b = 0, factor = 0;
@@ -625,11 +615,11 @@ __mlu_entry__ void mlu_strsm_rectile_kernel(int batch, int stride, int m, int n,
   float* sA = (float*)sram_buffer;
 
   float* rB = (float*)nram_buffer;
-  float* rC = rB + 4 * POTF_NB * 8 * POTF_NB;
-  float* rBp = rC + 4 * POTF_NB * 8 * POTF_NB;
-  float* rA = rBp + 4 * POTF_NB;
-  int calc_length = (8 * POTF_NB) > m ? m : (8 * POTF_NB);
-  __memset_nram(rB, POTF_NB * calc_length, (float)ZERO);
+  float* rC = rB + 4 * POTFNB * 8 * POTFNB;
+  float* rBp = rC + 4 * POTFNB * 8 * POTFNB;
+  float* rA = rBp + 4 * POTFNB;
+  int calc_length = (8 * POTFNB) > m ? m : (8 * POTFNB);
+  __memset_nram(rB, POTFNB * calc_length, (float)ZERO);
 
   float temp_b = 0, factor = 0;
   float sum = 0.0;
@@ -856,7 +846,7 @@ mluOpStatus_t sgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k,
                                           &workspace_size);
 
   if (workspace_size > 0) {
-    VLOG(1) << "sgemm workspace size:" << workspace_size;
+    MLULOG("sgemm workspace size: %ld\n", workspace_size);
   }
 
   CALL_CNNL(cnnlStrideBatchMatMul_v3(
@@ -1177,7 +1167,7 @@ mluOpStatus_t ssyrk(int batch, int stride, bool upper, bool trans, int n, int k,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mlu_spotrf_rectile(int batch, int stride, bool trans, bool uplo,
+mluOpStatus_t spotrf_recursion(int batch, int stride, bool trans, bool uplo,
                                  int n, int recnb, float* d_A, int lda,
                                  int gbstep, mluOpHandle_t handle,
                                  float* workspace) {
@@ -1186,17 +1176,17 @@ mluOpStatus_t mlu_spotrf_rectile(int batch, int stride, bool trans, bool uplo,
   if (n == 0) return MLUOP_STATUS_SUCCESS;
 
   if (n <= recnb) {
-    mlu_spotf2_lpin(batch, stride, trans, uplo, n, lda, d_A, gbstep, queue);
+    mlu_spotrf2_lpin(batch, stride, trans, uplo, n, lda, d_A, gbstep, queue);
   } else {
     int n1 = n / 2;
     int n2 = n - n1;
-    mlu_spotrf_rectile(batch, stride, trans, uplo, n1, recnb,
+    spotrf_recursion(batch, stride, trans, uplo, n1, recnb,
                        OFFSET_ROW(d_A, 0, 0), lda, gbstep, handle, workspace);
     strsm_rectile(batch, stride, uplo, trans, n1, n2, OFFSET_ROW(d_A, 0, 0),
                   lda, OFFSET_ROW(d_A, n1, 0), lda, queue);
     ssyrk(batch, stride, uplo, trans, n2, n1, d_A + n1 * lda, lda,
           OFFSET_ROW(d_A, n1, n1), lda, handle, workspace);
-    mlu_spotrf_rectile(batch, stride, trans, uplo, n2, recnb,
+    spotrf_recursion(batch, stride, trans, uplo, n2, recnb,
                        OFFSET_ROW(d_A, n1, n1), lda, gbstep + n1, handle,
                        workspace);
   }

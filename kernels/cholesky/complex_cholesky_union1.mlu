@@ -36,95 +36,95 @@ __mlu_func__ void small_cgemm(int m, int k, float* rA0, float* iA0,
                               const int lda, int width, float* sram_buffer,
                               float* dst) {
   int id = taskId % 4;
-  int span = CPOTF_NB;
+  int span = CPOTFNB;
   int finish = id * span;
   int remain = m - finish;
   bool if_execute = remain > 0;
-  span = (remain > CPOTF_NB || remain <= 0) ? CPOTF_NB : remain;
+  span = (remain > CPOTFNB || remain <= 0) ? CPOTFNB : remain;
 
-  float* rC = dst + CPOTF_NB * CREC_NB;
-  float* iC = rC + CPOTF_NB * CREC_NB;
-  float* rA = iC + CPOTF_NB * CREC_NB;
-  float* iA = rA + CPOTF_NB * CREC_NB;
-  float* rp = iA + CPOTF_NB * CREC_NB;
-  float* ip = rp + CPOTF_NB * CREC_NB;
-  float* rB = ip + CPOTF_NB * CREC_NB;
-  float* iB = rB + CPOTF_NB * CREC_NB;
+  float* rC = dst + CPOTFNB * CRECNB;
+  float* iC = rC + CPOTFNB * CRECNB;
+  float* rA = iC + CPOTFNB * CRECNB;
+  float* iA = rA + CPOTFNB * CRECNB;
+  float* rp = iA + CPOTFNB * CRECNB;
+  float* ip = rp + CPOTFNB * CRECNB;
+  float* rB = ip + CPOTFNB * CRECNB;
+  float* iB = rB + CPOTFNB * CRECNB;
 
   float* srB = sram_buffer;               // srB:shared_real_B
-  float* siB = srB + CPOTF_NB * CREC_NB;  // siB:shared_imag_B
+  float* siB = srB + CPOTFNB * CRECNB;  // siB:shared_imag_B
 
   float* rdst = dst;
-  float* idst = rdst + CPOTF_NB * CPOTF_NB;
+  float* idst = rdst + CPOTFNB * CPOTFNB;
 
   int total_length = k + width;
-  int loop_width = CPOTF_NB;
-  int b_height = std::min(width, CPOTF_NB);
+  int loop_width = CPOTFNB;
+  int b_height = std::min(width, CPOTFNB);
 
   if (if_execute) {
     int prefetch_width = std::min(loop_width, total_length);
     __memcpy(rp, (rA0 + finish * lda), prefetch_width * sizeof(float),
-             GDRAM2NRAM, CPOTF_NB * sizeof(float), lda * sizeof(float),
+             GDRAM2NRAM, CPOTFNB * sizeof(float), lda * sizeof(float),
              span - 1);
     __memcpy(ip, (iA0 + finish * lda), prefetch_width * sizeof(float),
-             GDRAM2NRAM, CPOTF_NB * sizeof(float), lda * sizeof(float),
+             GDRAM2NRAM, CPOTFNB * sizeof(float), lda * sizeof(float),
              span - 1);
   }
-  __memset_nram(rC, CPOTF_NB * CREC_NB * 2, (float)ZERO);
+  __memset_nram(rC, CPOTFNB * CRECNB * 2, (float)ZERO);
   __sync_cluster();
   if (id == 0) {
-    __memcpy(srB, rp, CPOTF_NB * CPOTF_NB * sizeof(float), NRAM2SRAM);
-    __memcpy(siB, ip, CPOTF_NB * CPOTF_NB * sizeof(float), NRAM2SRAM);
+    __memcpy(srB, rp, CPOTFNB * CPOTFNB * sizeof(float), NRAM2SRAM);
+    __memcpy(siB, ip, CPOTFNB * CPOTFNB * sizeof(float), NRAM2SRAM);
   }
   __sync_cluster();
   float a1, a2, b1, b2;
   for (int iter = 0; iter < k; iter += loop_width) {
-    __bang_move(rA, rp, CPOTF_NB * span * sizeof(float));
-    __bang_move(iA, ip, CPOTF_NB * span * sizeof(float));
-    __memcpy(rB, srB, CPOTF_NB * b_height * sizeof(float), SRAM2NRAM);
-    __memcpy(iB, siB, CPOTF_NB * b_height * sizeof(float), SRAM2NRAM);
+    __bang_move(rA, rp, CPOTFNB * span * sizeof(float));
+    __bang_move(iA, ip, CPOTFNB * span * sizeof(float));
+    __memcpy(rB, srB, CPOTFNB * b_height * sizeof(float), SRAM2NRAM);
+    __memcpy(iB, siB, CPOTFNB * b_height * sizeof(float), SRAM2NRAM);
     __sync_cluster();
     if (if_execute) {
       int prefetch_width =
           std::min(loop_width, total_length - iter - loop_width);
       __memcpy_async(rp, (rA0 + finish * lda + iter + loop_width),
                      prefetch_width * sizeof(float), GDRAM2NRAM,
-                     CPOTF_NB * sizeof(float), lda * sizeof(float), span - 1);
+                     CPOTFNB * sizeof(float), lda * sizeof(float), span - 1);
       __memcpy_async(ip, (iA0 + finish * lda + iter + loop_width),
                      prefetch_width * sizeof(float), GDRAM2NRAM,
-                     CPOTF_NB * sizeof(float), lda * sizeof(float), span - 1);
+                     CPOTFNB * sizeof(float), lda * sizeof(float), span - 1);
     }
     for (int i = 0; i < span; i++) {
       for (int j = 0; j < b_height; j++) {
         for (int h = 0; h < loop_width; h++) {
-          a1 = rA[(i * CPOTF_NB + h)];
-          b1 = iA[(i * CPOTF_NB + h)];
-          a2 = rB[(j * CPOTF_NB + h)];
-          b2 = iB[(j * CPOTF_NB + h)];
-          rC[(i * CPOTF_NB + j)] += (a1 * a2 + b1 * b2);
-          iC[(i * CPOTF_NB + j)] += (a2 * b1 - a1 * b2);
+          a1 = rA[(i * CPOTFNB + h)];
+          b1 = iA[(i * CPOTFNB + h)];
+          a2 = rB[(j * CPOTFNB + h)];
+          b2 = iB[(j * CPOTFNB + h)];
+          rC[(i * CPOTFNB + j)] += (a1 * a2 + b1 * b2);
+          iC[(i * CPOTFNB + j)] += (a2 * b1 - a1 * b2);
         }
       }
     }
     __sync_cluster();
     if (id == 0) {
-      __memcpy(srB, rp, CPOTF_NB * b_height * sizeof(float), NRAM2SRAM);
-      __memcpy(siB, ip, CPOTF_NB * b_height * sizeof(float), NRAM2SRAM);
+      __memcpy(srB, rp, CPOTFNB * b_height * sizeof(float), NRAM2SRAM);
+      __memcpy(siB, ip, CPOTFNB * b_height * sizeof(float), NRAM2SRAM);
     }
     __sync_cluster();
   }
 
-  __bang_sub(rp, rp, rC, CPOTF_NB * span);
-  __bang_sub(ip, ip, iC, CPOTF_NB * span);
+  __bang_sub(rp, rp, rC, CPOTFNB * span);
+  __bang_sub(ip, ip, iC, CPOTFNB * span);
 
   if (if_execute) {
-    __memcpy(rdst, rp, span * CPOTF_NB * sizeof(float), NRAM2NRAM);
-    __memcpy(idst, ip, span * CPOTF_NB * sizeof(float), NRAM2NRAM);
+    __memcpy(rdst, rp, span * CPOTFNB * sizeof(float), NRAM2NRAM);
+    __memcpy(idst, ip, span * CPOTFNB * sizeof(float), NRAM2NRAM);
   }
   if (id == 0) {
-    __memcpy(sram_buffer, rp, span * CPOTF_NB * sizeof(float), NRAM2SRAM);
-    __memcpy(sram_buffer + CPOTF_NB * CPOTF_NB, ip,
-             span * CPOTF_NB * sizeof(float), NRAM2SRAM);
+    __memcpy(sram_buffer, rp, span * CPOTFNB * sizeof(float), NRAM2SRAM);
+    __memcpy(sram_buffer + CPOTFNB * CPOTFNB, ip,
+             span * CPOTFNB * sizeof(float), NRAM2SRAM);
   }
   __sync_cluster();
 }
@@ -133,51 +133,51 @@ __mlu_func__ void small_cminout(int m, int width, float* dst,
                                 float* sram_buffer, int lda) {
   float factor;
   int id = taskId % 4;
-  int finish = id * CPOTF_NB;
+  int finish = id * CPOTFNB;
   int remain = m - finish;
   bool if_execute = remain > 0;
   int span = 2;
-  span = (remain > CPOTF_NB || remain <= 0) ? CPOTF_NB : remain;
+  span = (remain > CPOTFNB || remain <= 0) ? CPOTFNB : remain;
   float* rdst = dst;
-  float* idst = dst + CPOTF_NB * CPOTF_NB;
-  float* rdiag = idst + CPOTF_NB * CREC_NB;
-  float* idiag = rdiag + CPOTF_NB * CPOTF_NB;
+  float* idst = dst + CPOTFNB * CPOTFNB;
+  float* rdiag = idst + CPOTFNB * CRECNB;
+  float* idiag = rdiag + CPOTFNB * CPOTFNB;
 
   if (if_execute) {
-    __memcpy(rdiag, sram_buffer, width * CPOTF_NB * sizeof(float), SRAM2NRAM);
-    __memcpy(idiag, sram_buffer + CPOTF_NB * CPOTF_NB,
-             width * CPOTF_NB * sizeof(float), SRAM2NRAM);
+    __memcpy(rdiag, sram_buffer, width * CPOTFNB * sizeof(float), SRAM2NRAM);
+    __memcpy(idiag, sram_buffer + CPOTFNB * CPOTFNB,
+             width * CPOTFNB * sizeof(float), SRAM2NRAM);
     for (int iter = 0; iter < width; iter++) {
-      factor = rdiag[(iter * CPOTF_NB + iter)];
+      factor = rdiag[(iter * CPOTFNB + iter)];
       if (factor <= 0) {
-        VLOG(4) << "The input matrix is not positive definite." << endl;
+        MLULOG("The input matrix is not positive definite.\n");
         exit(-1);
       }
       factor = sqrt(factor);
       factor = 1.0 / factor;
       for (int i = 0; i < width; i++) {
-        rdiag[(i * CPOTF_NB + iter)] *= factor;
-        idiag[(i * CPOTF_NB + iter)] *= factor;
+        rdiag[(i * CPOTFNB + iter)] *= factor;
+        idiag[(i * CPOTFNB + iter)] *= factor;
 
-        rdst[(i * CPOTF_NB + iter)] *= factor;
-        idst[(i * CPOTF_NB + iter)] *= factor;
+        rdst[(i * CPOTFNB + iter)] *= factor;
+        idst[(i * CPOTFNB + iter)] *= factor;
       }
 
       __sync();
       for (int i = iter + 1; i < width; i++) {
         for (int j = 0; j < width; j++) {
           float a1, b1, a2, b2, a3, b3;
-          a1 = rdst[(j * CPOTF_NB + iter)];
-          b1 = idst[(j * CPOTF_NB + iter)];
-          a2 = rdiag[(i * CPOTF_NB + iter)];
-          b2 = idiag[(i * CPOTF_NB + iter)];
-          a3 = rdiag[(j * CPOTF_NB + iter)];
-          b3 = idiag[(j * CPOTF_NB + iter)];
+          a1 = rdst[(j * CPOTFNB + iter)];
+          b1 = idst[(j * CPOTFNB + iter)];
+          a2 = rdiag[(i * CPOTFNB + iter)];
+          b2 = idiag[(i * CPOTFNB + iter)];
+          a3 = rdiag[(j * CPOTFNB + iter)];
+          b3 = idiag[(j * CPOTFNB + iter)];
 
-          rdst[(j * CPOTF_NB + i)] -= (a1 * a2 + b1 * b2);   // a4
-          idst[(j * CPOTF_NB + i)] -= (a2 * b1 - a1 * b2);   // b4
-          rdiag[(j * CPOTF_NB + i)] -= (a3 * a2 + b3 * b2);  // a5
-          idiag[(j * CPOTF_NB + i)] -= (a2 * b3 - a3 * b2);  // b5
+          rdst[(j * CPOTFNB + i)] -= (a1 * a2 + b1 * b2);   // a4
+          idst[(j * CPOTFNB + i)] -= (a2 * b1 - a1 * b2);   // b4
+          rdiag[(j * CPOTFNB + i)] -= (a3 * a2 + b3 * b2);  // a5
+          idiag[(j * CPOTFNB + i)] -= (a2 * b3 - a3 * b2);  // b5
         }
       }
     }
@@ -189,35 +189,35 @@ __mlu_func__ void cmplout(int batch, const int m, float* rA0, float* rA,
                           float* iA0, float* iA, int lda, int localstep,
                           int width) {
   int id = taskId % 4;
-  int finish = id * CPOTF_NB;
+  int finish = id * CPOTFNB;
   int remain = m - finish;
   bool if_execute = remain > 0;
-  int span = (remain > CPOTF_NB || remain <= 0) ? CPOTF_NB : remain;
+  int span = (remain > CPOTFNB || remain <= 0) ? CPOTFNB : remain;
   float* dst = (float*)nram_buffer;
   small_cgemm(m, localstep, rA0, iA0, lda, width, (float*)sram_buffer, dst);
 
   __sync_cluster();
 
-  small_cminout(m, width, dst, (float*)sram_buffer, CPOTF_NB);
+  small_cminout(m, width, dst, (float*)sram_buffer, CPOTFNB);
 
   __sync_cluster();
 
   float* rdst = dst;
-  float* idst = dst + CPOTF_NB * CPOTF_NB;
+  float* idst = dst + CPOTFNB * CPOTFNB;
 
   if (id == 0) {
     for (int i = 0; i < width; i++) {
-      __memcpy((rA + (i * lda)), (rdst + (i * CPOTF_NB)),
+      __memcpy((rA + (i * lda)), (rdst + (i * CPOTFNB)),
                (i + 1) * sizeof(float), NRAM2GDRAM);
-      __memcpy((iA + (i * lda)), (idst + (i * CPOTF_NB)),
+      __memcpy((iA + (i * lda)), (idst + (i * CPOTFNB)),
                (i + 1) * sizeof(float), NRAM2GDRAM);
     }
 
   } else if (if_execute) {
     __memcpy((rA + (finish * lda)), rdst, width * sizeof(float), NRAM2LDRAM,
-             lda * sizeof(float), CPOTF_NB * sizeof(float), span - 1);
+             lda * sizeof(float), CPOTFNB * sizeof(float), span - 1);
     __memcpy((iA + (finish * lda)), idst, width * sizeof(float), NRAM2LDRAM,
-             lda * sizeof(float), CPOTF_NB * sizeof(float), span - 1);
+             lda * sizeof(float), CPOTFNB * sizeof(float), span - 1);
     span = 0;
   }
   __sync_cluster();
@@ -295,7 +295,7 @@ __mlu_func__ void small_cminout_batch(int m, int width, float* r_dst,
   for (int iter = 0; iter < width; iter++) {
     factor = r_diag[iter * width + iter];
     if (factor <= 0) {
-      VLOG(1) << "The input matrix is not positive definite." << endl;
+      MLULOG("The input matrix is not positive definite.");
       exit(-1);
     }
     factor = sqrt(factor);
@@ -354,9 +354,9 @@ __mlu_func__ void smlpout_batch(const int m, float* rA0, float* iA0, float* rA,
   __sync();
 }
 
-__mlu_global__ void cpotf_kernel(int batch, int stride, int m, float* drA,
+__mlu_global__ void cpotrf_kernel(int batch, int stride, int m, float* drA,
                                  float* diA, int lda) {
-  int width = CPOTF_NB;
+  int width = CPOTFNB;
   int span = width;
   float *origin_rA, *origin_iA;
   origin_rA = drA;
@@ -373,7 +373,7 @@ __mlu_global__ void cpotf_kernel(int batch, int stride, int m, float* drA,
   }
 }
 
-__mlu_global__ void cpotf_batch_kernel(int batch, int stride, int m,
+__mlu_global__ void cpotrf_batch_kernel(int batch, int stride, int m,
                                        float* r_dA, float* i_dA, int lda) {
   int id = taskId;
   int batch_id = id;
@@ -382,7 +382,7 @@ __mlu_global__ void cpotf_batch_kernel(int batch, int stride, int m,
   float* i_orignA = i_dA;
   r_dA = r_orignA + batch_id * stride;
   i_dA = i_orignA + batch_id * stride;
-  int width = CPOTF_NB;
+  int width = CPOTFNB;
   int span = width;
 
   for (int i = 0; i < m; i += width) {
@@ -404,17 +404,17 @@ cnrtDim3_t complex_policy_func(int batch) {
   return dim;
 }
 
-mluOpStatus_t mlu_cpotf_lpin(int batch, int stride, int n, int lda, float* drA,
+mluOpStatus_t mlu_cpotrf_lpin(int batch, int stride, int n, int lda, float* drA,
                              float* diA, cnrtQueue_t queue) {
   cnrtDim3_t dim = complex_policy_func(batch);
   cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
   if (batch < 8) {
-    KERNEL_CHECK(cpotf_kernel<<<dim, func_type, queue>>>(batch, stride, n, drA,
+    KERNEL_CHECK(cpotrf_kernel<<<dim, func_type, queue>>>(batch, stride, n, drA,
                                                          diA, lda));
   } else {
     func_type = CNRT_FUNC_TYPE_BLOCK;
-    KERNEL_CHECK(cpotf_batch_kernel<<<dim, func_type, queue>>>(batch, stride, n,
-                                                               drA, diA, lda));
+    KERNEL_CHECK(cpotrf_batch_kernel<<<dim, func_type, queue>>>(batch, stride,
+                                                          n, drA, diA, lda));
   }
 
   return MLUOP_STATUS_SUCCESS;
@@ -799,23 +799,23 @@ mluOpStatus_t cherk(int batch, int stride, int n, int k, float* rd_a,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t mlu_cpotrf_rectile(int batch, int stride, int n, int recnb,
+mluOpStatus_t cpotrf_recursion(int batch, int stride, int n, int recnb,
                                  float* drA, float* diA, int lda,
                                  mluOpHandle_t handle, float* workspace) {
   cnrtQueue_t queue;
   mluOpGetQueue(handle, &queue);
   if (n <= recnb) {
-    mlu_cpotf_lpin(batch, stride, n, lda, drA, diA, queue);
+    mlu_cpotrf_lpin(batch, stride, n, lda, drA, diA, queue);
   } else {
     int n1 = n / 2;
     int n2 = n - n1;
-    mlu_cpotrf_rectile(batch, stride, n1, recnb, drA, diA, lda, handle,
+    cpotrf_recursion(batch, stride, n1, recnb, drA, diA, lda, handle,
                        workspace);
     ctrsm(batch, stride, n1, n2, drA, diA, lda, drA + n1 * lda, diA + n1 * lda,
           lda, handle, workspace);
     cherk(batch, stride, n2, n1, drA + n1 * lda, diA + n1 * lda, lda,
           drA + n1 * lda + n1, diA + n1 * lda + n1, lda, handle, workspace);
-    mlu_cpotrf_rectile(batch, stride, n2, recnb, drA + n1 * lda + n1,
+    cpotrf_recursion(batch, stride, n2, recnb, drA + n1 * lda + n1,
                        diA + n1 * lda + n1, lda, handle, workspace);
   }
   return MLUOP_STATUS_SUCCESS;

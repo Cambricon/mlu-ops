@@ -43,26 +43,24 @@
 #include "kernels/debug.h"
 #include "kernels/utils/cnnl_helper.h"
 
-#define CORE_PER_CLUSTER (4)
+#define COREPERCLUSTER (4)
 
 #define CNB (32)
-#define REC_NB (16)
-#define POTF_NB ((REC_NB) / (CORE_PER_CLUSTER))
-#define CREC_NB (16)
-#define CPOTF_NB ((CREC_NB) / (CORE_PER_CLUSTER))
-// #define CPOTF_NB ((CREC_NB))
-#define __CNRT_FUNC_TYPE__ CNRT_FUNC_TYPE_UNION1
-#define TASK_NUM (4)
+#define RECNB (16)
+#define POTFNB ((RECNB) / (COREPERCLUSTER))
+#define CRECNB (16)
+#define CPOTFNB ((CRECNB) / (COREPERCLUSTER))
+#define TASKNUM (4)
 #define NB (32)
 
 #define CLUSTER_NUM 1
-#define M (TASK_NUM * POTF_NB)
+#define M (TASKNUM * POTFNB)
 #define ZERO 0.0
-#define SHARED_MEM_SIZE (((M * POTF_NB / TASK_NUM * 4) + (POTF_NB * POTF_NB)))
+#define SHARED_MEM_SIZE (((M * POTFNB / TASKNUM * 4) + (POTFNB * POTFNB)))
 #define OFFSET_ROW(A, i, j) A + ((i) * (lda) + (j))
 #define OFFSET_B_ROW(B, i, j) B + ((i) * (ldb) + (j))
 
-mluOpStatus_t mlu_spotrf_rectile(int batch, int stride, bool trans, bool uplo,
+mluOpStatus_t spotrf_recursion(int batch, int stride, bool trans, bool uplo,
                                  int n, int recnb, float* dA, int ldda,
                                  int gbstep, mluOpHandle_t handle,
                                  float* workspace);
@@ -89,7 +87,7 @@ mluOpStatus_t transpose(int batch, int m, int n, float* d_input,
 mluOpStatus_t conj_complex(int batch, int m, int n, float* d_input,
                            float* d_output, mluOpHandle_t handle);
 
-mluOpStatus_t mlu_cpotrf_rectile(int batch, int stride, int n, int recnb,
+mluOpStatus_t cpotrf_recursion(int batch, int stride, int n, int recnb,
                                  float* drA, float* diA, int lda,
                                  mluOpHandle_t handle, float* workspace);
 

@@ -72,7 +72,7 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                bool upper, float* workspace) {
   mluOpDataType_t dtype = input_desc->dtype;
 
-  int recnb = REC_NB;
+  int recnb = RECNB;
   int gbstep = 0;
   int dim = input_desc->dim;
   bool is_row_major = (input_desc->strides)[dim - 1] == 1;
@@ -134,7 +134,7 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                          OFFSET_ROW(d_output, j, j), lda, handle, workspace));
       cnrtQueueSync(queue);
       CHECK_RETURN("mluOpCholesky",
-                   mlu_spotrf_rectile(batch_size, stride, is_row_major, false,
+                   spotrf_recursion(batch_size, stride, is_row_major, false,
                                       jb, recnb, OFFSET_ROW(d_output, j, j),
                                       lda, j, handle, workspace));
       if (j + jb < row) {
@@ -168,7 +168,7 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                             CNRT_MEM_TRANS_DIR_DEV2DEV));
     }
   } else {
-    recnb = CREC_NB;
+    recnb = CRECNB;
     int nb = CNB;
     int row = lda;
     float* r_start = d_output;
@@ -187,7 +187,7 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                          i_start + j * lda + j, lda, handle, workspace));
       cnrtQueueSync(queue);
       CHECK_RETURN("mluOpCholesky",
-                   mlu_cpotrf_rectile(
+                   cpotrf_recursion(
                        batch_size, stride, jb, recnb, r_start + j * lda + j,
                        i_start + j * lda + j, lda, handle, workspace));
       cnrtQueueSync(queue);
