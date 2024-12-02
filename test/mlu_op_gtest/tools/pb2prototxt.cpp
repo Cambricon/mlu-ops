@@ -185,7 +185,11 @@ bool readIn(const std::string &filename, mluoptest::Node *proto) {
         new google::protobuf::io::CodedInputStream(input);
     // Total bytes hard limit / warning limit are set to 1GB and 512MB, as same
     // as tensorflow.
+#if GOOGLE_PROTOBUF_VERSION > 3005000
+    coded_stream->SetTotalBytesLimit(INT_MAX);
+#elif GOOGLE_PROTOBUF_VERSION
     coded_stream->SetTotalBytesLimit(INT_MAX, 512LL << 20);
+#endif
     proto->ParseFromCodedStream(coded_stream);
     delete input;
     delete coded_stream;

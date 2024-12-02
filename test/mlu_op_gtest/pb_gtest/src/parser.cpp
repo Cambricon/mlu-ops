@@ -1072,7 +1072,11 @@ bool Parser::readMessageFromFile(const std::string &filename, Node *proto) {
   google::protobuf::io::FileInputStream input(fd);
   if (strEndsWith(filename, ".pb")) {
     google::protobuf::io::CodedInputStream coded_input(&input);
+#if GOOGLE_PROTOBUF_VERSION > 3005000
+    coded_input.SetTotalBytesLimit(INT_MAX);
+#elif GOOGLE_PROTOBUF_VERSION
     coded_input.SetTotalBytesLimit(INT_MAX, INT_MAX - 1);
+#endif
     status = proto->ParseFromCodedStream(&coded_input);
   } else if (strEndsWith(filename, ".prototxt")) {
     status = google::protobuf::TextFormat::Parse(&input, proto);
