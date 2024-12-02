@@ -906,7 +906,7 @@ __mlu_func__ void MLUKernelMsDeformAttnForwardFastImpl(
   }
 }
 
-#if (__BANG_ARCH__ == 592)
+#if (__BANG_ARCH__ >= 592)
 
 /*
   The shape of each tensor on nram:
@@ -1260,7 +1260,7 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardFast(
   }
 #endif
 
-#if (__BANG_ARCH__ == 592)
+#if (__BANG_ARCH__ >= 592)
   MLUKernelMsDeformAttnForwardFastImpl<float>(
       data_value_gdram, data_spatial_shapes_gdram, data_level_start_index_gdram,
       data_sampling_loc_gdram, data_attn_weight_gdram, batch_size, num_keys,
