@@ -1,33 +1,11 @@
-# Copyright (C) [2024] by Cambricon, Inc.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the
-# "Software"), to deal in the Software without restriction, including
-# without limitation the rights to use, copy, modify, merge, publish,
-# distribute, sublicense, and/or sell copies of the Software, and to
-# permit persons to whom the Software is furnished to do so, subject to
-# the following conditions:
-#
-# The above copyright notice and this permission notice shall self.tcp included
-# in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
-# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-# pylint: disable=invalid-name, missing-class-docstring, missing-function-docstring
-# pylint: disable=attribute-defined-outside-init
 #!/usr/bin/env python3
 #coding:utf-8
 
+from typing import Dict
 import google.protobuf.json_format as json_format
-import mlu_op_test_pb2
+from analysis_suite.cfg import mlu_op_test_pb2
 
-# see http://gitlab.software.cambricon.com/neuware/software/test/
-# test_mluOp/-/blob/master/scripts/database/protobuf_case_parser.py
+# see http://gitlab.software.cambricon.com/neuware/software/test/test_mluops/-/blob/master/scripts/database/protobuf_case_parser.py
 class ProtobufCaseParserImplInputOutput:
 
     def __init__(self, mlu_op_test_pb2):
@@ -42,7 +20,7 @@ class ProtobufCaseParserImplInputOutput:
             for (v, k) in self.mlu_op_test_pb2.TensorLayout.items()
         }
 
-    def parse_param(self, node):
+    def parse_param(self, node) -> Dict:
         field_names = [i[0].name for i in node.ListFields()]
         params_dict = {}
         for param_name in field_names:
