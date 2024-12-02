@@ -125,8 +125,12 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignForward(
   const int channel_rem = channels % deal_num;
   const int channel_loops = channels / deal_num + (channel_rem != 0 ? 1 : 0);
   const int pixel_end = batches * height * width;
-  T px[5] = {0, 0, 0, 0, 0};
-  T py[5] = {0, 0, 0, 0, 0};
+  T px[5];
+  T py[5];
+  for (int i = 0; i < 5; ++i) {
+    px[i] = (T)0;
+    py[i] = (T)0;
+  }
   int pixel_i = 0;
   T *ping_out = NULL;
   T *pong_out = NULL;
@@ -450,8 +454,12 @@ __mlu_global__ void MLUKernelRotatedFeatureAlignBackward(
   const int channel_rem = channels % deal_num;
   const int channel_loops = channels / deal_num + (channel_rem != 0 ? 1 : 0);
   const int pixel_end = batches * height * width;
-  T px[5] = {0, 0, 0, 0, 0};
-  T py[5] = {0, 0, 0, 0, 0};
+  T px[5];
+  T py[5];
+  for (int i = 0; i < 5; ++i) {
+    px[i] = (T)0;
+    py[i] = (T)0;
+  }
   int pixel_i = 0;
   T *ping_out = NULL;
   T *pong_out = NULL;
