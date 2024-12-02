@@ -1,4 +1,4 @@
-op_name: "test_sgetrf2"
+op_name: "test_xgetrf"
 input {
   id: "input"
   shape: {
@@ -9,7 +9,7 @@ input {
  
   }
   layout: LAYOUT_ARRAY
-  dtype: DTYPE_FLOAT
+  dtype: DTYPE_COMPLEX_FLOAT
   random_data: {
     seed: 25
     upper_bound: 10.0
@@ -27,9 +27,17 @@ output {
    
   }
   layout: LAYOUT_ARRAY
-  dtype: DTYPE_FLOAT
+  dtype: DTYPE_COMPLEX_FLOAT
 }
-sgetrf2_param{
+output {
+  id: "output2"
+  shape {
+    dims: 1024
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+xgetrf_param{
     mode: 0
 }
 test_param: {

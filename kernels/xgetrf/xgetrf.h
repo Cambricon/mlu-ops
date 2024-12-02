@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2024] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -40,11 +40,22 @@
 #define c_one 1.0
 #define c_neg_one -1.0
 #define taskType 8
-#define MAX_M_SIZE_COMPLEX 1024
+
+#define MAX_M_SIZE \
+  1024  // represents the maximum number of rows that a single task can handle
+        // in the current computation.
+#define MAX_M_SIZE_PIVOT 2048    // for float type pivoting version
+#define MAX_M_SIZE_COMPLEX 1024  // for complex_float non_pivoting version
 #define MAX_M_SIZE_COMPLEX_PIVOT 2048
-#define MAX_M_SIZE1 2048
+
 #define CEILDIV(x, y) ((x + y - 1) / y)
 #define ROUNDUP(x, y) (CEILDIV(x, y) * y)
+enum FUNCTYPE { INV, MEMCPY, SCALGER, SWAP };
+void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
+                cnrtFunctionType_t *k_type, int batch, FUNCTYPE func);
+void policyFunc2(mluOpHandle_t handle, cnrtDim3_t *k_dim,
+                 cnrtFunctionType_t *k_type, mluOpDataType_t dtype, int m,
+                 int mode, int batch, FUNCTYPE func);
 
 mluOpStatus_t MLUOP_WIN_API KernelScal_ger(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
@@ -63,7 +74,7 @@ KernelMatrixAdd(cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
                 int ldda, int stride_a, float *dB, int lddb, int stride_b,
                 float *dC, int lddc, int stride_c);
 
-mluOpStatus_t MLUOP_WIN_API KernelMyCnrtMemcpy2D(
+mluOpStatus_t MLUOP_WIN_API KernelcnrtMemcpy2D(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, int batch, int m, int n, float *dA, int ldda,
     int stride_a, float *dB, int lddb, int stride_b, int mode);
@@ -85,6 +96,17 @@ mluOpStatus_t MLUOP_WIN_API KernelSwap(
     int m, int n, int step, float *dA, float *d_rA, float *d_iA, int lda,
     int stride_a, int *dipiv, int *dipiv2, int *info, int gbstep);
 
+mluOpStatus_t MLUOP_WIN_API gemm(mluOpHandle_t handle, mluOpDataType_t dtype,
+                                 int m_, int n_, int k_, float alpha,
+                                 float beta, int batch, int m, int n,
+                                 float *dev_a, float *dev_b, float *dev_c,
+                                 float *dev_d, int ldda, cnrtQueue_t queue);
+
+mluOpStatus_t MLUOP_WIN_API gemm_for_ctrsm(
+    mluOpHandle_t handle, mluOpDataType_t dtype, int m_, int n_, int k_,
+    float alpha, float beta, int batch, int m, int n, float *dev_a,
+    float *dev_b, float *dev_c, float *dev_d, int ldda, cnrtQueue_t queue);
+
 mluOpStatus_t cgemm(mluOpHandle_t handle, mluOpDataType_t dtype, int m_, int n_,
                     int k_, int batch, int m, int n, float *d_ra, float *d_ia,
                     int lda, float *d_rb, float *d_ib, int ldb, float *d_rc,
@@ -94,20 +116,13 @@ mluOpStatus_t complex_inverse(mluOpHandle_t handle, mluOpDataType_t dtype,
                               int ld_input, int stride_input, float *rd_output,
                               float *id_output, int ld_output,
                               int stride_output, int m, cnrtQueue_t queue);
+mluOpStatus_t trsm(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
+                   int M, int N, int m, int n, float *d_a, int lda, float *d_b,
+                   int ldb, float *work_space, cnrtQueue_t queue);
 mluOpStatus_t ctrsm(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
                     int M, int N, int m, int n, float *d_ra, float *d_ia,
                     int lda, float *d_rb, float *d_ib, int ldb,
                     float *work_space, cnrtQueue_t queue);
-
-mluOpStatus_t MLUOP_WIN_API gemm(mluOpHandle_t handle, mluOpDataType_t dtype,
-                                 int m_, int n_, int k_, float alpha,
-                                 float beta, int batch, int m, int n,
-                                 float *dev_a, float *dev_b, float *dev_c,
-                                 float *dev_d, int ldda, cnrtQueue_t queue);
-mluOpStatus_t MLUOP_WIN_API gemm_for_ctrsm(
-    mluOpHandle_t handle, mluOpDataType_t dtype, int m_, int n_, int k_,
-    float alpha, float beta, int batch, int m, int n, float *dev_a,
-    float *dev_b, float *dev_c, float *dev_d, int ldda, cnrtQueue_t queue);
 
 mluOpStatus_t MLUOP_WIN_API transpose(mluOpHandle_t handle,
                                       mluOpDataType_t dtype, int batch, int m,
@@ -117,18 +132,18 @@ mluOpStatus_t MLUOP_WIN_API transpose_back(mluOpHandle_t handle,
                                            mluOpDataType_t dtype, int batch,
                                            int m, int n, float *output,
                                            void *workspace, cnrtQueue_t queue);
-mluOpStatus_t MLUOP_WIN_API MyCnrtMemcpy2D(mluOpHandle_t handle, int batch,
-                                           int m, int n, float *dA, int ldda,
-                                           int stride_a, float *dB, int lddb,
-                                           int stride_b, int mode,
-                                           cnrtQueue_t queue);
+mluOpStatus_t MLUOP_WIN_API cnrtMemcpy2D(mluOpHandle_t handle, int batch, int m,
+                                         int n, float *dA, int ldda,
+                                         int stride_a, float *dB, int lddb,
+                                         int stride_b, int mode,
+                                         cnrtQueue_t queue);
 
-int sgetrf2_native(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
+int xgetrf2_native(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
                    int m, int n, float *dA, float *d_rA, float *d_iA, int ldda,
                    int gbm, int gbn, int *dipiv, int *dinfo, int gbstep,
                    int mode, void *workspace, cnrtQueue_t queue);
 
-int sgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
+int xgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
                int n, float *dA, float *d_rA, float *d_iA, int ldda, int *ipiv,
                int *info, int mode, void *workspace);
 #endif  // KERNELS_SGETRF2_SGETRF2_H

@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 // #include <complex.h>
-#include "sgetrf2.h"
+#include "xgetrf.h"
+#include <memory>
 
 namespace mluoptest {
 
@@ -239,28 +240,32 @@ void apply_row_swaps(float *A, int m, int n, int *ipiv) {
   }
 }
 
-void Sgetrf2Executor::paramCheck() {
+void XgetrfExecutor::paramCheck() {
   GTEST_CHECK(parser_->inputs().size() == 1,
-              "abs tensor input number is wrong.");
-  GTEST_CHECK(parser_->outputs().size() == 1,
-              "abs tensor output number is wrong.");
+              "Xgetrf tensor input number is wrong.");
+  GTEST_CHECK(parser_->outputs().size() == 2,
+              "Xgetrf tensor output number is wrong.");
 }
 
-void Sgetrf2Executor::compute() {
-  VLOG(4) << "AbsExecutor compute ";
+void XgetrfExecutor::compute() {
+  VLOG(4) << "XgetrfExecutor compute ";
 
   auto tensor_x = tensor_desc_[0].tensor;
   auto tensor_y = tensor_desc_[1].tensor;
+  auto dipiv_desc = tensor_desc_[2].tensor;
 
   auto dev_x = data_vector_[0].device_ptr;
   auto dev_y = data_vector_[1].device_ptr;
-  VLOG(4) << "call mluOpAbs()";
+  int *dipiv = (int *)data_vector_[2].device_ptr;
+  VLOG(4) << "call mluOpXgetrf()";
   auto dev_a = data_vector_[0].host_ptr;
   auto dev_b = data_vector_[1].host_ptr;
+  // int* ipiv =  (int*)data_vector_[2].host_ptr;
 
   auto count = parser_->input(0)->shape_count;
-  int row, col, batch = 1;
+  int row, col, batch;
   if (tensor_desc_[0].tensor->dim == 2) {
+    batch = 1;
     row = tensor_desc_[0].tensor->dims[0];
     col = tensor_desc_[0].tensor->dims[1];
   } else if (tensor_desc_[0].tensor->dim == 3) {
@@ -272,33 +277,31 @@ void Sgetrf2Executor::compute() {
     row = tensor_desc_[0].tensor->dims[2];
     col = tensor_desc_[0].tensor->dims[3];
   }
-  std::unique_ptr<int[]> ipiv0(new int[batch * row]);
-  int *ipiv = ipiv0.get();
+
   int info;
   int mode = 0;
-  mode = parser_->getProtoNode()->sgetrf2_param().mode();
-
-  for (int b = 0; b < batch; b++) {
-    for (int i = 0; i < row; i++) ipiv[i + b * row] = i;
-  }
-
+  mode = parser_->getProtoNode()->xgetrf_param().mode();
+  std::unique_ptr<int[]> ipiv0(new int[batch * row]);
+  int *ipiv = ipiv0.get();
+  // for (int b = 0; b < batch; b++) {
+  //   for (int i = 0; i < row; i++) ipiv[i + b * row] = i;
+  // }
   int m = row;
   int n = col;
   mluOpDataType_t dtype = tensor_x->dtype;
 
   size_t workspace_size = 0;
   void *workspace;
-  MLUOP_CHECK(mluOpGetSgetrf2WorkspaceSize(handle_, tensor_x, &workspace_size));
+  MLUOP_CHECK(mluOpGetXgetrfWorkspaceSize(handle_, tensor_x, &workspace_size));
 
   if (workspace_size > 0) {
     workspace = mlu_runtime_.allocate(workspace_size);
   }
   printf("workspace malloced %lu %ld\n", workspace_size, sizeof(size_t));
   interface_timer_.start();
-  MLUOP_CHECK(mluOpSgetrf2(handle_, tensor_x, dev_x, tensor_y, dev_y, workspace,
-                           ipiv, &info, mode));
+  MLUOP_CHECK(mluOpXgetrf(handle_, tensor_x, dev_x, tensor_y, dev_y, workspace,
+                          dipiv_desc, dipiv, &info, mode));
   interface_timer_.stop();
-
   mlu_runtime_.deallocate(workspace);
 
   float *typed_dev_x = static_cast<float *>(dev_x);
@@ -316,6 +319,8 @@ void Sgetrf2Executor::compute() {
       cnrtMemcpy(hA2.get(), (void *)(typed_dev_x + offset),
                  m * n * sizeof(float), cnrtMemcpyDevToHost);
       if (mode == 1) {
+        cnrtMemcpy(ipiv + b * m, dipiv + b * m, m * sizeof(int),
+                   cnrtMemcpyDevToHost);
         apply_row_swaps(LU_, m, n, ipiv + b * m);
       }
       cnrtMemcpy((void *)(typed_dev_y + offset), LU_, m * n * sizeof(float),
@@ -335,6 +340,11 @@ void Sgetrf2Executor::compute() {
       cnrtMemcpy(hA2.get(), (void *)(typed_dev_x + offset),
                  m * n * 2 * sizeof(float), cnrtMemcpyDevToHost);
       if (mode == 1) {
+        cnrtMemcpy(ipiv + b * m, dipiv + b * m, m * sizeof(int),
+                   cnrtMemcpyDevToHost);
+        // for(int i=0;i<m;i++)
+        //   printf("%d ",ipiv[i]);
+        // printf("\n");
         apply_row_swaps(LU_, m, 2 * n, ipiv + b * m);  //
       }
       cnrtMemcpy((void *)(typed_dev_y + offset), LU_, m * n * 2 * sizeof(float),
@@ -343,10 +353,11 @@ void Sgetrf2Executor::compute() {
   }
 }
 
-void Sgetrf2Executor::cpuCompute() {
+void XgetrfExecutor::cpuCompute() {
   auto count = parser_->input(0)->shape_count;
-  int row, col, batch = 1;
+  int row, col, batch;
   if (tensor_desc_[0].tensor->dim == 2) {
+    batch = 1;
     row = tensor_desc_[0].tensor->dims[0];
     col = tensor_desc_[0].tensor->dims[1];
   } else if (tensor_desc_[0].tensor->dim == 3) {
@@ -361,6 +372,10 @@ void Sgetrf2Executor::cpuCompute() {
 
   int m = row;
   int n = col;
+  int *ipiv = (int *)data_vector_[2].host_ptr;
+  for (int i = 0; i < batch * m; i++) {
+    cpu_fp32_output_[1][i] = ipiv[i];
+  }
 
   if (tensor_desc_[0].tensor->dtype == MLUOP_DTYPE_FLOAT) {
     for (int i = 0; i < count; ++i) {
@@ -373,7 +388,7 @@ void Sgetrf2Executor::cpuCompute() {
   }
 }
 
-int64_t Sgetrf2Executor::getTheoryOps() {
+int64_t XgetrfExecutor::getTheoryOps() {
   int row, col, batch = 1;
   if (tensor_desc_[0].tensor->dim == 2) {
     row = tensor_desc_[0].tensor->dims[0];

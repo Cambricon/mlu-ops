@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2024] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -20,23 +20,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_TEST_SGETRF2_TEST_SGETRF2_H_
-#define TEST_MLU_OP_GTEST_SRC_ZOO_TEST_SGETRF2_TEST_SGETRF2_H_
-#include "executor.h"
+#ifndef KERNELS_SGETRF2_SGETRF2_UTILS_H
+#define KERNELS_SGETRF2_SGETRF2_UTILS_H
+#include "mlu_op.h"
 
-namespace mluoptest {
+__nram__ float NRAM_BUFFER[MAX_NRAM_SIZE / 4];
+__mlu_shared__ float SRAM_BUFFER[MAX_SRAM_SIZE / 4];
 
-class Sgetrf2Executor : public Executor {
- public:
-  Sgetrf2Executor() {}
-  ~Sgetrf2Executor() {}
-
-  void paramCheck();
-  void compute();
-  void cpuCompute();
-  int64_t getTheoryOps() override;
-};
-
-}  // namespace mluoptest
 #endif
-

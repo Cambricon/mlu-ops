@@ -14523,16 +14523,17 @@ mluOpLgamma(mluOpHandle_t handle,
             const mluOpTensorDescriptor_t y_desc,
             void *y);
 
+// Group:Xgetrf
 /*!
  * @brief Calculates the size of the workspace required for the LU decomposition and initializes a workspace pointer.
- * This function must be called before performing LU decomposition using mluOpSgetrf2.
+ * This function must be called before performing LU decomposition using mluOpXgetrf.
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and
  * queues in the deformable convolution backward data operation. For detailed information,
  * see ::mluOpHandle_t.
  *
- * @param[in] input_desc
+ * @param[in] x_desc
  * The descriptor for the input tensor for which the LU decomposition will be performed.
  *
  * @param[out] workspace_size
@@ -14544,17 +14545,17 @@ mluOpLgamma(mluOpHandle_t handle,
  * - ::MLUOP_STATUS_EXECUTION_FAILED if there are issues during the calculation or memory allocation.
  *
  * @par Data Type
- * - None.
+ * - The supported combinations of data types are shown below:
+ *   - size_t( size)
  *
  * @par Data Layout
- * - The supported combinations of data types are shown below:
- * - size_t(size)
+ * - None
  *
  * @par Scale Limitation
- * - The dimension of input tensor must be either 2, 3 or 4.
+ * - None
  *
  * @par API Dependency
- * - The allocated extra workspace should be passed to ::mluOpSgetrf2 to perform the LU operation.
+ * - The allocated extra workspace should be passed to ::mluOpXgetrf to perform the LU operation.
  *
  * @par Note
  * - None.
@@ -14565,50 +14566,62 @@ mluOpLgamma(mluOpHandle_t handle,
  * @par Reference
  * - None.
  */
+
 mluOpStatus_t MLUOP_WIN_API
-mluOpGetSgetrf2WorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc, size_t *workspace_size);
+mluOpGetXgetrfWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc, size_t *workspace_size);
+
+// Group:Xgetrf
 /*!
- * @brief Computes the LU decomposition of a matrix using the input tensor descriptor \p input_desc and writes the
- result to the output tensor descriptor \p output_desc.
+ * @brief Computes the LU decomposition of a matrix using the input tensor descriptor \p x_desc and writes the
+ result to the output tensor descriptor \p y_desc.
 
  * @param[in] handle
- *   Handle to a Cambricon MLUOP context that is used to manage MLU devices and
- *   queues in the deformable convolution backward data operation. For detailed information,
- *   see ::mluOpHandle_t.
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ * queues in the deformable convolution backward data operation. For detailed information,
+ * see ::mluOpHandle_t.
  *
  * @param[in] x_desc
- *   The descriptor of the input tensor. For detailed information,
- *   see ::mluOpTensorDescriptor_t.
+ * The descriptor of the input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
  *
  * @param[in] x
- *   Pointer to the MLU memory that stores the input tensor.
+ * Pointer to the MLU memory that stores the input tensor.
  *
  * @param[in] y_desc
- *   The descriptor of the output tensor. For detailed information,
- *   see ::mluOpTensorDescriptor_t.
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
  *
  * @param[out] y
- *   Pointer to the MLU memory that stores the output tensor.
+ * Pointer to the MLU memory that stores the output tensor.
  *
  * @param[in, out] workspace
  * Pointer to the MLU memory that is used as an extra workspace for the
- * ::mluOpSgetrf2.
+ * ::mluOpXgetrf.
  *
- * @param[in, out] ipiv
- * INTEGER array, dimension (m);
- * The pivot indices; row i of the matrix was interchanged with row IPIV(i)
+ * @param[in, out] dipiv_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ *
+ * @param[in, out] dipiv
+ * An array containing the pivot indices. The value dipiv[i] is the
+ * row index that was swapped with row i. The array is updated during
+ * the execution to reflect the new row indices after each swap.The dipiv
+ * array is used to track the row permutation (pivoting),and it is
+ * modified in place as the row swaps are performed.
  *
  * @param[out] info
+ * Error code indicating the validity of the input arguments
  *     -     = 0:  successful exit
- *     -     < 0:  if INFO = -i, the i-th argument had an illegal value
- *                 or another error occured, such as memory allocation failed.
+ *     -     < 0:  an error occurred, with the value indicating the parameter number that was invalid.
  *     -     > 0:  if INFO = i, U(i,i) is exactly zero. The factorization
  *                 has been completed, but the factor U is exactly
  *                 singular, and division by zero will occur if it is used
  *                 to solve a system of equations.
  *
  * @param[in] mode
- *   option to perform operation with pivoting/no pivoting versions
+ * option to perform the operation with pivoting/no pivoting versions
+ * -     = 0: perform the operation without pivoting.
+ * -     = 1: perform the operation with pivoting.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS if the workspace size is successfully calculated.
@@ -14617,17 +14630,18 @@ mluOpGetSgetrf2WorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  * @par Data Type
  * - The supported combinations of data types are shown below:
  *   - float(x) - float(y)
+ *   - complex_float(x) - complex_float(y)
  *
  * @par Data Layout
  * - The data layout of x should be MLUOP_LAYOUT_ARRAY.
  * - The data layout of y should be MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
- * - The dimension of input tensor must be either 2, 3 or 4.
- * Considering the size of the GDRAM, the space occupied by the input matrix should not exceed 7GB.
+ * - None
  *
  * @par API Dependency
- * - The allocated extra workspace should be passed to ::mluOpSgetrf2 to perform the LU operation.
+ * - Before calling this function to perform ::mluOpXgetrf, you need to get the size of workspace by
+ * ::mluOpGetXgetrfWorkspaceSize to perform the LU operation.
  *
  * @par Note
  * - None.
@@ -14638,16 +14652,18 @@ mluOpGetSgetrf2WorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t
  * @par Reference
  * - None.
  */
+
 mluOpStatus_t MLUOP_WIN_API
-mluOpSgetrf2(mluOpHandle_t handle,
-             const mluOpTensorDescriptor_t x_desc,
-             void *x,
-             const mluOpTensorDescriptor_t y_desc,
-             void *y,
-             void *workspace,
-             int *ipiv,
-             int *info,
-             int mode);
+mluOpXgetrf(mluOpHandle_t handle,
+            const mluOpTensorDescriptor_t x_desc,
+            const void *x,
+            const mluOpTensorDescriptor_t y_desc,
+            void *y,
+            void *workspace,
+            const mluOpTensorDescriptor_t dipiv_desc,
+            int *dipiv,
+            int *info,
+            int mode);
 
 #if defined(__cplusplus)
 }

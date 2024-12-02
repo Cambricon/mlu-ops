@@ -2,21 +2,21 @@
 
 ## 1.LU分解原理
 
-LU分解将原矩阵A分解为一个下三角矩阵L（Lower triangular matrix）和一个上三角矩阵U（Upper triangular matrix）的乘积,其中下三角矩阵L的元素为：为了消去![img](1.png)这个位置所乘乘数的相反数。上三角U矩阵的元素为对原矩阵进行高斯消去后的结果。
+LU分解将原矩阵A分解为一个下三角矩阵L（Lower triangular matrix）和一个上三角矩阵U（Upper triangular matrix）的乘积,其中下三角矩阵L的元素为：为了消去![img](res/aij.png)这个位置所乘乘数的相反数。上三角U矩阵的元素为对原矩阵进行高斯消去后的结果。
 
-![image-20240524110329017](2.png)
+![image-20240524110329017](res/lufactor1.png)
 
 一个选主元的串行LU分解算法的步骤如下：
 
-![image-20240524110539395](3.png)
+![image-20240524110539395](res/lufactor2.png)
 
-在LU分解的串行计算是按照颜色顺序依次计算的，比如要计算L中的元素![img](4.png),需要减去左侧元素和上方元素之和然后除以对角线元素![img](5.png)：![img](6.png),在计算U中的元素![img](5.png)时同样需要减去其左侧元素和其上方元素：![img](7.png)，可以看出L和U矩阵中每个元素的计算依赖于左侧和上方的元素，导致数据必须按照依赖关系进行。
+在LU分解的串行计算是按照颜色顺序依次计算的，比如要计算L中的元素![img](res/l43.png),需要减去左侧元素和上方元素之和然后除以对角线元素![img](res/u33.png)：![img](res/math1.png),在计算U中的元素![img](res/u33.png)时同样需要减去其左侧元素和其上方元素：![img](res/math2.png)，可以看出L和U矩阵中每个元素的计算依赖于左侧和上方的元素，导致数据必须按照依赖关系进行。
 
-所以对于同一列的值可以用向量矩阵乘批量计算，为了计算元素![img](8.png)需要减去的减数可以这么计算：![img](9.png)，且![img](10.png)
+所以对于同一列的值可以用向量矩阵乘批量计算，为了计算元素![img](res/math3.png)需要减去的减数可以这么计算：![img](res/math4.png)，且![img](res/math5.png)
 
-![img](11.png) 
+![img](res/img_math4&5.png) 
 
-而对同行不同列的元素进行计算时，![img](12.png)之间存在相同的元素，如果此时在合并计算![img](13.png)时，需要注意他们之间还存在依赖。通过分块将串行计算转化为矩阵乘法，此时应该需要注意块外的依赖和块内的依赖，
+而对同行不同列的元素进行计算时，![img](res/math6.png)之间存在相同的元素，如果此时在合并计算![img](res/math7.png)时，需要注意他们之间还存在依赖。通过分块将串行计算转化为矩阵乘法，此时应该需要注意块外的依赖和块内的依赖，
 
 ## 2.实现方案设计
 
@@ -24,13 +24,13 @@ LU分解共分为两个过程，分别代表了在不同层次和分块尺寸上
 
 - 首先看最外层的过程(按照图示箭头方向执行)：
 
-![img](22.png) 
+![img](res/getrf.png) 
 
 该过程中输入的矩阵规模为(m,n)，主要是将输入的矩阵分解成大小为nb的列条块，分块的尺寸根据输入矩阵的规模决定，范围大致在128-512之间，将宽度为nb大小的列条块输入到下一层分解算法sgetrf2_native中去，蓝色表示当前正在处理的部分，绿色表示进行当前运算的输入，也代表已经完成的部分。
 
 
 
-![img](21.png)
+![img](res/getrf2_native.png)
 
 - 过程2 sgetrf2_native中输入的矩阵为过程1中输入的宽度为NB的列条块，这是内层的分解算法。它先将输入的矩阵继续分解为nb大小的小列条块，这里的nb取值为8，然后对每一个小列条块的每一列进行循环：找出当前第i列的最大元、进行行交换、计算当前主元下方和右侧的子矩阵元素。
 
@@ -42,11 +42,11 @@ LU分解共分为两个过程，分别代表了在不同层次和分块尺寸上
 
   该内核非主元部分的逻辑如下：对于图中的矩阵，首先对第i列矩阵的第二行到最后一行的元素都除以主元（第i个对角线元素），然后对其右侧的矩阵进行尾部矩阵更新，如此可以得到第i列的L矩阵元素和第i+1行的U元素；
 
-![img](23.png)
+![img](res/scal_ger1.png)
 
 然后如此迭代往复，直到完成nb大小的列条块的计算。
 
-![img](24.png)
+![img](res/scal_ger2.png)
 
 - 拆分：
 
@@ -99,7 +99,7 @@ LU分解共分为两个过程，分别代表了在不同层次和分块尺寸上
       __nram__ float orig[MAX_M_SIZE * N + N * N];//每个core包含额外行和工作行的整个矩阵（未转置）
       ```
 
-    - ![img](2.png)
+    - ![img](res/var_mapping.png)
 
   - 任务切分
 
@@ -554,11 +554,11 @@ __mlu_func__ void MLUSubKernelScal_ger(
 
     LU分解中的主要kernel包括：scal_ger——最内层分解kernel、gemm、trsm。其中gemm的实现方式是从host端拼接调用矩阵乘算子，通常情况下时间开销占比最大，而由于算法库中缺少trsm相关功能的实现，在自行实现的过程中由于计算顺序上的依赖导致计算时有大量的标量计算，不能很好地利用向量化接口，如果算法库中拓展一版优化的trsm将会大大减小这部分的时间占比。在最内层的分解内核scal_ger中，该内核的时间开销大部分来自于二维内存拷贝操作，当输入矩阵过大时，需要对输入矩阵在行维度上进行任务切分，每个计算单元处理矩阵的一部分。受限于片上空间的不足，数据必须分批处理，当使用NRAM或SRAM和GDRAM进行数据交换时，会产生较大的时间开销，该过程在选主元模式中体现极为明显。在选主元模式中，需根据按列选主元-计算-选主元-计算...的顺序，当片上空间不足以一次性装入足够大的矩阵时，需要分块装入计算，此时产生较大额外的时间开销。对分批次装入矩阵时一次装入矩阵的大小是影响时间因素的之一，当前代码下的诸如MAX_M_SIZE等参数的设置是根据经验设置，通常情况下能得到比较好的效果。
 
-    ![](25.png)
+    ![img](res/analysis1.png)
 
     - nb1=32; nb2=16时的kernel占比
 
-    ![img](26.png)
+    ![img](res/analysis2.png)
 
     - nb1=32; nb2=32时的kernel占比
 
@@ -611,6 +611,8 @@ LU 分解的功能是将原始矩阵 A 分解为两个矩阵 L 和 U，满足 A 
 
 ### 4.3.算子输入输出参数要求
 
+mluOpXgetrf
+
 | 参数        | 语义               | 类型      | 支持类型             | 物理布局         | 规模限制                                      |
 | ----------- | ------------------ | --------- | -------------------- | ---------------- | --------------------------------------------- |
 | handle      |                    | 句柄      |                      |                  |                                               |
@@ -619,6 +621,10 @@ LU 分解的功能是将原始矩阵 A 分解为两个矩阵 L 和 U，满足 A 
 | output_desc | 矩阵描述符         | 输入      |                      |                  |                                               |
 | output      | 输入矩阵           | 输入/输出 | float、complex float | shape[batch,M,N] | 所占空间不超过7GB，且单维度不得超过整型数大小 |
 | mode        | 模式pivot/no pivot | 输入      | int                  |                  |                                               |
+| dipiv_desc  | 矩阵描述符         | 输入      |                      |                  |                                               |
+| dipiv       | 置换矩阵           | 输入      | int*                 | shape[M]         |                                               |
+| info        | 执行状态           | 输入/输出 | int                  |                  |                                               |
+| workspace   | 额外工作空间       | 输入      | void*                |                  |                                               |
 
 ### 4.4. 算子限制
 
@@ -629,7 +635,7 @@ LU 分解的功能是将原始矩阵 A 分解为两个矩阵 L 和 U，满足 A 
 | 规模限制     | 算子输入矩阵不得超过GDRAM大小，且单维度不得超过整型数大小 |
 | 功能限制     | 无                                                        |
 | 数据范围限制 | mode表示是否选主元，非零为选主元模式                      |
-| 原位限制     | 仅支持原位                                                |
+| 原位限制     | 不支持原位                                                |
 | stride限制   | 不支持stride机制                                          |
 | 广播限制     | 不支持广播                                                |
 
@@ -639,7 +645,9 @@ LU 分解的功能是将原始矩阵 A 分解为两个矩阵 L 和 U，满足 A 
 
 ### 4.6. **算子接口设计**
 
-mluOpStatus_t mluOp_WIN_API mluOpLUFactorization(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc, void *input,const mluOpTensorDescriptor_t output_desc, void *output,const bool mode);
+mluOpStatus_t MLUOP_WIN_API mluOpGetXgetrfWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc, size_t *workspace_size);
+
+mluOpStatus_t mluOp_WIN_API mluOpXgetrf(mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc, const void *x,const mluOpTensorDescriptor_t y_desc, void *y,void *workspace,const mluOpTensorDescriptor_t dipiv_desc, int *ipiv, int *info, int mode);
 
 ### 4.7. 测试用例设计
 
@@ -657,7 +665,7 @@ mluOpStatus_t mluOp_WIN_API mluOpLUFactorization(mluOpHandle_t handle, const mlu
 
 2.检查输入输出支持的dtype以及shape；
 
-3.算子自身参数检查，检查支持的分解模式，目前只支持非主元；
+3.算子自身参数检查，检查支持的分解模式；
 
 4.指针为空检查；
 

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include <time.h>
-#include "sgetrf2.h"
+#include "xgetrf.h"
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -31,54 +31,142 @@
 #include "kernels/unary_op/unary_op_host.h"
 #include "kernels/utils/cnnl_helper.h"
 
-mluOpStatus_t MLUOP_WIN_API MyCnrtMemcpy2D(mluOpHandle_t handle, int batch,
-                                           int m, int n, float *dA, int ldda,
-                                           int stride_a, float *dB, int lddb,
-                                           int stride_b, int mode,
-                                           cnrtQueue_t queue) {
+void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
+                cnrtFunctionType_t *k_type, int batch, FUNCTYPE func) {
+  int dim_x;
+  int max_core_num = mluop::runtime::getCoreNumOfJobLimitCapability(handle);
+  if (func == INV) {
+    if (batch > 1) {
+      *k_type = mluop::runtime::getJobLimitCapabilityCnrtFuncType(handle);
+      dim_x = ROUNDUP(handle->core_num_per_cluster * batch, max_core_num);
+    } else {
+      *k_type = CNRT_FUNC_TYPE_UNION1;
+      dim_x = handle->core_num_per_cluster * 1;
+    }
+    k_dim->x = dim_x;
+    k_dim->y = 1;
+    k_dim->z = 1;
+  } else if (func == MEMCPY) {
+    if (batch > 1) {
+      *k_type = mluop::runtime::getJobLimitCapabilityCnrtFuncType(handle);
+      dim_x = ROUNDUP(handle->core_num_per_cluster * batch, max_core_num);
+    } else {
+      *k_type = CNRT_FUNC_TYPE_UNION1;
+      dim_x = handle->core_num_per_cluster * 1;
+    }
+    k_dim->x = dim_x;
+    k_dim->y = 1;
+    k_dim->z = 1;
+  } else if (func == SWAP) {
+    if (batch > 1) {
+      *k_type = mluop::runtime::getJobLimitCapabilityCnrtFuncType(handle);
+      dim_x = ROUNDUP(handle->core_num_per_cluster * batch, max_core_num);
+    } else {
+      if (taskType == 1) {
+        *k_type = CNRT_FUNC_TYPE_UNION1;
+        dim_x = handle->core_num_per_cluster * 1;
+      } else if (taskType == 8) {
+        *k_type = CNRT_FUNC_TYPE_UNION8;
+        dim_x = handle->core_num_per_cluster * 8;
+      }
+    }
+    k_dim->x = dim_x;
+    k_dim->y = 1;
+    k_dim->z = 1;
+  }
+}
+void policyFunc2(mluOpHandle_t handle, cnrtDim3_t *k_dim,
+                 cnrtFunctionType_t *k_type, mluOpDataType_t dtype, int m,
+                 int mode, int batch, FUNCTYPE func) {
+  int dim_x;
+  int max_core_num = mluop::runtime::getCoreNumOfJobLimitCapability(handle);
+  if (func == SCALGER) {
+    if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
+      if (batch > 1) {
+        *k_type = mluop::runtime::getJobLimitCapabilityCnrtFuncType(handle);
+        dim_x = ROUNDUP(handle->core_num_per_cluster * batch, max_core_num);
+      } else {
+        if (taskType == 1) {
+          *k_type = CNRT_FUNC_TYPE_UNION1;
+          dim_x = handle->core_num_per_cluster * 1;
+        } else if (taskType == 8) {
+          if (mode == 1) {
+            if (m <= MAX_M_SIZE_COMPLEX_PIVOT * TaskUnion1 ||
+                m > MAX_M_SIZE_COMPLEX_PIVOT * TaskUnion8) {
+              *k_type = CNRT_FUNC_TYPE_UNION1;
+              dim_x = handle->core_num_per_cluster * 1;
+            } else {
+              *k_type =
+                  mluop::runtime::getJobLimitCapabilityCnrtFuncType(handle);
+              dim_x =
+                  ROUNDUP(handle->core_num_per_cluster * batch, max_core_num);
+            }
+          } else {
+            *k_type = mluop::runtime::getJobLimitCapabilityCnrtFuncType(handle);
+            dim_x = ROUNDUP(handle->core_num_per_cluster * batch, max_core_num);
+          }
+        }
+      }
+    } else if (dtype == MLUOP_DTYPE_FLOAT) {
+      if (batch > 1) {
+        *k_type = mluop::runtime::getJobLimitCapabilityCnrtFuncType(handle);
+        dim_x = ROUNDUP(handle->core_num_per_cluster * batch, max_core_num);
+      } else {
+        if (taskType == 1) {
+          *k_type = CNRT_FUNC_TYPE_UNION1;
+          dim_x = handle->core_num_per_cluster * 1;
+        } else if (taskType == 8) {
+          if (mode == 1) {
+            if (m <= MAX_M_SIZE_PIVOT * TaskUnion1 ||
+                m > MAX_M_SIZE_PIVOT * TaskUnion8) {
+              *k_type = CNRT_FUNC_TYPE_UNION1;
+              dim_x = handle->core_num_per_cluster * 1;
+            } else {
+              *k_type =
+                  mluop::runtime::getJobLimitCapabilityCnrtFuncType(handle);
+              dim_x =
+                  ROUNDUP(handle->core_num_per_cluster * batch, max_core_num);
+            }
+          } else {
+            *k_type = mluop::runtime::getJobLimitCapabilityCnrtFuncType(handle);
+            dim_x = ROUNDUP(handle->core_num_per_cluster * batch, max_core_num);
+          }
+        }
+      }
+    }
+    k_dim->x = dim_x;
+    k_dim->y = 1;
+    k_dim->z = 1;
+  }
+}
+mluOpStatus_t MLUOP_WIN_API cnrtMemcpy2D(mluOpHandle_t handle, int batch, int m,
+                                         int n, float *dA, int ldda,
+                                         int stride_a, float *dB, int lddb,
+                                         int stride_b, int mode,
+                                         cnrtQueue_t queue) {
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
 
-  int dim_x;
-
-  if (batch > 1) {
-    k_type = CNRT_FUNC_TYPE_UNION8;
-    dim_x = ROUNDUP(handle->core_num_per_cluster * batch, 32);
-  } else {
-    k_type = CNRT_FUNC_TYPE_UNION1;
-    dim_x = handle->core_num_per_cluster * 1;
-  }
-  k_dim.x = dim_x;
-  k_dim.y = 1;
-  k_dim.z = 1;
-
+  policyFunc(handle, &k_dim, &k_type, batch, MEMCPY);
   CHECK_RETURN(
-      "[KernelMyCnrtMemcpy2D]",
-      KernelMyCnrtMemcpy2D(k_dim, k_type, queue, MLUOP_DTYPE_FLOAT, batch, m, n,
-                           dA, ldda, stride_a, dB, lddb, stride_b, mode));
+      "[KernelcnrtMemcpy2D]",
+      KernelcnrtMemcpy2D(k_dim, k_type, queue, MLUOP_DTYPE_FLOAT, batch, m, n,
+                         dA, ldda, stride_a, dB, lddb, stride_b, mode));
 
   CNRT_CHECK(cnrtQueueSync(queue));
   return MLUOP_STATUS_SUCCESS;
 }
 
-static mluOpStatus_t MLUOP_WIN_API
-MatrixInverse(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
-              float *d_input, int ld_input, int stride_input, float *d_output,
-              int ld_output, int stride_output, cnrtQueue_t queue) {
+mluOpStatus_t MLUOP_WIN_API MatrixInverse(mluOpHandle_t handle,
+                                          mluOpDataType_t dtype, int batch,
+                                          int m, float *d_input, int ld_input,
+                                          int stride_input, float *d_output,
+                                          int ld_output, int stride_output,
+                                          cnrtQueue_t queue) {
   cnrtDim3_t dim;
-  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION8;
-  int dim_x;
+  cnrtFunctionType_t func_type;
 
-  if (batch > 1) {
-    func_type = CNRT_FUNC_TYPE_UNION8;
-    dim_x = ROUNDUP(handle->core_num_per_cluster * batch, 32);
-  } else {
-    func_type = CNRT_FUNC_TYPE_UNION1;
-    dim_x = handle->core_num_per_cluster * 1;
-  }
-  dim.x = dim_x;
-  dim.y = 1;
-  dim.z = 1;
+  policyFunc(handle, &dim, &func_type, batch, INV);
 
   CHECK_RETURN(
       "kernelInverse",
@@ -89,25 +177,15 @@ MatrixInverse(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
   return MLUOP_STATUS_SUCCESS;
 }
 
-static mluOpStatus_t MLUOP_WIN_API
+mluOpStatus_t MLUOP_WIN_API
 CMatrixInverse(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
                float *rd_input, float *id_input, int ld_input, int stride_input,
                float *rd_output, float *id_output, int ld_output,
                int stride_output, cnrtQueue_t queue) {
   cnrtDim3_t dim;
-  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION8;
-  int dim_x;
+  cnrtFunctionType_t func_type;
 
-  if (batch > 1) {
-    func_type = CNRT_FUNC_TYPE_UNION8;
-    dim_x = ROUNDUP(handle->core_num_per_cluster * batch, 32);
-  } else {
-    func_type = CNRT_FUNC_TYPE_UNION1;
-    dim_x = handle->core_num_per_cluster * 1;
-  }
-  dim.x = dim_x;
-  dim.y = 1;
-  dim.z = 1;
+  policyFunc(handle, &dim, &func_type, batch, INV);
 
   CHECK_RETURN(
       "kernelInverse",
@@ -119,10 +197,9 @@ CMatrixInverse(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
   return MLUOP_STATUS_SUCCESS;
 }
 
-static mluOpStatus_t trsm(mluOpHandle_t handle, mluOpDataType_t dtype,
-                          int batch, int M, int N, int m, int n, float *d_a,
-                          int lda, float *d_b, int ldb, float *work_space,
-                          cnrtQueue_t queue) {
+mluOpStatus_t trsm(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
+                   int M, int N, int m, int n, float *d_a, int lda, float *d_b,
+                   int ldb, float *work_space, cnrtQueue_t queue) {
   if (n == 0) return MLUOP_STATUS_BAD_PARAM;
 
   int32_t *info;
@@ -185,6 +262,7 @@ static mluOpStatus_t trsm(mluOpHandle_t handle, mluOpDataType_t dtype,
   const int64_t stride_c_arr[1] = {M * ldb};
   const int64_t stride_d_arr[1] = {M * ldb};
 
+  VLOG(5) << "kernel cnnlStrideBatchMatMul_v3 for trsm";
   cnnlStrideBatchMatMul_v3(
       cnnl_handle, matmul_desc, cnnl_matmul_algo, false, false, m, n, m,
       batch_size_arr, &alpha_gemm, cnnl_a_desc, work_space, m, stride_a_arr,
@@ -215,10 +293,10 @@ mluOpStatus_t ctrsm(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
   d_rb1 = inv_d_ia + batch * m * m;
   d_ib1 = d_rb1 + batch * m * n;
 
-  MyCnrtMemcpy2D(handle, batch, m, n, d_rb, ldb, M * ldb, d_rb1, n, m * n, 1,
-                 queue);
-  MyCnrtMemcpy2D(handle, batch, m, n, d_ib, ldb, M * ldb, d_ib1, n, m * n, 1,
-                 queue);
+  cnrtMemcpy2D(handle, batch, m, n, d_rb, ldb, M * ldb, d_rb1, n, m * n, 1,
+               queue);
+  cnrtMemcpy2D(handle, batch, m, n, d_ib, ldb, M * ldb, d_ib1, n, m * n, 1,
+               queue);
 
   CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_a_desc));
   CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_b_desc));
@@ -346,6 +424,7 @@ mluOpStatus_t MLUOP_WIN_API gemm(mluOpHandle_t handle, mluOpDataType_t dtype,
       &cnnl_heuristic_result, &return_algo_count);
   cnnlGetStrideBatchMatMulHeuristicResult(
       cnnl_heuristic_result, &cnnl_matmul_algo, &workspace_size_matmul);
+  VLOG(5) << "kernel cnnlStrideBatchMatMul_v3 for gemm";
   cnnlStrideBatchMatMul_v3(
       cnnl_handle, matmul_desc, cnnl_matmul_algo, is_trans_a, is_trans_b, m_,
       n_, k_, batch_size_arr, &(alpha_gemm), cnnl_a_desc, dev_a, ldda,
@@ -436,6 +515,7 @@ mluOpStatus_t MLUOP_WIN_API gemm_for_ctrsm(
       &cnnl_heuristic_result, &return_algo_count);
   cnnlGetStrideBatchMatMulHeuristicResult(
       cnnl_heuristic_result, &cnnl_matmul_algo, &workspace_size_matmul);
+  VLOG(5) << "kernel cnnlStrideBatchMatMul_v3 for gemm_for_ctrsm";
   cnnlStrideBatchMatMul_v3(
       cnnl_handle, matmul_desc, cnnl_matmul_algo, is_trans_a, is_trans_b, m_,
       n_, k_, batch_size_arr, &(alpha_gemm), cnnl_a_desc, dev_a, m_,
@@ -516,6 +596,7 @@ mluOpStatus_t MLUOP_WIN_API transpose(mluOpHandle_t handle,
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_x_desc);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_y_desc);
+    VLOG(5) << "kernel cnnlTranspose_v2 for transpose";
     CALL_CNNL(cnnlTranspose_v2(cnnl_handle, trans_desc, cnnl_x_desc, input,
                                cnnl_y_desc, output, transpose_workspace,
                                transpose_workspace_size));
@@ -534,8 +615,10 @@ mluOpStatus_t MLUOP_WIN_API transpose_back(mluOpHandle_t handle,
   mluOpTensorDescriptor_t output_desc;
   cnnlTransposeDescriptor_t trans_desc;
   float *input = (float *)workspace;
-  CNRT_CHECK(cnrtMemcpy(input, output, batch * m * n * 2 * sizeof(float),
-                        cnrtMemcpyDevToDev));
+  // CNRT_CHECK(cnrtMemcpy(input, output, batch * m * n * 2 * sizeof(float),
+  //                       cnrtMemcpyDevToDev));
+  cnrtMemcpy2D(handle, batch, m, n, (float *)output, n, m * n, (float *)input,
+               n, m * n, 2, queue);
   void *transpose_workspace = NULL;
   int input_dim = 2;
   const int permute[2] = {1, 0};
@@ -564,6 +647,7 @@ mluOpStatus_t MLUOP_WIN_API transpose_back(mluOpHandle_t handle,
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_x_desc);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_y_desc);
+    VLOG(5) << "kernel cnnlTranspose_v2 for transpose_back";
     CALL_CNNL(cnnlTranspose_v2(cnnl_handle, trans_desc, cnnl_x_desc, input,
                                cnnl_y_desc, output, transpose_workspace,
                                transpose_workspace_size));
@@ -577,63 +661,66 @@ mluOpStatus_t MLUOP_WIN_API transpose_back(mluOpHandle_t handle,
   return MLUOP_STATUS_SUCCESS;
 }
 
-int get_sgetrf_native_nb(int m, int n) {
+int get_xgetrf_native_nb(int m, int n) {
   int nb;
   int minmn = MIN(m, n);
 
-  if (minmn <= 4096)
-    nb = 64;
-  else if (minmn <= 10240)
-    nb = 128;
-  else if (minmn <= 20480)
-    nb = 512;
+  // recommended 16、32、64
+  if (minmn <= 65536)
+    nb = 32;
   else
-    nb = 1024;
+    nb = 64;
 
   return nb;
 }
 
-int sgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
-               int n, float *dA, float *d_rA, float *d_iA, int ldda, int *ipiv,
+int xgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
+               int n, float *dA, float *d_rA, float *d_iA, int ldda, int *dipiv,
                int *info, int mode, void *workspace) {
   int nb;
-  int maxm, maxn, minmn, liwork;
-  int i, j, jb, rows, lddat;
-  int *diwork, *dipiv, *dipivinfo, *dinfo;
+  int minmn, liwork;
+  int i, j, jb, rows;
+  int *diwork, *dinfo;
   int gbm = m;
 
-  minmn = MIN(m, n);
-  nb = get_sgetrf_native_nb(m, n);
-  nb = 16;
+  /* Check arguments */
+  *info = 0;
+  if (m < 0)
+    *info = -1;
+  else if (n < 0)
+    *info = -2;
+  else if (ldda < MAX(1, n))
+    *info = -4;
 
-  liwork = m + m + 1;
+  if (*info != 0) {
+    return *info;
+  }
+
+  // Quick return if possible
+  if (m == 0 || n == 0) {
+    return *info;
+  }
+
+  minmn = MIN(m, n);
+  nb = get_xgetrf_native_nb(m, n);
+  // nb = 32;
+
+  liwork = 1;
   diwork = (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
                ? (int *)workspace + 2 * (m * n + m * m) * batch + m
                : (int *)workspace + batch * 64 * 64 + m;
-  dipivinfo = diwork;     // dipivinfo size = m
-  dipiv = dipivinfo + m;  // dipiv size = m
-  dinfo = dipiv + m;      // dinfo size = 1
-  CNRT_CHECK(cnrtMemsetAsync(dinfo, 0, sizeof(int), handle->queue));
-  if (mode == 1)
-    CNRT_CHECK(cnrtMemcpy(dipiv, ipiv, m * sizeof(int), cnrtMemcpyHostToDev));
+  dinfo = diwork;  // dinfo size = 1
+  CNRT_CHECK(cnrtMemset(dinfo, 0, sizeof(int)));
 
   if (nb <= 1 || nb >= MIN(m, n)) {
     if (dtype == MLUOP_DTYPE_FLOAT)
-      sgetrf2_native(handle, dtype, batch, m, n, dA, NULL, NULL, ldda, m, n,
+      xgetrf2_native(handle, dtype, batch, m, n, dA, NULL, NULL, ldda, m, n,
                      dipiv, dinfo, 0, mode, workspace, handle->queue);
     else if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
-      sgetrf2_native(handle, dtype, batch, m, n, dA, d_rA(0, 0), d_iA(0, 0),
+      xgetrf2_native(handle, dtype, batch, m, n, dA, d_rA(0, 0), d_iA(0, 0),
                      ldda, m, n, dipiv, dinfo, 0, mode, workspace,
                      handle->queue);
   } else {
-    maxm = ROUNDUP(m, 32);
-    maxn = ROUNDUP(n, 32);
-
-    if (m == n) {
-      lddat = ldda;
-    } else {
-      lddat = maxm;  // N-by-M
-    }
     cnrtQueueSync(handle->queue);  //
 
     for (j = 0; j < minmn - nb; j += nb) {
@@ -641,11 +728,11 @@ int sgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
 
       rows = m - j;
       if (dtype == MLUOP_DTYPE_FLOAT)
-        sgetrf2_native(handle, dtype, batch, rows, nb, dA(j, j), NULL, NULL,
+        xgetrf2_native(handle, dtype, batch, rows, nb, dA(j, j), NULL, NULL,
                        ldda, m, n, dipiv + j, dinfo, j, mode, workspace,
                        handle->queue);
       else if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
-        sgetrf2_native(handle, dtype, batch, rows, nb, dA(j, j), d_rA(j, j),
+        xgetrf2_native(handle, dtype, batch, rows, nb, dA(j, j), d_rA(j, j),
                        d_iA(j, j), ldda, m, n, dipiv + j, dinfo, j, mode,
                        workspace, handle->queue);
 
@@ -694,14 +781,14 @@ int sgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
       rows = m - j;
 
       if (dtype == MLUOP_DTYPE_FLOAT) {
-        sgetrf2_native(handle, dtype, batch, rows, jb, dA(j, j), NULL, NULL,
+        xgetrf2_native(handle, dtype, batch, rows, jb, dA(j, j), NULL, NULL,
                        ldda, m, n, dipiv + j, dinfo, j, mode, workspace,
                        handle->queue);
 
         trsm(handle, dtype, batch, m, n, jb, n - j - jb, dA(j, j), ldda,
              dA(j, j + jb), ldda, (float *)workspace, handle->queue);
       } else if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
-        sgetrf2_native(handle, dtype, batch, rows, jb, dA(j, j), d_rA(j, j),
+        xgetrf2_native(handle, dtype, batch, rows, jb, dA(j, j), d_rA(j, j),
                        d_iA(j, j), ldda, m, n, dipiv + j, dinfo, j, mode,
                        workspace, handle->queue);
 
@@ -711,9 +798,9 @@ int sgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
       }
     }
   }
-  if (mode == 1)
-    cnrtMemcpy(ipiv, dipiv, batch * m * sizeof(float), cnrtMemcpyDevToHost);
 
+  cnrtMemcpy(info, dinfo, sizeof(int), cnrtMemcpyDevToHost);
   cnrtQueueQuery(handle->queue);
+
   return *info;
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2024] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -20,17 +20,14 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "sgetrf2.h"
-#include "sgetrf2_utils.h"
+#include "xgetrf.h"
+#include "xgetrf_utils.h"
 #include "core/logging.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 
-#define N 8
-#define MAX_M_SIZE 1024
+#define N 16
 
-#define MAX_M_SIZE_PIVOT 512
-#define CEILDIV(x, y) ((x + y - 1) / y)
 #if taskType == 1
 #define SCALE TaskUnion1
 #elif taskType == 8
@@ -68,9 +65,9 @@ __mlu_func__ void findMax(float arr[], int index[], int gbindex[],
 }
 
 __mlu_func__ void MLUSubKernelCcal_ger(
-    int m, int n, int step, int taskdim, int batch, float *d_rA, float *d_iA,
-    int lda, int ldL1, int *info, int gbstep, int m_per_core, int m_per_core_,
-    int len_extra, int k, int cur, int m_e, float *r_shared_y,
+    int m, int n, int step, int J, int taskdim, int batch, float *d_rA,
+    float *d_iA, int lda, int ldL1, int *info, int gbstep, int m_per_core,
+    int m_per_core_, int len_extra, int k, int cur, int m_e, float *r_shared_y,
     float *i_shared_y, float *r_temp, float *i_temp, float *r_L1, float *i_L1,
     float *r_temp_L1, float *i_temp_L1, float *r_orig, float *i_orig) {
   float *ii_temp = i_orig + (MAX_NRAM_SIZE / 16 - 4 * 1024);
@@ -86,7 +83,7 @@ __mlu_func__ void MLUSubKernelCcal_ger(
            ldL1 * sizeof(float), n - 1);
 
   if (r_shared_y[0] * r_shared_y[0] + i_shared_y[0] * i_shared_y[0] == 0) {
-    (*info) = step + gbstep + 1;
+    (*info) = J + step + gbstep;
     return;
   }
 
@@ -176,7 +173,7 @@ __mlu_global__ void MLUKernelCcal_ger(int batch, int M_size, int N_size, int ib,
   int gbj, STEP;
   float *r_shared_y = NRAM_BUFFER;
   float *r_extra_vec = SRAM_BUFFER;
-  float *r_extra_vec_nram = r_shared_y + N * N;
+  float *r_extra_vec_nram = r_shared_y + N;
   float *r_temp = r_extra_vec_nram + N * N;
   float *r_L1 = r_temp + MAX_M_SIZE_COMPLEX + N + N * 2;
   float *r_temp_L1 = r_L1 + (MAX_NRAM_SIZE / 16 - 4 * 1024);
@@ -184,7 +181,7 @@ __mlu_global__ void MLUKernelCcal_ger(int batch, int M_size, int N_size, int ib,
 
   float *i_shared_y = r_orig + (MAX_NRAM_SIZE / 16 - 4 * 1024);
   float *i_extra_vec = r_extra_vec + N * N;
-  float *i_extra_vec_nram = i_shared_y + N * N;
+  float *i_extra_vec_nram = i_shared_y + N;
   float *i_temp = i_extra_vec_nram + N * N;
   float *i_L1 = i_temp + MAX_M_SIZE_COMPLEX + N + N * 2;
   float *i_temp_L1 = i_L1 + (MAX_NRAM_SIZE / 16 - 4 * 1024);
@@ -260,11 +257,11 @@ __mlu_global__ void MLUKernelCcal_ger(int batch, int M_size, int N_size, int ib,
 
       if (gbj < M_size) {
         int cur = STEP / m_per_core_;
-        MLUSubKernelCcal_ger(m - gbj, ib - STEP, STEP, taskdim, batch, rA, iA,
-                             lda, ld_L1, info, gbstep, m_per_core, m_per_core_,
-                             len_extra, k, cur, m_e, r_shared_y, i_shared_y,
-                             r_temp, i_temp, r_L1, i_L1, r_temp_L1, i_temp_L1,
-                             r_orig, i_orig);
+        MLUSubKernelCcal_ger(m - gbj, ib - STEP, STEP, J, taskdim, batch, rA,
+                             iA, lda, ld_L1, info, gbstep, m_per_core,
+                             m_per_core_, len_extra, k, cur, m_e, r_shared_y,
+                             i_shared_y, r_temp, i_temp, r_L1, i_L1, r_temp_L1,
+                             i_temp_L1, r_orig, i_orig);
         m_e--;
         if (m_e == 0) break;
       }
@@ -287,13 +284,13 @@ __mlu_global__ void MLUKernelCcal_ger(int batch, int M_size, int N_size, int ib,
   return;
 }
 
-__mlu_func__ void MLUSubKernelScal_ger(int m, int n, int step, int taskdim,
-                                       int batch, float *dA, int lda, int ldL1,
-                                       int *info, int gbstep, int m_per_core,
-                                       int m_per_core_, int len_extra, int k,
-                                       int cur, int m_e, float *shared_y,
-                                       float *temp, float *L1, float *temp_L1,
-                                       float *orig) {
+__mlu_func__ void MLUSubKernelScal_ger(int m, int n, int step, int J,
+                                       int taskdim, int batch, float *dA,
+                                       int lda, int ldL1, int *info, int gbstep,
+                                       int m_per_core, int m_per_core_,
+                                       int len_extra, int k, int cur, int m_e,
+                                       float *shared_y, float *temp, float *L1,
+                                       float *temp_L1, float *orig) {
   // checkinfo to avoid computation of the singular matrix
   if ((*info) != 0) return;
 
@@ -302,7 +299,7 @@ __mlu_func__ void MLUSubKernelScal_ger(int m, int n, int step, int taskdim,
   __memcpy(shared_y, L1, 1 * sizeof(float), NRAM2NRAM, 1 * sizeof(float),
            ldL1 * sizeof(float), n - 1);
   if (shared_y[0] == 0) {
-    (*info) = step + gbstep + 1;
+    (*info) = step + gbstep + J;
     return;
   }
 
@@ -349,11 +346,15 @@ __mlu_entry__ void MLUKernelScal_ger(int batch, int M_size, int N_size, int ib,
     taskdim = taskDim;
     tx = taskId;
   }
-
+  // L1 and orig store the matrix assigned to each core, which requires the
+  // largest memory space. (MAX_NRAM_SIZE / 8 - 8 * 1024) ~ (MAX_NRAM_SIZE /
+  // sizeof(float) - T * N * N) calculates the available space for L1 and orig
+  // after accounting for the memory used by the other T variables where T is
+  // less than 8 and N is typically 32, 16 or 8.
   int gbj, STEP;
   float *shared_y = NRAM_BUFFER;
   float *extra_vec = SRAM_BUFFER;
-  float *extra_vec_nram = shared_y + N * N;
+  float *extra_vec_nram = shared_y + N;
   float *temp = extra_vec_nram + N * N + N * 2;
   float *L1 = temp + (MAX_M_SIZE + N + N * 2);
   float *temp_L1 = L1 + (MAX_NRAM_SIZE / 8 - 8 * 1024);
@@ -407,8 +408,8 @@ __mlu_entry__ void MLUKernelScal_ger(int batch, int M_size, int N_size, int ib,
       gbj = J + STEP;
       if (gbj < M_size) {
         int cur = STEP / m_per_core_;
-        MLUSubKernelScal_ger(m - gbj, ib - STEP, STEP, taskdim, batch, A, lda,
-                             ld_L1, info, gbstep, m_per_core, m_per_core_,
+        MLUSubKernelScal_ger(m - gbj, ib - STEP, STEP, J, taskdim, batch, A,
+                             lda, ld_L1, info, gbstep, m_per_core, m_per_core_,
                              len_extra, k, cur, m_e, shared_y, temp, L1,
                              temp_L1, orig);
 
@@ -439,8 +440,8 @@ __mlu_func__ void MLUKernelCPivot(int m, int n, int step, int batch, int M_size,
                                   int *info, int gbstep) {
   float *r_src_nram = r_orig;
   float *i_src_nram = i_orig;
-  float *sram_buffer =
-      SRAM_BUFFER + (4 + 2 * N) * N + 3 * MAX_M_SIZE1 + MAX_SRAM_SIZE / 8;
+  float *sram_buffer = SRAM_BUFFER + (4 + 2 * N) * N +
+                       3 * MAX_M_SIZE_COMPLEX_PIVOT + MAX_SRAM_SIZE / 8;
   int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
   int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
   int max_core_pos = -1;
@@ -459,7 +460,8 @@ __mlu_func__ void MLUKernelCPivot(int m, int n, int step, int batch, int M_size,
       cur_core_row = step;
     } else {
       cur_core = step / mp_;
-      cur_core_row = (k > 0) ? step % MAX_M_SIZE1 : step % m_per_core;
+      cur_core_row =
+          (k > 0) ? step % MAX_M_SIZE_COMPLEX_PIVOT : step % m_per_core;
     }
 
     if (tx < cur_core) {
@@ -477,7 +479,8 @@ __mlu_func__ void MLUKernelCPivot(int m, int n, int step, int batch, int M_size,
 
       float absmax =
           r_src_nram[0] * r_src_nram[0] + i_src_nram[0] * i_src_nram[0];
-      int max_gb_pos = 0 + (m_per_core - len) + tx * mp_ + k * MAX_M_SIZE1;
+      int max_gb_pos =
+          0 + (m_per_core - len) + tx * mp_ + k * MAX_M_SIZE_COMPLEX_PIVOT;
       int max_pos = 0;
 
       __bang_square(r_src_nram, r_src_nram, len);
@@ -486,7 +489,8 @@ __mlu_func__ void MLUKernelCPivot(int m, int n, int step, int batch, int M_size,
       __bang_argmax(r_src_nram, r_src_nram, len);
       absmax = r_src_nram[0];
       max_pos = ((int *)r_src_nram)[1];
-      max_gb_pos = max_pos + (m_per_core - len) + tx * mp_ + k * MAX_M_SIZE1;
+      max_gb_pos = max_pos + (m_per_core - len) + tx * mp_ +
+                   k * MAX_M_SIZE_COMPLEX_PIVOT;
 
       sram_buffer[tx % TaskUnion1] = absmax;
       sram_buffer_idx[tx % TaskUnion1] = max_pos;
@@ -582,7 +586,7 @@ __mlu_func__ void MLUKernelPivot(int m, int n, int step, int batch, int M_size,
                                  int *dipiv2, int *info, int gbstep) {
   float *src_nram = orig;
   float *sram_buffer =
-      SRAM_BUFFER + 3 * MAX_M_SIZE1 + (N + 2) * N + MAX_SRAM_SIZE / 8;
+      SRAM_BUFFER + 3 * MAX_M_SIZE_PIVOT + (N + 2) * N + MAX_SRAM_SIZE / 8;
   int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
   int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
   int max_core_pos = -1;
@@ -601,7 +605,7 @@ __mlu_func__ void MLUKernelPivot(int m, int n, int step, int batch, int M_size,
       cur_core_row = step;
     } else {
       cur_core = step / mp_;
-      cur_core_row = (k > 0) ? step % MAX_M_SIZE1 : step % m_per_core;
+      cur_core_row = (k > 0) ? step % MAX_M_SIZE_PIVOT : step % m_per_core;
     }
 
     if (tx < cur_core) {
@@ -616,14 +620,15 @@ __mlu_func__ void MLUKernelPivot(int m, int n, int step, int batch, int M_size,
       src_nram = orig + start;
 
       float absmax = std::fabs(src_nram[0]);
-      int max_gb_pos = 0 + (m_per_core - len) + tx * mp_ + k * MAX_M_SIZE1;
+      int max_gb_pos = 0 + (m_per_core - len) + tx * mp_ + k * MAX_M_SIZE_PIVOT;
       int max_pos = 0;
 
       __bang_abs(src_nram, src_nram, len);
       __bang_argmax(src_nram, src_nram, len);
       absmax = src_nram[0];
       max_pos = ((int *)src_nram)[1];
-      max_gb_pos = max_pos + (m_per_core - len) + tx * mp_ + k * MAX_M_SIZE1;
+      max_gb_pos =
+          max_pos + (m_per_core - len) + tx * mp_ + k * MAX_M_SIZE_PIVOT;
 
       sram_buffer[tx % TaskUnion1] = absmax;
       sram_buffer_idx[tx % TaskUnion1] = max_pos;
@@ -651,7 +656,7 @@ __mlu_func__ void MLUKernelPivotSwap2(
   float *src_nram = L1;
   float *src_nram1 = orig;
   float *sram_buffer =
-      SRAM_BUFFER + 3 * MAX_M_SIZE1 + (N + 2) * N + MAX_SRAM_SIZE / 8;
+      SRAM_BUFFER + 3 * MAX_M_SIZE_PIVOT + (N + 2) * N + MAX_SRAM_SIZE / 8;
   int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
   int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
   int max_core_pos = -1;
@@ -774,7 +779,7 @@ __mlu_func__ void MLUKernelPivotSwap(
   float *src_nram = L1;
   float *src_nram1 = orig;
   float *sram_buffer =
-      SRAM_BUFFER + 3 * MAX_M_SIZE1 + (N + 2) * N + MAX_SRAM_SIZE / 8;
+      SRAM_BUFFER + 3 * MAX_M_SIZE_PIVOT + (N + 2) * N + MAX_SRAM_SIZE / 8;
   int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
   int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
   float *sram_buffer_arr = (float *)sram_buffer_idx + TaskUnion1;
@@ -887,8 +892,8 @@ __mlu_func__ void MLUKernelCPivotSwap2(
   float *i_src_nram = i_L1;
   float *r_src_nram1 = r_orig;
   float *i_src_nram1 = i_orig;
-  float *sram_buffer =
-      SRAM_BUFFER + (4 + 2 * N) * N + 3 * MAX_M_SIZE1 + MAX_SRAM_SIZE / 8;
+  float *sram_buffer = SRAM_BUFFER + (4 + 2 * N) * N +
+                       3 * MAX_M_SIZE_COMPLEX_PIVOT + MAX_SRAM_SIZE / 8;
   int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
   int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
   int max_core_pos = -1;
@@ -1035,8 +1040,8 @@ __mlu_func__ void MLUKernelCPivotSwap(
   float *i_src_nram = i_L1;
   float *r_src_nram1 = r_orig;
   float *i_src_nram1 = i_orig;
-  float *sram_buffer =
-      SRAM_BUFFER + (4 + 2 * N) * N + 3 * MAX_M_SIZE1 + MAX_SRAM_SIZE / 8;
+  float *sram_buffer = SRAM_BUFFER + (4 + 2 * N) * N +
+                       3 * MAX_M_SIZE_COMPLEX_PIVOT + MAX_SRAM_SIZE / 8;
   int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
   int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
   float *r_sram_buffer_arr = (float *)sram_buffer_idx + TaskUnion1;
@@ -1088,8 +1093,6 @@ __mlu_func__ void MLUKernelCPivotSwap(
       absmax = r_src_nram1[0];
       max_pos = ((int *)r_src_nram1)[1];
       max_gb_pos = max_pos + (m_per_core - len) + tx * m_per_core_;
-
-      // printf("tx %d max_val max_pos %.0f %d \n", taskId, absmax, max_pos);
 
       sram_buffer[tx % TaskUnion1] = absmax;
       sram_buffer_idx[tx % TaskUnion1] = max_pos;
@@ -1164,7 +1167,7 @@ __mlu_func__ void MLUKernelCPivotSwap(
 }
 
 __mlu_func__ void MLUSubKernelScal_ger_pivot(
-    int m, int n, int step, int taskdim, int batch, float *dA, int lda,
+    int m, int n, int step, int J, int taskdim, int batch, float *dA, int lda,
     int ldL1, int *info, int gbstep, int m_per_core, int m_per_core_,
     int len_extra, int k, int m_e, float *shared_y, float *temp, float *L1,
     float *orig) {
@@ -1175,7 +1178,7 @@ __mlu_func__ void MLUSubKernelScal_ger_pivot(
   L1 = L1 + step + step * ldL1;
 
   if (shared_y[0] == 0) {
-    (*info) = step + gbstep + 1;
+    (*info) = step + gbstep + J;
     return;
   }
   int offset_L1 = 0;
@@ -1203,7 +1206,7 @@ __mlu_func__ void MLUSubKernelScal_ger_pivot(
 
   return;
 }
-/// @brief 选主元的主kernel
+/// @brief scal_ger pivot version
 __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
                                             int ib, int J, int m, int n,
                                             int step, float *dA, int lda,
@@ -1228,17 +1231,24 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
   int gbj, STEP;
   float *shared_y = NRAM_BUFFER;
   float *extra_vec = SRAM_BUFFER;
-  float *extra_vec_nram = shared_y + N * N;
+  float *extra_vec_nram = shared_y + N;
   float *temp = extra_vec_nram + N * N;
-  float *L1 = temp + (MAX_M_SIZE1 + N + N * 2);
+  float *L1 = temp + (MAX_M_SIZE_PIVOT + N + N * 2);
   float *orig = L1 + (MAX_NRAM_SIZE / 8 - 8 * 1024);
   float *k_max = extra_vec + N * N;
-  int *k_max_idx = (int *)(k_max + MAX_M_SIZE1);
-  int *k_max_gbidx = k_max_idx + MAX_M_SIZE1;
-  float *k_max_arr = (float *)(k_max_gbidx + MAX_M_SIZE1);
+  int *k_max_idx = (int *)(k_max + MAX_M_SIZE_PIVOT);
+  int *k_max_gbidx = k_max_idx + MAX_M_SIZE_PIVOT;
+  float *k_max_arr = (float *)(k_max_gbidx + MAX_M_SIZE_PIVOT);
   int *sram_buffer = (int *)(k_max_arr + 2 * N);
 
   float *A = dA + J + J * lda;
+
+  // initialize dipiv
+  if ((tx % TaskUnion1 == 0) && (gbstep + J == 0)) {
+    for (int i = 0; i < M_size; i++) {
+      dipiv[i] = i;
+    }
+  }
 
   if ((lda - N > 0) && (tx % TaskUnion1 == 0) && (gbstep + J > 0)) {
     const int IPIV_SIZE = MAX_SRAM_SIZE / 8;
@@ -1261,12 +1271,12 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
   __memcpy(extra_vec_nram, extra_vec, n * sizeof(float), SRAM2NRAM,
            n * sizeof(float), n * sizeof(float), n - 1);
 
-  if (m > MAX_M_SIZE1 * TaskUnion8) {
+  if (m > MAX_M_SIZE_PIVOT * TaskUnion8) {
     int mp = m / taskdim;
     const int mp_ = mp;
     mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
 
-    int seg = CEILDIV(mp, MAX_M_SIZE1);
+    int seg = CEILDIV(mp, MAX_M_SIZE_PIVOT);
 
     __mlu_shared__ int shared_seg[TaskUnion1];
     shared_seg[tx] = seg;
@@ -1277,17 +1287,18 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
     for (STEP = 0; STEP < ib; STEP++) {
       gbj = J + STEP;
       for (int k = 0; k < seg; k++) {
-        int remain_m = mp - k * MAX_M_SIZE1;
-        int m_per_core = remain_m < MAX_M_SIZE1 ? remain_m : MAX_M_SIZE1;
+        int remain_m = mp - k * MAX_M_SIZE_PIVOT;
+        int m_per_core =
+            remain_m < MAX_M_SIZE_PIVOT ? remain_m : MAX_M_SIZE_PIVOT;
         m_per_core =
             ((tx == taskdim - 1) && (k == seg - 1)) ? remain_m : m_per_core;
         const int m_per_core_ = m_per_core;
 
-        int offset = tx * mp_ + k * MAX_M_SIZE1;
+        int offset = tx * mp_ + k * MAX_M_SIZE_PIVOT;
         int len_extra = offset <= n ? offset : n;
 
         if (m_per_core - 1 >= 0)
-          __memcpy(orig, A + STEP + tx * lda * mp_ + k * lda * MAX_M_SIZE1,
+          __memcpy(orig, A + STEP + tx * lda * mp_ + k * lda * MAX_M_SIZE_PIVOT,
                    1 * sizeof(float), GDRAM2NRAM, 1 * sizeof(float),
                    lda * sizeof(float), m_per_core - 1);
 
@@ -1309,15 +1320,16 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
       __memcpy(shared_y, A + STEP + STEP * lda, (ib - STEP) * sizeof(float),
                GDRAM2NRAM);
       for (int k = 0; k < seg; k++) {
-        int remain_m = mp - k * MAX_M_SIZE1;
-        int m_per_core = remain_m < MAX_M_SIZE1 ? remain_m : MAX_M_SIZE1;
+        int remain_m = mp - k * MAX_M_SIZE_PIVOT;
+        int m_per_core =
+            remain_m < MAX_M_SIZE_PIVOT ? remain_m : MAX_M_SIZE_PIVOT;
         m_per_core =
             ((tx == taskdim - 1) && (k == seg - 1)) ? remain_m : m_per_core;
 
         const int m_per_core_ = m_per_core;
 
         int len_extra = 0;
-        int offset = tx * mp_ + k * MAX_M_SIZE1;
+        int offset = tx * mp_ + k * MAX_M_SIZE_PIVOT;
         len_extra = offset <= n ? offset : n;
 
         if ((len_extra - 1 >= 0 && k == 0))
@@ -1325,7 +1337,7 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
                    n * sizeof(float), n * sizeof(float), len_extra - 1);
         if (m_per_core - 1 >= 0)
           __memcpy(orig + len_extra * n,
-                   A + tx * lda * mp_ + k * lda * MAX_M_SIZE1,
+                   A + tx * lda * mp_ + k * lda * MAX_M_SIZE_PIVOT,
                    n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
                    lda * sizeof(float), m_per_core - 1);
 
@@ -1340,16 +1352,16 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
         m_e = (k > 0) ? m_per_core - STEP : m_e - STEP;
 
         if (gbj < M_size) {
-          MLUSubKernelScal_ger_pivot(m - gbj, ib - STEP, STEP, taskdim, batch,
-                                     A, lda, ld_L1, info, gbstep, m_per_core,
-                                     m_per_core_, len_extra, k, m_e, shared_y,
-                                     temp, L1, orig);
+          MLUSubKernelScal_ger_pivot(m - gbj, ib - STEP, STEP, J, taskdim,
+                                     batch, A, lda, ld_L1, info, gbstep,
+                                     m_per_core, m_per_core_, len_extra, k, m_e,
+                                     shared_y, temp, L1, orig);
         }
 
         if (m_e1 > 0) __bang_transpose(orig, L1, n, m_e1);
 
         if (mm_per_core - 1 >= 0) {
-          __memcpy(A + tx * lda * mp_ + k * lda * MAX_M_SIZE1,
+          __memcpy(A + tx * lda * mp_ + k * lda * MAX_M_SIZE_PIVOT,
                    orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
                    lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
         }
@@ -1365,7 +1377,7 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
     const int mp_ = mp;
     mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
 
-    int seg = CEILDIV(mp, MAX_M_SIZE1);
+    int seg = CEILDIV(mp, MAX_M_SIZE_PIVOT);
     seg = 1;
 
     for (int k = 0; k < seg; k++) {
@@ -1373,7 +1385,7 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
       const int m_per_core_ = m_per_core;
 
       int len_extra = 0;
-      int offset = tx * mp_ + k * MAX_M_SIZE1;
+      int offset = tx * mp_ + k * MAX_M_SIZE_PIVOT;
       len_extra = offset <= n ? offset : n;
 
       if ((len_extra - 1 >= 0 && k == 0))
@@ -1381,9 +1393,9 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
                  n * sizeof(float), n * sizeof(float), len_extra - 1);
       if (m_per_core - 1 >= 0)
         __memcpy(orig + len_extra * n,
-                 A + tx * lda * mp_ + k * lda * MAX_M_SIZE1, n * sizeof(float),
-                 GDRAM2NRAM, n * sizeof(float), lda * sizeof(float),
-                 m_per_core - 1);
+                 A + tx * lda * mp_ + k * lda * MAX_M_SIZE_PIVOT,
+                 n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
+                 lda * sizeof(float), m_per_core - 1);
 
       int m_e = m_per_core < 0 ? 0 : m_per_core + len_extra;
       const int m_e1 = m_e;
@@ -1397,7 +1409,7 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
       for (STEP = 0; STEP < ib; STEP++) {
         gbj = J + STEP;
         if (gbj < M_size) {
-          if (m > MAX_M_SIZE1 * TaskUnion1) {
+          if (m > MAX_M_SIZE_PIVOT * TaskUnion1) {
             MLUKernelPivotSwap2(m - gbj, ib - STEP, STEP, batch, M_size, N_size,
                                 A, lda, stride_a, workspace, L1, ld_L1, orig, n,
                                 len_extra, m_e, max_arr, max_arr_vec, max_idx,
@@ -1411,10 +1423,10 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
                                dipiv, dipiv2, info, gbstep);
           }
 
-          MLUSubKernelScal_ger_pivot(m - gbj, ib - STEP, STEP, taskdim, batch,
-                                     A, lda, ld_L1, info, gbstep, m_per_core,
-                                     m_per_core_, len_extra, k, m_e, shared_y,
-                                     temp, L1, orig);
+          MLUSubKernelScal_ger_pivot(m - gbj, ib - STEP, STEP, J, taskdim,
+                                     batch, A, lda, ld_L1, info, gbstep,
+                                     m_per_core, m_per_core_, len_extra, k, m_e,
+                                     shared_y, temp, L1, orig);
 
           m_e--;
         }
@@ -1423,7 +1435,7 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
       if (m_e1 > 0) __bang_transpose(orig, L1, n, m_e1);
 
       if (mm_per_core - 1 >= 0) {
-        __memcpy(A + tx * lda * mp_ + k * lda * MAX_M_SIZE1,
+        __memcpy(A + tx * lda * mp_ + k * lda * MAX_M_SIZE_PIVOT,
                  orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
                  lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
       }
@@ -1434,11 +1446,11 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
 }
 
 __mlu_func__ void MLUSubKernelCcal_ger_pivot(
-    int m, int n, int step, int taskdim, int batch, float *d_rA, float *d_iA,
-    int lda, int ldL1, int *info, int gbstep, int m_per_core, int m_per_core_,
-    int len_extra, int k, int m_e, float *r_shared_y, float *i_shared_y,
-    float *r_temp, float *i_temp, float *r_L1, float *i_L1, float *r_orig,
-    float *i_orig) {
+    int m, int n, int step, int J, int taskdim, int batch, float *d_rA,
+    float *d_iA, int lda, int ldL1, int *info, int gbstep, int m_per_core,
+    int m_per_core_, int len_extra, int k, int m_e, float *r_shared_y,
+    float *i_shared_y, float *r_temp, float *i_temp, float *r_L1, float *i_L1,
+    float *r_orig, float *i_orig) {
   float *ii_temp = i_orig + MAX_NRAM_SIZE / 16 - 4 * 1024;
   float *ir_temp = ii_temp + MAX_M_SIZE_COMPLEX_PIVOT + N * N;
   float *r_temp_L1 = ir_temp + MAX_M_SIZE_COMPLEX_PIVOT + N * N;
@@ -1452,7 +1464,7 @@ __mlu_func__ void MLUSubKernelCcal_ger_pivot(
   i_L1 = i_L1 + step + step * ldL1;
 
   if (r_shared_y[0] * r_shared_y[0] + i_shared_y[0] * i_shared_y[0] == 0) {
-    (*info) = step + gbstep + 1;
+    (*info) = step + gbstep + J;
     return;
   }
 
@@ -1541,24 +1553,33 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
   int gbj, STEP;
   float *r_shared_y = NRAM_BUFFER;
   float *r_extra_vec = SRAM_BUFFER;
-  float *r_extra_vec_nram = r_shared_y + N * N;
+  float *r_extra_vec_nram = r_shared_y + N;
   float *r_temp = r_extra_vec_nram + N * N;
   float *r_L1 = r_temp + (MAX_M_SIZE_COMPLEX_PIVOT + N + N * 2);
   float *r_orig = r_L1 + (MAX_NRAM_SIZE / 16 - 4 * 1024);
 
   float *i_shared_y = r_orig + (MAX_NRAM_SIZE / 16 - 4 * 1024);
   float *i_extra_vec = r_extra_vec + N * N;
-  float *i_extra_vec_nram = i_shared_y + N * N;
+  float *i_extra_vec_nram = i_shared_y + N;
   float *i_temp = i_extra_vec_nram + N * N;
   float *i_L1 = i_temp + (MAX_M_SIZE_COMPLEX_PIVOT + N + N * 2);
   float *i_orig = i_L1 + (MAX_NRAM_SIZE / 16 - 4 * 1024);
 
   int *sram_buffer = (int *)i_extra_vec + N * N;
   float *k_max = (float *)sram_buffer + (MAX_SRAM_SIZE / 8);
-  int *k_max_idx = (int *)k_max + MAX_M_SIZE1;
-  int *k_max_gbidx = k_max_idx + MAX_M_SIZE1;
-  float *r_k_max_arr = (float *)k_max_gbidx + MAX_M_SIZE1;
+  int *k_max_idx = (int *)k_max + MAX_M_SIZE_COMPLEX_PIVOT;
+  int *k_max_gbidx = k_max_idx + MAX_M_SIZE_COMPLEX_PIVOT;
+  float *r_k_max_arr = (float *)k_max_gbidx + MAX_M_SIZE_COMPLEX_PIVOT;
   float *i_k_max_arr = r_k_max_arr + 2 * N;
+
+  // initialize dipiv
+  if ((tx % TaskUnion1 == 0) && (gbstep + J == 0)) {
+    for (int i = 0; i < M_size; i++) {
+      dipiv[i] = i;
+    }
+  }
+
+  __sync_cluster();
 
   if ((lda - N > 0) && (tx % TaskUnion1 == 0) && (gbstep + J > 0)) {
     const int IPIV_SIZE = MAX_SRAM_SIZE / 8;
@@ -1568,8 +1589,9 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
       int remain =
           m - k * IPIV_SIZE > IPIV_SIZE ? IPIV_SIZE : m - k * IPIV_SIZE;
       for (int i = 0; i < remain; i++) sram_buffer[i] = i + k * IPIV_SIZE;
-      __memcpy(dipiv2 + k * IPIV_SIZE, sram_buffer, remain * sizeof(int),
-               SRAM2LDRAM);
+      if (remain > 0)
+        __memcpy(dipiv2 + k * IPIV_SIZE, sram_buffer, remain * sizeof(int),
+                 SRAM2LDRAM);
     }
   }
 
@@ -1587,6 +1609,7 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
            n * sizeof(float), n * sizeof(float), n - 1);
   __memcpy(i_extra_vec_nram, i_extra_vec, n * sizeof(float), SRAM2NRAM,
            n * sizeof(float), n * sizeof(float), n - 1);
+
   if (m > MAX_M_SIZE_COMPLEX_PIVOT * TaskUnion8) {
     int mp = m / taskdim;
     const int mp_ = mp;
@@ -1690,8 +1713,8 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
         m_e = (k > 0) ? m_per_core - STEP : m_e - STEP;
 
         if (gbj < M_size) {
-          MLUSubKernelCcal_ger_pivot(m - gbj, ib - STEP, STEP, taskdim, batch,
-                                     rA, iA, lda, ld_L1, info, gbstep,
+          MLUSubKernelCcal_ger_pivot(m - gbj, ib - STEP, STEP, J, taskdim,
+                                     batch, rA, iA, lda, ld_L1, info, gbstep,
                                      m_per_core, m_per_core_, len_extra, k, m_e,
                                      r_shared_y, i_shared_y, r_temp, i_temp,
                                      r_L1, i_L1, r_orig, i_orig);
@@ -1725,88 +1748,85 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
     // int seg = CEILDIV(mp, MAX_M_SIZE_COMPLEX_PIVOT);
     // seg = seg == 0 ? 1 : 1;
     int k = 0;
-    if (mp > 0) {
-      int m_per_core = mp;
-      const int m_per_core_ = m_per_core;
+    // if (mp > 0) {
+    int m_per_core = mp;
+    const int m_per_core_ = m_per_core;
 
-      int len_extra = 0;
-      int offset = tx * mp_ + k * MAX_M_SIZE_COMPLEX_PIVOT;
-      len_extra = offset <= n ? offset : n;
+    int len_extra = 0;
+    int offset = tx * mp_ + k * MAX_M_SIZE_COMPLEX_PIVOT;
+    len_extra = offset <= n ? offset : n;
 
-      if ((len_extra - 1 >= 0 && k == 0)) {
-        __memcpy(r_orig, r_extra_vec_nram, n * sizeof(float), NRAM2NRAM,
-                 n * sizeof(float), n * sizeof(float), len_extra - 1);
-        __memcpy(i_orig, i_extra_vec_nram, n * sizeof(float), NRAM2NRAM,
-                 n * sizeof(float), n * sizeof(float), len_extra - 1);
-      }
+    if ((len_extra - 1 >= 0 && k == 0)) {
+      __memcpy(r_orig, r_extra_vec_nram, n * sizeof(float), NRAM2NRAM,
+               n * sizeof(float), n * sizeof(float), len_extra - 1);
+      __memcpy(i_orig, i_extra_vec_nram, n * sizeof(float), NRAM2NRAM,
+               n * sizeof(float), n * sizeof(float), len_extra - 1);
+    }
 
-      if (m_per_core - 1 >= 0) {
-        __memcpy(r_orig + len_extra * n,
-                 rA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
-                 n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
-                 lda * sizeof(float), m_per_core - 1);
-        __memcpy(i_orig + len_extra * n,
-                 iA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
-                 n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
-                 lda * sizeof(float), m_per_core - 1);
-      }
+    if (m_per_core - 1 >= 0) {
+      __memcpy(r_orig + len_extra * n,
+               rA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+               n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
+               lda * sizeof(float), m_per_core - 1);
+      __memcpy(i_orig + len_extra * n,
+               iA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+               n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
+               lda * sizeof(float), m_per_core - 1);
+    }
 
-      int m_e = m_per_core < 0 ? 0 : m_per_core + len_extra;
-      const int m_e1 = m_e;
-      int ld_L1 = m_e;
-      const int mm_per_core = m_per_core;
-      const int llen_extra = len_extra;
+    int m_e = m_per_core < 0 ? 0 : m_per_core + len_extra;
+    const int m_e1 = m_e;
+    int ld_L1 = m_e;
+    const int mm_per_core = m_per_core;
+    const int llen_extra = len_extra;
 
-      if (m_e > 0) {
-        __bang_transpose(r_L1, r_orig, m_e, n);
-        __bang_transpose(i_L1, i_orig, m_e, n);
-      }
+    if (m_e > 0) {
+      __bang_transpose(r_L1, r_orig, m_e, n);
+      __bang_transpose(i_L1, i_orig, m_e, n);
+    }
 
-      m_e = (k > 0) ? m_per_core : m_e;
+    m_e = (k > 0) ? m_per_core : m_e;
 
-      for (STEP = 0; STEP < ib; STEP++) {
-        gbj = J + STEP;
+    for (STEP = 0; STEP < ib; STEP++) {
+      gbj = J + STEP;
 
-        if (gbj < M_size) {
-          if (m > MAX_M_SIZE_COMPLEX_PIVOT * TaskUnion1) {
-            MLUKernelCPivotSwap2(m - gbj, ib - STEP, STEP, batch, M_size,
-                                 N_size, r_L1, i_L1, ld_L1, r_orig, i_orig, n,
-                                 len_extra, m_e, max_arr, r_max_arr_vec,
-                                 i_max_arr_vec, max_idx, max_gbidx, r_shared_y,
-                                 i_shared_y, tx, taskdim, batch_id, m_per_core,
-                                 mp_, dipiv, dipiv2, info, gbstep);
-          } else {
-            MLUKernelCPivotSwap(m - gbj, ib - STEP, STEP, batch, M_size, N_size,
-                                r_L1, i_L1, ld_L1, r_orig, i_orig, n, len_extra,
-                                m_e, max_arr, r_max_arr_vec, i_max_arr_vec,
-                                max_idx, r_shared_y, i_shared_y, tx, taskdim,
-                                batch_id, m_per_core, mp_, dipiv, dipiv2, info,
-                                gbstep);
-          }
-
-          MLUSubKernelCcal_ger_pivot(m - gbj, ib - STEP, STEP, taskdim, batch,
-                                     rA, iA, lda, ld_L1, info, gbstep,
-                                     m_per_core, m_per_core_, len_extra, k, m_e,
-                                     r_shared_y, i_shared_y, r_temp, i_temp,
-                                     r_L1, i_L1, r_orig, i_orig);
-          m_e--;
+      if (gbj < M_size) {
+        if (m > MAX_M_SIZE_COMPLEX_PIVOT * TaskUnion1) {
+          MLUKernelCPivotSwap2(
+              m - gbj, ib - STEP, STEP, batch, M_size, N_size, r_L1, i_L1,
+              ld_L1, r_orig, i_orig, n, len_extra, m_e, max_arr, r_max_arr_vec,
+              i_max_arr_vec, max_idx, max_gbidx, r_shared_y, i_shared_y, tx,
+              taskdim, batch_id, m_per_core, mp_, dipiv, dipiv2, info, gbstep);
+        } else {
+          MLUKernelCPivotSwap(
+              m - gbj, ib - STEP, STEP, batch, M_size, N_size, r_L1, i_L1,
+              ld_L1, r_orig, i_orig, n, len_extra, m_e, max_arr, r_max_arr_vec,
+              i_max_arr_vec, max_idx, r_shared_y, i_shared_y, tx, taskdim,
+              batch_id, m_per_core, mp_, dipiv, dipiv2, info, gbstep);
         }
-      }
 
-      if (m_e1 > 0) {
-        __bang_transpose(r_orig, r_L1, n, m_e1);
-        __bang_transpose(i_orig, i_L1, n, m_e1);
-      }
-
-      if (mm_per_core - 1 >= 0) {
-        __memcpy(rA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
-                 r_orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
-                 lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
-        __memcpy(iA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
-                 i_orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
-                 lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+        MLUSubKernelCcal_ger_pivot(
+            m - gbj, ib - STEP, STEP, J, taskdim, batch, rA, iA, lda, ld_L1,
+            info, gbstep, m_per_core, m_per_core_, len_extra, k, m_e,
+            r_shared_y, i_shared_y, r_temp, i_temp, r_L1, i_L1, r_orig, i_orig);
+        m_e--;
       }
     }
+
+    if (m_e1 > 0) {
+      __bang_transpose(r_orig, r_L1, n, m_e1);
+      __bang_transpose(i_orig, i_L1, n, m_e1);
+    }
+
+    if (mm_per_core - 1 >= 0) {
+      __memcpy(rA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+               r_orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
+               lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+      __memcpy(iA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+               i_orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
+               lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+    }
+    // }
   }
 
   return;
