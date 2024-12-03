@@ -24,6 +24,7 @@
 #define KERNELS_BOX_IOU_ROTATED_BOX_IOU_ROTATED_UTILS_H_
 
 #include "kernels/utils/common.h"
+#include "kernels/utils/scatter_gather.h"
 
 #define FIILED_ONES (int)0xffffffff
 #define HALF_FILLED_ONES (int16_t)0xffff
@@ -590,21 +591,22 @@ __mlu_func__ void convexHullGraham(
                       sizeof(T), actual_compute_box_num);
 
     // get the ordered points according to the angle value
-    __gather(ordered_pts_x + (i + 1) * actual_compute_box_num, intersect_pts_x,
-             (unsigned int *)temp_offset, sizeof(T), NRAM2NRAM, sizeof(T),
-             actual_compute_box_num);
-    __gather(ordered_pts_y + (i + 1) * actual_compute_box_num, intersect_pts_y,
-             (unsigned int *)temp_offset, sizeof(T), NRAM2NRAM, sizeof(T),
-             actual_compute_box_num);
-    __gather(temp_long_1 + (i + 1) * actual_compute_box_num, valid_pts,
-             (unsigned int *)temp_offset, sizeof(T), NRAM2NRAM, sizeof(T),
-             actual_compute_box_num);
+    __mluop_gather<T>(ordered_pts_x + (i + 1) * actual_compute_box_num,
+                      intersect_pts_x, (unsigned int *)temp_offset, NULL,
+                      sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
+    __mluop_gather<T>(ordered_pts_y + (i + 1) * actual_compute_box_num,
+                      intersect_pts_y, (unsigned int *)temp_offset, NULL,
+                      sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
+    __mluop_gather<T>(temp_long_1 + (i + 1) * actual_compute_box_num, valid_pts,
+                      (unsigned int *)temp_offset, NULL, sizeof(T), NRAM2NRAM,
+                      sizeof(T), actual_compute_box_num);
 
     // assign a invalid value to the point which has been get ordered
-    __scatter(temp_long_2, temp1_ram, (unsigned int *)temp_offset, sizeof(T),
-              NRAM2NRAM, sizeof(T), actual_compute_box_num);
-    __scatter(valid_pts, temp2_ram, (unsigned int *)temp_offset, sizeof(T),
-              NRAM2NRAM, sizeof(T), actual_compute_box_num);
+    __mluop_scatter<T>(temp_long_2, temp1_ram, (unsigned int *)temp_offset,
+                       NULL, sizeof(T), NRAM2NRAM, sizeof(T),
+                       actual_compute_box_num);
+    __mluop_scatter<T>(valid_pts, temp2_ram, (unsigned int *)temp_offset, NULL,
+                       sizeof(T), NRAM2NRAM, sizeof(T), actual_compute_box_num);
   }
   __bang_move(valid_pts, temp_long_1, total_points * sizeof(T));
 #else
