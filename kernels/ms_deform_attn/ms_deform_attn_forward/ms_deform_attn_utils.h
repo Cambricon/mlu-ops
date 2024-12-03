@@ -376,7 +376,7 @@ __mlu_func__ void stageOneLoop(
 }
 #endif
 
-#if (__BANG_ARCH__ == 592)
+#if (__BANG_ARCH__ >= 592)
 __mlu_func__ void gatherAsync(void* dst, void* src, unsigned int* offset,
                               void* mask, int transfer_size,
                               mluMemcpyDirection_t dir, int dst_stride,
