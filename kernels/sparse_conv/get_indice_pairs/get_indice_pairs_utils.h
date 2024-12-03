@@ -76,7 +76,7 @@ func: generate stage index from start_index
 */
 __mlu_func__ void stepIndex(int32_t *dst_nram, int32_t start_index,
                             int32_t length) {
-#if (__BANG_ARCH__ == 372 || __BANG_ARCH__ == 322 || __BANG_ARCH__ == 592)
+#if __BANG_ARCH__ >= 372
   int32_t align_num = 128;
   int32_t repeat = (int32_t)(logf(length / align_num) / logf(2));
   int32_t remain = length / align_num - powf(2, repeat);

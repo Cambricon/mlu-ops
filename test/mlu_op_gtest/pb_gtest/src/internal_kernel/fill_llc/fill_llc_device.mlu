@@ -24,7 +24,7 @@
 #include "kernels/kernel.h"  // MAX_NRAM_SIZE
 
 __mlu_global__ void flushLLC(void* input, int fill_bytes) {
-#if (__BANG_ARCH__ == 592)
+#if (__BANG_ARCH__ >= 592)
   if (coreId != 0) {
     return;
   }
