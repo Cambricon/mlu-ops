@@ -110,9 +110,8 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                    transpose(batch_size, size_a, size_a, d_input, d_output,
                              handle, dtype, workspace));
     } else {
-      CNRT_CHECK(cnrtMemcpy(d_output, d_input,
-                            type_size * size_a * lda * ((uint64_t)batch_size),
-                            CNRT_MEM_TRANS_DIR_DEV2DEV));
+      KernelMyCnrtMemcpy1D(d_input, d_output,
+        size_a * lda * ((uint64_t)batch_size), queue, 0);
     }
   } else {
     CHECK_RETURN("mluOpCholesky",
@@ -165,9 +164,8 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                    transpose(batch_size, size_a, size_a, d_output, workspace,
                              handle, dtype, workspace));
       cnrtQueueSync(queue);
-      CNRT_CHECK(cnrtMemcpy(d_output, workspace,
-                            type_size * size_a * lda * ((uint64_t)batch_size),
-                            CNRT_MEM_TRANS_DIR_DEV2DEV));
+      KernelMyCnrtMemcpy1D(workspace, d_output,
+        size_a * lda * ((uint64_t)batch_size), queue, 0);
     }
   } else {
     recnb = CRECNB;
@@ -232,18 +230,14 @@ calculate_body(mluOpHandle_t handle, int batch_size,
       cnrtQueueSync(queue);
     } else {
       if (batch_size > 16) {
-        CNRT_CHECK(cnrtMemcpy(d_output, workspace,
-                              type_size * size_a * lda * 16,
-                              CNRT_MEM_TRANS_DIR_DEV2DEV));
-        CNRT_CHECK(
-            cnrtMemcpy(d_output + type_size / 4 * size_a * lda * 16,
-                       workspace + type_size / 4 * size_a * lda * 16,
-                       type_size * size_a * lda * ((uint64_t)batch_size - 16),
-                       CNRT_MEM_TRANS_DIR_DEV2DEV));
+        KernelMyCnrtMemcpy1D(workspace,
+          d_output, size_a * lda * 16, queue, 0);
+        KernelMyCnrtMemcpy1D(workspace + type_size / 4 * size_a * lda * 16,
+          d_output + type_size / 4 * size_a * lda * 16,
+          size_a * lda * ((uint64_t)batch_size - 16), queue, 0);
       } else {
-        CNRT_CHECK(cnrtMemcpy(d_output, workspace,
-                              type_size * size_a * lda * ((uint64_t)batch_size),
-                              CNRT_MEM_TRANS_DIR_DEV2DEV));
+        KernelMyCnrtMemcpy1D(workspace,
+          d_output, size_a * lda * ((uint64_t)batch_size), queue, 0);
       }
     }
   }

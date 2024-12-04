@@ -111,4 +111,13 @@ mluOpStatus_t cherk(int batch, int stride, int n, int k, float* rd_a,
                     float* id_a, int lda, float* rd_c, float* id_c, int ldc,
                     mluOpHandle_t handle, float* workspace);
 
+
+mluOpStatus_t KernelMyCnrtMemcpy3D(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    int batch, int m, int n, float *dA, int ldda,
+    int stride_a, float *dB, int lddb, int stride_b, int mode);
+
+mluOpStatus_t MLUOP_WIN_API KernelMyCnrtMemcpy1D(
+    float *dA, float *dB, int n, cnrtQueue_t queue, int mode);
+
 #endif

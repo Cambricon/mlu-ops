@@ -664,14 +664,19 @@ mluOpStatus_t cgemm_real(int batch, bool trans_a, bool trans_b, int m, int n,
   int copy_lda = k;
   int copy_stride_a = m * k;
 
-  for (int i = 0; i < batch; i++) {
-    CNRT_CHECK(cnrtMemcpy2D(copy_ra + i * m * k, k * sizeof(float),
-                            d_ra + i * stride_a, lda * sizeof(float),
-                            k * sizeof(float), m, CNRT_MEM_TRANS_DIR_DEV2DEV));
-    CNRT_CHECK(cnrtMemcpy2D(copy_ia + i * m * k, k * sizeof(float),
-                            d_ia + i * stride_a, lda * sizeof(float),
-                            k * sizeof(float), m, CNRT_MEM_TRANS_DIR_DEV2DEV));
-  }
+  cnrtDim3_t dim1;
+  dim1.y = 1;
+  dim1.z = 1;
+  dim1.x = 4 * batch;
+
+  cnrtFunctionType_t func_type1 = CNRT_FUNC_TYPE_UNION1;
+
+
+  KernelMyCnrtMemcpy3D(dim1, func_type1, queue, batch, m, k,
+        d_ra, lda, stride_a, copy_ra, k, m * k, 0);
+
+  KernelMyCnrtMemcpy3D(dim1, func_type1, queue, batch, m, k,
+        d_ia, lda, stride_a, copy_ia, k, m * k, 0);
 
   float *r_c, *i_c;
   r_c = d_rc;
