@@ -25,6 +25,7 @@
 #include "core/logging.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
+#include "kernels/utils/scatter_gather.h"
 
 __nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
@@ -392,10 +393,11 @@ __mlu_func__ void MLUKernelVoxelPoolingStageTwoPerfKernel(
       __bang_ge_bitindex((float *)gather_mask,
                          (float *)nram_geom + point_idx_offset,
                          (float *)nram_geom_x, align_8_deal_num);
-      __gather((float *)gather_src, (float *)input_features,
-               (unsigned int *)gather_offset + point_idx_offset,
-               (void *)gather_mask, num_channels * sizeof(float), GDRAM2NRAM,
-               num_channels * sizeof(float), actual_load_num);
+      __mluop_gather<float>((float *)gather_src, (float *)input_features,
+                            (unsigned int *)gather_offset + point_idx_offset,
+                            (uint8_t *)gather_mask,
+                            num_channels * sizeof(float), GDRAM2NRAM,
+                            num_channels * sizeof(float), actual_load_num);
       for (int index = 0; index < actual_load_num; index++) {
         int output_features_pt_offset = nram_geom[point_idx_offset + index];
         if (output_features_pt_offset >= 0) {

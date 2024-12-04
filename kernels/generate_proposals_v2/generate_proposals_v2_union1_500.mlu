@@ -158,6 +158,7 @@ __mlu_func__ void proposalBoxesDecode(
     // gather offset (byte).
     __bang_mul_scalar(anchors_index_nram, anchors_index_nram, sizeof(int32_t),
                       deal_num);
+    // deal_num <= 5163
     __gather(temp_nram, anchors, (unsigned int *)anchors_index_nram,
              sizeof(T) * 4, GDRAM2NRAM, sizeof(T) * 4, deal_num);
     __bang_transpose(anchors_nram, temp_nram, deal_num, 4);

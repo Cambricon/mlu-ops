@@ -25,6 +25,7 @@
 #include "core/logging.h"
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
+#include "kernels/utils/scatter_gather.h"
 
 __nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 
@@ -313,24 +314,25 @@ void __mlu_func__ loadValue(
                     sizeof(int32_t), 4 * num_deal_grid);
   __sync_io_move_compute();
 
-  __gather_async((void *)nram_grad_output_tl, (void *)data_value,
-                 (unsigned int *)grad_temp3, deal_num_real * sizeof(float),
-                 GDRAM2NRAM, deal_num_real * sizeof(float), num_deal_grid);
+  __mluop_gather<float>((float *)nram_grad_output_tl, (float *)data_value,
+                        (unsigned int *)grad_temp3, NULL,
+                        deal_num_real * sizeof(float), GDRAM2NRAM,
+                        deal_num_real * sizeof(float), num_deal_grid);
 
-  __gather_async((void *)nram_grad_output_tr, (void *)data_value,
-                 (unsigned int *)(grad_temp3 + num_deal_grid),
-                 deal_num_real * sizeof(float), GDRAM2NRAM,
-                 deal_num_real * sizeof(float), num_deal_grid);
+  __mluop_gather<float>((float *)nram_grad_output_tr, (float *)data_value,
+                        (unsigned int *)(grad_temp3 + num_deal_grid), NULL,
+                        deal_num_real * sizeof(float), GDRAM2NRAM,
+                        deal_num_real * sizeof(float), num_deal_grid);
 
-  __gather_async((void *)nram_grad_output_bl, (void *)data_value,
-                 (unsigned int *)(grad_temp3 + 2 * num_deal_grid),
-                 deal_num_real * sizeof(float), GDRAM2NRAM,
-                 deal_num_real * sizeof(float), num_deal_grid);
+  __mluop_gather<float>((float *)nram_grad_output_bl, (float *)data_value,
+                        (unsigned int *)(grad_temp3 + 2 * num_deal_grid), NULL,
+                        deal_num_real * sizeof(float), GDRAM2NRAM,
+                        deal_num_real * sizeof(float), num_deal_grid);
 
-  __gather_async((void *)nram_grad_output_br, (void *)data_value,
-                 (unsigned int *)(grad_temp3 + 3 * num_deal_grid),
-                 deal_num_real * sizeof(float), GDRAM2NRAM,
-                 deal_num_real * sizeof(float), num_deal_grid);
+  __mluop_gather<float>((float *)nram_grad_output_br, (float *)data_value,
+                        (unsigned int *)(grad_temp3 + 3 * num_deal_grid), NULL,
+                        deal_num_real * sizeof(float), GDRAM2NRAM,
+                        deal_num_real * sizeof(float), num_deal_grid);
   __sync_io_move_compute();
 
 #else

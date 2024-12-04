@@ -233,14 +233,14 @@ __mlu_func__ void backwardStageTwoLoop(
     for (int j = 0; j < 5; j++) {
       T* tmp_wp = weight_polation_nram + (j - 1) * nq_nl_np;
       if (j < 4) {
-        gatherAsync(v_ping, zeros_nram, (unsigned int*)offset_zero_nram_stg2,
-                    bit_cond_reverse_nram + j * bit_cond_stride,
-                    channels * sizeof(T), NRAM2NRAM, channels * sizeof(T),
-                    nq_nl_np);
-        gatherAsync(v_ping, data_value_gdram,
-                    (unsigned int*)offset_nram + j * nq_nl_np,
-                    bit_cond_nram + j * bit_cond_stride, channels * sizeof(T),
-                    GDRAM2NRAM, channels * sizeof(T), nq_nl_np);
+        gatherAsync<T>(v_ping, zeros_nram, (unsigned int*)offset_zero_nram_stg2,
+                       bit_cond_reverse_nram + j * bit_cond_stride,
+                       channels * sizeof(T), NRAM2NRAM, channels * sizeof(T),
+                       nq_nl_np);
+        gatherAsync<T>(
+            v_ping, data_value_gdram, (unsigned int*)offset_nram + j * nq_nl_np,
+            bit_cond_nram + j * bit_cond_stride, channels * sizeof(T),
+            GDRAM2NRAM, channels * sizeof(T), nq_nl_np);
       }
 
       if (j == 0) {
@@ -249,10 +249,10 @@ __mlu_func__ void backwardStageTwoLoop(
                        NRAM2NRAM, channels * sizeof(T), num_levels_points - 1,
                        num_levels_points * channels * sizeof(T), deal_n - 1, 0,
                        num_levels_points - 1, channels * sizeof(T), deal_n - 1);
-        gatherAsync(buffer, zeros_nram, (unsigned int*)offset_zero_nram_stg2,
-                    bit_cond_reverse_nram + 4 * bit_cond_stride,
-                    channels * sizeof(T), NRAM2NRAM, channels * sizeof(T),
-                    nq_nl_np);
+        gatherAsync<T>(buffer, zeros_nram, (unsigned int*)offset_zero_nram_stg2,
+                       bit_cond_reverse_nram + 4 * bit_cond_stride,
+                       channels * sizeof(T), NRAM2NRAM, channels * sizeof(T),
+                       nq_nl_np);
         __bang_write_value(value_wp, nq_nl_np_c, (T)0);  // clear value*wp
         __sync_move();
         // (n, nl, np, c) => (c, n, nl, np)
@@ -332,7 +332,7 @@ __mlu_func__ void backwardStageTwoLoop(
     int32_t* dst_offset = (int32_t*)offset_zero_nram_stg2;
     for (int i = 0; i < 4; i++) {
       __bang_filter((T*)dst_offset + i * nq_nl_np,
-                     (T*)offset_nram + i * nq_nl_np, cond_all_valid, nq_nl_np);
+                    (T*)offset_nram + i * nq_nl_np, cond_all_valid, nq_nl_np);
     }
     int32_t* src_offset = (int32_t*)inter_grad;
     int32_t* stride_4_2 = dst_offset + 3 * nq_nl_np;
@@ -368,7 +368,7 @@ __mlu_func__ void backwardStageTwoLoop(
       int32_t valid_count = __bang_sum(tmp_cond, nq_nl_np);
       if (valid_count > 0) {
         __bang_filter((T*)tmp_dst_offset, (T*)tmp_dst_offset, tmp_cond,
-                       nq_nl_np);
+                      nq_nl_np);
         __bang_filter((T*)tmp_src_offset, (T*)seq_nram, tmp_cond, nq_nl_np);
         __bang_mul_scalar(tmp_src_offset, tmp_src_offset, channels * sizeof(T),
                           valid_count);
