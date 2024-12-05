@@ -488,10 +488,10 @@ mluOpStatus_t fftGetBatchMatMulBcastWorkspaceSize(
   cnnlMatMulHeuristicResult_t heuristic_result;
   CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
   int requested_algo_count = 1, return_algo_count = 0;
-  cnnlGetBatchMatMulAlgoHeuristic(
+  cnnlGetBatchMatMulExAlgoHeuristic(
       cnnl_handle, bmm_bcast_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc, NULL,
       requested_algo_count, &heuristic_result, &return_algo_count);
-  cnnlGetBatchMatMulHeuristicResult(heuristic_result, algo, &workspace_size);
+  cnnlGetBatchMatMulExHeuristicResult(heuristic_result, algo, &workspace_size);
   // destroy descriptor
   // destroy cnnl descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
@@ -585,20 +585,20 @@ mluOpStatus_t fftBatchMatMulBcast(
   alpha = 1.0;
   beta = 0.0;
   int requested_algo_count = 1, return_algo_count = 0;
-  cnnlGetBatchMatMulAlgoHeuristic(
+  cnnlGetBatchMatMulExAlgoHeuristic(
       cnnl_handle, bmm_bcast_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc, NULL,
       requested_algo_count, &heuristic_result, &return_algo_count);
-  cnnlGetBatchMatMulHeuristicResult(heuristic_result, algo, &workspace_size);
+  cnnlGetBatchMatMulExHeuristicResult(heuristic_result, algo, &workspace_size);
   if (workspace_size > 0) {
     CNRT_CHECK(cnrtMalloc((void **)&workspace, workspace_size));
   } else {
     CNRT_CHECK(cnrtMalloc((void **)&workspace, m * n * sizeof(float)));
   }
 
-  CALL_CNNL(cnnlBatchMatMulBCast_v2(cnnl_handle, bmm_bcast_desc, algo, &alpha,
-                                    cnnl_a_desc, a_ptr, cnnl_b_desc, b_ptr,
-                                    &beta, cnnl_c_desc, c_ptr,
-                                    (void *)workspace, workspace_size));
+  CALL_CNNL(cnnlBatchMatMulEx(cnnl_handle, bmm_bcast_desc, algo, &alpha,
+                              cnnl_a_desc, a_ptr, cnnl_b_desc, b_ptr,
+                              &beta, cnnl_c_desc, c_ptr,
+                              (void *)workspace, workspace_size));
   // destroy descriptor
   // destroy cnnl descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
