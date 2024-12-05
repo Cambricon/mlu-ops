@@ -484,7 +484,8 @@ mluOpContiguous(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_desc, cnnl_input_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(temp_desc, cnnl_temp_desc);
   CALL_CNNL(
-      cnnlCopy(cnnl_handle, cnnl_input_desc, input, cnnl_temp_desc, output));
+      cnnlCopy_v2(cnnl_handle, cnnl_input_desc, input, cnnl_temp_desc, output,
+                  NULL, 0));
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_temp_desc);
   DESTROY_CNNL_HANDLE(cnnl_handle);

@@ -33,26 +33,10 @@
 __mlu_global__ void MLUKernelFFT1dButterflyRowC2R(
     void *input, void *output, int *factors, void *twiddles, void *twiddles_end,
     void *dft_matrix, void *buffer, int batch, int fft_flag, int dtype_size) {
-  switch (dtype_size) {
-    case (MLUOP_DTYPE_COMPLEX_FLOAT):
-    case (MLUOP_DTYPE_FLOAT): {
-      computeMutiStageOnchipC2R<float>((float *)input, (float *)output, factors,
-                                       (float *)twiddles, (float *)twiddles_end,
-                                       (float *)dft_matrix, (float *)buffer,
-                                       batch, fft_flag);
-    }; break;
-    case (MLUOP_DTYPE_COMPLEX_HALF):
-    case (MLUOP_DTYPE_HALF): {
-      computeMutiStageOnchipC2R<half>((half *)input, (half *)output, factors,
-                                      (half *)twiddles, (half *)twiddles_end,
-                                      (half *)dft_matrix, (half *)buffer, batch,
-                                      fft_flag);
-    }; break;
-
-    default: {
-      MLULOG("mluOpFFT Not Implemented.");
-    }
-  }
+  computeMutiStageOnchipC2R<float>((float *)input, (float *)output, factors,
+                                   (float *)twiddles, (float *)twiddles_end,
+                                   (float *)dft_matrix, (float *)buffer, batch,
+                                   fft_flag);
 }
 
 mluOpStatus_t MLUOP_WIN_API kernelFFT1dButterflyRowC2R(
