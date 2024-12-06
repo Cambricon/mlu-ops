@@ -119,8 +119,8 @@ int64_t FftExecutor::getTheoryIoSize() {
   // dtype check
   auto input_tensor = tensor_desc_[0].tensor;
   auto output_tensor = tensor_desc_[1].tensor;
-  mluOpDataType_t input_dtype = input_tensor->dtype;
-  mluOpDataType_t output_dtype = output_tensor->dtype;
+  mluOpDataType_t input_dtype = input_tensor->getDtype();
+  mluOpDataType_t output_dtype = output_tensor->getDtype();
 
   auto fft_param = parser_->getProtoNode()->fft_param();
   int rank = fft_param.rank();
