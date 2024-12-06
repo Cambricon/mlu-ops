@@ -38,10 +38,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetXgetrfWorkspaceSize(
 
   PARAM_CHECK("mluOpXgetrf",
               x_desc->dim == 2 || x_desc->dim == 3 || x_desc->dim == 4);
-  PARAM_CHECK("mluOpXgetrf", x_desc->dims[0] > 0);
-  PARAM_CHECK("mluOpXgetrf", x_desc->dims[1] > 0);
 
-  /* xgetrf参数转换*/
   size_t m, n, batch = 1;
   mluOpDataType_t dtype = x_desc->dtype;
 
@@ -52,15 +49,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetXgetrfWorkspaceSize(
   MLUOP_CHECK(mluOpGetSizeOfDataType(dtype, &type_size));
 
   if (x_desc->dim == 2) {
+    PARAM_CHECK("mluOpXgetrf", x_desc->dims[0] >= 0);
+    PARAM_CHECK("mluOpXgetrf", x_desc->dims[1] >= 0);
     m = x_desc->dims[0];
     n = x_desc->dims[1];
   } else if (x_desc->dim == 3) {
-    PARAM_CHECK("mluOpXgetrf", x_desc->dims[2] > 0);
+    PARAM_CHECK("mluOpXgetrf", x_desc->dims[1] >= 0);
+    PARAM_CHECK("mluOpXgetrf", x_desc->dims[2] >= 0);
     batch = x_desc->dims[0];
     m = x_desc->dims[1];
     n = x_desc->dims[2];
   } else if (x_desc->dim == 4) {
-    PARAM_CHECK("mluOpXgetrf", x_desc->dims[3] > 0);
+    PARAM_CHECK("mluOpXgetrf", x_desc->dims[2] >= 0);
+    PARAM_CHECK("mluOpXgetrf", x_desc->dims[3] >= 0);
     batch = x_desc->dims[0] * x_desc->dims[1];
     m = x_desc->dims[2];
     n = x_desc->dims[3];
@@ -90,26 +91,24 @@ mluOpStatus_t MLUOP_WIN_API mluOpXgetrf(
   PARAM_CHECK("mluOpXgetrf", dipiv != NULL);
   PARAM_CHECK("mluOpXgetrf",
               x_desc->dim == 2 || x_desc->dim == 3 || x_desc->dim == 4);
-  PARAM_CHECK("mluOpXgetrf", x_desc->dims[0] >= 0);
-  PARAM_CHECK("mluOpXgetrf", x_desc->dims[1] >= 0);
-
-  if (x_desc->dim == 3) {
-    PARAM_CHECK("mluOpXgetrf", x_desc->dims[2] > 0);
-  }
-  if (x_desc->dim == 4) {
-    PARAM_CHECK("mluOpXgetrf", x_desc->dims[3] > 0);
-  }
 
   PARAM_CHECK("mluOpXgetrf",
               dtype == MLUOP_DTYPE_FLOAT || dtype == MLUOP_DTYPE_COMPLEX_FLOAT);
   if (x_desc->dim == 2) {
+    PARAM_CHECK("mluOpXgetrf", x_desc->dims[0] >= 0);
+    PARAM_CHECK("mluOpXgetrf", x_desc->dims[1] >= 0);
+    batch = 1;
     m = x_desc->dims[0];
     n = x_desc->dims[1];
   } else if (x_desc->dim == 3) {
+    PARAM_CHECK("mluOpXgetrf", x_desc->dims[1] >= 0);
+    PARAM_CHECK("mluOpXgetrf", x_desc->dims[2] >= 0);
     batch = x_desc->dims[0];
     m = x_desc->dims[1];
     n = x_desc->dims[2];
   } else if (x_desc->dim == 4) {
+    PARAM_CHECK("mluOpXgetrf", x_desc->dims[2] >= 0);
+    PARAM_CHECK("mluOpXgetrf", x_desc->dims[3] >= 0);
     batch = x_desc->dims[0] * x_desc->dims[1];
     m = x_desc->dims[2];
     n = x_desc->dims[3];

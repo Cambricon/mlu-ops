@@ -428,7 +428,7 @@ __mlu_entry__ void MLUKernelScal_ger(int batch, int M_size, int N_size, int ib,
   }
   return;
 }
-
+// Handle the complex matrix pivoting for the given segment
 __mlu_func__ void MLUKernelCPivot(int m, int n, int step, int batch, int M_size,
                                   int N_size, int k, float *d_rA, float *d_iA,
                                   int lda, int stride_a, float *r_orig,
@@ -508,7 +508,7 @@ __mlu_func__ void MLUKernelCPivot(int m, int n, int step, int batch, int M_size,
   }
   __sync_cluster();
 }
-
+// Swap rows based on the pivoting results to maintain correctness for complex
 __mlu_func__ void MLUKernelCKSwap(
     int m, int n, int step, int batch, int M_size, int N_size, float *d_rA,
     float *d_iA, int lda, int stride_a, float *r_orig, float *i_orig,
@@ -546,7 +546,7 @@ __mlu_func__ void MLUKernelCKSwap(
   }
   __sync_cluster();
 }
-
+// Swap rows based on the pivoting results to maintain correctness
 __mlu_func__ void MLUKernelKSwap(int m, int n, int step, int batch, int M_size,
                                  int N_size, float *dA, int lda, int stride_a,
                                  float *orig, int ld_orig, int m_per_core,
@@ -576,6 +576,7 @@ __mlu_func__ void MLUKernelKSwap(int m, int n, int step, int batch, int M_size,
   }
   __sync_cluster();
 }
+// Handle the matrix pivoting for the given segment
 __mlu_func__ void MLUKernelPivot(int m, int n, int step, int batch, int M_size,
                                  int N_size, int k, float *dA, int lda,
                                  int stride_a, float *orig, int ld_orig,
@@ -645,7 +646,7 @@ __mlu_func__ void MLUKernelPivot(int m, int n, int step, int batch, int M_size,
   }
   __sync_cluster();
 }
-
+// Handle pivoting and swapping for large-scale matrices
 __mlu_func__ void MLUKernelPivotSwap2(
     int m, int n, int step, int batch, int M_size, int N_size, float *dA,
     int lda, int stride_a, float *workspace, float *L1, int ldL1, float *orig,
@@ -768,7 +769,7 @@ __mlu_func__ void MLUKernelPivotSwap2(
   }
   __sync_all();
 }
-
+// Handle pivoting and swapping for smaller-scale matrices
 __mlu_func__ void MLUKernelPivotSwap(
     int m, int n, int step, int batch, int M_size, int N_size, float *dA,
     int lda, int stride_a, float *workspace, float *L1, int ldL1, float *orig,
@@ -880,7 +881,7 @@ __mlu_func__ void MLUKernelPivotSwap(
   }
   __sync_cluster();
 }
-
+// Handle pivoting and swapping for large-scale complex matrices
 __mlu_func__ void MLUKernelCPivotSwap2(
     int m, int n, int step, int batch, int M_size, int N_size, float *r_L1,
     float *i_L1, int ldL1, float *r_orig, float *i_orig, int ld_orig,
@@ -1028,7 +1029,7 @@ __mlu_func__ void MLUKernelCPivotSwap2(
   }
   __sync_all();
 }
-
+// Handle pivoting and swapping for smaller-scale complex matrices
 __mlu_func__ void MLUKernelCPivotSwap(
     int m, int n, int step, int batch, int M_size, int N_size, float *r_L1,
     float *i_L1, int ldL1, float *r_orig, float *i_orig, int ld_orig,
@@ -1305,13 +1306,16 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
         m_e = m_per_core + len_extra;
         m_e = (k > 0) ? m_per_core - STEP : m_e - STEP;
         if (gbj < M_size) {
+          // Perform pivoting for the current segment of the matrix
+          // Handle the matrix pivoting for the given segment
           MLUKernelPivot(m - gbj, ib - STEP, STEP, batch, M_size, N_size, k, A,
                          lda, stride_a, orig, 1, len_extra, m_e, k_max,
                          k_max_idx, k_max_gbidx, tx, taskdim, batch_id, mp, mp_,
                          m_per_core, m_per_core_, dipiv, dipiv2, info, gbstep);
         }
       }
-
+      // Perform row swaps for the pivoting step
+      // Swap rows based on the pivoting results to maintain correctness
       MLUKernelKSwap(m - gbj, ib - STEP, STEP, batch, M_size, N_size, A, lda,
                      stride_a, orig, 1, m_e, k_max, k_max_idx, k_max_gbidx,
                      k_max_arr, tx, taskdim, batch_id, mp, mp_, dipiv, dipiv2,
@@ -1410,12 +1414,14 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
         gbj = J + STEP;
         if (gbj < M_size) {
           if (m > MAX_M_SIZE_PIVOT * TaskUnion1) {
+            // Handle pivoting and swapping for large-scale matrices
             MLUKernelPivotSwap2(m - gbj, ib - STEP, STEP, batch, M_size, N_size,
                                 A, lda, stride_a, workspace, L1, ld_L1, orig, n,
                                 len_extra, m_e, max_arr, max_arr_vec, max_idx,
                                 max_gbidx, shared_y, tx, taskdim, batch_id,
                                 m_per_core, mp_, dipiv, dipiv2, info, gbstep);
           } else {
+            // Handle pivoting and swapping for smaller-scale matrices
             MLUKernelPivotSwap(m - gbj, ib - STEP, STEP, batch, M_size, N_size,
                                A, lda, stride_a, workspace, L1, ld_L1, orig, n,
                                len_extra, m_e, max_arr, max_arr_vec, max_idx,
@@ -1610,6 +1616,7 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
   __memcpy(i_extra_vec_nram, i_extra_vec, n * sizeof(float), SRAM2NRAM,
            n * sizeof(float), n * sizeof(float), n - 1);
 
+  // Choose different scal_ger operations based on rows
   if (m > MAX_M_SIZE_COMPLEX_PIVOT * TaskUnion8) {
     int mp = m / taskdim;
     const int mp_ = mp;
@@ -1652,6 +1659,8 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
         m_e = m_per_core + len_extra;
         m_e = (k > 0) ? m_per_core - STEP : m_e - STEP;
         if (gbj < M_size) {
+          // Perform pivoting for the current segment of the matrix
+          // handles the complex matrix pivoting for the given segment
           MLUKernelCPivot(m - gbj, ib - STEP, STEP, batch, M_size, N_size, k,
                           rA, iA, lda, stride_a, r_orig, i_orig, 1, len_extra,
                           m_e, k_max, k_max_idx, k_max_gbidx, tx, taskdim,
@@ -1659,7 +1668,8 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
                           dipiv2, info, gbstep);
         }
       }
-
+      // Perform row swaps for the pivoting step
+      // swaps rows based on the pivoting results to maintain correctness
       MLUKernelCKSwap(m - gbj, ib - STEP, STEP, batch, M_size, N_size, rA, iA,
                       lda, stride_a, r_orig, i_orig, 1, m_e, k_max, k_max_idx,
                       k_max_gbidx, r_k_max_arr, i_k_max_arr, tx, taskdim,
@@ -1789,15 +1799,17 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
 
     for (STEP = 0; STEP < ib; STEP++) {
       gbj = J + STEP;
-
+      // Choose different pivoting operations based on matrix size
       if (gbj < M_size) {
         if (m > MAX_M_SIZE_COMPLEX_PIVOT * TaskUnion1) {
+          // Handle pivoting and swapping for large-scale complex matrices
           MLUKernelCPivotSwap2(
               m - gbj, ib - STEP, STEP, batch, M_size, N_size, r_L1, i_L1,
               ld_L1, r_orig, i_orig, n, len_extra, m_e, max_arr, r_max_arr_vec,
               i_max_arr_vec, max_idx, max_gbidx, r_shared_y, i_shared_y, tx,
               taskdim, batch_id, m_per_core, mp_, dipiv, dipiv2, info, gbstep);
         } else {
+          // Handle pivoting and swapping for smaller-scale complex matrices
           MLUKernelCPivotSwap(
               m - gbj, ib - STEP, STEP, batch, M_size, N_size, r_L1, i_L1,
               ld_L1, r_orig, i_orig, n, len_extra, m_e, max_arr, r_max_arr_vec,

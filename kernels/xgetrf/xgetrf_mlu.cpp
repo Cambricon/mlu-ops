@@ -66,8 +66,8 @@ void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
         *k_type = CNRT_FUNC_TYPE_UNION1;
         dim_x = handle->core_num_per_cluster * 1;
       } else if (taskType == 8) {
-        *k_type = CNRT_FUNC_TYPE_UNION8;
-        dim_x = handle->core_num_per_cluster * 8;
+        *k_type = mluop::runtime::getJobLimitCapabilityCnrtFuncType(handle);
+        dim_x = ROUNDUP(handle->core_num_per_cluster * batch, max_core_num);
       }
     }
     k_dim->x = dim_x;
@@ -710,7 +710,9 @@ int xgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
                ? (int *)workspace + 2 * (m * n + m * m) * batch + m
                : (int *)workspace + batch * 64 * 64 + m;
   dinfo = diwork;  // dinfo size = 1
-  CNRT_CHECK(cnrtMemset(dinfo, 0, sizeof(int)));
+  // CNRT_CHECK(cnrtMemset(dinfo, 0, sizeof(int)));
+  cnrtMemcpy2D(handle, 1, 1, 1, (float *)dinfo, 1, 1, NULL, 1, 1, 3,
+               handle->queue);  // set dinfo to 0
 
   if (nb <= 1 || nb >= MIN(m, n)) {
     if (dtype == MLUOP_DTYPE_FLOAT)

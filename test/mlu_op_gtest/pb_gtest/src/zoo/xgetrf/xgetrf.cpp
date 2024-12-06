@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2024] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -260,7 +260,7 @@ void XgetrfExecutor::compute() {
   VLOG(4) << "call mluOpXgetrf()";
   auto dev_a = data_vector_[0].host_ptr;
   auto dev_b = data_vector_[1].host_ptr;
-  // int* ipiv =  (int*)data_vector_[2].host_ptr;
+  int *ipiv = (int *)data_vector_[2].host_ptr;
 
   auto count = parser_->input(0)->shape_count;
   int row, col, batch;
@@ -281,8 +281,8 @@ void XgetrfExecutor::compute() {
   int info;
   int mode = 0;
   mode = parser_->getProtoNode()->xgetrf_param().mode();
-  std::unique_ptr<int[]> ipiv0(new int[batch * row]);
-  int *ipiv = ipiv0.get();
+  //   std::unique_ptr<int[]> ipiv0(new int[batch * row]);
+  //   int *ipiv = ipiv0.get();
   // for (int b = 0; b < batch; b++) {
   //   for (int i = 0; i < row; i++) ipiv[i + b * row] = i;
   // }

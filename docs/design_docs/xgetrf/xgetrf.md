@@ -622,7 +622,7 @@ mluOpXgetrf
 | output      | 输入矩阵           | 输入/输出 | float、complex float | shape[batch,M,N] | 所占空间不超过7GB，且单维度不得超过整型数大小 |
 | mode        | 模式pivot/no pivot | 输入      | int                  |                  |                                               |
 | dipiv_desc  | 矩阵描述符         | 输入      |                      |                  |                                               |
-| dipiv       | 置换矩阵           | 输入      | int*                 | shape[M]         |                                               |
+| dipiv       | 置换矩阵           | 输入/输出 | int*                 | shape[batch,M]   |                                               |
 | info        | 执行状态           | 输入/输出 | int                  |                  |                                               |
 | workspace   | 额外工作空间       | 输入      | void*                |                  |                                               |
 
