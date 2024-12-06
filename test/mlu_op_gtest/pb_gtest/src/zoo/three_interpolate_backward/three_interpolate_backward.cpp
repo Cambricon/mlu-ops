@@ -41,10 +41,10 @@ void ThreeInterpolateBackwardExecutor::compute() {
   auto indices_data_ptr = data_vector_[1].device_ptr;
   auto weights_data_ptr = data_vector_[2].device_ptr;
   auto grad_features_data_ptr = data_vector_[3].device_ptr;
-  b_ = grad_output_desc->dims[0];
-  c_ = grad_output_desc->dims[1];
-  n_ = grad_output_desc->dims[2];
-  m_ = grad_features_desc->dims[2];
+  b_ = grad_output_desc->getDimIndex(0);
+  c_ = grad_output_desc->getDimIndex(1);
+  n_ = grad_output_desc->getDimIndex(2);
+  m_ = grad_features_desc->getDimIndex(2);
   VLOG(4) << "call mluOpThreeInterpolateBackward()";
   interface_timer_.start();
   MLUOP_CHECK(mluOpThreeInterpolateBackward(

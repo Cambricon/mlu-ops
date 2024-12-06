@@ -42,7 +42,7 @@ void IndiceConvolutionBackwardFilterExecutor::initParam() {
   subm_ = op_param.sub_m();
 
   diffw_trans_ = false;
-  // if (MLUOP_LAYOUT_HWCN != diffw_desc_->layout) {
+  // if (MLUOP_LAYOUT_HWCN != diffw_desc_->getLayout()) {
   //   diffw_trans_ = true;
   // }
 }
@@ -131,14 +131,14 @@ void IndiceConvolutionBackwardFilterExecutor::cpuCompute() {
   }
 
   if (diffw_trans_) {
-    temp_diffw = (float *)cpu_runtime_.allocate(diffw_desc_->total_element_num *
+    temp_diffw = (float *)cpu_runtime_.allocate(diffw_desc_->getTotalElementNum() *
                                                 sizeof(float));
   }
 
-  int64_t in_active_num = input_indice_desc_->dims[0];
-  int64_t ci = input_indice_desc_->dims[1];
-  int64_t co = diffy_indice_desc_->dims[1];
-  int64_t kd = diffw_desc_->dim == 4 ? 1 : mluOpGetTensordimD(diffw_desc_);
+  int64_t in_active_num = input_indice_desc_->getDimIndex(0);
+  int64_t ci = input_indice_desc_->getDimIndex(1);
+  int64_t co = diffy_indice_desc_->getDimIndex(1);
+  int64_t kd = diffw_desc_->getDim() == 4 ? 1 : mluOpGetTensordimD(diffw_desc_);
   int64_t kh = mluOpGetTensordimH(diffw_desc_);
   int64_t kw = mluOpGetTensordimH(diffw_desc_);
   int64_t kernel_volume = kd * kh * kw;
@@ -169,7 +169,7 @@ void IndiceConvolutionBackwardFilterExecutor::cpuCompute() {
   }
   // trans
   if (diffw_trans_) {
-    cpuTranspose(diffw, temp_diffw, kernel_volume, ci, co, diffw_desc_->layout);
+    cpuTranspose(diffw, temp_diffw, kernel_volume, ci, co, diffw_desc_->getLayout());
     cpu_runtime_.deallocate(temp_diffw);
   }
 
@@ -177,13 +177,13 @@ void IndiceConvolutionBackwardFilterExecutor::cpuCompute() {
 }
 
 int64_t IndiceConvolutionBackwardFilterExecutor::getTheoryOps() {
-  int64_t ci = input_indice_desc_->dims[1];
-  int64_t co = diffy_indice_desc_->dims[1];
-  int64_t kernel_volume = indice_pair_desc_->dims[0];
+  int64_t ci = input_indice_desc_->getDimIndex(1);
+  int64_t co = diffy_indice_desc_->getDimIndex(1);
+  int64_t kernel_volume = indice_pair_desc_->getDimIndex(0);
   int64_t total_ops = 0;
 
   // fill theory ops
-  total_ops += diffw_desc_->total_tensor_size;
+  total_ops += diffw_desc_->getTotalTensorSize();
   for (int64_t i = 0; i < kernel_volume; ++i) {
     if (indice_num_[0] <= 0) {
       continue;
@@ -194,27 +194,27 @@ int64_t IndiceConvolutionBackwardFilterExecutor::getTheoryOps() {
   }
   // transpose theory ops
   if (diffw_trans_) {
-    total_ops += diffw_desc_->total_element_num;
+    total_ops += diffw_desc_->getTotalElementNum();
   }
   return total_ops;
 }
 
 int64_t IndiceConvolutionBackwardFilterExecutor::getTheoryIoSize() {
   int32_t *indice_pair = (int32_t *)(data_vector_[2].host_ptr);
-  int64_t ci = input_indice_desc_->dims[1];
-  int64_t co = diffy_indice_desc_->dims[1];
-  int64_t in_active_num = input_indice_desc_->dims[0];
-  int64_t kernel_volume = indice_pair_desc_->dims[0];
+  int64_t ci = input_indice_desc_->getDimIndex(1);
+  int64_t co = diffy_indice_desc_->getDimIndex(1);
+  int64_t in_active_num = input_indice_desc_->getDimIndex(0);
+  int64_t kernel_volume = indice_pair_desc_->getDimIndex(0);
   int64_t theory_ios = 0;
   size_t input_indice_dwidth, diffy_indice_dwidth, indice_pair_dwidth,
       diffw_dwidth;
   MLUOP_CHECK(
-      mluOpGetSizeOfDataType(input_indice_desc_->dtype, &input_indice_dwidth));
+      mluOpGetSizeOfDataType(input_indice_desc_->getDtype(), &input_indice_dwidth));
   MLUOP_CHECK(
-      mluOpGetSizeOfDataType(diffy_indice_desc_->dtype, &diffy_indice_dwidth));
+      mluOpGetSizeOfDataType(diffy_indice_desc_->getDtype(), &diffy_indice_dwidth));
   MLUOP_CHECK(
-      mluOpGetSizeOfDataType(indice_pair_desc_->dtype, &indice_pair_dwidth));
-  MLUOP_CHECK(mluOpGetSizeOfDataType(diffw_desc_->dtype, &diffw_dwidth));
+      mluOpGetSizeOfDataType(indice_pair_desc_->getDtype(), &indice_pair_dwidth));
+  MLUOP_CHECK(mluOpGetSizeOfDataType(diffw_desc_->getDtype(), &diffw_dwidth));
 
   auto gather_nd_ios = [&](const int64_t kernel_index, const int64_t gather_num,
                            const int64_t channel,
@@ -237,7 +237,7 @@ int64_t IndiceConvolutionBackwardFilterExecutor::getTheoryIoSize() {
   };
 
   // fill theory ios
-  theory_ios += diffw_desc_->total_tensor_size;
+  theory_ios += diffw_desc_->getTotalTensorSize();
 
   for (int64_t i = 0; i < kernel_volume; ++i) {
     if (indice_num_[i] <= 0) {
@@ -254,7 +254,7 @@ int64_t IndiceConvolutionBackwardFilterExecutor::getTheoryIoSize() {
   }
   // transpose theory ios
   if (diffw_trans_) {
-    theory_ios += diffw_desc_->total_tensor_size * 2;
+    theory_ios += diffw_desc_->getTotalTensorSize() * 2;
   }
 
   return theory_ios;

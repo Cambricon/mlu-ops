@@ -95,10 +95,10 @@ void IndiceConvolutionForwardExecutor::cpuCompute() {
     return;  // skip zero element
   }
 
-  int64_t num_active_in = features_desc_->dims[0];
-  int64_t ci = features_desc_->dims[1];
-  int64_t co = features_out_desc_->dims[1];
-  bool filters_need_transpose = filters_desc_->layout != MLUOP_LAYOUT_ARRAY;
+  int64_t num_active_in = features_desc_->getDimIndex(0);
+  int64_t ci = features_desc_->getDimIndex(1);
+  int64_t co = features_out_desc_->getDimIndex(1);
+  bool filters_need_transpose = filters_desc_->getLayout() != MLUOP_LAYOUT_ARRAY;
   int64_t kd = 0;
   int64_t kh = 0;
   int64_t kw = 0;
@@ -107,9 +107,9 @@ void IndiceConvolutionForwardExecutor::cpuCompute() {
     kh = mluOpGetTensordimH(filters_desc_);
     kw = mluOpGetTensordimW(filters_desc_);
   } else {
-    kd = filters_desc_->dims[0];
-    kh = filters_desc_->dims[1];
-    kw = filters_desc_->dims[2];
+    kd = filters_desc_->getDimIndex(0);
+    kh = filters_desc_->getDimIndex(1);
+    kw = filters_desc_->getDimIndex(2);
   }
   int64_t num_filters = kd * kh * kw;
 
@@ -117,12 +117,12 @@ void IndiceConvolutionForwardExecutor::cpuCompute() {
   float *filters_transed = filters;
   if (filters_need_transpose) {
     filters_transed = (float *)cpu_runtime_.allocate(
-        filters_desc_->total_element_num * sizeof(float));
-    if (filters_desc_->layout == MLUOP_LAYOUT_NCDHW) {
+        filters_desc_->getTotalElementNum() * sizeof(float));
+    if (filters_desc_->getLayout() == MLUOP_LAYOUT_NCDHW) {
       stride[0] = 1;
       stride[1] = num_filters;
       stride[2] = num_filters * ci;
-    } else if (filters_desc_->layout == MLUOP_LAYOUT_NDHWC) {
+    } else if (filters_desc_->getLayout() == MLUOP_LAYOUT_NDHWC) {
       stride[0] = ci;
       stride[1] = 1;
       stride[2] = ci * num_filters;
@@ -142,7 +142,7 @@ void IndiceConvolutionForwardExecutor::cpuCompute() {
   int32_t features_out_data_count = parser_->getOutputDataCount(0);
   memset(
       cpu_fp32_output_[0], 0x00,
-      mluOpDataTypeBytes(features_out_desc_->dtype) * features_out_data_count);
+      mluOpDataTypeBytes(features_out_desc_->getDtype()) * features_out_data_count);
 
   for (int64_t kdi = 0; kdi < kd; ++kdi) {
     for (int64_t khi = 0; khi < kh; ++khi) {
@@ -175,13 +175,13 @@ void IndiceConvolutionForwardExecutor::cpuCompute() {
 }
 
 int64_t IndiceConvolutionForwardExecutor::getTheoryOps() {
-  int64_t ci = features_desc_->dims[1];
-  int64_t co = features_out_desc_->dims[1];
-  int64_t num_filters = indice_pairs_desc_->dims[0];
+  int64_t ci = features_desc_->getDimIndex(1);
+  int64_t co = features_out_desc_->getDimIndex(1);
+  int64_t num_filters = indice_pairs_desc_->getDimIndex(0);
   int64_t total_ops = 0;
 
   // initialize output to 0
-  total_ops += features_out_desc_->total_element_num;
+  total_ops += features_out_desc_->getTotalElementNum();
   for (int64_t i = 0; i < num_filters; ++i) {
     if (indice_num_[i] < 0) {
       continue;
@@ -196,27 +196,27 @@ int64_t IndiceConvolutionForwardExecutor::getTheoryOps() {
   // transpose filters ops
   bool filters_need_transpose = true;
   if (filters_need_transpose) {
-    total_ops += filters_desc_->total_element_num;
+    total_ops += filters_desc_->getTotalElementNum();
   }
   return total_ops;
 }
 
 int64_t IndiceConvolutionForwardExecutor::getTheoryIoSize() {
   int32_t *indice_pair = (int32_t *)(data_vector_[2].host_ptr);
-  int64_t ci = features_desc_->dims[1];
-  int64_t co = features_out_desc_->dims[2];
-  int64_t num_active_in = features_desc_->dims[0];
-  int64_t num_active_out = features_out_desc_->dims[0];
-  int64_t num_filters = indice_pairs_desc_->dims[0];
+  int64_t ci = features_desc_->getDimIndex(1);
+  int64_t co = features_out_desc_->getDimIndex(2);
+  int64_t num_active_in = features_desc_->getDimIndex(0);
+  int64_t num_active_out = features_out_desc_->getDimIndex(0);
+  int64_t num_filters = indice_pairs_desc_->getDimIndex(0);
   int64_t theory_ios = 0;
   size_t features_dwidth, filters_dwidth, indice_pairs_dwith,
       features_out_dwith;
-  MLUOP_CHECK(mluOpGetSizeOfDataType(features_desc_->dtype, &features_dwidth));
-  MLUOP_CHECK(mluOpGetSizeOfDataType(filters_desc_->dtype, &filters_dwidth));
+  MLUOP_CHECK(mluOpGetSizeOfDataType(features_desc_->getDtype(), &features_dwidth));
+  MLUOP_CHECK(mluOpGetSizeOfDataType(filters_desc_->getDtype(), &filters_dwidth));
   MLUOP_CHECK(
-      mluOpGetSizeOfDataType(indice_pairs_desc_->dtype, &indice_pairs_dwith));
+      mluOpGetSizeOfDataType(indice_pairs_desc_->getDtype(), &indice_pairs_dwith));
   MLUOP_CHECK(
-      mluOpGetSizeOfDataType(features_out_desc_->dtype, &features_out_dwith));
+      mluOpGetSizeOfDataType(features_out_desc_->getDtype(), &features_out_dwith));
 
   auto gather_scatter_ios = [&](const int64_t index, const int64_t num,
                                 const int64_t channel,
@@ -234,10 +234,10 @@ int64_t IndiceConvolutionForwardExecutor::getTheoryIoSize() {
   };
 
   // fill ios
-  theory_ios += filters_desc_->total_tensor_size;
+  theory_ios += filters_desc_->getTotalTensorSize();
 
   // transpose ios
-  theory_ios += filters_desc_->total_element_num * 2;
+  theory_ios += filters_desc_->getTotalElementNum() * 2;
 
   for (int64_t i = 0; i < num_filters; ++i) {
     if (indice_num_[i] <= 0) {

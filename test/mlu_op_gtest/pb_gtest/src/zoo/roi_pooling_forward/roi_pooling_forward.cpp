@@ -27,7 +27,7 @@
 
 #define getParam(ty, ctx) \
   (ty) parser_->getProtoNode()->roi_pooling_forward_param().ctx()
-#define getTensorDims(x, y) tensor_desc_[x].tensor->dims[y]
+#define getTensorDims(x, y) tensor_desc_[x].tensor->getDimIndex(y)
 #define getTensorDesc(x) tensor_desc_[x].tensor
 #define getDevicePtr(x) data_vector_[x].device_ptr
 

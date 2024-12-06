@@ -113,19 +113,19 @@ void BorderAlignBackwardExecutor::cpuCompute() {
   float *boxes = cpu_fp32_input_[1];
   float *argmax_idx = cpu_fp32_input_[2];
   float *grad_input = cpu_fp32_output_[0];
-  const int32_t box_size = boxes_desc->dims[1];
-  const int32_t channels = grad_output_desc->dims[3];
-  const int32_t height = grad_input_desc->dims[1];
-  const int32_t width = grad_input_desc->dims[2];
-  const int32_t N = grad_output_desc->dims[0];
-  const int32_t H = grad_output_desc->dims[1];
-  const int32_t W = grad_output_desc->dims[2];
-  const int32_t C = grad_output_desc->dims[3];
+  const int32_t box_size = boxes_desc->getDimIndex(1);
+  const int32_t channels = grad_output_desc->getDimIndex(3);
+  const int32_t height = grad_input_desc->getDimIndex(1);
+  const int32_t width = grad_input_desc->getDimIndex(2);
+  const int32_t N = grad_output_desc->getDimIndex(0);
+  const int32_t H = grad_output_desc->getDimIndex(1);
+  const int32_t W = grad_output_desc->getDimIndex(2);
+  const int32_t C = grad_output_desc->getDimIndex(3);
 
-  const int32_t N1 = grad_input_desc->dims[0];
-  const int32_t H1 = grad_input_desc->dims[1];
-  const int32_t W1 = grad_input_desc->dims[2];
-  const int32_t C1 = grad_input_desc->dims[3];
+  const int32_t N1 = grad_input_desc->getDimIndex(0);
+  const int32_t H1 = grad_input_desc->getDimIndex(1);
+  const int32_t W1 = grad_input_desc->getDimIndex(2);
+  const int32_t C1 = grad_input_desc->getDimIndex(3);
   float x_stride = 0;
   float y_stride = 0;
   float stride = 0;
@@ -260,9 +260,9 @@ void BorderAlignBackwardExecutor::cpuCompute() {
 int64_t BorderAlignBackwardExecutor::getTheoryOps() {
   auto input_desc = parser_->getMetaTensor(0).tensor;
   auto boxes_desc = parser_->getMetaTensor(1).tensor;
-  const int32_t N = input_desc->dims[0];
-  const int32_t C = input_desc->dims[3] / 4;
-  const int32_t K = boxes_desc->dims[1];
+  const int32_t N = input_desc->getDimIndex(0);
+  const int32_t C = input_desc->getDimIndex(3) / 4;
+  const int32_t K = boxes_desc->getDimIndex(1);
 
   const int64_t theory_ops = N * K * 4 * C * 3;
   return theory_ops;

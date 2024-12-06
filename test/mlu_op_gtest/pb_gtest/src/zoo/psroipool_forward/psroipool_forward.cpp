@@ -95,13 +95,13 @@ void PsroipoolForwardExecutor::cpuCompute() {
   auto output_cpu = cpu_fp32_output_[0];
   auto mapping_channel_cpu = cpu_fp32_output_[1];
 
-  const int input_n = input_desc->dims[0];
-  const int input_h = input_desc->dims[1];
-  const int input_w = input_desc->dims[2];
-  const int input_c = input_desc->dims[3];
+  const int input_n = input_desc->getDimIndex(0);
+  const int input_h = input_desc->getDimIndex(1);
+  const int input_w = input_desc->getDimIndex(2);
+  const int input_c = input_desc->getDimIndex(3);
 
-  const int rois_n = rois_desc->dims[0];
-  const int rois_offset = rois_desc->dims[1];
+  const int rois_n = rois_desc->getDimIndex(0);
+  const int rois_offset = rois_desc->getDimIndex(1);
 
   for (int roi_id = 0; roi_id < rois_n; roi_id++) {
     int out_batch_offset =

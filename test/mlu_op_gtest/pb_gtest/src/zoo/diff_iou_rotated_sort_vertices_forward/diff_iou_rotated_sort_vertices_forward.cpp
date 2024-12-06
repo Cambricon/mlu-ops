@@ -98,9 +98,9 @@ void DiffIouRotatedSortVerticesForwardExecutor::cpuCompute() {
   float *data_idx = (float *)cpu_fp32_output_[0];
   auto vertices_desc = tensor_desc_[0].tensor;
 
-  int dim_b = vertices_desc->dims[0];
-  int dim_n = vertices_desc->dims[1];
-  int dim_m = vertices_desc->dims[2];
+  int dim_b = vertices_desc->getDimIndex(0);
+  int dim_n = vertices_desc->getDimIndex(1);
+  int dim_m = vertices_desc->getDimIndex(2);
 
   memset(data_idx, 0, dim_b*dim_n*9 * sizeof(int));
   for (int bi = 0; bi < dim_b; ++bi) {
