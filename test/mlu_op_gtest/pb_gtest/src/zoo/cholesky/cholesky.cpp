@@ -20,6 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include <cstdio>
 #include <vector>
 #include "cholesky.h"
 // #include "kernels/kernel_wrapper/export_statement.h"
@@ -37,7 +38,7 @@ void CholeskyExecutor::paramCheck() {
 }
 
 void set_matrix_zero(float* A, bool upper, bool trans_, int n_, int ldda_,
-                     mluOpDataType_t type_) {
+mluOpDataType_t type_) {
   if (trans_) {
     for (int64_t i = 0; i < n_; i++) {
       for (int64_t j = 0; j < ldda_; j++) {
@@ -89,7 +90,7 @@ void set_matrix_zero(float* A, bool upper, bool trans_, int n_, int ldda_,
 }
 
 void trans_mul(float* A, float* C, int lda, bool upper_, bool trans_, int n_,
-               int ldda_, mluOpDataType_t type_, bool diag_add) {
+int ldda_, mluOpDataType_t type_, bool diag_add) {
   if (trans_) {
     for (int64_t i = 0; i < lda; i++) {
       for (int64_t j = 0; j < n_; j++) {
@@ -106,7 +107,7 @@ void trans_mul(float* A, float* C, int lda, bool upper_, bool trans_, int n_,
           A[j * lda * 2 + i * 2 + 1] = 0.0;
 
           if (j == i && diag_add) {
-            A[j * lda * 2 + i * 2] = 1.0;
+            A[j * lda * 2 + i * 2] = (float)n_;
           }
         }
         for (int64_t k = 0; k <= i; k++) {
@@ -186,7 +187,7 @@ void trans_mul(float* A, float* C, int lda, bool upper_, bool trans_, int n_,
 }
 
 void fill_zero(float* A, bool upper_, int batch_, int n_, int ldda_,
-               mluOpDataType_t type_, bool if_conj) {
+mluOpDataType_t type_, bool if_conj) {
   int stride = n_ * ldda_;
   if (type_ == MLUOP_DTYPE_FLOAT) {
   } else {
@@ -229,7 +230,7 @@ void set_diag_imag_one(float* A, int batch_, int n_, int ldda_) {
 }
 
 void print_matrix(int batch, float* A, int lda, bool trans_, int n_, int ldda_,
-                  mluOpDataType_t type_) {
+mluOpDataType_t type_) {
   for (int x = 0; x < batch; x++) {
     printf("batch:%d\n", x);
     if (trans_) {
@@ -280,7 +281,7 @@ void cpu_transfer_data(float* dst, float* src, uint64_t data_size) {
 }
 
 void mlu_transfer_data(float* dst, float* src, uint64_t data_size,
-                       cnrtMemTransDir_t dir) {
+cnrtMemTransDir_t dir) {
   uint64_t size_block = 1024 * 1024 * 1024;
   uint64_t transfer_num = data_size / size_block;
   uint64_t transfer_remain = data_size % size_block;
@@ -299,7 +300,6 @@ void mlu_transfer_data(float* dst, float* src, uint64_t data_size,
 }
 
 void CholeskyExecutor::prepareComputeParam() {
-  VLOG(0) << "start prepare compute parameter." << std::endl;
   int long_int_size = sizeof(int64_t);
   int int_size = sizeof(int);
   auto input_desc_ = (tensor_desc_[0].tensor);
@@ -319,32 +319,32 @@ void CholeskyExecutor::prepareComputeParam() {
     int dim = input_desc_->dim;
     stride_ = (input_desc_->strides)[dim - 1];
     ldda_ = input_desc_->dims[1];
-    VLOG(0) << "n:" << n_ << ", lda:" << ldda_ << ", stride:" << stride_
+    VLOG(4) << "n:" << n_ << ", lda:" << ldda_ << ", stride:" << stride_
             << ", upper:" << upper_<< ",trans:" << trans_ << std::endl;
     int size = input_desc_->dims[0];
-    VLOG(0) << "size:" << size << ", dim:" << dim << std::endl;
-    VLOG(0) << "strides:" << std::endl;
+    VLOG(4) << "size:" << size << ", dim:" << dim << std::endl;
+    VLOG(4) << "strides:" << std::endl;
     for (int i = 0; i < dim; i++) {
-      VLOG(0) << (input_desc_->strides)[i] << " ";
+      VLOG(4) << (input_desc_->strides)[i] << " ";
     }
-    VLOG(0) << "data vector length : " << data_vector_.size() << std::endl;
+    VLOG(4) << "data vector length : " << data_vector_.size() << std::endl;
   } else if (dim_size == 3) {
     batch_size_ = input_shape.dims(0);
     n_ = input_shape.dims(1);
     int dim = input_desc_->dim;
     stride_ = (input_desc_->strides)[dim - 1];
     ldda_ = input_desc_->dims[2];
-    VLOG(0) << "batch_size:" << batch_size_ << ", n:" << n_ << ", lda:"
+    VLOG(4) << "batch_size:" << batch_size_ << ", n:" << n_ << ", lda:"
             << ldda_ << ", stride:" << stride_ << ", upper"<< upper_
             << ",trans:" << trans_<< std::endl;
 
     int size = input_desc_->dims[1];
-    VLOG(0) << "size:" << size << ", dim:" << dim << std::endl;
-    VLOG(0) << "strides:" << std::endl;
+    VLOG(4) << "size:" << size << ", dim:" << dim << std::endl;
+    VLOG(4) << "strides:" << std::endl;
     for (int i = 0; i < dim; i++) {
-      VLOG(0) << (input_desc_->strides)[i] << " ";
+      VLOG(4) << (input_desc_->strides)[i] << " ";
     }
-    VLOG(0) << "data vector length : " << data_vector_.size() << std::endl;
+    VLOG(4) << "data vector length : " << data_vector_.size() << std::endl;
   }
   uint64_t total_size = batch_size_ * n_ * ldda_ * type_size_;
 
@@ -451,7 +451,7 @@ void CholeskyExecutor::compute() {
 }
 
 void cpu_compute(float* cpu_c, int n_, int ldda_, bool upper_, bool trans_,
-                 mluOpDataType_t type_) {
+mluOpDataType_t type_) {
   if (trans_) {
     for (int64_t i = 0; i < n_; i++) {
       float dia;
