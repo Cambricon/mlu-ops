@@ -1014,7 +1014,7 @@ mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n,
   float* temp_result = workspace + batch * m * m*2;
   float* sgemm_workspace = temp_result + batch * m * n*2;
 
-  CNRT_CHECK(cnrtMemset(workspace, 0.0, batch * m * m * sizeof(float)));
+  KernelMyMemsetzero(batch * m * m, workspace, queue);
 
   float* h_i;
   h_i = (float*)malloc(m * m * sizeof(float));
@@ -1062,7 +1062,6 @@ mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n,
   sgemm(batch, false, false, m2, m2, m1, -1.0f, 0.0f, workspace2, m, m * m,
         workspace1 + m1 * m, m, m * m, workspace1 + m1 * m, m, m * m, handle,
         sgemm_workspace);
-  cnrtQueueSync(queue);
 
   sgemm(batch, false, true, n, m, m, 1.0f, 0.0f, d_b, ldb, stride,
         workspace, m, m * m, temp_result, m, m*n, handle, sgemm_workspace);
@@ -1070,7 +1069,6 @@ mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n,
 
 
 
-  cnrtQueueSync(queue);
 
   cnrtDim3_t dim1;
   dim1.y = 1;
@@ -1081,8 +1079,6 @@ mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n,
 
   KernelMyCnrtMemcpy3D(dim1, func_type1, queue, batch, n, m,
         temp_result, m, m * n, d_b, ldb, stride, 0);
-
-  cnrtQueueSync(queue);
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -1145,6 +1141,21 @@ mluOpStatus_t spotrf_recursion(int batch, int stride, bool trans, bool uplo,
                        OFFSET_ROW(d_A, n1, n1), lda, gbstep + n1, handle,
                        workspace);
   }
+  return MLUOP_STATUS_SUCCESS;
+}
+
+__mlu_entry__ void MLUKernelMyCnrtMemcpy3D(int num, float* dA) {
+  __gdramset(dA, num * sizeof(float), 0);
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelMyMemsetzero(int num, float* dA,
+                                               cnrtQueue_t queue) {
+  cnrtDim3_t dim;
+  dim.y = 1;
+  dim.z = 1;
+  dim.x = 1;
+  cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_BLOCK;
+  KERNEL_CHECK(MLUKernelMyCnrtMemcpy3D<<<dim, func_type, queue>>>(num, dA));
   return MLUOP_STATUS_SUCCESS;
 }
 

@@ -630,18 +630,15 @@ mluOpStatus_t cgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k,
 
   sgemm(batch, trans_a, trans_b, m, n, k, alpha, beta, d_ra, lda, s_stride_a,
         d_rb, ldb, s_stride_b, r_c, ldc, s_stride_c, handle, workspace);
-  cnrtQueueSync(queue);
 
   sgemm(batch, trans_a, trans_b, m, n, k, alpha, 1, d_ia, lda, s_stride_a, d_ib,
         ldb, s_stride_b, r_c, ldc, s_stride_c, handle, workspace);
-  cnrtQueueSync(queue);
 
   sgemm(batch, trans_a, trans_b, m, n, k, -alpha, beta, d_ra, lda, s_stride_a,
         d_ib, ldb, s_stride_b, i_c, ldc, s_stride_c, handle, workspace);
-  cnrtQueueSync(queue);
+
   sgemm(batch, trans_a, trans_b, m, n, k, alpha, 1, d_ia, lda, s_stride_a, d_rb,
         ldb, s_stride_b, i_c, ldc, s_stride_c, handle, workspace);
-  cnrtQueueSync(queue);
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -688,21 +685,18 @@ mluOpStatus_t cgemm_real(int batch, bool trans_a, bool trans_b, int m, int n,
   sgemm(batch, trans_a, trans_b, m, n, k, alpha, beta, copy_ra, copy_lda,
         copy_stride_a, d_rb, ldb, s_stride_b, r_c, ldc, s_stride_c, handle,
         sgemm_workspace);
-  cnrtQueueSync(queue);
 
   sgemm(batch, trans_a, trans_b, m, n, k, -alpha, 1, copy_ia, copy_lda,
         copy_stride_a, d_ib, ldb, s_stride_b, r_c, ldc, s_stride_c, handle,
         sgemm_workspace);
-  cnrtQueueSync(queue);
 
   sgemm(batch, trans_a, trans_b, m, n, k, alpha, beta, copy_ra, copy_lda,
         copy_stride_a, d_ib, ldb, s_stride_b, i_c, ldc, s_stride_c, handle,
         sgemm_workspace);
-  cnrtQueueSync(queue);
+
   sgemm(batch, trans_a, trans_b, m, n, k, alpha, 1, copy_ia, copy_lda,
         copy_stride_a, d_rb, ldb, s_stride_b, i_c, ldc, s_stride_c, handle,
         sgemm_workspace);
-  cnrtQueueSync(queue);
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -744,7 +738,6 @@ mluOpStatus_t complex_inverse(int batch, float* rd_input, float* id_input,
                     id_input + m1 * ld_input + m1, ld_input, stride_input,
                     output2_r, output2_i, ld_output, stride_output, m2, handle,
                     workspace);
-    cnrtQueueSync(queue);
 
     float* cgemm_workspace = workspace + batch * 2 * (m2 * m1);
     float* temp_r = workspace;
@@ -756,12 +749,11 @@ mluOpStatus_t complex_inverse(int batch, float* rd_input, float* id_input,
           id_input + m1 * ld_input, ld_input, stride_input, output1_r,
           output1_i, ld_output, stride_output, temp_r, temp_i, temp_ld,
           temp_stride, handle, cgemm_workspace);
-    cnrtQueueSync(queue);
+
     cgemm(batch, false, false, m2, m2, m1, -1.0f, 0.0f, output2_r, output2_i,
           ld_output, stride_output, temp_r, temp_i, temp_ld, temp_stride,
           rd_output + m1 * ld_output, id_output + m1 * ld_output, ld_output,
           stride_output, handle, cgemm_workspace);
-    cnrtQueueSync(queue);
   }
 
   return MLUOP_STATUS_SUCCESS;
@@ -774,15 +766,14 @@ mluOpStatus_t ctrsm(int batch, int stride, int m, int n, float* rd_a,
   cnrtQueue_t queue;
   mluOpGetQueue(handle, &queue);
   float* workspace = ctrsm_workspace + batch * m * m * 2;
-  CNRT_CHECK(
-      cnrtMemset(ctrsm_workspace, 0.0, batch * m * m * 2 * sizeof(float)));
+
+  KernelMyMemsetzero(batch * m * m * 2, ctrsm_workspace, queue);
   float *r_inverse_result, *i_inverse_result;
   r_inverse_result = ctrsm_workspace;
   i_inverse_result = r_inverse_result + batch * m * m;
 
   complex_inverse(batch, rd_a, id_a, lda, stride, r_inverse_result,
                   i_inverse_result, m, m * m, m, handle, workspace);
-  cnrtQueueSync(queue);
 
   cgemm_real(batch, false, true, n, m, m, 1.0, 0.0f, rd_b, id_b, ldb, stride,
              r_inverse_result, i_inverse_result, m, m * m, rd_b, id_b, ldb,
@@ -799,7 +790,6 @@ mluOpStatus_t cherk(int batch, int stride, int n, int k, float* rd_a,
         id_a, lda, stride, rd_c, id_c, ldc, stride, handle, workspace);
   cnrtQueue_t queue;
   mluOpGetQueue(handle, &queue);
-  cnrtQueueSync(queue);
   set_half_zero(batch, stride, rd_c, ldc, n, handle);
   set_half_zero(batch, stride, id_c, ldc, n, handle);
   return MLUOP_STATUS_SUCCESS;

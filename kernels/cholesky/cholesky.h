@@ -120,4 +120,7 @@ mluOpStatus_t KernelMyCnrtMemcpy3D(
 mluOpStatus_t MLUOP_WIN_API KernelMyCnrtMemcpy1D(
     float *dA, float *dB, int n, cnrtQueue_t queue, int mode);
 
+mluOpStatus_t MLUOP_WIN_API KernelMyMemsetzero(int num, float* dA,
+                                               cnrtQueue_t queue);
+
 #endif
