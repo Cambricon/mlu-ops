@@ -303,7 +303,7 @@ function potf2_smlpout_device(m, A0, A):
     id = taskId % 4
     shared_data = allocate_shared_data()
     sdata_A = shared_data
-    sdata_B = shared_data + m * POTF_NB / TASK_NUM * 4
+    sdata_B = shared_data + m * POTFNB / TASKNUM * 4
 
     // Perform matrix multiplication with fixed width
     small_gemm(m, A0, sdata_A, sdata_B)
@@ -311,17 +311,17 @@ function potf2_smlpout_device(m, A0, A):
     sync_cluster()
 
     // Perform Cholesky factorization with fixed size
-    spotf2_sminout_device(m, sdata_A, POTF_NB)
+    spotf2_sminout_device(m, sdata_A, POTFNB)
 
     sync_cluster()
 
-    span = POTF_NB
+    span = POTFNB
 
     if id == 0:
         for i from 0 to span:
-            copy_memory(A + (i * lda), sdata_A + i * POTF_NB, i + 1, SRAM2LDRAM)
+            copy_memory(A + (i * lda), sdata_A + i * POTFNB, i + 1, SRAM2LDRAM)
     else if id * span < m:
-        copy_memory(A + (id * POTF_NB * lda), sdata_A + id * POTF_NB * POTF_NB, POTF_NB, SRAM2LDRAM, span - 1)
+        copy_memory(A + (id * POTFNB * lda), sdata_A + id * POTFNB * POTFNB, POTFNB, SRAM2LDRAM, span - 1)
 
     sync_cluster()
 
@@ -404,14 +404,25 @@ function inverse_kernel(d_input, ld_input, stride_input, d_output, ld_output, st
 
 #### 3.3.2 性能测试
 float类型单batch性能测试如下，表格中数字为运行时间，单位为微秒（us），最右侧一列为mlu的运行时间与pytorch在gpu上的运行时间的比值：
+upper为false：
+
 | 规模 | pytorch | mlu   | mlu/pytorch |
 | ---- | ------- | ----- | ----------- |
 | 64   | 75.9    | 280   | 3.689065    |
 | 256  | 161.5   | 1177  | 7.287926    |
 | 1024 | 709     | 5576  | 7.864598    |
 | 3000 | 3182    | 24220 | 7.611565    |
+upper为true：
+
+| 规模 | pytorch | mlu   | mlu/pytorch |
+| ---- | ------- | ----- | ----------- |
+| 64   | 80.9    | 321   | 3.967862    |
+| 256  | 232.7   | 1554  | 6.678126    |
+| 1024 | 988.7   | 7610  | 7.696976    |
+| 3000 | 4173.9  | 31193 | 7.473346    |
 
 float类型多batch性能测试：
+upper为false：
 
 | 规模    | pytorch | mlu    | mlu/pytorch |
 | ------- | ------- | ------ | ----------- |
@@ -419,8 +430,18 @@ float类型多batch性能测试：
 | 16,512  | 1003    | 5405   | 5.388833    |
 | 32,3000 | 97264   | 143560 | 1.475983    |
 
+upper为true：
+
+| 规模     | pytorch | mlu  | mlu/pytorch |
+| -------- | ------- | ---- | ----------- |
+| 32,64    | 113     | 582  | 5.150442    |
+| 16, 512  | 1053    | 7041 | 6.68661     |
+| 32, 3000 | 105062  |      | 0           |
+
 float类型的cholesky分解在mlu端运行时间在pytorch运行时间的10倍以内。
 complex类型单batch性能测试：
+
+upper为false：
 
 | 规模 | pytorch | mlu   | mlu/pytorch |
 | ---- | ------- | ----- | ----------- |
@@ -429,15 +450,36 @@ complex类型单batch性能测试：
 | 128  | 110     | 1465  | 13.31818    |
 | 3000 | 4826    | 76277 | 15.80543    |
 
+upper为true：
+
+| 规模 | pytorch | mlu   | mlu/pytorch |
+| ---- | ------- | ----- | ----------- |
+| 16   | 60      | 87    | 1.45        |
+| 64   | 94      | 671   | 7.138298    |
+| 128  | 162     | 1584  | 9.777778    |
+| 3000 | 7124    | 81768 | 11.47782    |
+
 complex类型多batch性能测试：
+
+upper为false：
 
 | 规模     | pytorch | mlu    | mlu/pytorch |
 | -------- | ------- | ------ | ----------- |
 | 32, 16   | 56      | 68     | 1.214286    |
-| 32, 64   | 73      | 612    | 8.383562    |
+| 32, 64   | 73      | 1510   | 20.68493    |
 | 32, 128  | 218     | 3786   | 17.36697    |
 | 4, 1024  | 2698    | 24535  | 9.093773    |
 | 32, 3000 | 132817  | 922743 | 6.947477    |
+
+upper为true：
+
+| 规模     | pytorch | mlu   | mlu/pytorch |
+| -------- | ------- | ----- | ----------- |
+| 32, 16   | 63      | 166   | 2.634921    |
+| 32, 64   | 119     | 1534  | 12.89076    |
+| 32, 128  | 212     | 4700  | 22.16981    |
+| 4, 1024  | 3183    | 26718 | 8.393968    |
+| 32, 3000 | 142568  | 107539 | 0           |
 
 对于mlu/pytorch>10的规模，例如batch为32，N为128时，使用cnperf-cli进行性能分析，如下图所示
 ![image](32_128性能分析.png)
