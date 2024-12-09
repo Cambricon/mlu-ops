@@ -119,21 +119,18 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                            handle, MLUOP_DTYPE_FLOAT, workspace));
   }
 
-  cnrtQueueSync(queue);
   int stride = size_a * lda;
 
   if (dtype == MLUOP_DTYPE_FLOAT) {
     int row = is_row_major ? lda : size_a;
     int nb = NB;
     set_half_zero(batch_size, stride, d_output, lda, lda, handle);
-    cnrtQueueSync(queue);
     for (int j = 0; j < row; j += nb) {
       jb = std::min(nb, row - j);
       CHECK_RETURN("mluOpCholesky",
                    ssyrk(batch_size, stride, false, is_row_major, jb, j,
                          OFFSET_ROW(d_output, j, 0), lda,
                          OFFSET_ROW(d_output, j, j), lda, handle, workspace));
-      cnrtQueueSync(queue);
       CHECK_RETURN("mluOpCholesky",
                    spotrf_recursion(batch_size, stride, is_row_major, false,
                                       jb, recnb, OFFSET_ROW(d_output, j, j),
@@ -146,7 +143,6 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                   OFFSET_ROW(d_output, j, 0), lda, stride,
                   OFFSET_ROW(d_output, j + jb, j), lda, stride, handle,
                   workspace));
-        cnrtQueueSync(queue);
       }
       if (j + jb < row) {
         CHECK_RETURN(
@@ -154,16 +150,13 @@ calculate_body(mluOpHandle_t handle, int batch_size,
             strsm(batch_size, stride, false, is_row_major, jb, row - j - jb,
                   OFFSET_ROW(d_output, j, j), lda,
                   OFFSET_ROW(d_output, j + jb, j), lda, handle, workspace));
-        cnrtQueueSync(queue);
       }
     }
 
     if (upper) {
-      cnrtQueueSync(queue);
       CHECK_RETURN("mluOpCholesky",
                    transpose(batch_size, size_a, size_a, d_output, workspace,
                              handle, dtype, workspace));
-      cnrtQueueSync(queue);
       KernelMyCnrtMemcpy1D(workspace, d_output,
         size_a * lda * ((uint64_t)batch_size), queue, 0);
     }
@@ -177,7 +170,6 @@ calculate_body(mluOpHandle_t handle, int batch_size,
 
     set_half_zero(batch_size, stride, r_start, lda, lda, handle);
     set_half_zero(batch_size, stride, i_start, lda, lda, handle);
-    cnrtQueueSync(queue);
 
     for (int j = 0; j < row; j += nb) {
       jb = std::min(nb, row - j);
@@ -185,12 +177,10 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                    cherk(batch_size, stride, jb, j, r_start + j * lda,
                          i_start + j * lda, lda, r_start + j * lda + j,
                          i_start + j * lda + j, lda, handle, workspace));
-      cnrtQueueSync(queue);
       CHECK_RETURN("mluOpCholesky",
                    cpotrf_recursion(
                        batch_size, stride, jb, recnb, r_start + j * lda + j,
                        i_start + j * lda + j, lda, handle, workspace));
-      cnrtQueueSync(queue);
       if (j + jb < row) {
         CHECK_RETURN("mluOpCholesky",
                      cgemm(batch_size, false, true, row - j - jb, jb, j, -1.0f,
@@ -200,8 +190,6 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                            lda, stride, OFFSET_ROW(r_start, j + jb, j),
                            OFFSET_ROW(i_start, j + jb, j), lda, stride, handle,
                            workspace));
-
-        cnrtQueueSync(queue);
       }
       if (j + jb < row) {
         CHECK_RETURN(
@@ -210,39 +198,26 @@ calculate_body(mluOpHandle_t handle, int batch_size,
                   OFFSET_ROW(r_start, j, j), OFFSET_ROW(i_start, j, j), lda,
                   OFFSET_ROW(r_start, j + jb, j),
                   OFFSET_ROW(i_start, j + jb, j), lda, handle, workspace));
-        cnrtQueueSync(queue);
       }
     }
 
     CHECK_RETURN("mluOpCholesky",
                  transpose(batch_size, 2, size_a * size_a, d_output, workspace,
                            handle, MLUOP_DTYPE_FLOAT, workspace));
-    cnrtQueueSync(queue);
 
     if (upper) {
-      cnrtQueueSync(queue);
       CHECK_RETURN("mluOpCholesky",
                    transpose(batch_size, size_a, size_a, workspace, d_output,
                              handle, dtype, workspace));
-      cnrtQueueSync(queue);
       CHECK_RETURN("mluOpCholesky", conj_complex(batch_size, size_a, size_a,
                                                  d_output, d_output, handle));
-      cnrtQueueSync(queue);
     } else {
-      if (batch_size > 16) {
         KernelMyCnrtMemcpy1D(workspace,
-          d_output, size_a * lda * 16, queue, 0);
-        KernelMyCnrtMemcpy1D(workspace + type_size / 4 * size_a * lda * 16,
-          d_output + type_size / 4 * size_a * lda * 16,
-          size_a * lda * ((uint64_t)batch_size - 16), queue, 0);
-      } else {
-        KernelMyCnrtMemcpy1D(workspace,
-          d_output, size_a * lda * ((uint64_t)batch_size), queue, 0);
-      }
+          d_output, type_size / 4 * size_a * lda *
+          ((uint64_t)batch_size), queue, 0);
     }
   }
 
-  cnrtQueueSync(queue);
 
   return MLUOP_STATUS_SUCCESS;
 }

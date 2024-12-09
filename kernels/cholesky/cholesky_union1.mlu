@@ -783,12 +783,12 @@ mluOpStatus_t strsm_rectile(int batch, int stride, bool upper, bool trans,
     if (batch == 1) {
       func_type = CNRT_FUNC_TYPE_UNION1;
     } else if (batch == 2) {
-      func_type = CNRT_FUNC_TYPE_UNION2;
+      func_type = CNRT_FUNC_TYPE_UNION1;
     } else if (batch <= 4) {
-      func_type = CNRT_FUNC_TYPE_UNION4;
+      func_type = CNRT_FUNC_TYPE_UNION1;
       carry_batch = 4;
     } else {
-      func_type = CNRT_FUNC_TYPE_UNION8;
+      func_type = CNRT_FUNC_TYPE_UNION1;
       carry_batch = batch < 8 ? 8 : batch;
       if (batch <= 8) {
         carry_batch = 8;
@@ -1040,12 +1040,12 @@ mluOpStatus_t strsm(int batch, int stride, bool upper, bool trans, int m, int n,
     if (batch == 1) {
       func_type = CNRT_FUNC_TYPE_UNION1;
     } else if (batch == 2) {
-      func_type = CNRT_FUNC_TYPE_UNION2;
+      func_type = CNRT_FUNC_TYPE_UNION1;
     } else if (batch <= 4) {
-      func_type = CNRT_FUNC_TYPE_UNION4;
+      func_type = CNRT_FUNC_TYPE_UNION1;
       carry_batch = 4;
     } else {
-      func_type = CNRT_FUNC_TYPE_UNION8;
+      func_type = CNRT_FUNC_TYPE_UNION1;
       carry_batch = batch < 8 ? 8 : batch;
     }
     dim.x = carry_batch * 4;
@@ -1201,9 +1201,9 @@ mluOpStatus_t MLUOP_WIN_API KernelMyCnrtMemcpy1D(
   cnrtDim3_t dim1;
   dim1.y = 1;
   dim1.z = 1;
-  dim1.x = 4;
+  dim1.x = 1;
 
-  cnrtFunctionType_t func_type1 = CNRT_FUNC_TYPE_UNION1;
+  cnrtFunctionType_t func_type1 = CNRT_FUNC_TYPE_BLOCK;
   KERNEL_CHECK(MLUKernelMyCnrtMemcpy3D<<<dim1, func_type1, queue>>>(
       1, 1, n, dA, n, 0, dB, n, 0, mode));
 
