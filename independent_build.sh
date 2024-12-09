@@ -51,6 +51,7 @@ long_args=(
   help
   mlu370 # mlu arch
   mlu590
+  mtp613
   no_prepare
   perf
   prepare
@@ -67,6 +68,9 @@ add_mlu_arch_support () {
       ;;
     --mlu590)
       bang_arch="mtp_592;"
+      ;;
+    --mtp613)
+      bang_arch="mtp_613;"
       ;;
     *)
       ;;

@@ -57,6 +57,7 @@ typedef enum {
   MLUOP_MLU270 = 270,
   MLUOP_MLU370 = 372,
   MLUOP_MLU590 = 592,
+  MLUOP_MTP613 = 613,
   MLUOP_MLU290 = 290,
 } mluOpDevType_t;
 
