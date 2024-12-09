@@ -82,6 +82,7 @@ __mlu_func__ void sgemm_fixwidth_device(int m, int k, float* A0, const int lda,
              GDRAM2NRAM, POTFNB * sizeof(float), lda * sizeof(float),
              span - 1);
   __memset_nram(rC, POTFNB * span, (float)ZERO);
+  __sync_cluster();
 
   if (id == 0) {
     __memcpy(sB, rp, POTFNB * POTFNB * sizeof(float), NRAM2SRAM);
@@ -93,6 +94,7 @@ __mlu_func__ void sgemm_fixwidth_device(int m, int k, float* A0, const int lda,
     __bang_move(rA, rp, POTFNB * span * sizeof(float));
     __memcpy(rB, sB, POTFNB * POTFNB * sizeof(float), SRAM2NRAM);
 
+    __sync_cluster();
     if (id * span < m)
       __memcpy_async(rp, OFFSET_ROW(A0, span * id, iter + POTFNB),
                      POTFNB * sizeof(float), GDRAM2NRAM,
