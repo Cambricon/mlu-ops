@@ -283,6 +283,21 @@ mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
   PARAM_CHECK("mluOpCholesky",
               dtype == MLUOP_DTYPE_FLOAT || dtype == MLUOP_DTYPE_COMPLEX_FLOAT);
 
+  // check 0 element
+  if (mluOpGetTensorElementNum(input_desc) == 0) {
+    VLOG(5) << "mluOpCholesky" << "skip zero element tensor.";
+    return MLUOP_STATUS_SUCCESS;
+  }
+
+  // check largetensor
+  uint64_t num_input = mluOpGetTensorElementNum(input_desc);
+  TENSOR_NUM_CHECK("mluOpCholesky", num_input, LARGE_TENSOR_NUM,
+                   "input tensor num is too large. ");
+
+  PARAM_CHECK("mluOpCholesky", input_desc->dim <= MLUOP_DIM_MAX);
+  PARAM_CHECK("mluOpCholesky",
+    needStrideProcess(input_desc, output_desc) == false);
+
   int dim = input_desc->dim;
   int size_a = 0, lda = 0, size_c = 0, ldc = 0;
 
