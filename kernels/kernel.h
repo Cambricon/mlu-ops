@@ -31,7 +31,7 @@
  * Macros for mluop kernels
  ******************************************************************************/
 // in future, can be "__BANG_ARCH__ == 592 || __BANG_ARCH__ == xxx || ...)"
-#define ARCH_SUPPORT_LARGE_TENSOR (__BANG_ARCH__ == 592)
+#define ARCH_SUPPORT_LARGE_TENSOR (__BANG_ARCH__ >= 592)
 
 #define MAX_WRAM_SIZE (__MLU_WRAM_SIZE__ * 1024)
 #define WRAM_LT_STRIDE (__MLU_WRAM_SIZE__ * 1024 / 64)

@@ -180,6 +180,8 @@ struct cnfftButterflyAddrs {
   int *factors;
   int *factors_2d;
   void *input_pad_addr;
+  void *input_copy_workspace_addr;
+  void *output_copy_workspace_addr;
 };
 struct mluOpFFTStruct {
   int rank;            // rank of FFT
@@ -193,24 +195,26 @@ struct mluOpFFTStruct {
   int inum;                  // element num of input tensor
   int istride;  // distance between two successive input elements in the
                 // innermost dimension
-  int idist;    // distance between the first element of two consecutive signals
-                // in a batch of the input data
-  int odim;     // the dimension size of output tensor
+  int in_stride[FFT_DIM_MAX + 1];
+  int idist;  // distance between the first element of two consecutive signals
+              // in a batch of the input data
+  int odim;   // the dimension size of output tensor
   int onembed[FFT_DIM_MAX];  // Pointer of size rank that indicates the storage
                              // dimensions of the output data in memory
   int onum;                  // element num of output tensor
   int ostride;  // distance between two successive output elements in the
                 // innermost dimension
-  int odist;    // distance between the first element of two consecutive signals
-                // in a batch of the output data
-  int batch;    // batch size for this transform
-  int L;        // n = L * 2^m, L size for this transform
-  int m;        // n = L * 2^m, m size for this transform
-  int s;        // The size that can be put down on NRAM: L * 2^s, only used by
-                // Cooley-Tukey algorithm
-  int L_sub;    // The size that can be put down on NRAM: L_sub * 2^m, only used
-                // by  Stockham algorithm
-  int prime;    // wether fft1d'size contains a prime number > 64
+  int out_stride[FFT_DIM_MAX + 1];
+  int odist;  // distance between the first element of two consecutive signals
+              // in a batch of the output data
+  int batch;  // batch size for this transform
+  int L;      // n = L * 2^m, L size for this transform
+  int m;      // n = L * 2^m, m size for this transform
+  int s;      // The size that can be put down on NRAM: L * 2^s, only used by
+              // Cooley-Tukey algorithm
+  int L_sub;  // The size that can be put down on NRAM: L_sub * 2^m, only used
+              // by  Stockham algorithm
+  int prime;  // wether fft1d'size contains a prime number > 64
   bool is_input_contiguous;
   bool is_output_contiguous;
   bool is_batch_contiguous;
