@@ -139,7 +139,7 @@ void GetIndicePairsExecutor::castIn() {
 
 void GetIndicePairsExecutor::diffPreprocess() {
   float *cpu_input = (float *)cpu_fp32_output_[1];
-  int32_t input_active_in = indice_pairs_desc_->dims[2];
+  int32_t input_active_in = indice_pairs_desc_->getDimIndex(2);
   int32_t kernel_volume = 1;
   for (int i = 0; i < filter_space_.size(); i++) {
     kernel_volume *= filter_space_[i];
@@ -294,7 +294,7 @@ void GetIndicePairsExecutor::cpuGetIndicePairs(
     std::vector<int32_t> out_spatail_shape, const int32_t dimNb,
     const int32_t sub_m, const int32_t batch_size) {
   int32_t num_act = 0;
-  int32_t num_act_in = indice_in_desc->dims[0];
+  int32_t num_act_in = indice_in_desc->getDimIndex(0);
   int32_t batch_idx = 0;
   int32_t spatail_volume = 1;
   int32_t NDim = dimNb - 2;
@@ -406,8 +406,8 @@ void GetIndicePairsExecutor::cpuGetIndicePairs(
 }
 
 int64_t GetIndicePairsExecutor::getTheoryOps() {
-  int64_t kernel_volume = indice_pairs_desc_->dims[0];
-  int64_t active_input_in = indice_pairs_desc_->dims[2];
+  int64_t kernel_volume = indice_pairs_desc_->getDimIndex(0);
+  int64_t active_input_in = indice_pairs_desc_->getDimIndex(2);
   int64_t dims = dimNb_ - 2 + 1;
   int64_t total_op_size = 0;
   int64_t kernel1_op_size = 0, kernel2_op_size = 0, kernel3_op_size = 0,
@@ -450,8 +450,8 @@ int64_t GetIndicePairsExecutor::getTheoryOps() {
 }
 
 int64_t GetIndicePairsExecutor::getTheoryIoSize() {
-  int64_t kernel_volume = indice_pairs_desc_->dims[0];
-  int64_t active_input_in = indice_pairs_desc_->dims[2];
+  int64_t kernel_volume = indice_pairs_desc_->getDimIndex(0);
+  int64_t active_input_in = indice_pairs_desc_->getDimIndex(2);
   int64_t dims = dimNb_ - 2 + 1;
   int64_t total_io_size = 0;
   int64_t kernel1_io_size = 0, kernel2_io_size = 0, kernel3_io_size = 0,

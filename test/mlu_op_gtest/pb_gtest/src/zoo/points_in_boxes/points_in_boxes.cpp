@@ -52,19 +52,19 @@ static void points_in_boxes_cpu(
     const mluOpTensorDescriptor_t boxes_desc, const void *boxes,
     const mluOpTensorDescriptor_t points_indices_desc, void *points_indices) {
   for (int64_t i = 0;
-       i < points_indices_desc->dims[0] * points_indices_desc->dims[1]; i++) {
+       i < points_indices_desc->getDimIndex(0) * points_indices_desc->getDimIndex(1); i++) {
     *((float *)points_indices + i) = -1.0;
   }
-  for (int64_t i = 0; i < points_desc->dims[0]; i++) {
-    for (int64_t j = 0; j < points_desc->dims[1]; j++) {
-      for (int64_t m = 0; m < boxes_desc->dims[1]; m++) {
+  for (int64_t i = 0; i < points_desc->getDimIndex(0); i++) {
+    for (int64_t j = 0; j < points_desc->getDimIndex(1); j++) {
+      for (int64_t m = 0; m < boxes_desc->getDimIndex(1); m++) {
         float local_x, local_y;
         int cur_in_flag = check_pt_in_box3d_cpu(
-            (float *)points + (i * points_desc->dims[1] + j) * 3,
-            (float *)boxes + (i * boxes_desc->dims[1] + m) * 7, local_x,
+            (float *)points + (i * points_desc->getDimIndex(1) + j) * 3,
+            (float *)boxes + (i * boxes_desc->getDimIndex(1) + m) * 7, local_x,
             local_y);
         if (cur_in_flag) {
-          *((float *)points_indices + i * points_desc->dims[1] + j) = (float)m;
+          *((float *)points_indices + i * points_desc->getDimIndex(1) + j) = (float)m;
           break;
         }
       }

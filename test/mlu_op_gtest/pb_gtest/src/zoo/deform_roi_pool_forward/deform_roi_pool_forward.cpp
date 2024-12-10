@@ -52,13 +52,13 @@ void DeformRoiPoolForwardExecutor::initData() {
     output_desc = tensor_desc_[2].tensor;
   }
 
-  batchs = input_desc->dims[0];
-  height = input_desc->dims[1];
-  width = input_desc->dims[2];
-  channels = input_desc->dims[3];
-  rois_num = rois_desc->dims[0];
-  pooled_height = output_desc->dims[1];
-  pooled_width = output_desc->dims[2];
+  batchs = input_desc->getDimIndex(0);
+  height = input_desc->getDimIndex(1);
+  width = input_desc->getDimIndex(2);
+  channels = input_desc->getDimIndex(3);
+  rois_num = rois_desc->getDimIndex(0);
+  pooled_height = output_desc->getDimIndex(1);
+  pooled_width = output_desc->getDimIndex(2);
   // get params
   auto deform_roi_pool_forward_proto_desc =
       parser_->getProtoNode()->deform_roi_pool_forward_param();

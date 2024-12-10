@@ -115,12 +115,12 @@ int64_t MoeDispatchForwardExecutor::getTheoryOps() {
 int64_t MoeDispatchForwardExecutor::getTheoryIoSize() {
   size_t gates_dwidth, indices_dwidth, locations_dwidth, input_dwidth,
       dispatch_dwidth;
-  MLUOP_CHECK(mluOpGetSizeOfDataType(desc_gates_->dtype, &gates_dwidth));
-  MLUOP_CHECK(mluOpGetSizeOfDataType(desc_indices_->dtype, &indices_dwidth));
+  MLUOP_CHECK(mluOpGetSizeOfDataType(desc_gates_->getDtype(), &gates_dwidth));
+  MLUOP_CHECK(mluOpGetSizeOfDataType(desc_indices_->getDtype(), &indices_dwidth));
   MLUOP_CHECK(
-      mluOpGetSizeOfDataType(desc_locations_->dtype, &locations_dwidth));
-  MLUOP_CHECK(mluOpGetSizeOfDataType(desc_input_->dtype, &input_dwidth));
-  MLUOP_CHECK(mluOpGetSizeOfDataType(desc_input_->dtype, &dispatch_dwidth));
+      mluOpGetSizeOfDataType(desc_locations_->getDtype(), &locations_dwidth));
+  MLUOP_CHECK(mluOpGetSizeOfDataType(desc_input_->getDtype(), &input_dwidth));
+  MLUOP_CHECK(mluOpGetSizeOfDataType(desc_input_->getDtype(), &dispatch_dwidth));
 
   int64_t gates_theory_ios = samples_ * gates_dwidth;
   int64_t indices_theory_ios = samples_ * indices_dwidth;

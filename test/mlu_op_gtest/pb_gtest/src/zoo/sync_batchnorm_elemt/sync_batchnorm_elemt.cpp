@@ -80,7 +80,7 @@ void cpuSyncBNElemt(const float *x, const float *mean, const float *invstd,
 }
 
 void SyncBatchnormElemtExecutor::cpuCompute() {
-  int len_c = tensor_desc_[0].tensor->dims[tensor_desc_[0].tensor->dim - 1];
+  int len_c = tensor_desc_[0].tensor->getDimIndex(tensor_desc_[0].tensor->getDim() - 1);
   int len_x = parser_->getInputDataCount(0);
 
   VLOG(4) << "SyncBatchnormElemtExecutor: cpu compute begin";

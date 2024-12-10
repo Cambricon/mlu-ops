@@ -43,11 +43,11 @@ void MaskedCol2imForwardExecutor::paramCheck() {
 void MaskedCol2imForwardExecutor::init() {
   auto col_desc = tensor_desc_[0].tensor;
   auto im_desc = tensor_desc_[3].tensor;
-  batchs_ = im_desc->dims[0];
-  channels_ = im_desc->dims[1];
-  height_ = im_desc->dims[2];
-  width_ = im_desc->dims[3];
-  mask_cnt_ = col_desc->dims[1];
+  batchs_ = im_desc->getDimIndex(0);
+  channels_ = im_desc->getDimIndex(1);
+  height_ = im_desc->getDimIndex(2);
+  width_ = im_desc->getDimIndex(3);
+  mask_cnt_ = col_desc->getDimIndex(1);
 }
 
 void MaskedCol2imForwardExecutor::workspaceMalloc() {
