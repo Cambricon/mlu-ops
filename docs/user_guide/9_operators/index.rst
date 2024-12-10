@@ -793,3 +793,10 @@ mluOpLgamma
 
 - ``x`` 为输入张量。
 
+.. cholesky::
+
+mluOpCholesky
+---------------
+执行 Cholesky 分解，将一个正定矩阵分解为其下三角矩阵（L）或其转置的上三角矩阵（U），具体分解为上三角或下三角取决于参数``upper``。
+
+该算子包含7个输入：handle 为操作句柄，input_desc 与 d_input 分别描述并提供输入矩阵的信息；两个输出：output_desc 与 d_output 分别描述并存储输出矩阵的信息；此外，还包含一个布尔参数 upper，用于指定输出是上三角还是下三角矩阵，以及一个 workspace 用于临时存储计算过程中的数据。
