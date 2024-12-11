@@ -333,6 +333,8 @@ __mlu_func__ void bilinearInterpolatePosWeight(
         w3[i] += w3[j];
         w4[i] += w4[j];
         w1[j] = -1;
+      } else {
+        break;
       }
     }
     if (unique_num != i) {
@@ -386,14 +388,13 @@ bin_hw_order_num = bin_order_num ^ 2。<br>
 | pos4 | sizeof(uint) * bin_hw_order_num | pos4 坐标 |
 
 
-剩余空间对齐均分为三份 vi, vi_t, val，记空间大小为 max_v_size。<br>
-其中 vi 复用多次，最终的 val_sum 也存储于 vi 中。<br>
-此时 max_once_c = max_v_size / unique_num / sizeof(T)。 <br>
+剩余空间对齐均分为两份 val, v_t，记空间大小为 max_v_size。<br>
+此时 max_once_c = max_v_size / 4 / unique_num / sizeof(T)。 <br>
 以float 类型为例：
-- 若 bin_order_num 为 32，固定的 size 为 53376, max_vi_size 为 113280。
-unique_num 最大可到 bin_hw_order_num(1024)，此时 max_once_c = 27。
-- 若 bin_order_num 为 8，固定的 size 为 7296, max_vi_size 为 128640。
-unique_num 最大可到 bin_hw_order_num(64)，此时 max_once_c = 502。
+- 若 bin_order_num 为 32，固定的 size 为 53376, max_vi_size 为 169920。
+unique_num 最大可到 bin_hw_order_num(1024)，此时 max_once_c = 10。
+- 若 bin_order_num 为 8，固定的 size 为 7296, max_vi_size 为 192960。
+unique_num 最大可到 bin_hw_order_num(64)，此时 max_once_c = 188。
 
 
 ### 3.4 性能优化设计
@@ -401,7 +402,7 @@ unique_num 最大可到 bin_hw_order_num(64)，此时 max_once_c = 502。
 2.减少重复计算，例如:roi_info 计算，bin_h、bin_w 二维序列构建等。
 3.使用 fuse.nram 融合三条以上的乘加法。
 4.双线性插值坐标进行查重，减少 IO 的数量。
-
+5.将周围四个点坐标搬运成连续向量，gather时一次性处理，在有效点较少时能提升 IO 效率。
 
 ### 3.5 可维护性设计
 
