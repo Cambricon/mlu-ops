@@ -390,9 +390,9 @@ __mlu_global__ void roiAlignRotatedForward(
     if (params.sample_ratio < bin_order_num) {
       construct_order = false;
       // construct bin_w_idx in bin_loop
-      __memcpy_async(bin_w_order, order, params.sample_ratio * sizeof(T),
-                     NRAM2NRAM, params.sample_ratio * sizeof(T), 0,
-                     params.sample_ratio - 1);
+      __memcpy(bin_w_order, order, params.sample_ratio * sizeof(T),
+               NRAM2NRAM, params.sample_ratio * sizeof(T), 0,
+               params.sample_ratio - 1);
       // construct bin_h_idx in bin_loop
       __bang_write_value(nram_w1, params.sample_ratio,
                          (uint8_t)params.sample_ratio);
@@ -449,9 +449,9 @@ __mlu_global__ void roiAlignRotatedForward(
 
           if (construct_order) {
             // construct bin_w_idx in bin_loop
-            __memcpy_async(bin_w_order, order, deal_bin_w * sizeof(T),
-                           NRAM2NRAM, deal_bin_w * sizeof(T), 0,
-                           deal_bin_h - 1);
+            __memcpy(bin_w_order, order, deal_bin_w * sizeof(T),
+                     NRAM2NRAM, deal_bin_w * sizeof(T), 0,
+                     deal_bin_h - 1);
             // construct bin_h_idx in bin_loop
             __bang_write_value(nram_w1, deal_bin_h, (uint8_t)deal_bin_w);
             __extension(bin_h_order, order, (uint8_t *)nram_w1, sizeof(T),
