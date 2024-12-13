@@ -1979,26 +1979,87 @@ mluOpStatus_t execIRFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
       fft_plan->mlu_addrs.input = fft_plan->mlu_addrs.input_pad_addr;
     }
 
-    if (fft_plan->n[0] == 1 && fft_plan->n[1] == 1) {
-      mluOpTensorDescriptor_t input_desc;
-      status = mluOpCreateTensorDescriptor(&input_desc);
-      INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    if (fft_plan->n[0] == 1 || fft_plan->n[1] == 1) {
+      if (fft_plan->n[0] == 1 && fft_plan->n[1] == 1) {
+        mluOpTensorDescriptor_t input_desc;
+        status = mluOpCreateTensorDescriptor(&input_desc);
+        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-      const int IN_DIM_NUM = 2;
-      int64_t dims[IN_DIM_NUM] = {
-          fft_plan->batch * fft_plan->n[0] * fft_plan->n[1], 1};
-      int64_t strides[IN_DIM_NUM] = {2, 1};
-      status = mluOpSetTensorDescriptorEx_v2(input_desc, MLUOP_LAYOUT_ARRAY,
-                                             MLUOP_DTYPE_FLOAT, IN_DIM_NUM,
-                                             dims, strides);
-      INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+        const int IN_DIM_NUM = 2;
+        int64_t dims[IN_DIM_NUM] = {
+            fft_plan->batch * fft_plan->n[0] * fft_plan->n[1], 1};
+        int64_t strides[IN_DIM_NUM] = {2, 1};
+        status = mluOpSetTensorDescriptorEx_v2(input_desc, MLUOP_LAYOUT_ARRAY,
+                                               MLUOP_DTYPE_FLOAT, IN_DIM_NUM,
+                                               dims, strides);
+        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-      status = mluOpContiguous(handle, input_desc, fft_plan->mlu_addrs.input,
-                               fft_plan->mlu_addrs.output);
-      INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+        status = mluOpContiguous(handle, input_desc, fft_plan->mlu_addrs.input,
+                                 fft_plan->mlu_addrs.output);
+        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-      status = mluOpDestroyTensorDescriptor(input_desc);
-      INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+        status = mluOpDestroyTensorDescriptor(input_desc);
+        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+      } else if (fft_plan->n[0] != 1 && fft_plan->n[1] == 1) {
+        for (int batch_id = 0; batch_id < fft_plan->batch; batch_id++) {
+          status = kernelIRFFT2dButterflyColumn(k_dim, k_type, handle->queue,
+                                                fft_plan, FFT_IFFT);
+
+          INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
+          fft_plan->mlu_addrs.input =
+              (void *)((uint64_t)(fft_plan->mlu_addrs.input) + idist);
+          fft_plan->mlu_addrs.output =
+              (void *)((uint64_t)(fft_plan->mlu_addrs.output) + odist);
+        }
+        fft_plan->mlu_addrs.input =
+            (void *)((uint64_t)(fft_plan->mlu_addrs.input) -
+                     fft_plan->batch * idist);
+        fft_plan->mlu_addrs.output =
+            (void *)((uint64_t)(fft_plan->mlu_addrs.output) -
+                     fft_plan->batch * odist);
+
+        mluOpTensorDescriptor_t input_desc;
+        status = mluOpCreateTensorDescriptor(&input_desc);
+        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
+        const int IN_DIM_NUM = 2;
+        int64_t dims[IN_DIM_NUM] = {
+            fft_plan->batch * fft_plan->n[0] * fft_plan->n[1], 1};
+        int64_t strides[IN_DIM_NUM] = {2, 1};
+        status = mluOpSetTensorDescriptorEx_v2(input_desc, MLUOP_LAYOUT_ARRAY,
+                                               MLUOP_DTYPE_FLOAT, IN_DIM_NUM,
+                                               dims, strides);
+        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
+        status = mluOpContiguous(handle, input_desc, fft_plan->mlu_addrs.input,
+                                 fft_plan->mlu_addrs.output);
+        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
+        status = mluOpDestroyTensorDescriptor(input_desc);
+        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+      } else {
+        for (int batch_id = 0; batch_id < fft_plan->batch; batch_id++) {
+          status = kernelIRFFT2dButterflyRow(k_dim, k_type, handle->queue,
+                                             fft_plan, FFT_IFFT);
+
+          INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+          status = kernelIRFFT2dButterflyRow(k_dim, k_type, handle->queue,
+                                             fft_plan, FFT_IFFT);
+          INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+
+          fft_plan->mlu_addrs.input =
+              (void *)((uint64_t)(fft_plan->mlu_addrs.input) + idist);
+          fft_plan->mlu_addrs.output =
+              (void *)((uint64_t)(fft_plan->mlu_addrs.output) + odist);
+        }
+        fft_plan->mlu_addrs.input =
+            (void *)((uint64_t)(fft_plan->mlu_addrs.input) -
+                     fft_plan->batch * idist);
+        fft_plan->mlu_addrs.output =
+            (void *)((uint64_t)(fft_plan->mlu_addrs.output) -
+                     fft_plan->batch * odist);
+      }
     } else {
       for (int batch_id = 0; batch_id < fft_plan->batch; batch_id++) {
         status = kernelIRFFT2dButterflyColumn(k_dim, k_type, handle->queue,
