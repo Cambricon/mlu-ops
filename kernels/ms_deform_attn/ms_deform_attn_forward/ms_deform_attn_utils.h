@@ -28,6 +28,7 @@
 
 #include "kernels/kernel.h"
 #include "kernels/utils/common.h"
+#include "kernels/utils/scatter_gather.h"
 
 #define BIT_COLLECT_PAD (8)
 #define BACKWARD_MAX_NQ_NL_NP (1024)
@@ -376,20 +377,13 @@ __mlu_func__ void stageOneLoop(
 }
 #endif
 
-#if (__BANG_ARCH__ == 592)
+#if (__BANG_ARCH__ >= 592)
+template <typename T>
 __mlu_func__ void gatherAsync(void* dst, void* src, unsigned int* offset,
                               void* mask, int transfer_size,
                               mluMemcpyDirection_t dir, int dst_stride,
                               int transfer_num) {
-  __gather_async(dst, src, offset, mask, transfer_size, dir, dst_stride,
-                 transfer_num);
-}
-
-__mlu_func__ void gatherSync(void* dst, void* src, unsigned int* offset,
-                             void* mask, int transfer_size,
-                             mluMemcpyDirection_t dir, int dst_stride,
-                             int transfer_num) {
-  __gather(dst, src, offset, mask, transfer_size, dir, dst_stride,
-           transfer_num);
+  __mluop_gather_async<T>((T*)dst, (T*)src, offset, (uint8_t*)mask,
+                          transfer_size, dir, dst_stride, transfer_num);
 }
 #endif

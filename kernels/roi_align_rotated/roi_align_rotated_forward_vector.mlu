@@ -38,14 +38,12 @@ __mlu_func__ void mluopDivScalar(T *dst, T *src, T value, uint32_t num) {
     __asm__ volatile(
         "div.scalar.nram.f16 [%[dst]], [%[src0]], "
         "%[src1], %[num];\n\t" ::[dst] "r"(dst),
-        [ src0 ] "r"(src), [ src1 ] "r"(value),
-        [ num ] "r"(num));
+        [ src0 ] "r"(src), [ src1 ] "r"(value), [ num ] "r"(num));
   } else {
     __asm__ volatile(
         "div.scalar.nram.f32 [%[dst]], [%[src0]], "
         "%[src1], %[num];\n\t" ::[dst] "r"(dst),
-        [ src0 ] "r"(src), [ src1 ] "r"(value),
-        [ num ] "r"(num));
+        [ src0 ] "r"(src), [ src1 ] "r"(value), [ num ] "r"(num));
   }
 }
 
@@ -314,6 +312,7 @@ __mlu_func__ void handleChannels(const T *input, uint32_t deal_channels,
   }
   uint32_t hwc_num = deal_channels * vec_num;
 
+  // vec_num <= 1024
   __gather(val, input, pos, deal_channels * sizeof(T), GDRAM2NRAM,
            deal_channels * sizeof(T), vec_num);
   if (deal_channels != 1) {
@@ -391,6 +390,7 @@ __mlu_global__ void roiAlignRotatedForward(
     if (params.sample_ratio < bin_order_num) {
       construct_order = false;
       // construct bin_w_idx in bin_loop
+      __sync();
       __memcpy_async(bin_w_order, order, params.sample_ratio * sizeof(T),
                      NRAM2NRAM, params.sample_ratio * sizeof(T), 0,
                      params.sample_ratio - 1);
@@ -450,6 +450,7 @@ __mlu_global__ void roiAlignRotatedForward(
 
           if (construct_order) {
             // construct bin_w_idx in bin_loop
+            __sync();
             __memcpy_async(bin_w_order, order, deal_bin_w * sizeof(T),
                            NRAM2NRAM, deal_bin_w * sizeof(T), 0,
                            deal_bin_h - 1);
@@ -521,8 +522,7 @@ __mlu_global__ void roiAlignRotatedForward(
           }
         }
       }
-      mluopDivScalar(output_channels, output_channels, (T)count,
-                     cur_cache_c);
+      mluopDivScalar(output_channels, output_channels, (T)count, cur_cache_c);
       __memcpy(output_dram + bin_i * channels + c_cache_i, output_channels,
                cur_cache_c * sizeof(T), NRAM2GDRAM);
     }

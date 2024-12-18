@@ -35,26 +35,10 @@ __mlu_global__ void MLUKernelFFT1dButterflyRow(
     void *input, void *output, int *factors, void *twiddles, void *twiddles_end,
     void *dft_matrix, void *buffer, const int batch, const int fft_flag,
     const int direction, const int dtype_size) {
-  switch (dtype_size) {
-    case (MLUOP_DTYPE_COMPLEX_FLOAT):
-    case (MLUOP_DTYPE_FLOAT): {
-      computeMutiStageOnchip<float>((float *)input, (float *)output, factors,
-                                    (float *)twiddles, (float *)twiddles_end,
-                                    (float *)dft_matrix, (float *)buffer, batch,
-                                    fft_flag, direction);
-    }; break;
-    case (MLUOP_DTYPE_COMPLEX_HALF):
-    case (MLUOP_DTYPE_HALF): {
-      computeMutiStageOnchip<half>((half *)input, (half *)output, factors,
-                                   (half *)twiddles, (half *)twiddles_end,
-                                   (half *)dft_matrix, (half *)buffer, batch,
-                                   fft_flag, direction);
-    }; break;
-
-    default: {
-      MLULOG("mluOpFFT Not Implemented.");
-    }
-  }
+  computeMutiStageOnchip<float>((float *)input, (float *)output, factors,
+                                (float *)twiddles, (float *)twiddles_end,
+                                (float *)dft_matrix, (float *)buffer, batch,
+                                fft_flag, direction);
 }
 
 // Kernel function for 1D FFT butterfly operations on columns.
@@ -62,26 +46,10 @@ __mlu_global__ void MLUKernelFFT1dButterflyColumn(
     void *input, void *output, int *factors, void *twiddles, void *twiddles_end,
     void *dft_matrix, void *buffer, const int batch, const int fft_flag,
     const int direction, const int dtype_size, const int nb) {
-  switch (dtype_size) {
-    case (MLUOP_DTYPE_COMPLEX_FLOAT):
-    case (MLUOP_DTYPE_FLOAT): {
-      computeMutiStageOnchipColumn<float>(
-          (float *)input, (float *)output, factors, (float *)twiddles,
-          (float *)twiddles_end, (float *)dft_matrix, (float *)buffer, batch,
-          fft_flag, direction, nb);
-    }; break;
-    case (MLUOP_DTYPE_COMPLEX_HALF):
-    case (MLUOP_DTYPE_HALF): {
-      computeMutiStageOnchipColumn<half>((half *)input, (half *)output, factors,
-                                         (half *)twiddles, (half *)twiddles_end,
-                                         (half *)dft_matrix, (half *)buffer,
-                                         batch, fft_flag, direction, nb);
-    }; break;
-
-    default: {
-      MLULOG("mluOpFFT Not Implemented.");
-    }
-  }
+  computeMutiStageOnchipColumn<float>((float *)input, (float *)output, factors,
+                                      (float *)twiddles, (float *)twiddles_end,
+                                      (float *)dft_matrix, (float *)buffer,
+                                      batch, fft_flag, direction, nb);
 }
 
 // Launches a kernel for 2D FFT butterfly operations on columns.

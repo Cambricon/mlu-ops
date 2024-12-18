@@ -51,6 +51,7 @@ long_args=(
   help
   mlu370 # mlu arch
   mlu590
+  mtp613
   no_prepare
   perf
   prepare
@@ -67,6 +68,9 @@ add_mlu_arch_support () {
       ;;
     --mlu590)
       bang_arch="mtp_592;"
+      ;;
+    --mtp613)
+      bang_arch="mtp_613;"
       ;;
     *)
       ;;
@@ -166,7 +170,7 @@ prepare_cntoolkit () {
               wget -A deb -m -p -E -k -K -np -q --reject-regex 'static'  ${PACKAGE_PATH}
 
               pushd ${PACKAGE_EXTRACT_DIR} > /dev/null
-              for filename in ../${REAL_PATH}*.deb; do
+              for filename in ../${REAL_PATH}/*.deb; do
                 dpkg -x --force-overwrite ${filename} .
                 prog_log_info "extract ${filename}"
                 if [ ${arr_modules[$i]} == "cntoolkit" ]; then

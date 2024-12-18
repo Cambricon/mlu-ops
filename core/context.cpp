@@ -29,9 +29,9 @@
 #include "core/tool.h"
 #include "kernels/kernel.h"
 
-#define DEP_CHECK_LOG(level)                                              \
+#define DEP_CHECK_LOG(level)                                                \
   mluop::logging::LogMessage(__FILE__, __LINE__, 4, level, "MLU-OPS", true, \
-                             true, true, true)                            \
+                             true, true, true)                              \
       .stream()
 
 namespace mluop {
@@ -46,27 +46,23 @@ static struct deviceName name_list_table[] = {
     // case.
 };
 
-// once cnrtGetDeviceProperties() update and not use
-// device_ordinal, update this funciton.
-mluOpDevType_t convertDeviceName(char *name) {
-  struct deviceName *pName = NULL;
-  int num = sizeof(name_list_table) / sizeof(struct deviceName);
-  if (CONTEXT_DEVICENAME_LEAST_SIZE > strlen(name)) {
-    LOG(ERROR)
-        << "get device name failed. device name too short. device name = "
-        << name << "\n";
-    return MLUOP_UNKNOWN_DEVICE;
-  }
-  for (int i = 0; i < num; i++) {
-    pName = &name_list_table[i];
-    if (0 == strncmp(pName->name, name, strlen(pName->name)) ||
-        (i == num - 1 &&
-         0 >= strncmp(pName->name, name, CONTEXT_DEVICENAME_LEAST_SIZE))) {
-      return pName->type;
+mluOpDevType_t convertDeviceNameFromInt(int device_code) {
+  switch (device_code) {
+    case 372: {
+      return MLUOP_MLU370;
+      break;
     }
+    case 592: {
+      return MLUOP_MLU590;
+      break;
+    }
+    case 613: {
+      return MLUOP_MTP613;
+      break;
+    }
+    default:
+      break;
   }
-  LOG(ERROR) << "get device name failed. return unknown device. device name = "
-             << name << "\n";
   return MLUOP_UNKNOWN_DEVICE;
 }
 }  // namespace mluop
@@ -179,6 +175,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
   int32_t persisting_l2cache_maxsize = 0;
   double memory_band_width = 0;
   char device_name[CONTEXT_DEVICENAME_BUFFER_SIZE] = "";
+  int device_code = 0;
   mluOpContext *ctx = new (std::nothrow) mluOpContext();
   CNcontext drv_ctx;
   CNctxConfigParam ctx_conf_param;
@@ -248,6 +245,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
                                mlu_dev));
   INTERNAL_CHECK(
       "[mluOpCreate]",
+      CN_SUCCESS == cnDeviceGetAttribute(&device_code,
+                                         CN_DEVICE_ATTRIBUTE_MLU_ISA_VERSION,
+                                         mlu_dev));
+  INTERNAL_CHECK(
+      "[mluOpCreate]",
       CN_SUCCESS == cnDeviceGetName(device_name, CONTEXT_DEVICENAME_BUFFER_SIZE,
                                     mlu_dev));
   //  ClusterLimitCapability and JobLimitCapability
@@ -266,8 +268,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
   }
 
   ctx->capability_job_limit = (int32_t)ctx_conf_param.unionLimit;
-  ctx->arch = mluop::convertDeviceName(
-      device_name);  // warning: possible return unknown.
+  ctx->arch = mluop::convertDeviceNameFromInt(device_code);
   ctx->sram_size = sram_size - REM_FOR_STACK;
 
   strncpy(ctx->device_name, device_name, sizeof(device_name));

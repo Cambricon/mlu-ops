@@ -58,6 +58,9 @@ endif()
 
 # -- BANG memcheck
 #TODO remove this option after cntoolkit upgraded to 4.0
+
+set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} --no-neuware-version-check")  # no need after toolkit 4.0
+
 if(${MLUOP_BUILD_BANG_MEMCHECK} MATCHES "ON")
   message("-- BANG memcheck enabled")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -mllvm -enable-mlisa-sanitizer")
@@ -137,7 +140,8 @@ endif()
 if (NOT MLUOP_MLU_ARCH_LIST)
   message(STATUS "build all arch")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_372"
-                                           "--bang-mlu-arch=mtp_592")
+                                           "--bang-mlu-arch=mtp_592"
+                                           "--bang-mlu-arch=mtp_613")
 else()
   foreach (arch ${MLUOP_MLU_ARCH_LIST})
     set(CNCC_FLAGS_ARCH ${CNCC_FLAGS_ARCH} "--bang-mlu-arch=${arch}" )
