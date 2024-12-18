@@ -170,7 +170,7 @@ prepare_cntoolkit () {
               wget -A deb -m -p -E -k -K -np -q --reject-regex 'static'  ${PACKAGE_PATH}
 
               pushd ${PACKAGE_EXTRACT_DIR} > /dev/null
-              for filename in ../${REAL_PATH}*.deb; do
+              for filename in ../${REAL_PATH}/*.deb; do
                 dpkg -x --force-overwrite ${filename} .
                 prog_log_info "extract ${filename}"
                 if [ ${arr_modules[$i]} == "cntoolkit" ]; then
