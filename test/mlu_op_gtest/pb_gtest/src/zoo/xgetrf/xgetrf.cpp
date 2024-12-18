@@ -304,6 +304,11 @@ void XgetrfExecutor::compute() {
   interface_timer_.stop();
   mlu_runtime_.deallocate(workspace);
 
+  if (mode == 0) {
+    memset(ipiv, 0, batch * m * sizeof(int));
+    cnrtMemcpy(dipiv, ipiv, batch * m * sizeof(int), cnrtMemcpyHostToDev);
+  }
+
   float *typed_dev_x = static_cast<float *>(dev_x);
   float *typed_dev_y = static_cast<float *>(dev_y);
   if (dtype == MLUOP_DTYPE_FLOAT) {
@@ -321,6 +326,10 @@ void XgetrfExecutor::compute() {
       if (mode == 1) {
         cnrtMemcpy(ipiv + b * m, dipiv + b * m, m * sizeof(int),
                    cnrtMemcpyDevToHost);
+        // printf("compute\n");
+        // for(int i=0;i<m;i++)
+        //   printf("%d ",ipiv[i]);
+        // printf("\n");
         apply_row_swaps(LU_, m, n, ipiv + b * m);
       }
       cnrtMemcpy((void *)(typed_dev_y + offset), LU_, m * n * sizeof(float),
@@ -351,6 +360,11 @@ void XgetrfExecutor::compute() {
                  cnrtMemcpyHostToDev);
     }
   }
+  // cnrtMemcpy(ipiv, dipiv, m * sizeof(int),
+  //                  cnrtMemcpyDevToHost);
+  // for(int i=0;i< m;i++)
+  //   printf("%d ",ipiv[i]);
+  // printf("\n");
 }
 
 void XgetrfExecutor::cpuCompute() {
@@ -373,10 +387,17 @@ void XgetrfExecutor::cpuCompute() {
   int m = row;
   int n = col;
   int *ipiv = (int *)data_vector_[2].host_ptr;
+
+  // printf("cpu_fp32_output_\n");
   for (int i = 0; i < batch * m; i++) {
     cpu_fp32_output_[1][i] = ipiv[i];
+    // printf("%d ",(int)cpu_fp32_output_[1][i]);
   }
-
+  // printf("\n");
+  // printf("cpu_compute\n");
+  // for(int i=0;i<m;i++)
+  //   printf("%d ",ipiv[i]);
+  // printf("\n");
   if (tensor_desc_[0].tensor->dtype == MLUOP_DTYPE_FLOAT) {
     for (int i = 0; i < count; ++i) {
       cpu_fp32_output_[0][i] = (cpu_fp32_input_[0][i]);
