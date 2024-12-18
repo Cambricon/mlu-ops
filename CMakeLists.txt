@@ -58,6 +58,9 @@ endif()
 
 # -- BANG memcheck
 #TODO remove this option after cntoolkit upgraded to 4.0
+
+set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} --no-neuware-version-check")  # no need after toolkit 4.0
+
 if(${MLUOP_BUILD_BANG_MEMCHECK} MATCHES "ON")
   message("-- BANG memcheck enabled")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -mllvm -enable-mlisa-sanitizer")
