@@ -329,8 +329,8 @@ void VoxelizationExecutor::cpuCompute() {
       parser_->getProtoNode()->voxelization_param().deterministic();
 
   auto tensor_points = tensor_desc_[0].tensor;
-  size_t num_points = tensor_points->dims[0];
-  size_t num_features = tensor_points->dims[1];
+  size_t num_points = tensor_points->getDimIndex(0);
+  size_t num_features = tensor_points->getDimIndex(1);
 
   float *points = cpu_fp32_input_[0];
   float *voxel_size = cpu_fp32_input_[1];
@@ -359,8 +359,8 @@ int64_t VoxelizationExecutor::getTheoryIoSize() {
       parser_->getProtoNode()->voxelization_param().max_voxels();
 
   auto tensor_points = tensor_desc_[0].tensor;
-  size_t num_points = tensor_points->dims[0];
-  size_t num_features = tensor_points->dims[1];
+  size_t num_points = tensor_points->getDimIndex(0);
+  size_t num_features = tensor_points->getDimIndex(1);
 
   int64_t total_size = 0;
   // mluOpUnionKernelDynamicVoxelize
@@ -387,7 +387,7 @@ int64_t VoxelizationExecutor::getTheoryIoSize() {
 
 int64_t VoxelizationExecutor::getTheoryOps() {
   auto tensor_points = tensor_desc_[0].tensor;
-  size_t num_points = tensor_points->dims[0];
+  size_t num_points = tensor_points->getDimIndex(0);
 
   int64_t theory_ops = 0;
   int32_t cp_count = 31;

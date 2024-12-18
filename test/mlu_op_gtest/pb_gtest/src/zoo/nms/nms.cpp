@@ -41,11 +41,11 @@ void NmsExecutor::workspaceMalloc() {
   auto tensor_boxes = parser_->getMetaTensor("input1").tensor;
   auto tensor_confi = parser_->getMetaTensor("input2").tensor;
   auto input_layout = parser_->getProtoNode()->nms_param().input_layout();
-  if (tensor_boxes->dim == 2) {
+  if (tensor_boxes->getDim() == 2) {
     if (input_layout == 0) {
-      box_dim_ = tensor_boxes->dims[1];
+      box_dim_ = tensor_boxes->getDimIndex(1);
     } else {
-      box_dim_ = tensor_boxes->dims[0];
+      box_dim_ = tensor_boxes->getDimIndex(0);
     }
   }
   VLOG(4) << "box_dim_: " << box_dim_;
@@ -70,7 +70,7 @@ void NmsExecutor::workspaceMalloc() {
   // this op will modify input data.
   // when repeat != 1, after second compute(), input data has been modified.
   // input data changed, the result of this op ("result_num",
-  // aka output->dims[0]) is changed.
+  // aka output->getDimIndex(0)) is changed.
   // so we don't know result_num when repeat finished.
   // so ignore what result_num(valid data number in output0) is,
   // set all data in output0 as 0.
@@ -105,8 +105,7 @@ void NmsExecutor::compute() {
       (mluOpNmsAlgo_t)parser_->getProtoNode()->nms_param().algo();
   float offset = parser_->getProtoNode()->nms_param().offset();
   auto input_layout = parser_->getProtoNode()->nms_param().input_layout();
-  int max_output_size =
-      parser_->getProtoNode()->nms_param().max_output_boxes();
+  int max_output_size = parser_->getProtoNode()->nms_param().max_output_boxes();
   float confidence_threshold =
       parser_->getProtoNode()->nms_param().confidence_threshold();
   bool pad_to_max_output_size =
@@ -131,10 +130,9 @@ void NmsExecutor::compute() {
   VLOG(4) << "call mluop NmsTensor()";
 
   mluOpNmsDescriptor_t nms_desc;
-  nms_desc =
-      cpu_runtime_.allocate(mluOpCreateNmsDescriptor,
-                            mluOpDestroyNmsDescriptor);
-  VLOG(5) << "tensor_boxes->dim: " << tensor_boxes->dim;
+  nms_desc = cpu_runtime_.allocate(mluOpCreateNmsDescriptor,
+                                   mluOpDestroyNmsDescriptor);
+  VLOG(5) << "tensor_boxes->getDim(): " << tensor_boxes->getDim();
   MLUOP_CHECK(mluOpSetNmsDescriptor(
       nms_desc, box_mode, mode, algo, method_mode, iou_threshold,
       soft_nms_sigma, max_output_size, confidence_threshold, offset,
@@ -148,10 +146,9 @@ void NmsExecutor::compute() {
   interface_timer_.start();
   VLOG(4) << "tensor_confi=" << tensor_confi << ", dev_confi=" << dev_confi
           << ", workspace_size_=" << workspace_size_;
-  MLUOP_CHECK(mluOpNms(
-      handle_, nms_desc, tensor_boxes, dev_boxes, tensor_confi, dev_confi,
-      workspace_, workspace_size_, tensor_output, dev_output,
-      dev_output_size));
+  MLUOP_CHECK(mluOpNms(handle_, nms_desc, tensor_boxes, dev_boxes, tensor_confi,
+                       dev_confi, workspace_, workspace_size_, tensor_output,
+                       dev_output, dev_output_size));
   interface_timer_.stop();
   VLOG(4) << "mluOpNms-end";
 
@@ -439,29 +436,29 @@ void NmsExecutor::cpuCompute() {
   int input_batches_num = 1;
   int input_classes_num = 1;
   int box_dim = 4;
-  if (input_box_desc->dim == 2) {
+  if (input_box_desc->getDim() == 2) {
     if (input_layout == 0) {
       // when layout is [boxes_num, 4], dims[0] represets the input number.
-      input_boxes_num = input_box_desc->dims[0];
-      box_dim = input_box_desc->dims[1];
+      input_boxes_num = input_box_desc->getDimIndex(0);
+      box_dim = input_box_desc->getDimIndex(1);
     } else if (input_layout == 1) {
-      input_boxes_num = input_box_desc->dims[1];
-      box_dim = input_box_desc->dims[0];
+      input_boxes_num = input_box_desc->getDimIndex(1);
+      box_dim = input_box_desc->getDimIndex(0);
     } else {
       VLOG(4) << "unsupport input layout now.";
     }
   } else {
-    // assert input_box_desc->dim == 3
-    input_batches_num = input_box_desc->dims[0];
-    input_classes_num = input_conf_desc->dims[1];
+    // assert input_box_desc->getDim() == 3
+    input_batches_num = input_box_desc->getDimIndex(0);
+    input_classes_num = input_conf_desc->getDimIndex(1);
     // keep content of algo and offset, algo is deprecated at
     // setNmsDescriptor_v4
     algo = mluOpNmsAlgo_t::MLUOP_NMS_ALGO_INCLUDE_BOUNDARY;
     if (input_layout == 0) {
       // when layout is [boxes_num, 4], dims[0] represets the input number.
-      input_boxes_num = input_box_desc->dims[1];
+      input_boxes_num = input_box_desc->getDimIndex(1);
     } else if (input_layout == 1) {
-      input_boxes_num = input_box_desc->dims[2];
+      input_boxes_num = input_box_desc->getDimIndex(2);
     } else {
       VLOG(4) << "unsupport input layout now.";
     }
@@ -525,8 +522,9 @@ void NmsExecutor::diffPreprocess() {
       parser_->getProtoNode()->nms_param().pad_to_max_output_size();
   int output_mode_num = 1;
   int box_dim = 4;
-  if (tensor_boxes->dim == 2) {
-    box_dim = input_layout == 0 ? tensor_boxes->dims[1] : tensor_boxes->dims[0];
+  if (tensor_boxes->getDim() == 2) {
+    box_dim = input_layout == 0 ? tensor_boxes->getDimIndex(1)
+                                : tensor_boxes->getDimIndex(0);
   }
   if (box_dim == 7) {
     mode = static_cast<mluOpNmsOutputMode_t>(0);
@@ -661,25 +659,25 @@ int64_t NmsExecutor::getTheoryOps() {
   int input_batches_num = 0;
   int input_classes_num = 0;
   int box_dim = 4;
-  if (input_desc->dim == 2) {
+  if (input_desc->getDim() == 2) {
     if (input_layout == 0) {
-      input_boxes_num = input_desc->dims[0];
-      box_dim = input_desc->dims[1];
+      input_boxes_num = input_desc->getDimIndex(0);
+      box_dim = input_desc->getDimIndex(1);
     } else if (input_layout == 1) {
-      input_boxes_num = input_desc->dims[1];
-      box_dim = input_desc->dims[0];
+      input_boxes_num = input_desc->getDimIndex(1);
+      box_dim = input_desc->getDimIndex(0);
     } else {
       VLOG(4) << "unsupport input layout now.";
     }
   } else {
-    // assert input_desc->dim == 3
-    input_batches_num = input_desc->dims[0];
-    input_classes_num = input_conf_desc->dims[1];
+    // assert input_desc->getDim() == 3
+    input_batches_num = input_desc->getDimIndex(0);
+    input_classes_num = input_conf_desc->getDimIndex(1);
     if (input_layout == 0) {
       // when layout is [boxes_num, 4], dims[0] represets the input number.
-      input_boxes_num = input_desc->dims[1];
+      input_boxes_num = input_desc->getDimIndex(1);
     } else if (input_layout == 1) {
-      input_boxes_num = input_desc->dims[2];
+      input_boxes_num = input_desc->getDimIndex(2);
     } else {
       VLOG(4) << "unsupport input layout now.";
     }
@@ -688,8 +686,8 @@ int64_t NmsExecutor::getTheoryOps() {
   float *input_boxes = NULL;
   float *input_conf = NULL;
   if (device == Device::GPU) {
-    auto boxes_dtype = input_desc->dtype;
-    auto conf_dtype = input_conf_desc->dtype;
+    auto boxes_dtype = input_desc->getDtype();
+    auto conf_dtype = input_conf_desc->getDtype();
     int boxes_count_num = mluOpGetTensorElementNum(input_desc);
     int conf_count_num = mluOpGetTensorElementNum(input_conf_desc);
     float *boxes_host =
