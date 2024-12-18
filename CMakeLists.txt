@@ -140,7 +140,8 @@ endif()
 if (NOT MLUOP_MLU_ARCH_LIST)
   message(STATUS "build all arch")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS}" "--bang-mlu-arch=mtp_372"
-                                           "--bang-mlu-arch=mtp_592")
+                                           "--bang-mlu-arch=mtp_592"
+                                           "--bang-mlu-arch=mtp_613")
 else()
   foreach (arch ${MLUOP_MLU_ARCH_LIST})
     set(CNCC_FLAGS_ARCH ${CNCC_FLAGS_ARCH} "--bang-mlu-arch=${arch}" )
