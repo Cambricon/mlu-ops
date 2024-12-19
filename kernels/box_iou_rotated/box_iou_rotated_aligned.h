@@ -62,7 +62,8 @@ __mlu_func__ void MLUUnion1BoxIouRotatedAligned(const T *box1, const T *box2,
   const uint32_t max_box_pair =
       FLOOR_ALIGN(MAX_NRAM_SIZE / copies_of_nram, COMPUTE_COUNT_ALIGN);
   // First, initialize ram with all 0, or could cause nan/inf unexcepted results
-  __bang_write_zero((uint8_t *)nram_buffer, copies_of_nram * max_box_pair);
+  __bang_write_value((uint8_t *)nram_buffer, copies_of_nram * max_box_pair,
+                     (uint8_t)0);
 
   void *box1_trans = nram_buffer + 4 * max_box_pair * sizeof(T);
   void *box2_trans =
@@ -224,8 +225,8 @@ __mlu_func__ void MLUUnion1BoxIouRotatedAligned(const T *box1, const T *box2,
                        (T *)temp4_ram, (T *)temp5_ram, actual_compute_box_num);
 
     // initialize valid_pts, nums_in
-    __bang_write_zero((T *)valid_pts, 24 * actual_compute_box_num);
-    __bang_write_zero((T *)nums_in_ram, actual_compute_box_num);
+    __bang_write_value((T *)valid_pts, 24 * actual_compute_box_num, (T)0);
+    __bang_write_value((T *)nums_in_ram, actual_compute_box_num, (T)0);
 
     // 3. Get all intersection points
     getIntersectionPoints(

@@ -455,8 +455,8 @@ __mlu_func__ void convexHullGraham(
   // if all of boxes are invalid, just return.
   int valid_box_count = __bang_count((T *)valid_box, real_compute_box_num);
   if (!valid_box_count) {
-    __bang_write_value((T *)ordered_pts_x, total_points, 0);
-    __bang_write_value((T *)ordered_pts_y, total_points, 0);
+    __bang_write_value((T *)ordered_pts_x, total_points, (T)0);
+    __bang_write_value((T *)ordered_pts_y, total_points, (T)0);
     __bang_write_value((T *)valid_pts, actual_compute_box_num, (T)1);
     __bang_write_value((T *)valid_pts + actual_compute_box_num,
                        total_points - actual_compute_box_num, (T)0);
@@ -559,8 +559,8 @@ __mlu_func__ void convexHullGraham(
   // assign invalid value to temp1_ram(-2 < -1) and temp2_ram for sorting.
   __bang_write_value((T *)temp1_ram, actual_compute_box_num, (T)-2);
   __bang_write_value((T *)temp2_ram, actual_compute_box_num, (T)0);
-  __bang_write_value((T *)ordered_pts_x, total_points, 0);
-  __bang_write_value((T *)ordered_pts_y, total_points, 0);
+  __bang_write_value((T *)ordered_pts_x, total_points, (T)0);
+  __bang_write_value((T *)ordered_pts_y, total_points, (T)0);
 
   // get the offset of each max value according to the channel
   __mluop_get_stage_indices_tfuse((int *)temp3_ram, actual_compute_box_num);
@@ -783,7 +783,7 @@ __mlu_func__ void polygonArea(T *ordered_pts_x, T *ordered_pts_y, T *valid_box,
              actual_compute_box_num);
 
   // temp1 = area, initialize with all 0
-  __bang_write_zero((T *)temp1_ram, actual_compute_box_num);
+  __bang_write_value((T *)temp1_ram, actual_compute_box_num, (T)0);
   __bang_argmax((T *)temp6_ram, (T *)nums_in_ram, actual_compute_box_num);
 
   // temp_nums_in = max(nums_in)
