@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef MLUOP_EXAMPLE_H_
-#define MLUOP_EXAMPLE_H_
+#ifndef MLUOP_H_
+#define MLUOP_H_
 
 /******************************************************************************
  * MLU-OPS: Cambricon Open Source operator library for Network
@@ -14526,4 +14526,4 @@ mluOpLgamma(mluOpHandle_t handle,
 }
 #endif
 
-#endif  // MLUOP_EXAMPLE_H_
+#endif  // MLUOP_H_

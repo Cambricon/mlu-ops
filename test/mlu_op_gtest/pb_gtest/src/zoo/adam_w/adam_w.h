@@ -22,6 +22,7 @@
  *************************************************************************/
 #ifndef TEST_MLU_OP_GTEST_SRC_ZOO_ADAMW_ADAMW_H_
 #define TEST_MLU_OP_GTEST_SRC_ZOO_ADAMW_ADAMW_H_
+
 #include "executor.h"
 
 namespace mluoptest {

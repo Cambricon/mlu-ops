@@ -8,6 +8,7 @@ MLUOP_TARGET_CPU_ARCH=`uname -m`
 GEN_SYMBOL_VIS_FILE_PY="./scripts/gen_symbol_visibility_map.py"
 MLUOP_SYMBOL_VIS_FILE="symbol_visibility.map"
 TARGET_SYMBOL_FILE="mlu_op.h"
+TARGET_SYMBOL_FILE_LITE="bangc_kernels.h"
 PACKAGE_EXTRACT_DIR="dep_libs_extract"
 
 PROG_NAME=$(basename $0)  # current script filename, DO NOT EDIT
@@ -421,7 +422,7 @@ if [ "$OS_RELEASE_ID" = "centos" -a "$OS_RELEASE_VERSION_ID" = "7" ]; then
   fi
 fi
 
-if [[ "$(g++ --version | head -n1 | awk '{ print $3 }' | cut -d '.' -f1)" < "5" ]]; then
+if [[ "$(g++ --version | head -n1 | awk '{ print $3 }' | cut -d '.' -f1)" -lt "5" ]]; then
   prog_log_note "we do not support g++<5, try to activate devtoolset-8 env"
   source /opt/rh/devtoolset-8/enable && prog_log_warn "devtoolset-8 activated" \
     || ( prog_log_warn "source devtoolset-8 failed, ignore this info if you have set env TOOLCHAIN_ROOT, TARGET_C_COMPILER, TARGET_CXX_COMPILER properly (see more details in README.md)" && sleep 4 ) # I hope user will see it
@@ -459,8 +460,8 @@ export PATH=${NEUWARE_HOME}/bin:$PATH
 export LD_LIBRARY_PATH=${NEUWARE_HOME}/lib64:$LD_LIBRARY_PATH
 
 prog_log_info "generate ${MLUOP_SYMBOL_VIS_FILE} file."
-prog_log_info "python3 ${GEN_SYMBOL_VIS_FILE_PY} ${BUILD_PATH}/${MLUOP_SYMBOL_VIS_FILE} ${TARGET_SYMBOL_FILE}"
-python3 ${GEN_SYMBOL_VIS_FILE_PY} ${BUILD_PATH}/${MLUOP_SYMBOL_VIS_FILE} ${TARGET_SYMBOL_FILE}
+prog_log_info "python3 ${GEN_SYMBOL_VIS_FILE_PY} ${BUILD_PATH}/${MLUOP_SYMBOL_VIS_FILE} ${TARGET_SYMBOL_FILE} ${TARGET_SYMBOL_FILE_LITE}"
+python3 ${GEN_SYMBOL_VIS_FILE_PY} ${BUILD_PATH}/${MLUOP_SYMBOL_VIS_FILE} ${TARGET_SYMBOL_FILE} ${TARGET_SYMBOL_FILE_LITE}
 
 pushd ${BUILD_PATH} > /dev/null
   prog_log_info "Rmove cmake cache ${PWD}"
