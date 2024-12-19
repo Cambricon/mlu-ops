@@ -840,7 +840,7 @@ __mlu_func__ void polygonArea(T *ordered_pts_x, T *ordered_pts_y, T *valid_box,
              actual_compute_box_num);
 
   // temp1 = area, initialize with all 0
-  __bang_write_zero((T *)temp1_ram, actual_compute_box_num);
+  __bang_write_value((T *)temp1_ram, actual_compute_box_num, (T)0);
   __bang_argmax((T *)temp6_ram, (T *)nums_in_ram, actual_compute_box_num);
 
   // temp_nums_in = max(nums_in)

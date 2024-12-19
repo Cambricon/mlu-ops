@@ -65,10 +65,6 @@ void hardwareMonitor::start() {
         std::bind(&hardwareMonitor::monitorFrequencyOneGRepeat, this),
         monitor_hwtime);
   }));
-  monitor_threads.emplace_back(std::thread([&, this] {
-    monitorAllGRepeat(std::bind(&hardwareMonitor::monitorPowerOneGRepeat, this),
-                      monitor_hwtime);
-  }));
   monitor_hwtime = true;
   monitor_threads.emplace_back(std::thread([&, this] {
     monitorAllGRepeat(
@@ -163,62 +159,6 @@ void hardwareMonitor::monitorFrequencyOneGRepeat() {
       std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(t2 -
                                                                             t1);
   VLOG(4) << "cndevGetFrequencyInfo took " << time_span.count() / i
-          << "us per call.";
-}
-
-void hardwareMonitor::monitorPowerOneGRepeat() {
-  std::ofstream power_file(results_dir + "/power_device_" +
-                               std::to_string(global_var.dev_id_) + ".csv",
-                           std::ios::app);
-  power_file << "relative_time(ns),instantaneous_power(W),average_power(W)\n";
-  cndevDevice_t dev_id;
-  GTEST_CHECK(cnrtGetDevice(&dev_id) == cnrtSuccess);
-  GTEST_CHECK(cndevInit(0) == CNDEV_SUCCESS);
-  int i = 1;
-
-  cndevPowerInfo_t power_info_prev, power_info_curr;
-  size_t t_prev, t_curr;
-  auto getPower = [&, this]() {
-    power_info_curr.version = CNDEV_VERSION_5;
-    t_curr = MONITOR_CLOCK::now().time_since_epoch().count() - start_time_point;
-    // TODO(None): cntoolkit-3.6, use cndevGetDevicePower
-    // GTEST_CHECK(cndevGetDevicePower(&power_info_curr, dev_id) ==
-    // CNDEV_SUCCESS);
-    GTEST_CHECK(cndevGetPowerInfo(&power_info_curr, dev_id) == CNDEV_SUCCESS);
-  };
-
-  MONITOR_CLOCK::time_point t1 = MONITOR_CLOCK::now();
-  getPower();
-  std::tie(t_prev, power_info_prev) = std::make_tuple(t_curr, power_info_curr);
-  power_file << t_prev << ","
-             << (uint32_t)(power_info_prev.instantaneousPowerUsage) << ","
-             << power_info_prev.usage << "\n";
-  while (!status.finish_one_grepeat) {
-    ++i;
-    getPower();
-    if (power_info_prev.instantaneousPowerUsage !=
-            power_info_curr.instantaneousPowerUsage ||
-        power_info_prev.usage != power_info_curr.usage) {
-      power_file << t_prev << ","
-                 << (uint32_t)(power_info_prev.instantaneousPowerUsage) << ","
-                 << power_info_prev.usage << "\n";
-      power_file << t_curr << ","
-                 << (uint32_t)(power_info_curr.instantaneousPowerUsage) << ","
-                 << power_info_curr.usage << "\n";
-      power_info_prev = power_info_curr;
-    }
-    t_prev = t_curr;
-  }
-  power_file << t_curr << ","
-             << (uint32_t)(power_info_curr.instantaneousPowerUsage) << ","
-             << power_info_curr.usage << "\n";
-  MONITOR_CLOCK::time_point t2 = MONITOR_CLOCK::now();
-  auto time_span =
-      std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(t2 -
-                                                                            t1);
-  // TODO(None): cntoolkit-3.6, remove this warning
-  LOG(WARNING) << "From cntoolkit-3.6 onward, use cndevGetDevicePower.";
-  VLOG(4) << "cndevGetDevicePower took " << time_span.count() / i
           << "us per call.";
 }
 

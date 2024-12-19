@@ -119,7 +119,7 @@ inline int32_t getClusterNumberOfJobLimitCapability(mluOpHandle_t handle) {
 inline cnrtFunctionType_t castCnKernelClassToCnrtFuncType(KernelClass jobType) {
   switch (jobType) {
     default:
-      return CNRT_FUNC_TYPE_MUTABLE;
+      return cnrtFuncTypeMutable;
     case CN_KERNEL_CLASS_BLOCK:
       return cnrtFuncTypeBlock;
     case CN_KERNEL_CLASS_UNION:
