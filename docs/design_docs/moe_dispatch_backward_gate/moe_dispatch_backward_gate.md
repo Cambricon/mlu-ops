@@ -476,7 +476,7 @@ for (int i = 0; i < samples; ++i) {
              int sample_idx = 0;
              // 从 workspace load所有中间计算结果
              T *nram_grad_gates = (T *)nram_buffer;
-             __bang_write_zero(nram_grad_gates, samples);
+             __bang_write_value(nram_grad_gates, samples, (T)0);
              for (int ti = 0; ti < taskDim; ti++) {
                  if ((rem_task > 0) && (ti < (one_sample_task_num + 1) * rem_task)) {
                      sample_idx = (int)(ti / (one_sample_task_num + 1));
@@ -567,7 +567,7 @@ for (int i = 0; i < samples; ++i) {
 
               // 复用nram_location空间
               T *nram_grad_gates = (T*)nram_location;
-              __bang_write_zero(nram_grad_gates, deal_s_num);
+              __bang_write_value(nram_grad_gates, deal_s_num, 0);
 
               // 三级流水计算过程
               // step4
