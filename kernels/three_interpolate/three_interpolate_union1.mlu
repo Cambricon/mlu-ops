@@ -307,7 +307,7 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
     // transpose the indices and weights
     for (uint32_t index = 0; index < INDEX_WEIGHT_LAST_DIM; ++index) {
       __bang_write_value(nram_indices_transpose + index * n_limit, n_limit, -1);
-      __bang_write_zero(nram_weights_transpose + index * n_limit, n_limit);
+      __bang_write_value(nram_weights_transpose + index * n_limit, n_limit, 0);
       __memcpy(nram_indices_transpose + index * n_limit, nram_indices + index,
                sizeof(int32_t), NRAM2NRAM, sizeof(int32_t),
                INDEX_WEIGHT_LAST_DIM * sizeof(int32_t), actual_n_size - 1);
@@ -330,7 +330,7 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
             MIN(CEIL_ALIGN(c_slice % c_limit, align_base_128), c_limit_new);
       }
       // 1.2 load Co*Mo features data
-      __bang_write_zero(nram_output, output_deal_size);
+      __bang_write_value(nram_output, output_deal_size, 0);
       uint32_t m_rem = m;
       for (uint32_t k = 0; k < m_repeated_times; ++k) {
         uint32_t m_slice = m_limit < m_rem ? m_limit : m_rem;
@@ -355,8 +355,8 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
                    m_slice, GDRAM2NRAM, m_limit_new, m, c_slice - 1);
         }
         // 2. Compute
-        __bang_write_zero(nram_features_transpose,
-                          features_deal_size + c_limit);
+        __bang_write_value(nram_features_transpose,
+                           features_deal_size + c_limit, 0);
         c_limit = c_limit_new;
         m_limit = m_limit_new;
         // 2.1 transpose features from Co*Mo to Mo*Co to easily select one whole
@@ -366,8 +366,8 @@ __mlu_global__ void MLUKernelThreeInterpolateForward(
         uint32_t m_min = k * m_limit_org;
         uint32_t m_max = m_min + m_slice;
         for (uint32_t index = 0; index < INDEX_WEIGHT_LAST_DIM; ++index) {
-          __bang_write_zero(nram_features, output_deal_size);
-          __bang_write_zero(nram_features_selected, output_deal_size);
+          __bang_write_value(nram_features, output_deal_size, 0);
+          __bang_write_value(nram_features_selected, output_deal_size, 0);
           // 2.2 select the offset between the m_min and m_max
           // convert indices from int32_t to float
           if (m <= INT2FLOAT_KEEP_PRECISION_MAX_VALUE) {
@@ -542,7 +542,7 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
             MIN(CEIL_ALIGN(c_slice % c_limit, align_base_128), c_limit_new);
       }
       // initial the nram_grad_features with 0
-      __bang_write_zero(nram_grad_features, grad_features_deal_size);
+      __bang_write_value(nram_grad_features, grad_features_deal_size, 0);
       uint32_t n_rem = n;
       for (uint32_t k = 0; k < n_repeated_times; ++k) {
         uint32_t n_slice = n_limit < n_rem ? n_limit : n_rem;
@@ -579,7 +579,8 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
         for (uint32_t index = 0; index < INDEX_WEIGHT_LAST_DIM; ++index) {
           __bang_write_value(nram_indices_transpose + index * n_limit, n_limit,
                              -1);
-          __bang_write_zero(nram_weights_transpose + index * n_limit, n_limit);
+          __bang_write_value(nram_weights_transpose + index * n_limit, n_limit,
+                             0);
           __memcpy(nram_indices_transpose + index * n_limit_new,
                    nram_indices + index, sizeof(int32_t), NRAM2NRAM,
                    sizeof(int32_t), INDEX_WEIGHT_LAST_DIM * sizeof(int32_t),
@@ -595,8 +596,8 @@ __mlu_global__ void MLUKernelThreeInterpolateBackward(
         // initial nram_grad_output_transpose with zero
         // and set extra c_limit size that will be selected by the index not in
         // [m_min, m_max)
-        __bang_write_zero(nram_grad_output_transpose,
-                          grad_output_deal_size + c_limit);
+        __bang_write_value(nram_grad_output_transpose,
+                           grad_output_deal_size + c_limit, 0);
         c_limit = c_limit_new;
         n_limit = n_limit_new;
         for (uint32_t index = 0; index < INDEX_WEIGHT_LAST_DIM; ++index) {

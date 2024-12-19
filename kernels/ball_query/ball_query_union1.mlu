@@ -121,7 +121,7 @@ __mlu_func__ void ballQueryWorkflow(
     T *new_xyz_nram = vec_new_x1;
     __memcpy(new_xyz_nram, &new_xyz[base1], num_deal_new_xyz * 3 * sizeof(T),
              GDRAM2NRAM);
-    __bang_write_zero(vec_idx_num, num_stride);
+    __bang_write_value(vec_idx_num, num_stride, 0);
 
     for (uint32_t new_index = index_new_xyz;
          new_index < (index_new_xyz + num_deal_new_xyz);) {

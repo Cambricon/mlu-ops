@@ -148,7 +148,7 @@ __mlu_func__ void nms_detection(
   void *vec2_y = (float *)vec2_x + 4 * max_seg_iou_pad;
 
   // First, initialize ram with all 0, or could cause nan/inf unexcepted results
-  __bang_write_zero((uint8_t *)score, copies_of_nram * max_seg_iou_pad);
+  __bang_write_value((uint8_t *)score, copies_of_nram * max_seg_iou_pad, 0);
 
   for (int keep = 0; keep < input_box_num; keep++) {
     __sync_cluster();
@@ -267,7 +267,7 @@ __mlu_func__ void nms_detection(
       // Initialize valid_box, set actual_box_num boxes to 1, else set to 0
       __bang_write_value(((float *)valid_box), seg_len, 1.0f);
       if (cpy_len < seg_len) {
-        __bang_write_zero((float *)valid_box + cpy_len, seg_len - cpy_len);
+        __bang_write_value((float *)valid_box + cpy_len, seg_len - cpy_len, 0);
       }
 
       // Each box data: x, y, w, h, a
@@ -320,8 +320,8 @@ __mlu_func__ void nms_detection(
                          (float *)temp3_ram, (float *)temp4_ram, seg_len);
 
       // initialize valid_pts, nums_in
-      __bang_write_zero((float *)valid_pts, 24 * seg_len);
-      __bang_write_zero((float *)nums_in_ram, seg_len);
+      __bang_write_value((float *)valid_pts, 24 * seg_len, 0);
+      __bang_write_value((float *)nums_in_ram, seg_len, 0);
 
       // 3. Get all intersection points
       getIntersectionPoints(

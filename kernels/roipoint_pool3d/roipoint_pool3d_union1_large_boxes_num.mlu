@@ -213,8 +213,8 @@ __mlu_func__ void computeStoreLastBlockRoipointPool3d(
     int rem =
         (sampled_pts_num * (3 + feature_in_len)) % (auxiliary_num_deal * 6);
     // use auxiliary_a to auxiliary_f
-    __bang_write_zero((T *)auxiliary_a,
-                      PAD_UP(auxiliary_num_deal * 6, NFU_ALIGN_SIZE));
+    __bang_write_value((T *)auxiliary_a,
+                      PAD_UP(auxiliary_num_deal * 6, NFU_ALIGN_SIZE), 0);
     if (repeat > 0) {
       __memcpy(pooled_features_gdram +
                    box_idx * sampled_pts_num * (3 + feature_in_len) * sizeof(T),

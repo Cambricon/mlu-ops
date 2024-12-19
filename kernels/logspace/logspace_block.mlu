@@ -60,16 +60,16 @@ __mlu_func__ void float2DifferentType(float *result_float, T *result,
     __bang_lut((int16_t *)result_ge_half_max, (uint16_t *)result_ge_half_max,
                (int16_t *)table_half_all1, num, LUT_TABEL_LENGTH);
     __bang_float2half_tz((half *)result, result_float, num);
-    __bang_bor((int16_t *)result, (int16_t *)result,
-               (int16_t *)result_ge_half_max, num);
+    __bang_bor((int8_t *)result, (int8_t *)result, (int8_t *)result_ge_half_max,
+               num);
     __bang_ge_scalar((int16_t *)result_ge_half_max,
                      (int16_t *)result_ge_half_max, 1, num);
     __nram__ int16_t table_half_inf[LUT_TABEL_LENGTH] = {(int16_t)0xffff,
                                                          (int16_t)0xfc00};
     __bang_lut((int16_t *)result_ge_half_max, (uint16_t *)result_ge_half_max,
                (int16_t *)table_half_inf, num, LUT_TABEL_LENGTH);
-    __bang_band((int16_t *)result, (int16_t *)result,
-                (int16_t *)result_ge_half_max, num);
+    __bang_band((int8_t *)result, (int8_t *)result,
+                (int8_t *)result_ge_half_max, 2 * num);
   }
   if (std::is_same<T, int>::value) {
     __cn_vector_cast_f32_to_s32(num, (int *)result, result_float);
@@ -236,8 +236,10 @@ __mlu_func__ void dealBaseNegative(const float start, const float end,
     __bang_float2int32((int *)floor_y, floor_y, actual_deal_num, 0);
     __bang_move(y_copy, log2_result, sizeof(float) * actual_deal_num);
     __bang_float2int32((int *)y_copy, y_copy, actual_deal_num, 0);
-    __bang_band((int *)y_copy, (int *)y_copy, all_int_1, actual_deal_num);
-    __bang_band((int *)y_copy, (int *)y_copy, (int *)floor_y, actual_deal_num);
+    __bang_band((int8_t *)y_copy, (int8_t *)y_copy, (int8_t *)all_int_1,
+                actual_deal_num);
+    __bang_band((int8_t *)y_copy, (int8_t *)y_copy, (int8_t *)floor_y,
+                actual_deal_num);
     __nram__ uint32_t table_for_odd_or_even_power[LUT_TABEL_LENGTH] = {
         0, 0x80000000};
     __bang_lut((int32_t *)y_copy, (uint32_t *)y_copy,
@@ -247,11 +249,11 @@ __mlu_func__ void dealBaseNegative(const float start, const float end,
     __bang_lut((int32_t *)floor_y, (uint32_t *)floor_y,
                (int32_t *)table_for_integer_power, actual_deal_num,
                LUT_TABEL_LENGTH);
-    __bang_bor((int *)log2_result, (int *)log2_result, (int *)floor_y,
+    __bang_bor((int8_t *)log2_result, (int8_t *)log2_result, (int8_t *)floor_y,
                actual_deal_num);
     __bang_mul_scalar(log2_result, log2_result, base_log, actual_deal_num);
     __bang_pow2(result_float, log2_result, actual_deal_num);
-    __bang_bor((int *)result_float, (int *)result_float, (int *)y_copy,
+    __bang_bor((int8_t *)result_float, (int8_t *)result_float, (int8_t *)y_copy,
                actual_deal_num);
     float2DifferentType(result_float, result, actual_deal_num);
     __memcpy(res + loop_offset, result, actual_deal_num * sizeof(T),

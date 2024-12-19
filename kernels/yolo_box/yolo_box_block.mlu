@@ -217,7 +217,7 @@ __mlu_func__ void compute(T *nram_x, T *nram_y, T *nram_w, T *nram_h,
   if (clip_bbox == true) {
     // bx0 = bx0 > 0 ? bx0 : 0;
     // by0 = by0 > 0 ? by0 : 0;
-    __bang_write_zero(nram_conf_p, deal_num);
+    __bang_write_value(nram_conf_p, deal_num, 0);
     __bang_maxequal(nram_x_p, nram_conf_p, nram_x_p, deal_num);
     __bang_maxequal(nram_y_p, nram_conf_p, nram_y_p, deal_num);
 
@@ -406,16 +406,16 @@ __mlu_func__ void YoloBoxComputeBbox(
          n_in, class_num, anchor_s, anchor_s, 0, c_in, hw_total_num, hw_seg_num,
          align_hw_seg_num, 0, 0);
 
-    __bang_write_zero(nram_cx, deal_num);
-    __bang_write_zero(nram_cy, deal_num);
+    __bang_write_value(nram_cx, deal_num, 0);
+    __bang_write_value(nram_cy, deal_num, 0);
     initCxyParam(nram_cx, nram_cy, n_in, anchor_s, w_in, hw_seg_num,
                  align_hw_seg_num, hw_data_offset);
-    __bang_write_zero(nram_anchor_w, deal_num);
-    __bang_write_zero(nram_anchor_h, deal_num);
+    __bang_write_value(nram_anchor_w, deal_num, 0);
+    __bang_write_value(nram_anchor_h, deal_num, 0);
     initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, n_in, anchor_s,
                     anchor_s, 0, align_hw_seg_num);
-    __bang_write_zero(nram_img_w, deal_num);
-    __bang_write_zero(nram_img_h, deal_num);
+    __bang_write_value(nram_img_w, deal_num, 0);
+    __bang_write_value(nram_img_h, deal_num, 0);
     initImgParam(img_size, nram_img_w, nram_img_h, n_in, anchor_s,
                  align_hw_seg_num);
     __sync();
@@ -440,12 +440,12 @@ __mlu_func__ void YoloBoxComputeBbox(
     T *base_addr_x = (T *)x + hw_data_offset;
     T *base_addr_boxes = (T *)boxes + hw_data_offset;
 
-    __bang_write_zero(nram_cx, deal_num);
-    __bang_write_zero(nram_cy, deal_num);
+    __bang_write_value(nram_cx, deal_num, 0);
+    __bang_write_value(nram_cy, deal_num, 0);
     initCxyParam(nram_cx, nram_cy, deal_n_num, anchor_s, w_in, hw_seg_num,
                  align_hw_seg_num, hw_data_offset);
-    __bang_write_zero(nram_anchor_w, deal_num);
-    __bang_write_zero(nram_anchor_h, deal_num);
+    __bang_write_value(nram_anchor_w, deal_num, 0);
+    __bang_write_value(nram_anchor_h, deal_num, 0);
     initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, deal_n_num, anchor_s,
                     anchor_s, 0, align_hw_seg_num);
 
@@ -467,8 +467,8 @@ __mlu_func__ void YoloBoxComputeBbox(
 
       // C
       int *addr_img_size = (int *)img_size;
-      __bang_write_zero(nram_img_w, deal_num);
-      __bang_write_zero(nram_img_h, deal_num);
+      __bang_write_value(nram_img_w, deal_num, 0);
+      __bang_write_value(nram_img_h, deal_num, 0);
       initImgParam(addr_img_size, nram_img_w, nram_img_h, deal_n_num, anchor_s,
                    align_hw_seg_num);
       compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
@@ -494,8 +494,8 @@ __mlu_func__ void YoloBoxComputeBbox(
 
       // C
       int *addr_img_size = (int *)img_size + (n_iter + 1) * deal_n_num * 2;
-      __bang_write_zero(nram_img_w, deal_num);
-      __bang_write_zero(nram_img_h, deal_num);
+      __bang_write_value(nram_img_w, deal_num, 0);
+      __bang_write_value(nram_img_h, deal_num, 0);
       initImgParam(addr_img_size, nram_img_w, nram_img_h, deal_n_num, anchor_s,
                    align_hw_seg_num);
       compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
@@ -525,8 +525,8 @@ __mlu_func__ void YoloBoxComputeBbox(
     if (repeat_n > 0) {
       // C
       int *addr_img_size = (int *)img_size + (repeat_n - 1) * deal_n_num * 2;
-      __bang_write_zero(nram_img_w, deal_num);
-      __bang_write_zero(nram_img_h, deal_num);
+      __bang_write_value(nram_img_w, deal_num, 0);
+      __bang_write_value(nram_img_h, deal_num, 0);
       initImgParam(addr_img_size, nram_img_w, nram_img_h, deal_n_num, anchor_s,
                    align_hw_seg_num);
       compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
@@ -548,8 +548,8 @@ __mlu_func__ void YoloBoxComputeBbox(
     if (rem_n_num > 0) {
       // C
       int *addr_img_size = (int *)img_size + repeat_n * deal_n_num * 2;
-      __bang_write_zero(nram_img_w, deal_num);
-      __bang_write_zero(nram_img_h, deal_num);
+      __bang_write_value(nram_img_w, deal_num, 0);
+      __bang_write_value(nram_img_h, deal_num, 0);
       initImgParam(addr_img_size, nram_img_w, nram_img_h, rem_n_num, anchor_s,
                    align_hw_seg_num);
       compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
@@ -575,8 +575,8 @@ __mlu_func__ void YoloBoxComputeBbox(
     T *base_addr_x = (T *)x + hw_data_offset;
     T *base_addr_boxes = (T *)boxes + hw_data_offset;
 
-    __bang_write_zero(nram_cx, deal_num);
-    __bang_write_zero(nram_cy, deal_num);
+    __bang_write_value(nram_cx, deal_num, 0);
+    __bang_write_value(nram_cy, deal_num, 0);
     initCxyParam(nram_cx, nram_cy, 1, deal_s_num, w_in, hw_seg_num,
                  align_hw_seg_num, hw_data_offset);
 
@@ -617,14 +617,14 @@ __mlu_func__ void YoloBoxComputeBbox(
       }
 
       // C
-      __bang_write_zero(nram_anchor_w, deal_num);
-      __bang_write_zero(nram_anchor_h, deal_num);
+      __bang_write_value(nram_anchor_w, deal_num, 0);
+      __bang_write_value(nram_anchor_h, deal_num, 0);
       initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, 1, anchor_s,
                       deal_s_num, 0, align_hw_seg_num);
 
       int *addr_img_size = (int *)img_size;
-      __bang_write_zero(nram_img_w, deal_num);
-      __bang_write_zero(nram_img_h, deal_num);
+      __bang_write_value(nram_img_w, deal_num, 0);
+      __bang_write_value(nram_img_h, deal_num, 0);
       initImgParam(addr_img_size, nram_img_w, nram_img_h, 1, deal_s_num,
                    align_hw_seg_num);
       compute(nram_x, nram_y, nram_w, nram_h, nram_conf, nram_iou, nram_cx,
@@ -671,8 +671,8 @@ __mlu_func__ void YoloBoxComputeBbox(
       }
 
       // C
-      __bang_write_zero(nram_anchor_w, deal_num);
-      __bang_write_zero(nram_anchor_h, deal_num);
+      __bang_write_value(nram_anchor_w, deal_num, 0);
+      __bang_write_value(nram_anchor_h, deal_num, 0);
       int anchor_offset = (ns_iter + 1) * deal_s_num;
       initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, 1, anchor_s,
                       deal_s_num, anchor_offset, align_hw_seg_num);
@@ -684,8 +684,8 @@ __mlu_func__ void YoloBoxComputeBbox(
       anchor_num = anchor_s - s_num_offset;
       next_batch = deal_s_num > anchor_num;
       anchor_num = next_batch ? anchor_num : deal_s_num;
-      __bang_write_zero(nram_img_w, deal_num);
-      __bang_write_zero(nram_img_h, deal_num);
+      __bang_write_value(nram_img_w, deal_num, 0);
+      __bang_write_value(nram_img_h, deal_num, 0);
       initImgParam(addr_img_size, nram_img_w, nram_img_h, 1, anchor_num,
                    align_hw_seg_num);
 
@@ -728,8 +728,8 @@ __mlu_func__ void YoloBoxComputeBbox(
     }
     if (repeat_ns > 0) {
       // C
-      __bang_write_zero(nram_anchor_w, deal_num);
-      __bang_write_zero(nram_anchor_h, deal_num);
+      __bang_write_value(nram_anchor_w, deal_num, 0);
+      __bang_write_value(nram_anchor_h, deal_num, 0);
       int anchor_offset = (repeat_ns - 1) * deal_s_num;
       initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, 1, anchor_s,
                       deal_s_num, anchor_offset, align_hw_seg_num);
@@ -741,8 +741,8 @@ __mlu_func__ void YoloBoxComputeBbox(
       int anchor_num = anchor_s - s_num_offset;
       bool next_batch = deal_s_num > anchor_num;
       anchor_num = next_batch ? anchor_num : deal_s_num;
-      __bang_write_zero(nram_img_w, deal_num);
-      __bang_write_zero(nram_img_h, deal_num);
+      __bang_write_value(nram_img_w, deal_num, 0);
+      __bang_write_value(nram_img_h, deal_num, 0);
       initImgParam(addr_img_size, nram_img_w, nram_img_h, 1, anchor_num,
                    align_hw_seg_num);
 
@@ -774,8 +774,8 @@ __mlu_func__ void YoloBoxComputeBbox(
     }
     if (rem_ns_num > 0) {
       // C
-      __bang_write_zero(nram_anchor_w, deal_num);
-      __bang_write_zero(nram_anchor_h, deal_num);
+      __bang_write_value(nram_anchor_w, deal_num, 0);
+      __bang_write_value(nram_anchor_h, deal_num, 0);
       int anchor_offset = repeat_ns * deal_s_num;
       initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, 1, anchor_s,
                       rem_ns_num, anchor_offset, align_hw_seg_num);
@@ -783,8 +783,8 @@ __mlu_func__ void YoloBoxComputeBbox(
       // init img w/h
       int batch_num = anchor_offset / anchor_s;
       int *addr_img_size = (int *)img_size + batch_num * 2;
-      __bang_write_zero(nram_img_w, deal_num);
-      __bang_write_zero(nram_img_h, deal_num);
+      __bang_write_value(nram_img_w, deal_num, 0);
+      __bang_write_value(nram_img_h, deal_num, 0);
       initImgParam(addr_img_size, nram_img_w, nram_img_h, 1, rem_ns_num,
                    align_hw_seg_num);
 
@@ -817,13 +817,13 @@ __mlu_func__ void YoloBoxComputeBbox(
         T *addr_boxes_n = base_addr_boxes + n_iter * output_stride +
                           s_iter * 4 * hw_total_num;
 
-        __bang_write_zero(nram_anchor_w, deal_num);
-        __bang_write_zero(nram_anchor_h, deal_num);
+        __bang_write_value(nram_anchor_w, deal_num, 0);
+        __bang_write_value(nram_anchor_h, deal_num, 0);
         initAnchorParam(anchors, nram_anchor_w, nram_anchor_h, 1, anchor_s, 1,
                         s_iter, deal_num);
 
-        __bang_write_zero(nram_img_w, deal_num);
-        __bang_write_zero(nram_img_h, deal_num);
+        __bang_write_value(nram_img_w, deal_num, 0);
+        __bang_write_value(nram_img_h, deal_num, 0);
         int *addr_img_size = (int *)img_size + n_iter * 2;
         initImgParam(addr_img_size, nram_img_w, nram_img_h, 1, 1, deal_num);
 
@@ -844,8 +844,8 @@ __mlu_func__ void YoloBoxComputeBbox(
                deal_num, deal_num, nram_pingpong_num, 1);
 
           // C
-          __bang_write_zero(nram_cx, deal_num);
-          __bang_write_zero(nram_cy, deal_num);
+          __bang_write_value(nram_cx, deal_num, 0);
+          __bang_write_value(nram_cy, deal_num, 0);
           int hw_offset = hw_data_offset;
           initCxyParam(nram_cx, nram_cy, 1, 1, w_in, deal_num, deal_num,
                        hw_offset);
@@ -870,8 +870,8 @@ __mlu_func__ void YoloBoxComputeBbox(
                deal_num, deal_num, nram_pingpong_num, hw_iter + 2);
 
           // C
-          __bang_write_zero(nram_cx, deal_num);
-          __bang_write_zero(nram_cy, deal_num);
+          __bang_write_value(nram_cx, deal_num, 0);
+          __bang_write_value(nram_cy, deal_num, 0);
           int hw_offset = hw_data_offset + (hw_iter + 1) * deal_num;
           initCxyParam(nram_cx, nram_cy, 1, 1, w_in, deal_num, deal_num,
                        hw_offset);
@@ -899,8 +899,8 @@ __mlu_func__ void YoloBoxComputeBbox(
         }
         if (repeat_hw > 0) {
           // C
-          __bang_write_zero(nram_cx, deal_num);
-          __bang_write_zero(nram_cy, deal_num);
+          __bang_write_value(nram_cx, deal_num, 0);
+          __bang_write_value(nram_cy, deal_num, 0);
           int hw_offset = hw_data_offset + (repeat_hw - 1) * deal_num;
           initCxyParam(nram_cx, nram_cy, 1, 1, w_in, deal_num, deal_num,
                        hw_offset);
@@ -921,8 +921,8 @@ __mlu_func__ void YoloBoxComputeBbox(
         }
         if (rem_hw_num > 0) {
           // C
-          __bang_write_zero(nram_cx, deal_num);
-          __bang_write_zero(nram_cy, deal_num);
+          __bang_write_value(nram_cx, deal_num, 0);
+          __bang_write_value(nram_cy, deal_num, 0);
           int hw_offset = hw_data_offset + repeat_hw * deal_num;
           initCxyParam(nram_cx, nram_cy, 1, 1, w_in, rem_hw_num, deal_num,
                        hw_offset);
