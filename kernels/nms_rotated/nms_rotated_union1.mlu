@@ -42,7 +42,9 @@ __mlu_func__ void nms_detection(
     mluMemcpyDirection_t scores_load_dir, mluMemcpyDirection_t scores_store_dir,
     mluMemcpyDirection_t boxes_load_dir, void *exit) {
   int32_t *exit_flag = (int32_t *)exit;
-  exit_flag[0] = 0;
+  if (taskId == 0) {
+    exit_flag[0] = 0;
+  }
   // temp nram buffer to store selected target.
   int nram_save_limit_count = 256;
   int32_t nram_save_count = 0;
@@ -214,9 +216,10 @@ __mlu_func__ void nms_detection(
     }
 
     // suppress max_box's score as -inf
-    if (!__is_mpu()) {
+    if (!__is_mpu() && taskId == 0) {
       storeGpr(input_data_score + global_max_index, IN_DT(-INFINITY));
     }
+    __sync_all_ipu_within_cluster();
 
     // prepare box1, also is the max_box
     // x
@@ -475,7 +478,9 @@ __mlu_global__ void MLUKernelNmsRotated(const T *boxes, T *input_boxes,
                   scores_store_dir, boxes_load_dir, exit);
   }
 
-  result_num[0] = output_box_num;
+  if (taskId == 0) {
+    result_num[0] = output_box_num;
+  }
   // PERF_TIME_END();
 }
 
