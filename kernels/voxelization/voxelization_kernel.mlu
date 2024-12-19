@@ -502,7 +502,7 @@ __mlu_global__ void mluCalcPointsPerVoxel(
 
     // generate 0~deal_num indices.
     __mluop_get_stage_indices_tfuse(nram_base_offset, max_nram_count);
-    __bang_write_value(nram_temp_zeros, max_nram_count, 0);
+    __bang_write_value(nram_temp_zeros, max_nram_count, (int32_t)0);
     for (int32_t i = 0; i <= repeat; i++) {
       if (i == repeat && rem == 0) {
         break;

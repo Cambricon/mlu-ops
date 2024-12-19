@@ -33,7 +33,7 @@ __nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 template <typename T>
 __mlu_func__ void generate_AbAb_Mask(T *a_mask, T a_index, T *b_mask, T b_index,
                                      T *tmp, T *result, const int align_num) {
-  __bang_write_value(result, align_num, 0);
+  __bang_write_value(result, align_num, (T)0);
   __bang_mul_scalar(tmp, a_mask, a_index, align_num);
   __bang_add(result, result, tmp, align_num);
   __bang_mul_scalar(tmp, b_mask, b_index, align_num);
@@ -79,7 +79,7 @@ __mlu_global__ void mluKernelPriorVar(const int height, const int width,
     const int loop_pixel_num = pixel_end_index - pixel_begin_index;
     T *loop_gdram_ptr = var + pixel_begin_index * num_priors * 4;
     __gdramset(loop_gdram_ptr, loop_pixel_num * num_priors * 4, (T)0);
-    __bang_write_value(var_nram, loop_pixel_num * one_var_size, 0);
+    __bang_write_value(var_nram, loop_pixel_num * one_var_size, (T)0);
     __bang_cycle_add(var_nram, var_nram, variances_nram,
                      loop_pixel_num * one_var_size, one_var_size);
     // memcpy to gdram

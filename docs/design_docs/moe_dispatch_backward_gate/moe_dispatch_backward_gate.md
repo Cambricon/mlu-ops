@@ -476,7 +476,7 @@ for (int i = 0; i < samples; ++i) {
              int sample_idx = 0;
              // 从 workspace load所有中间计算结果
              T *nram_grad_gates = (T *)nram_buffer;
-             __bang_write_value(nram_grad_gates, samples, 0);
+             __bang_write_value(nram_grad_gates, samples, (T)0);
              for (int ti = 0; ti < taskDim; ti++) {
                  if ((rem_task > 0) && (ti < (one_sample_task_num + 1) * rem_task)) {
                      sample_idx = (int)(ti / (one_sample_task_num + 1));

@@ -217,7 +217,7 @@ __mlu_func__ void compute(T *nram_x, T *nram_y, T *nram_w, T *nram_h,
   if (clip_bbox == true) {
     // bx0 = bx0 > 0 ? bx0 : 0;
     // by0 = by0 > 0 ? by0 : 0;
-    __bang_write_value(nram_conf_p, deal_num, 0);
+    __bang_write_value(nram_conf_p, deal_num, (T)0);
     __bang_maxequal(nram_x_p, nram_conf_p, nram_x_p, deal_num);
     __bang_maxequal(nram_y_p, nram_conf_p, nram_y_p, deal_num);
 
@@ -406,8 +406,8 @@ __mlu_func__ void YoloBoxComputeBbox(
          n_in, class_num, anchor_s, anchor_s, 0, c_in, hw_total_num, hw_seg_num,
          align_hw_seg_num, 0, 0);
 
-    __bang_write_value(nram_cx, deal_num, 0);
-    __bang_write_value(nram_cy, deal_num, 0);
+    __bang_write_value(nram_cx, deal_num, (T)0);
+    __bang_write_value(nram_cy, deal_num, (T)0);
     initCxyParam(nram_cx, nram_cy, n_in, anchor_s, w_in, hw_seg_num,
                  align_hw_seg_num, hw_data_offset);
     __bang_write_value(nram_anchor_w, deal_num, 0);
@@ -440,8 +440,8 @@ __mlu_func__ void YoloBoxComputeBbox(
     T *base_addr_x = (T *)x + hw_data_offset;
     T *base_addr_boxes = (T *)boxes + hw_data_offset;
 
-    __bang_write_value(nram_cx, deal_num, 0);
-    __bang_write_value(nram_cy, deal_num, 0);
+    __bang_write_value(nram_cx, deal_num, (T)0);
+    __bang_write_value(nram_cy, deal_num, (T)0);
     initCxyParam(nram_cx, nram_cy, deal_n_num, anchor_s, w_in, hw_seg_num,
                  align_hw_seg_num, hw_data_offset);
     __bang_write_value(nram_anchor_w, deal_num, 0);
@@ -575,8 +575,8 @@ __mlu_func__ void YoloBoxComputeBbox(
     T *base_addr_x = (T *)x + hw_data_offset;
     T *base_addr_boxes = (T *)boxes + hw_data_offset;
 
-    __bang_write_value(nram_cx, deal_num, 0);
-    __bang_write_value(nram_cy, deal_num, 0);
+    __bang_write_value(nram_cx, deal_num, (T)0);
+    __bang_write_value(nram_cy, deal_num, (T)0);
     initCxyParam(nram_cx, nram_cy, 1, deal_s_num, w_in, hw_seg_num,
                  align_hw_seg_num, hw_data_offset);
 
@@ -844,8 +844,8 @@ __mlu_func__ void YoloBoxComputeBbox(
                deal_num, deal_num, nram_pingpong_num, 1);
 
           // C
-          __bang_write_value(nram_cx, deal_num, 0);
-          __bang_write_value(nram_cy, deal_num, 0);
+          __bang_write_value(nram_cx, deal_num, (T)0);
+          __bang_write_value(nram_cy, deal_num, (T)0);
           int hw_offset = hw_data_offset;
           initCxyParam(nram_cx, nram_cy, 1, 1, w_in, deal_num, deal_num,
                        hw_offset);
@@ -870,8 +870,8 @@ __mlu_func__ void YoloBoxComputeBbox(
                deal_num, deal_num, nram_pingpong_num, hw_iter + 2);
 
           // C
-          __bang_write_value(nram_cx, deal_num, 0);
-          __bang_write_value(nram_cy, deal_num, 0);
+          __bang_write_value(nram_cx, deal_num, (T)0);
+          __bang_write_value(nram_cy, deal_num, (T)0);
           int hw_offset = hw_data_offset + (hw_iter + 1) * deal_num;
           initCxyParam(nram_cx, nram_cy, 1, 1, w_in, deal_num, deal_num,
                        hw_offset);
@@ -899,8 +899,8 @@ __mlu_func__ void YoloBoxComputeBbox(
         }
         if (repeat_hw > 0) {
           // C
-          __bang_write_value(nram_cx, deal_num, 0);
-          __bang_write_value(nram_cy, deal_num, 0);
+          __bang_write_value(nram_cx, deal_num, (T)0);
+          __bang_write_value(nram_cy, deal_num, (T)0);
           int hw_offset = hw_data_offset + (repeat_hw - 1) * deal_num;
           initCxyParam(nram_cx, nram_cy, 1, 1, w_in, deal_num, deal_num,
                        hw_offset);
@@ -921,8 +921,8 @@ __mlu_func__ void YoloBoxComputeBbox(
         }
         if (rem_hw_num > 0) {
           // C
-          __bang_write_value(nram_cx, deal_num, 0);
-          __bang_write_value(nram_cy, deal_num, 0);
+          __bang_write_value(nram_cx, deal_num, (T)0);
+          __bang_write_value(nram_cy, deal_num, (T)0);
           int hw_offset = hw_data_offset + repeat_hw * deal_num;
           initCxyParam(nram_cx, nram_cy, 1, 1, w_in, rem_hw_num, deal_num,
                        hw_offset);

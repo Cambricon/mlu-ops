@@ -132,7 +132,7 @@ static __mlu_func__ void compute(int8_t *nram_vertices, int8_t *nram_mask,
                  deal_num * dim_m);
 
   // preprocess to get pad index
-  __bang_write_value(nram_temp0, dim_m, 0);
+  __bang_write_value(nram_temp0, dim_m, (T)0);
   __bang_write_value(nram_temp0, INTERSECTION_OFFSET, (T)1.0);
   __bang_int82float(nram_pad, (int8_t *)(nram_mask_p), deal_num * dim_m, 0);
   __bang_cycle_maxequal(nram_pad, nram_pad, nram_temp0, deal_num * dim_m,

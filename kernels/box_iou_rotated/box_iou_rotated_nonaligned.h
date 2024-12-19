@@ -68,7 +68,8 @@ __mlu_func__ void MLUUnion1BoxIouRotatedNonAligned(const T *box1, const T *box2,
   const uint32_t max_box_pair =
       FLOOR_ALIGN(MAX_NRAM_SIZE / copies_of_nram, COMPUTE_COUNT_ALIGN);
   // First, initialize ram with all 0, or could cause nan/inf unexcepted results
-  __bang_write_value((uint8_t *)nram_buffer, copies_of_nram * max_box_pair, 0);
+  __bang_write_value((uint8_t *)nram_buffer, copies_of_nram * max_box_pair,
+                     (uint8_t)0);
 
   void *box1_onchip = nram_buffer + 2 * max_box_pair * sizeof(T);
   void *box2_onchip =

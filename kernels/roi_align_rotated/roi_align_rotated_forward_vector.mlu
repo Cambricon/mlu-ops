@@ -432,7 +432,7 @@ __mlu_global__ void roiAlignRotatedForward(
       if (cur_cache_c + c_cache_i > channels) {
         cur_cache_c = channels - c_cache_i;
       }
-      __bang_write_value(output_channels, cur_cache_c, 0);
+      __bang_write_value(output_channels, cur_cache_c, (T)0);
 
       for (uint32_t h_idx = 0; h_idx < roi_bin_grid_h; h_idx += bin_order_num) {
         uint32_t deal_bin_h = bin_order_num;

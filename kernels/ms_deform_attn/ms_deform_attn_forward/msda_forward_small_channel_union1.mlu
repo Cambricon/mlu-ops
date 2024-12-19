@@ -418,7 +418,7 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
             c_real_num = c_rem;
           }
         }
-        __bang_write_value((float *)input_tl, 4 * deal_num * channel, 0);
+        __bang_write_value((float *)input_tl, 4 * deal_num * channel, (float)0);
         __sync();
         // load data_value
         for (int32_t p_idx = 0; p_idx < io_data_num; ++p_idx) {
