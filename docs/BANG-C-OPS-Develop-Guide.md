@@ -615,7 +615,7 @@ int main() {
 #### 3.3.1 抽象硬件模型
 
 <p align="center">
-    <img src="https://www.cambricon.com/docs/sdk_1.15.0/cntoolkit_3.7.2/programming_guide_1.7.0/_images/hardwarehierarchy.png" alt="example" style="zoom:80%">
+    <img src="./images/hardwarehierarchy.png" alt="example" style="zoom:80%">
    <br>
    图 3.1 Cambricon BANG 异构计算平台的抽象硬件模型
 </p>
@@ -631,7 +631,7 @@ int main() {
 #### 3.3.2 抽象存储模型
 
 <p align="center">
-    <img src="https://www.cambricon.com/docs/sdk_1.15.0/cntoolkit_3.7.2/programming_guide_1.7.0/_images/memorymodel.png" alt="example" style="zoom:80%">
+    <img src="./images/memorymodel.png" alt="example" style="zoom:80%">
    <br>
    图 3.2 Cambricon BANG 抽象存储模型
 </p>
@@ -670,7 +670,7 @@ int main() {
   如下图所示，Inst-Cache 中的一段指令序列顺序开始执行后，经过分发和调度被分配进多个 PIPE 队列， 进入 PIPE 前指令是顺序执行被译码的，进入不同计算或访存队列后由硬件解决寄存器重命名或读写依赖。MLUv03 的 IO-DMA 和 Move-DMA 互相独立， 所以 MLUv03 用户的片上的访存操作和片外访存操作可以无依赖独立执行。
 
 <p align="center">
-    <img src="https://www.cambricon.com/docs/sdk_1.14.0/cntoolkit_3.6.1/cntoolkit_tuning_0.4.1/_images/figure4-1.png" alt="example" style="zoom:80%">
+    <img src="./images/figure4-1.png" alt="example" style="zoom:80%">
    <br>
    图 3.3
 </p>
@@ -717,7 +717,7 @@ int main() {
 下图给出两个多维 Kernel 函数并行展开映射到硬件 MLU Cluster 执行的示意，如果使用整个 MLU Device 时都使用相同任务类型例如都是 Union1 类型的任务， 那么整个设备的利用率会较高，因为硬件调度器看到的并行粒度统一，不会出现 Union2 等待 2 个 MLU Cluster 的情况。
 
 <p align="center">
-    <img src="https://www.cambricon.com/docs/sdk_1.14.0/cntoolkit_3.6.1/cntoolkit_tuning_0.4.1/_images/figure4-2.png" alt="example" style="zoom:80%">
+    <img src="./images/figure4-2.png" alt="example" style="zoom:80%">
    <br>
    图 3.5 MLU Cluster 的并发
 </p>
@@ -729,7 +729,7 @@ int main() {
 用户可以使用 `foo<<<...>>>()` 完成异步的 Kernel 计算，还可以使用 CNRT 或 CNDrv 的异步 Memcpy 实现 H2D/D2D/D2H 的传输， 如上一小结所述，MLU Device 会根据下发的任务类型调度执行一个 Block 或 UnionN，那么在 Host 和 Device 之间就有一个任务队列， 不同硬件支持的队列最大深度是不一样的，用户可以使用 `cnDeviceGetAttribute()` 接口和 `CN_DEVICE_ATTRIBUTE_MAX_QUEUE_COUNT` 来获取。
 
 <p align="center">
-    <img src="https://www.cambricon.com/docs/sdk_1.14.0/cntoolkit_3.6.1/cntoolkit_tuning_0.4.1/_images/figure4-3.png" alt="example" style="zoom:80%">
+    <img src="./images/figure4-3.png" alt="example" style="zoom:80%">
    <br>
    图 3.6 Host 和 Device 的并发
 </p>
@@ -746,7 +746,7 @@ MLU 架构的并行或并发如前面所述可以分为 MLU Core 、MLU Cluster�
 如[内部并行指令流水和计算架构抽象](#333-mlu-core-内部并行指令流水和计算架构抽象)所示，MLU Core 内的多个 PIPE 可以异步并行执行，我们将不同 PIPE 的运算或者访存抽象为读和写的话， 即可建立依赖关系，如下图蓝色连线 A/B/C/D/E/F：
 
 <p align="center">
-    <img src="https://www.cambricon.com/docs/sdk_1.14.0/cntoolkit_3.6.1/cntoolkit_tuning_0.4.1/_images/figure4-4.png" alt="example" style="zoom:80%">
+    <img src="./images/figure4-4.png" alt="example" style="zoom:80%">
    <br>
    图 3.7  MLUv03 MLU Core 内多指令流水线同步
 </p>
@@ -766,7 +766,7 @@ MLU 架构的并行或并发如前面所述可以分为 MLU Core 、MLU Cluster�
 - `__sync_all()` 负责同步一个软件概念的 Union Block Task 的全部 Block Task，无论用户启动的是 Union1、Union2、Union4、UnionX 等联合任务，此函数会同步 UnionX 映射到的全部 X 个 Cluster， 对应的指令伪代码是 `barrier.sync.global ID, (%coreDim + 1) * %clusterDim`
 
 <p align="center">
-    <img src="https://www.cambricon.com/docs/sdk_1.14.0/cntoolkit_3.6.1/cntoolkit_tuning_0.4.1/_images/figure4-5.png" alt="example" style="zoom:80%">
+    <img src="./images/figure4-5.png" alt="example" style="zoom:80%">
    <br>
    图 3.8 MLUv03 MLU Cluster 的同步
 </p>
@@ -856,7 +856,7 @@ dim.z = 4;
 上述配置描述的三维任务网格如下图所示。
 
 <p align="center">
-  <img src="https://www.cambricon.com/docs/sdk_1.15.0/cntoolkit_3.7.2/programming_guide_1.7.0/_images/taskgrid.png" alt="example" style="zoom:80%">
+  <img src="./images/taskgrid.png" alt="example" style="zoom:80%">
   <br>
   图 3.9 三维任务网格示意图
 </p>
@@ -1003,7 +1003,7 @@ UnionN (N=1, 2, 4, 8, ...) 任务表示一个 Kernel 在执行时至少需要占
   在指令中，①硬件 I/O(Load&Store) 和 ② Compute 是分别依赖 I/O 队列和 Compute 队列实现的。两个队列可以同时发射指令，发射出去的指令可以并行执行。为了充分利用这种并行优势，编程中引入了流水线的概念。流水线，本质上是利用两份资源，具体地，将 NRAM 空间分为 ping/pong 部分。每部分各占一半。如下图所示：
 
   <p align="center">
-    <img src="https://www.cambricon.com/docs/sdk_1.15.0/cntoolkit_3.7.2/programming_guide_1.7.0/_images/pingpong.png" alt="example" style="zoom:80%">
+    <img src="./images/pingpong.png" alt="example" style="zoom:80%">
    <br>
    图 4.1 三级流水示意图
   </p>
@@ -1308,7 +1308,7 @@ UnionN (N=1, 2, 4, 8, ...) 任务表示一个 Kernel 在执行时至少需要占
   以 Union1 任务类型为例，四级流水的过程包括，首先由 Memory Core 将数据从 GDRAM 搬运到 SRAM 中，然后再由 coreDim（以4为例）个 MLU Core 分别从 SRAM 搬运部分数据到 NRAM 中进行计算，计算结果由 coreDim 个 MLU Core 搬运回 GDRAM 中，从而实现了四级流水。如下图所示：
 
    <p align="center">
-    <img src="https://www.cambricon.com/docs/sdk_1.15.0/cntoolkit_3.7.2/programming_guide_1.7.0/_images/pingpong4.png" alt="example" style="zoom:80%">
+    <img src="./images/pingpong4.png" alt="example" style="zoom:80%">
    <br>
    图 4.2 四级软件流水示意图
   </p>
@@ -1604,7 +1604,7 @@ UnionN (N=1, 2, 4, 8, ...) 任务表示一个 Kernel 在执行时至少需要占
   以 Union1 任务类型为例，常用的五级流水的过程包括，首先由 Memory  Core 将数据从 GDRAM 搬运到 SRAM 中，然后再由 coreDim（以 4 为例）个MLU Core 分别从 SRAM 搬运部分数据到 NRAM 中进行计算，计算结果先由 coreDim个 MLU Core 搬运到 SRAM 上，再由 Memory Core 从 SRAM 搬运到 GDRAM 上，从而实现了五级流水。如下图所示：
 
    <p align="center">
-    <img src="https://www.cambricon.com/docs/sdk_1.15.0/cntoolkit_3.7.2/programming_guide_1.7.0/_images/pingpong5.png" alt="example" style="zoom:80%">
+    <img src="./images/pingpong5.png" alt="example" style="zoom:80%">
    <br>
    图 4.3 五级软件流水示意图
   </p>												
