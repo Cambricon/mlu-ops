@@ -31,7 +31,7 @@
 
 static void LogspacePolicyFunc(const mluOpHandle_t &handle, const int64_t steps,
                                cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type) {
-  *k_type = CNRT_FUNC_TYPE_BLOCK;
+  *k_type = cnrtFuncTypeBlock;
   uint32_t cluster_num =
       mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   uint32_t core_in_cluster = handle->core_num_per_cluster;

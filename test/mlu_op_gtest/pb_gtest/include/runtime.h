@@ -38,7 +38,7 @@
 #include "memory_pool.h"
 
 #ifndef CNRT_RET_ERR_INVALID
-#define CNRT_RET_ERR_INVALID (632007)
+#define CNRT_RET_ERR_INVALID ((cnrtRet_t)632007)
 #endif
 
 namespace mluoptest {

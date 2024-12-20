@@ -116,11 +116,11 @@ __mlu_func__ void computePGrad(const int b, const int S, const int T,
 
   float *nram_cur_term2 = nram_cur_term1 + min_len + 1;
   float *nram_cur_p_grad = nram_cur_term2 + min_len;
-  __bang_write_zero(nram_cur_term1, 3 * min_len + 1);
+  __bang_write_value(nram_cur_term1, 3 * min_len + 1, (float)0);
 
   // compute the last one: p_grad[b][s_end][t_end] = ans_grad[b]
-  __memcpy(nram_p_grad + s_end * (T + 1) + t_end, ans_grad + b,
-           sizeof(float), GDRAM2NRAM);
+  __memcpy(nram_p_grad + s_end * (T + 1) + t_end, ans_grad + b, sizeof(float),
+           GDRAM2NRAM);
   nram_cur_p_grad[0] = nram_p_grad[s_end * (T + 1) + t_end];
 
   int data_num = 0;
@@ -242,7 +242,8 @@ __mlu_global__ void mluBlock3PipelineMutualInformationBackward(
       t_begin = boundary[1];
       s_end = boundary[2];
       t_end = boundary[3];
-      __bang_write_zero((float *)nram_buffer, S * (T + 1) + (S + 1) * T);
+      __bang_write_value((float *)nram_buffer, S * (T + 1) + (S + 1) * T,
+                         (float)0);
 
       if (s_begin > s_end || t_begin > t_end) {
         if (S > 0) {

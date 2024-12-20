@@ -183,7 +183,7 @@ __mlu_global__ void MLUKernelMoeDispatchBwdGate1(
 
   if ((samples < taskDim) && (taskId == 0)) {
     T *nram_grad_gates = (T *)nram_buffer;
-    __bang_write_zero(nram_grad_gates, samples);
+    __bang_write_value(nram_grad_gates, samples, (T)0);
 
     if (samples > 1) {
       int one_sample_task_num = taskDim / samples;
@@ -285,7 +285,7 @@ __mlu_global__ void MLUKernelMoeDispatchBwdGate2(
     __bang_and(nram_mask, nram_mask, nram_indices, deal_s_num);
 
     T *nram_grad_gates = (T *)nram_indices;
-    __bang_write_zero(nram_grad_gates, deal_s_num);
+    __bang_write_value(nram_grad_gates, deal_s_num, 0);
 
     if (deal_s_num > 1) {
       T *base_dispatch_addr = (T *)dispatch;

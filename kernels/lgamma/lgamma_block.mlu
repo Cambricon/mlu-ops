@@ -161,7 +161,7 @@ __mlu_func__ void calcLgamma(float *buf0, float *buf1, float *buf2, float *buf3,
    * reflection_denom - lgamma_x : -reflection_denom;
    */
   // using buf3 -> reflection
-  __bang_write_zero(buf4, num_deal);
+  __bang_write_value(buf4, num_deal, (float)0);
   __bang_sub(buf2, buf4, buf2, num_deal);
   isFinite(buf4, buf2, num_deal);
   __bang_sub(buf3, buf2, buf1, num_deal);

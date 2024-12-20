@@ -370,7 +370,7 @@ void __mlu_func__ loadValue(
         b_col * spatial_size * qid_stride + level_start_id * qid_stride;
   }
 #endif
-  __bang_write_zero(grad_temp1, deal_num_real * num_deal_grid);
+  __bang_write_value(grad_temp1, deal_num_real * num_deal_grid, (float)0);
   __bang_cycle_add(grad_temp1, grad_temp1, mask2, deal_num_real * num_deal_grid,
                    num_deal_grid);
   __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
@@ -379,7 +379,7 @@ void __mlu_func__ loadValue(
                      num_deal_grid * deal_num_real, 0);
   __bang_lut((int32_t *)grad_temp3, (uint32_t *)grad_temp3, (int32_t *)table,
              num_deal_grid * deal_num_real, 64);
-  __bang_write_zero(grad_temp1, deal_num_real * num_deal_grid);
+  __bang_write_value(grad_temp1, deal_num_real * num_deal_grid, (float)0);
   __bang_cycle_add(grad_temp1, grad_temp1, mask1, deal_num_real * num_deal_grid,
                    num_deal_grid);
   __sync_io_move_compute();
@@ -397,7 +397,7 @@ void __mlu_func__ loadValue(
               (int8_t *)grad_temp3,
               num_deal_grid * deal_num_real * sizeof(float));
 
-  __bang_write_zero(grad_temp1, deal_num_real * num_deal_grid);
+  __bang_write_value(grad_temp1, deal_num_real * num_deal_grid, (float)0);
   __bang_cycle_add(grad_temp1, grad_temp1, mask4, deal_num_real * num_deal_grid,
                    num_deal_grid);
   __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
@@ -410,7 +410,7 @@ void __mlu_func__ loadValue(
               (int8_t *)grad_temp3,
               num_deal_grid * deal_num_real * sizeof(float));
 
-  __bang_write_zero(grad_temp1, deal_num_real * num_deal_grid);
+  __bang_write_value(grad_temp1, deal_num_real * num_deal_grid, (float)0);
   __bang_cycle_add(grad_temp1, grad_temp1, mask3, deal_num_real * num_deal_grid,
                    num_deal_grid);
   __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
@@ -438,7 +438,7 @@ void __mlu_func__ computeGradValue(
     float *nram_grid_offset2, const int32_t &batch, float *nram_grad_output_tl,
     float *nram_grad_output_tr, float *nram_grad_output_bl,
     float *nram_grad_output_br, float *nram_grad_weight) {
-  __bang_write_zero(grad_temp1, deal_num_real * num_deal_grid);
+  __bang_write_value(grad_temp1, deal_num_real * num_deal_grid, (float)0);
   __bang_cycle_add(grad_temp1, grad_temp1, nram_grad_weight,
                    deal_num_real * num_deal_grid, num_deal_grid);
   __bang_transpose(grad_temp3, grad_temp1,
@@ -600,7 +600,7 @@ void __mlu_func__ computeGradAttnWeight(
     const int32_t &num_per_time_real, const int32_t &num_heads,
     const int32_t &num_levels, const int32_t &num_points,
     const int32_t &grid_offset, float *nram_h_high_temp) {
-  __bang_write_zero(grad_w_weight, 2 * offset_nram);
+  __bang_write_value(grad_w_weight, 2 * offset_nram, (float)0);
   // grad_output_nram_tl
   __bang_transpose(grad_weight, nram_grad_output_tl, num_deal_grid,
                    deal_num_real);
@@ -714,7 +714,7 @@ void __mlu_func__ computeGradSampingLoc(
                    num_points * deal_num_real,
                    num_per_time_real * num_heads * num_levels);
 
-  __bang_write_zero(grad_temp1, num_deal_grid * deal_num_real);
+  __bang_write_value(grad_temp1, num_deal_grid * deal_num_real, (float)0);
   __bang_cycle_add(grad_temp1, grad_temp1, nram_grad_weight,
                    num_deal_grid * deal_num_real, num_deal_grid);
   __bang_transpose(nram_grad_output_tr, grad_temp1,
