@@ -89,7 +89,7 @@ mluOpStatus_t mluOpTransposeCpu(const int64_t dim_desc,
   PARAM_CHECK("[cnnlTransposeCpu]", y_desc != NULL);
   uint64_t sum = mluOpGetTensorElementNum(x_desc);
   // zero elements, return success
-  if (sum == 0 || x_desc->dim == 0 || y_desc->dim == 0) {
+  if (sum == 0 || x_desc->getDim() == 0 || y_desc->getDim() == 0) {
     VLOG(5) << "cnnlTransposeCpu:: zero elements, return success.";
     return MLUOP_STATUS_SUCCESS;
   }
@@ -97,7 +97,7 @@ mluOpStatus_t mluOpTransposeCpu(const int64_t dim_desc,
   PARAM_CHECK("[cnnlTransposeCpu]", y != NULL);
 
   const uint64_t dim_all = dim_desc;
-  auto data_type = x_desc->dtype;
+  auto data_type = x_desc->getDtype();
   int loop_d = 1;
   if (data_type == MLUOP_DTYPE_INT31) {
     loop_d = 2;
@@ -112,17 +112,17 @@ mluOpStatus_t mluOpTransposeCpu(const int64_t dim_desc,
   uint64_t DIM[TRANSPOSE_MAX_DIM + 1] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
   uint64_t dim[TRANSPOSE_MAX_DIM + 1] = {0};
 
-  if (x_desc->dim != dim_all || y_desc->dim != dim_all) {
+  if (x_desc->getDim() != dim_all || y_desc->getDim() != dim_all) {
     LOG(ERROR)
         << "cnnlTransposeCpu: dimension information mismatch, dim of x: "
-        << x_desc->dim << ", dim of y: " << y_desc->dim
+        << x_desc->getDim() << ", dim of y: " << y_desc->getDim()
         << ", dim of descriptor: " << dim_all;
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   for (int i = 0; i < dim_all; i++) {
     permute[i] = permute_desc[i];
-    DIM[i] = x_desc->dims[i];
+    DIM[i] = x_desc->getDimIndex(i);
   }
   if (MLUOP_DTYPE_INT31 == data_type) {
     transposeCpuNd(loop_d, (int16_t *)x, (int16_t *)y, sum, dim, DIM, permute);

@@ -77,13 +77,13 @@ void PsroipoolBackwardExecutor::cpuCompute() {
   auto rois_cpu = cpu_fp32_input_[2];
   auto bottom_output_cpu = cpu_fp32_output_[0];
 
-  const int bottom_n = bottom_output_desc->dims[0];
-  const int bottom_h = bottom_output_desc->dims[1];
-  const int bottom_w = bottom_output_desc->dims[2];
-  const int bottom_c = bottom_output_desc->dims[3];
+  const int bottom_n = bottom_output_desc->getDimIndex(0);
+  const int bottom_h = bottom_output_desc->getDimIndex(1);
+  const int bottom_w = bottom_output_desc->getDimIndex(2);
+  const int bottom_c = bottom_output_desc->getDimIndex(3);
 
-  const int rois_n = rois_desc->dims[0];
-  const int rois_offset = rois_desc->dims[1];
+  const int rois_n = rois_desc->getDimIndex(0);
+  const int rois_offset = rois_desc->getDimIndex(1);
 
   for (int roi_id = 0; roi_id < rois_n; roi_id++) {
     int top_batch_offset =

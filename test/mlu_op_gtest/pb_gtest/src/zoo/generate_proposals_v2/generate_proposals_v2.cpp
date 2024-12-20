@@ -156,10 +156,10 @@ void GenerateProposalsV2Executor::cpuCompute() {
 
   auto tensor_scores = parser_->getMetaTensor("input1").tensor;
 
-  const int N = tensor_scores->dims[0];
-  const int H = tensor_scores->dims[1];
-  const int W = tensor_scores->dims[2];
-  const int A = tensor_scores->dims[3];
+  const int N = tensor_scores->getDimIndex(0);
+  const int H = tensor_scores->getDimIndex(1);
+  const int W = tensor_scores->getDimIndex(2);
+  const int A = tensor_scores->getDimIndex(3);
 
   auto scores_ptr = parser_->getMetaTensor("input1").cpu_ptr;
   auto deltas_ptr = parser_->getMetaTensor("input2").cpu_ptr;
@@ -183,12 +183,12 @@ void GenerateProposalsV2Executor::cpuCompute() {
 
 int64_t GenerateProposalsV2Executor::getTheoryOps() {
   VLOG(4) << "getTheoryOps";
-  //   int dims = parser_->getMetaTensor("input1").tensor->dims[0];
+  //   int dims = parser_->getMetaTensor("input1").tensor->getDimIndex(0);
   auto tensor_scores = parser_->getMetaTensor("input1").tensor;
-  const int N = tensor_scores->dims[0];
-  const int H = tensor_scores->dims[1];
-  const int W = tensor_scores->dims[2];
-  const int A = tensor_scores->dims[3];
+  const int N = tensor_scores->getDimIndex(0);
+  const int H = tensor_scores->getDimIndex(1);
+  const int W = tensor_scores->getDimIndex(2);
+  const int A = tensor_scores->getDimIndex(3);
   int64_t theory_ops = 39 * N * A * H * W;
   VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
   return theory_ops;

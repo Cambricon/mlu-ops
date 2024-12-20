@@ -114,7 +114,7 @@ void PolyNmsExecutor::pnmsComputeCPU(float *output_data, int *output_box_num,
 void PolyNmsExecutor::cpuCompute() {
   float iou_thresh = parser_->getProtoNode()->poly_nms_param().iou_threshold();
   auto input_box_desc = tensor_desc_[0].tensor;
-  int input_boxes_num = input_box_desc->dims[0];
+  int input_boxes_num = input_box_desc->getDimIndex(0);
 
   VLOG(4) << "[mluOpPolyNms] cpu compute start, input_boxes_num: "
           << input_boxes_num;
@@ -133,7 +133,7 @@ void PolyNmsExecutor::cpuCompute() {
 int64_t PolyNmsExecutor::getTheoryOps() {
   VLOG(4) << "getTheoryOps";
   int64_t theory_ops = 21650;
-  int dims = parser_->getMetaTensor("input1").tensor->dims[0];
+  int dims = parser_->getMetaTensor("input1").tensor->getDimIndex(0);
   theory_ops = theory_ops * dims * dims;
   int64_t sort_ops = dims * dims - dims;
   theory_ops += sort_ops;

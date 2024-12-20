@@ -63,12 +63,14 @@ void DivExecutor::cpuCompute() {
   auto c_desc = tensor_desc_[2].tensor;
   float *a_broadcast = (float *)cpu_runtime_.allocate(count3 * sizeof(float));
   float *b_broadcast = (float *)cpu_runtime_.allocate(count3 * sizeof(float));
-  expand_compute_cpu(std::vector<int>(a_desc->dims, a_desc->dims + a_desc->dim),
-                     std::vector<int>(c_desc->dims, c_desc->dims + c_desc->dim),
-                     cpu_fp32_input_[0], a_broadcast);
-  expand_compute_cpu(std::vector<int>(b_desc->dims, b_desc->dims + b_desc->dim),
-                     std::vector<int>(c_desc->dims, c_desc->dims + c_desc->dim),
-                     cpu_fp32_input_[1], b_broadcast);
+  expand_compute_cpu(
+      std::vector<int>(a_desc->getDims(), a_desc->getDims() + a_desc->getDim()),
+      std::vector<int>(c_desc->getDims(), c_desc->getDims() + c_desc->getDim()),
+      cpu_fp32_input_[0], a_broadcast);
+  expand_compute_cpu(
+      std::vector<int>(b_desc->getDims(), b_desc->getDims() + b_desc->getDim()),
+      std::vector<int>(c_desc->getDims(), c_desc->getDims() + c_desc->getDim()),
+      cpu_fp32_input_[1], b_broadcast);
 
   for (size_t i = 0; i < count3; ++i) {
     cpu_fp32_output_[0][i] = a_broadcast[i] / b_broadcast[i];

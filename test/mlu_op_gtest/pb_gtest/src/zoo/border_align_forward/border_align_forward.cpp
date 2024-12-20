@@ -113,11 +113,11 @@ float bilinear_interpolate(const float *input, const int32_t H, const int32_t W,
 void BorderAlignForwardExecutor::cpuCompute() {
   auto input_desc = parser_->getMetaTensor(0).tensor;
   auto boxes_desc = parser_->getMetaTensor(1).tensor;
-  const int32_t N = input_desc->dims[0];
-  const int32_t H = input_desc->dims[1];
-  const int32_t W = input_desc->dims[2];
-  const int32_t C = input_desc->dims[3] / 4;
-  const int32_t K = boxes_desc->dims[1];
+  const int32_t N = input_desc->getDimIndex(0);
+  const int32_t H = input_desc->getDimIndex(1);
+  const int32_t W = input_desc->getDimIndex(2);
+  const int32_t C = input_desc->getDimIndex(3) / 4;
+  const int32_t K = boxes_desc->getDimIndex(1);
   float x1, x2, y1, y2;
   float x_stride = 0;
   float y_stride = 0;
@@ -195,9 +195,9 @@ void BorderAlignForwardExecutor::cpuCompute() {
 int64_t BorderAlignForwardExecutor::getTheoryOps() {
   auto input_desc = parser_->getMetaTensor(0).tensor;
   auto boxes_desc = parser_->getMetaTensor(1).tensor;
-  const int32_t N = input_desc->dims[0];
-  const int32_t C = input_desc->dims[3] / 4;
-  const int32_t K = boxes_desc->dims[1];
+  const int32_t N = input_desc->getDimIndex(0);
+  const int32_t C = input_desc->getDimIndex(3) / 4;
+  const int32_t K = boxes_desc->getDimIndex(1);
 
   const int64_t theory_ops = N * K * 4 * C * 14;
   return theory_ops;

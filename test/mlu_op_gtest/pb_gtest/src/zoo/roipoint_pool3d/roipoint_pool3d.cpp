@@ -191,11 +191,11 @@ void RoipointPool3dExecutor::workspaceMalloc() {
   auto tensor_pooled_features = tensor_desc_[3].tensor;
   auto tensor_pooled_empty_flag = tensor_desc_[4].tensor;
 
-  int batch_size = tensor_points->dims[0];
-  int pts_num = tensor_points->dims[1];
-  int boxes_num = tensor_boxes3d->dims[1];
-  int feature_len = tensor_point_features->dims[2];
-  int sampled_pts_num = tensor_pooled_features->dims[2];
+  int batch_size = tensor_points->getDimIndex(0);
+  int pts_num = tensor_points->getDimIndex(1);
+  int boxes_num = tensor_boxes3d->getDimIndex(1);
+  int feature_len = tensor_point_features->getDimIndex(2);
+  int sampled_pts_num = tensor_pooled_features->getDimIndex(2);
 
   void *workspace_ptr = nullptr;
   MLUOP_CHECK(mluOpGetRoiPointPool3dWorkspaceSize(
@@ -223,10 +223,10 @@ void RoipointPool3dExecutor::compute() {
   auto tensor_pooled_features = tensor_desc_[3].tensor;
   auto tensor_pooled_empty_flag = tensor_desc_[4].tensor;
 
-  int batch_size = tensor_points->dims[0];
-  int pts_num = tensor_points->dims[1];
-  int boxes_num = tensor_boxes3d->dims[1];
-  int feature_len = tensor_point_features->dims[2];
+  int batch_size = tensor_points->getDimIndex(0);
+  int pts_num = tensor_points->getDimIndex(1);
+  int boxes_num = tensor_boxes3d->getDimIndex(1);
+  int feature_len = tensor_point_features->getDimIndex(2);
 
   auto dev_points = data_vector_[0].device_ptr;
   auto dev_point_features = data_vector_[1].device_ptr;
@@ -253,11 +253,11 @@ void RoipointPool3dExecutor::cpuCompute() {
   auto tensor_pooled_features = tensor_desc_[3].tensor;
   auto tensor_pooled_empty_flag = tensor_desc_[4].tensor;
 
-  int batch_size = tensor_points->dims[0];
-  int pts_num = tensor_points->dims[1];
-  int boxes_num = tensor_boxes3d->dims[1];
-  int feature_len = tensor_point_features->dims[2];
-  int sampled_pts_num = tensor_pooled_features->dims[2];
+  int batch_size = tensor_points->getDimIndex(0);
+  int pts_num = tensor_points->getDimIndex(1);
+  int boxes_num = tensor_boxes3d->getDimIndex(1);
+  int feature_len = tensor_point_features->getDimIndex(2);
+  int sampled_pts_num = tensor_pooled_features->getDimIndex(2);
 
   auto points = cpu_fp32_input_[0];
   auto point_features = cpu_fp32_input_[1];
@@ -299,11 +299,11 @@ int64_t RoipointPool3dExecutor::getTheoryOps() {
   auto tensor_pooled_features = tensor_desc_[3].tensor;
   auto tensor_pooled_empty_flag = tensor_desc_[4].tensor;
 
-  int64_t batch_size = tensor_points->dims[0];
-  int64_t pts_num = tensor_points->dims[1];
-  int64_t boxes_num = tensor_boxes3d->dims[1];
-  int64_t feature_len = tensor_point_features->dims[2];
-  int64_t sampled_pts_num = tensor_pooled_features->dims[2];
+  int64_t batch_size = tensor_points->getDimIndex(0);
+  int64_t pts_num = tensor_points->getDimIndex(1);
+  int64_t boxes_num = tensor_boxes3d->getDimIndex(1);
+  int64_t feature_len = tensor_point_features->getDimIndex(2);
+  int64_t sampled_pts_num = tensor_pooled_features->getDimIndex(2);
 
   int64_t count = 21 + feature_len;
   int64_t theory_ops = batch_size * pts_num * count * boxes_num;
