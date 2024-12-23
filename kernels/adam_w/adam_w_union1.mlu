@@ -237,7 +237,7 @@ mluOpStatus_t MLUOP_WIN_API KernelApplyAdamW(
   return MLUOP_STATUS_SUCCESS;
 }
 
-NAMESPACE_BANGC_KERNELS_GEGIN
+NAMESPACE_BANGC_KERNELS_BEGIN
 
 template <typename T>
 bangcKernelsStatus_t BANGC_KERNELS_WIN_API
