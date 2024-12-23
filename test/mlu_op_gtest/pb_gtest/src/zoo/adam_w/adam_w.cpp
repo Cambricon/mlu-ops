@@ -88,8 +88,8 @@ void AdamWExecutor::compute() {
         handle_->queue, fp32_lr, fp32_beta1, fp32_beta2, fp32_bias1, fp32_bias2,
         fp32_epsilon, fp32_weight_decay, fp32_scale, use_nesterov, size,
         BANG_WRAP_T((Eigen::bfloat16 *)dev_paramh),
-        BANG_WRAP_T((Eigen::bfloat16 *)dev_grad), dev_param, dev_momentum,
-        dev_velocity);
+        BANG_WRAP_T((Eigen::bfloat16 *)dev_grad), (float *)dev_param,
+        (float *)dev_momentum, (float *)dev_velocity);
     interface_timer_.stop();
   }
 }

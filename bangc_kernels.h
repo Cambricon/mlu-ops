@@ -81,9 +81,9 @@ bangcKernelsStatus_t BANGC_KERNELS_WIN_API mluAdamW(const cnrtQueue_t queue,
                                                     const size_t size,
                                                     T *param_h,
                                                     T *grad,
-                                                    void *param,
-                                                    void *momentum,
-                                                    void *velocity);
+                                                    float *param,
+                                                    float *momentum,
+                                                    float *velocity);
 
 #ifndef NAMESPACE_BANGC_KERNELS_END
 #define NAMESPACE_BANGC_KERNELS_END }
