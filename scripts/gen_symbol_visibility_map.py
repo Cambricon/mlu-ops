@@ -6,12 +6,18 @@ mluop_abi_version = "MLUOP_ABI_1.0 {"
 def get_mluops(input_file):
     ops_str=""
     pattern = re.compile(r'(?P<api>mluOp\w+) *\(')
+    pattern_lite = re.compile(r'(?P<api>mluApply\w+) *\(')
     with open(input_file,'r', encoding='utf8') as f:
         for line in f:
             match = pattern.search(line)
+            lite_match = pattern_lite.search(line)
             if match:
                 op = match.groupdict()['api'] + ';'
                 ops_str += op
+
+            if lite_match:
+                op = lite_match.groupdict()['api'] + '*;'
+                ops_str += '*' + op
     return ops_str
 
 def create_map_file(map_file,ops_str):

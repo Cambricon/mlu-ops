@@ -21,12 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 
+#include "adam_w.h"
+
 #include <mlu.h>
-#include <cmath>
-#include <algorithm>
-#include "core/logging.h"
-#include "kernels/adam_w/adam_w.h"
-#include "kernels/utils/common.h"
+
+#include "bangc_helper_dtype.h"
+#include "bangc_kernels.h"
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #define SIZE_NRAM_PER_REGION PAD_DOWN((MAX_NRAM_SIZE / 12), NFU_ALIGN_SIZE)
 #define HIGH_PRECISION_MODE 1
@@ -193,7 +195,7 @@ __mlu_global__ void unionApplyAdamW(T *param_h, T *grad, float *param,
                 ddr_param - 2 * num_x * param_flag, ddr_momentum - 2 * num_x,
                 ddr_velocity - 2 * num_x, nbuf_paramh, nbuf_param,
                 nbuf_momentum, nbuf_velocity,
-                std::min(num_x, (int)(num_task - (i - 2) * num_x)),
+                MIN(num_x, (int)(num_task - (i - 2) * num_x)),
                 (i - 2) % 2 * pong);
     }
     // load data
@@ -201,15 +203,14 @@ __mlu_global__ void unionApplyAdamW(T *param_h, T *grad, float *param,
       loadData(nbuf_paramh, (T *)(nbuf_grad + pong / 2), nbuf_param,
                nbuf_momentum, nbuf_velocity, ddr_paramh, ddr_grad, ddr_param,
                ddr_momentum, ddr_velocity,
-               std::min(num_x, (int)(num_task - i * num_x)), i % 2 * pong);
+               MIN(num_x, (int)(num_task - i * num_x)), i % 2 * pong);
     }
     // compute
     if (i >= 1 && i <= num_iter) {
       computeAdamW(nbuf_paramh, (T *)(nbuf_grad + pong / 2), nbuf_param,
                    nbuf_grad, nbuf_momentum, nbuf_velocity, temp_1, temp_2, lr,
                    beta1, beta2, bias1, bias2, epsilon, weight_decay, scale,
-                   use_nesterov,
-                   std::min(num_x, (int)(num_task - (i - 1) * num_x)),
+                   use_nesterov, MIN(num_x, (int)(num_task - (i - 1) * num_x)),
                    (i - 1) % 2 * pong, param_flag);
     }
     ddr_paramh += num_x * paramh_flag;
@@ -228,16 +229,48 @@ mluOpStatus_t MLUOP_WIN_API KernelApplyAdamW(
     void *momentum, void *velocity, float lr, float beta1, float beta2,
     float bias1, float bias2, float epsilon, float weight_decay, float scale,
     bool use_nesterov, size_t size, mluOpDataType_t k_data_type) {
-  switch (k_data_type) {
-    default: {
-      LOG(ERROR) << "Not Implemented.";
-    }
-    case MLUOP_DTYPE_BFLOAT16: {
-      KERNEL_CHECK(unionApplyAdamW<bfloat16_t><<<k_dim, k_type, queue>>>(
-          (bfloat16_t *)param_h, (bfloat16_t *)grad, (float *)param,
-          (float *)momentum, (float *)velocity, lr, beta1, beta2, bias1, bias2,
-          epsilon, weight_decay, scale, use_nesterov, size));
-    }; break;
-  }
+  // launch kernel
+  unionApplyAdamW<bfloat16_t><<<k_dim, k_type, queue>>>(
+      (bfloat16_t *)param_h, (bfloat16_t *)grad, (float *)param,
+      (float *)momentum, (float *)velocity, lr, beta1, beta2, bias1, bias2,
+      epsilon, weight_decay, scale, use_nesterov, size);
   return MLUOP_STATUS_SUCCESS;
 }
+
+NAMESPACE_BANGC_KERNELS_GEGIN
+
+template <typename T>
+bangcKernelsStatus_t BANGC_KERNELS_WIN_API
+mluApplyAdamW(const cnrtQueue_t queue, const float lr, const float beta1,
+              const float beta2, const float bias1, const float bias2,
+              const float epsilon, const float weight_decay, const float scale,
+              const bool use_nesterov, size_t size, T *param_h, T *grad,
+              void *param, void *momentum, void *velocity) {
+  // set job type
+  int ordinal = -1;
+  int cluster_num;
+  int core_dim;
+  cnrtGetDevice(&ordinal);
+  cnrtDeviceGetAttribute(&core_dim, cnrtAttrMcorePerCluster, ordinal);
+  cnrtDeviceGetAttribute(&cluster_num, cnrtAttrMaxClusterPerUnionLimitTask,
+                         ordinal);
+  cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
+  cnrtDim3_t k_dim{.x = (uint32_t)core_dim, .y = (uint32_t)cluster_num, .z = 1};
+
+  // launch kernel
+  unionApplyAdamW<<<k_dim, k_type, queue>>>(
+      BANG_UNWRAP_T(param_h), BANG_UNWRAP_T(grad), (float *)param,
+      (float *)momentum, (float *)velocity, lr, beta1, beta2, bias1, bias2,
+      epsilon, weight_decay, scale, use_nesterov, size);
+  return BANGC_KERNELS_STATUS_SUCCESS;
+}
+
+#define IMPL_MLU_APPLY_ADAMW_KERNEL(DType)                                   \
+  template bangcKernelsStatus_t BANGC_KERNELS_WIN_API mluApplyAdamW(         \
+      const cnrtQueue_t, const float, const float, const float, const float, \
+      const float, const float, const float, const float, const bool,        \
+      const size_t, DType *, DType *, void *, void *, void *)
+
+IMPL_MLU_APPLY_ADAMW_KERNEL(bang_bfloat16_t);
+
+NAMESPACE_BANGC_KERNELS_END
