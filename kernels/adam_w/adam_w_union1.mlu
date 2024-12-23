@@ -244,8 +244,8 @@ bangcKernelsStatus_t BANGC_KERNELS_WIN_API
 mluAdamW(const cnrtQueue_t queue, const float lr, const float beta1,
          const float beta2, const float bias1, const float bias2,
          const float epsilon, const float weight_decay, const float scale,
-         const bool use_nesterov, size_t size, T *param_h, T *grad, void *param,
-         void *momentum, void *velocity) {
+         const bool use_nesterov, size_t size, T *param_h, T *grad,
+         float *param, float *momentum, float *velocity) {
   // set job type
   int ordinal = -1;
   int cluster_num;
@@ -259,9 +259,9 @@ mluAdamW(const cnrtQueue_t queue, const float lr, const float beta1,
 
   // launch kernel
   unionApplyAdamW<<<k_dim, k_type, queue>>>(
-      BANG_UNWRAP_T(param_h), BANG_UNWRAP_T(grad), (float *)param,
-      (float *)momentum, (float *)velocity, lr, beta1, beta2, bias1, bias2,
-      epsilon, weight_decay, scale, use_nesterov, size);
+      BANG_UNWRAP_T(param_h), BANG_UNWRAP_T(grad), param, momentum, velocity,
+      lr, beta1, beta2, bias1, bias2, epsilon, weight_decay, scale,
+      use_nesterov, size);
   return BANGC_KERNELS_STATUS_SUCCESS;
 }
 
@@ -269,7 +269,7 @@ mluAdamW(const cnrtQueue_t queue, const float lr, const float beta1,
   template bangcKernelsStatus_t BANGC_KERNELS_WIN_API mluAdamW(              \
       const cnrtQueue_t, const float, const float, const float, const float, \
       const float, const float, const float, const float, const bool,        \
-      const size_t, DType *, DType *, void *, void *, void *)
+      const size_t, DType *, DType *, float *, float *, float *)
 
 IMPL_MLU_APPLY_ADAMW_KERNEL(bang_bfloat16_t);
 
