@@ -6,7 +6,7 @@ mluop_abi_version = "MLUOP_ABI_1.0 {"
 def get_mluops(input_file):
     ops_str=""
     pattern = re.compile(r'(?P<api>mluOp\w+) *\(')
-    pattern_lite = re.compile(r'(?P<api>mluApply\w+) *\(')
+    pattern_lite = re.compile(r'(?P<api>mlu\w+) *\(')
     with open(input_file,'r', encoding='utf8') as f:
         for line in f:
             match = pattern.search(line)

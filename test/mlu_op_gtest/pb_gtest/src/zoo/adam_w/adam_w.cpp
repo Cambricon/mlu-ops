@@ -81,10 +81,10 @@ void AdamWExecutor::compute() {
     interface_timer_.stop();
     MLUOP_CHECK(mluOpDestroyAdamWDescriptor(adamw_desc));
   } else {
-    VLOG(4) << "call mluApplyAdamW. ";
+    VLOG(4) << "call mluAdamW. ";
     const int size = mluOpGetTensorElementNum(desc_momentum) * sizeof(float);
     interface_timer_.start();
-    const auto adamw_status = bangc_kernels::mluApplyAdamW(
+    const auto adamw_status = bangc_kernels::mluAdamW(
         handle_->queue, fp32_lr, fp32_beta1, fp32_beta2, fp32_bias1, fp32_bias2,
         fp32_epsilon, fp32_weight_decay, fp32_scale, use_nesterov, size,
         BANG_WRAP_T((Eigen::bfloat16 *)dev_paramh),

@@ -228,7 +228,7 @@ mluOpStatus_t MLUOP_WIN_API KernelApplyAdamW(
     const cnrtQueue_t queue, void *param, void *param_h, void *grad,
     void *momentum, void *velocity, float lr, float beta1, float beta2,
     float bias1, float bias2, float epsilon, float weight_decay, float scale,
-    bool use_nesterov, size_t size, mluOpDataType_t k_data_type) {
+    bool use_nesterov, size_t size) {
   // launch kernel
   unionApplyAdamW<bfloat16_t><<<k_dim, k_type, queue>>>(
       (bfloat16_t *)param_h, (bfloat16_t *)grad, (float *)param,
@@ -241,11 +241,11 @@ NAMESPACE_BANGC_KERNELS_GEGIN
 
 template <typename T>
 bangcKernelsStatus_t BANGC_KERNELS_WIN_API
-mluApplyAdamW(const cnrtQueue_t queue, const float lr, const float beta1,
-              const float beta2, const float bias1, const float bias2,
-              const float epsilon, const float weight_decay, const float scale,
-              const bool use_nesterov, size_t size, T *param_h, T *grad,
-              void *param, void *momentum, void *velocity) {
+mluAdamW(const cnrtQueue_t queue, const float lr, const float beta1,
+         const float beta2, const float bias1, const float bias2,
+         const float epsilon, const float weight_decay, const float scale,
+         const bool use_nesterov, size_t size, T *param_h, T *grad, void *param,
+         void *momentum, void *velocity) {
   // set job type
   int ordinal = -1;
   int cluster_num;
@@ -266,7 +266,7 @@ mluApplyAdamW(const cnrtQueue_t queue, const float lr, const float beta1,
 }
 
 #define IMPL_MLU_APPLY_ADAMW_KERNEL(DType)                                   \
-  template bangcKernelsStatus_t BANGC_KERNELS_WIN_API mluApplyAdamW(         \
+  template bangcKernelsStatus_t BANGC_KERNELS_WIN_API mluAdamW(              \
       const cnrtQueue_t, const float, const float, const float, const float, \
       const float, const float, const float, const float, const bool,        \
       const size_t, DType *, DType *, void *, void *, void *)

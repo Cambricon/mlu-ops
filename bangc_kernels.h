@@ -68,23 +68,22 @@ typedef enum {
 } bangcKernelsStatus_t;
 
 template <typename T>
-bangcKernelsStatus_t BANGC_KERNELS_WIN_API
-mluApplyAdamW(const cnrtQueue_t queue,
-              const float lr,
-              const float beta1,
-              const float beta2,
-              const float bias1,
-              const float bias2,
-              const float epsilon,
-              const float weight_decay,
-              const float scale,
-              const bool use_nesterov,
-              const size_t size,
-              T *param_h,
-              T *grad,
-              void *param,
-              void *momentum,
-              void *velocity);
+bangcKernelsStatus_t BANGC_KERNELS_WIN_API mluAdamW(const cnrtQueue_t queue,
+                                                    const float lr,
+                                                    const float beta1,
+                                                    const float beta2,
+                                                    const float bias1,
+                                                    const float bias2,
+                                                    const float epsilon,
+                                                    const float weight_decay,
+                                                    const float scale,
+                                                    const bool use_nesterov,
+                                                    const size_t size,
+                                                    T *param_h,
+                                                    T *grad,
+                                                    void *param,
+                                                    void *momentum,
+                                                    void *velocity);
 
 #ifndef NAMESPACE_BANGC_KERNELS_END
 #define NAMESPACE_BANGC_KERNELS_END }
