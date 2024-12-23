@@ -105,7 +105,7 @@ void NmsRotatedExecutor::compute() {
   GTEST_CHECK(cnrtSuccess == cnrtMemset(result_num, 0, sizeof(int32_t)));
 
   // GTEST_CHECK(cnrtSuccess == cnrtMemset(dev_output, 0,
-  //   output->dims[0] * sizeof(int64_t)));
+  //   output->getDimIndex(0) * sizeof(int64_t)));
   VLOG(4) << "call mluOpNmsRotated()";
   interface_timer_.start();
   MLUOP_CHECK(mluOpGetNmsRotatedWorkspaceSize(
@@ -124,8 +124,8 @@ void NmsRotatedExecutor::cpuCompute() {
     return;
   }
 
-  auto num_box = tensor_desc_[0].tensor->dims[0];
-  auto box_dim = tensor_desc_[0].tensor->dims[1];
+  auto num_box = tensor_desc_[0].tensor->getDimIndex(0);
+  auto box_dim = tensor_desc_[0].tensor->getDimIndex(1);
   float iou_threshold =
     parser_->getProtoNode()->nms_rotated_param().iou_threshold();
 

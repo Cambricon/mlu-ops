@@ -109,11 +109,11 @@ void RotatedFeatureAlignForwardExecutor::cpuCompute() {
   auto input_desc = tensor_desc_[0].tensor;
   auto bboxes_desc = tensor_desc_[1].tensor;
 
-  const int batch = input_desc->dims[0];
-  const int height = input_desc->dims[1];
-  const int width = input_desc->dims[2];
-  const int channels = input_desc->dims[3];
-  const int bboxes_offset = bboxes_desc->dims[3];
+  const int batch = input_desc->getDimIndex(0);
+  const int height = input_desc->getDimIndex(1);
+  const int width = input_desc->getDimIndex(2);
+  const int channels = input_desc->getDimIndex(3);
+  const int bboxes_offset = bboxes_desc->getDimIndex(3);
   float px[5] = {0, 0, 0, 0, 0};
   float py[5] = {0, 0, 0, 0, 0};
 

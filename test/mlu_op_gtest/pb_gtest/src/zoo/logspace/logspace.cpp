@@ -57,7 +57,7 @@ void LogspaceExecutor::cpuCompute() {
     auto count = parser_->output(0)->shape_count;
     float step = (end_num_ - start_num_) / (steps_num_ - 1);
 
-    switch (tensor_desc_[1].tensor->dtype) {
+    switch (tensor_desc_[1].tensor->getDtype()) {
       case MLUOP_DTYPE_FLOAT: {
         for (int i = 0; i < count; ++i) {
           cpu_fp32_output_[0][i] = ::powf(base_num_, start_num_ + step * i);

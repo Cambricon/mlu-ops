@@ -192,12 +192,12 @@ void PriorBoxExecutor::cpuCompute() {
   float* variances = cpu_fp32_input_[2];
   float* max_sizes = cpu_fp32_input_[3];
 
-  const int min_sizes_num = min_sizes_desc_->total_element_num;
-  const int aspect_ratios_num = aspect_ratios_desc_->total_element_num;
-  const int variances_num = variances_desc_->total_element_num;
-  const int max_sizes_num = max_sizes_desc_->total_element_num;
-  const int output_num = output_desc_->total_element_num;
-  const int var_num = var_desc_->total_element_num;
+  const int min_sizes_num = min_sizes_desc_->getTotalElementNum();
+  const int aspect_ratios_num = aspect_ratios_desc_->getTotalElementNum();
+  const int variances_num = variances_desc_->getTotalElementNum();
+  const int max_sizes_num = max_sizes_desc_->getTotalElementNum();
+  const int output_num = output_desc_->getTotalElementNum();
+  const int var_num = var_desc_->getTotalElementNum();
   const float step_h = step_h_;
   const float step_w = step_w_;
   const float offset = offset_;

@@ -184,13 +184,13 @@ void MsDeformAttnForwardExecutor::cpuCompute() {
   auto tensor_data_sampling_loc = tensor_desc_[3].tensor;
   auto tensor_data_attn_weight = tensor_desc_[4].tensor;
   auto tensor_data_col = tensor_desc_[5].tensor;
-  int batch_size = tensor_data_value->dims[0];
-  int num_keys = tensor_data_value->dims[1];
-  int num_heads = tensor_data_value->dims[2];
-  int channels = tensor_data_value->dims[3];
-  int num_levels = tensor_data_spatial_shapes->dims[0];
-  int num_query = tensor_data_sampling_loc->dims[1];
-  int num_point = tensor_data_sampling_loc->dims[4];
+  int batch_size = tensor_data_value->getDimIndex(0);
+  int num_keys = tensor_data_value->getDimIndex(1);
+  int num_heads = tensor_data_value->getDimIndex(2);
+  int channels = tensor_data_value->getDimIndex(3);
+  int num_levels = tensor_data_spatial_shapes->getDimIndex(0);
+  int num_query = tensor_data_sampling_loc->getDimIndex(1);
+  int num_point = tensor_data_sampling_loc->getDimIndex(4);
   auto data_value = cpu_fp32_input_[0];
   auto data_spatial_shapes = cpu_fp32_input_[1];
   auto data_level_start_index = cpu_fp32_input_[2];
@@ -214,12 +214,12 @@ int64_t MsDeformAttnForwardExecutor::getTheoryIoSize() {
   auto tensor_data_value = tensor_desc_[0].tensor;
   auto tensor_data_spatial_shapes = tensor_desc_[1].tensor;
   auto tensor_data_sampling_loc = tensor_desc_[3].tensor;
-  size_t batch_size = tensor_data_value->dims[0];
-  size_t num_heads = tensor_data_value->dims[2];
-  size_t channels = tensor_data_value->dims[3];
-  size_t num_levels = tensor_data_spatial_shapes->dims[0];
-  size_t num_query = tensor_data_sampling_loc->dims[1];
-  size_t num_point = tensor_data_sampling_loc->dims[4];
+  size_t batch_size = tensor_data_value->getDimIndex(0);
+  size_t num_heads = tensor_data_value->getDimIndex(2);
+  size_t channels = tensor_data_value->getDimIndex(3);
+  size_t num_levels = tensor_data_spatial_shapes->getDimIndex(0);
+  size_t num_query = tensor_data_sampling_loc->getDimIndex(1);
+  size_t num_point = tensor_data_sampling_loc->getDimIndex(4);
   size_t total_size = 0;
   total_size += 4 * batch_size * num_query * num_heads * num_levels *
                 num_point * channels *
@@ -240,11 +240,11 @@ int64_t MsDeformAttnForwardExecutor::getTheoryOps() {
   auto tensor_data_value = tensor_desc_[0].tensor;
   auto tensor_data_spatial_shapes = tensor_desc_[1].tensor;
   auto tensor_data_sampling_loc = tensor_desc_[3].tensor;
-  size_t batch_size = tensor_data_value->dims[0];
-  size_t num_heads = tensor_data_value->dims[2];
-  size_t num_levels = tensor_data_spatial_shapes->dims[0];
-  size_t num_query = tensor_data_sampling_loc->dims[1];
-  size_t num_point = tensor_data_sampling_loc->dims[4];
+  size_t batch_size = tensor_data_value->getDimIndex(0);
+  size_t num_heads = tensor_data_value->getDimIndex(2);
+  size_t num_levels = tensor_data_spatial_shapes->getDimIndex(0);
+  size_t num_query = tensor_data_sampling_loc->getDimIndex(1);
+  size_t num_point = tensor_data_sampling_loc->getDimIndex(4);
   int64_t count = 11;
   int64_t theory_ops = batch_size * num_query * num_heads * num_levels *
                        num_point * count;
