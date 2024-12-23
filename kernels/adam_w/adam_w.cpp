@@ -267,12 +267,11 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
               << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
       CHECK_RETURN(
           "[mluOpAdamW]",
-          KernelApplyAdamW(k_dim, k_type, handle->queue, (void *)param,
-                           (void *)param_h, (void *)grad, (void *)momentum,
-                           (void *)velocity, lr, beta1, beta2, bias1, bias2,
-                           epsilon, adamw_desc->weight_decay,
-                           adamw_desc->grad_scale, adamw_desc->use_nesterov,
-                           size, k_data_type));
+          KernelApplyAdamW(
+              k_dim, k_type, handle->queue, (void *)param, (void *)param_h,
+              (void *)grad, (void *)momentum, (void *)velocity, lr, beta1,
+              beta2, bias1, bias2, epsilon, adamw_desc->weight_decay,
+              adamw_desc->grad_scale, adamw_desc->use_nesterov, size));
     }
   }
   GEN_CASE_END();
