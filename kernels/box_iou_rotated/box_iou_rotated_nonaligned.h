@@ -68,7 +68,8 @@ __mlu_func__ void MLUUnion1BoxIouRotatedNonAligned(const T *box1, const T *box2,
   const uint32_t max_box_pair =
       FLOOR_ALIGN(MAX_NRAM_SIZE / copies_of_nram, COMPUTE_COUNT_ALIGN);
   // First, initialize ram with all 0, or could cause nan/inf unexcepted results
-  __bang_write_zero((uint8_t *)nram_buffer, copies_of_nram * max_box_pair);
+  __bang_write_value((uint8_t *)nram_buffer, copies_of_nram * max_box_pair,
+                     (uint8_t)0);
 
   void *box1_onchip = nram_buffer + 2 * max_box_pair * sizeof(T);
   void *box2_onchip =
@@ -190,7 +191,7 @@ __mlu_func__ void MLUUnion1BoxIouRotatedNonAligned(const T *box1, const T *box2,
         const T area_thres = 1e-14;
         if (area1 < area_thres) {
           // set all current box-paires ious to zeros
-          __bang_write_zero((T *)ious_ram, actual_compute_box_num);
+          __bang_write_value((T *)ious_ram, actual_compute_box_num, (T)0);
           __memcpy(ious + current_ious_offset, (T *)ious_ram,
                    actual_box2_num * sizeof(T), NRAM2GDRAM);
           continue;
@@ -309,8 +310,8 @@ __mlu_func__ void MLUUnion1BoxIouRotatedNonAligned(const T *box1, const T *box2,
                            (T *)temp3_ram, (T *)temp4_ram,
                            actual_compute_box_num);
 
-        __bang_write_zero((T *)valid_pts, 24 * actual_compute_box_num);
-        __bang_write_zero((T *)nums_in_ram, actual_compute_box_num);
+        __bang_write_value((T *)valid_pts, 24 * actual_compute_box_num, (T)0);
+        __bang_write_value((T *)nums_in_ram, actual_compute_box_num, (T)0);
 
         // 3. Get all intersection points
         getIntersectionPoints(
