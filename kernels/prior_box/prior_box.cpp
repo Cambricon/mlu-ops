@@ -48,7 +48,8 @@ static void policyFuncPriorBox(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
 static int getNumPriors(const mluOpTensorDescriptor_t min_sizes_desc,
                         const mluOpTensorDescriptor_t aspect_ratios_desc,
                         const mluOpTensorDescriptor_t max_sizes_desc) {
-  int num_priors = min_sizes_desc->getDimIndex(0) * aspect_ratios_desc->getDimIndex(0);
+  int num_priors =
+      min_sizes_desc->getDimIndex(0) * aspect_ratios_desc->getDimIndex(0);
   if (max_sizes_desc->getTotalElementNum() != 0) {
     num_priors += max_sizes_desc->getDimIndex(0);
   }
@@ -117,16 +118,19 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
 
   for (int i = 0; i < output_desc->getDim(); i++) {
     std::string i_str = "i: " + std::to_string(i);
-    PARAM_CHECK(api, output_desc->getDimIndex(i) == var_desc->getDimIndex(i), i_str);
+    PARAM_CHECK(api, output_desc->getDimIndex(i) == var_desc->getDimIndex(i),
+                i_str);
   }
   if (max_sizes_desc->getTotalElementNum() != 0) {
-    PARAM_CHECK(api, max_sizes_desc->getDimIndex(0) == min_sizes_desc->getDimIndex(0));
-    PARAM_CHECK(api,
-                max_sizes_desc->getDimIndex(0) +
-                        min_sizes_desc->getDimIndex(0) * aspect_ratios_desc->getDimIndex(0) ==
-                    output_desc->getDimIndex(2));
+    PARAM_CHECK(
+        api, max_sizes_desc->getDimIndex(0) == min_sizes_desc->getDimIndex(0));
+    PARAM_CHECK(api, max_sizes_desc->getDimIndex(0) +
+                             min_sizes_desc->getDimIndex(0) *
+                                 aspect_ratios_desc->getDimIndex(0) ==
+                         output_desc->getDimIndex(2));
   } else {
-    PARAM_CHECK(api, min_sizes_desc->getDimIndex(0) * aspect_ratios_desc->getDimIndex(0) ==
+    PARAM_CHECK(api, min_sizes_desc->getDimIndex(0) *
+                             aspect_ratios_desc->getDimIndex(0) ==
                          output_desc->getDimIndex(2));
   }
   const int num_priors =

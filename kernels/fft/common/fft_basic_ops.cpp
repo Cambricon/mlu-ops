@@ -606,9 +606,9 @@ mluOpStatus_t fftBatchMatMulBcast(
   }
 
   CALL_CNNL(cnnlBatchMatMulEx(cnnl_handle, bmm_bcast_desc, algo, &alpha,
-                              cnnl_a_desc, a_ptr, cnnl_b_desc, b_ptr,
-                              &beta, cnnl_c_desc, c_ptr,
-                              (void *)workspace, workspace_size));
+                              cnnl_a_desc, a_ptr, cnnl_b_desc, b_ptr, &beta,
+                              cnnl_c_desc, c_ptr, (void *)workspace,
+                              workspace_size));
   // destroy descriptor
   // destroy cnnl descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);

@@ -47,7 +47,8 @@ static mluOpStatus_t pointsInBoxesPreCheck(
   if (points_indices_desc->getDim() != 2) {
     LOG(ERROR) << "[mluOpPointsInBoxes] The dim size of the points_indices"
                << " tensor must be 2."
-               << " points_indices dim size is " << points_indices_desc->getDim();
+               << " points_indices dim size is "
+               << points_indices_desc->getDim();
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -152,7 +153,8 @@ static bool isPointsInBoxes(const mluOpHandle_t handle, cnrtDim3_t &k_dim,
 
   uint32_t cluster_num = mluop::runtime::getClusterLimitCapability(handle);
   uint32_t core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
-  uint32_t cluster_used = PAD_UP(points_desc->getDimIndex(1), core_dim) / core_dim;
+  uint32_t cluster_used =
+      PAD_UP(points_desc->getDimIndex(1), core_dim) / core_dim;
   cluster_used = cluster_used > cluster_num ? cluster_num : cluster_used;
   k_type = cnrtFuncTypeBlock;
   k_dim.x = 1;
@@ -228,16 +230,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpPointsInBoxes(
   VLOG(5) << "[[mluOpPointsInBoxes]] Launch Kernel "
              "KernelPointsInBoxes.";
   CHECK_RETURN("[mluOpPointsInBoxes]",
-               KernelPointsInBoxes(k_dim, k_type, handle->queue,
-                                   points_desc->getDimIndex(0), points_desc->getDimIndex(1),
-                                   boxes_desc->getDimIndex(1), (float *)points,
-                                   (float *)boxes, (int *)points_indices,
-                                   points_in_boxes_info.points_batch_offset,
-                                   points_in_boxes_info.boxes_batch_offset,
-                                   points_in_boxes_info.idx_batch_offset,
-                                   points_in_boxes_info.points_deal_num,
-                                   points_in_boxes_info.points_deal_offset,
-                                   points_in_boxes_info.idx_deal_num));
+               KernelPointsInBoxes(
+                   k_dim, k_type, handle->queue, points_desc->getDimIndex(0),
+                   points_desc->getDimIndex(1), boxes_desc->getDimIndex(1),
+                   (float *)points, (float *)boxes, (int *)points_indices,
+                   points_in_boxes_info.points_batch_offset,
+                   points_in_boxes_info.boxes_batch_offset,
+                   points_in_boxes_info.idx_batch_offset,
+                   points_in_boxes_info.points_deal_num,
+                   points_in_boxes_info.points_deal_offset,
+                   points_in_boxes_info.idx_deal_num));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

@@ -134,9 +134,10 @@ static mluOpStatus_t DynamicPointToVoxelForwardParamCheck(
 
   PARAM_CHECK(api, voxel_feats_desc->getDtype() == feats_desc->getDtype());
   PARAM_CHECK(api, voxel_coors_desc->getDtype() == coors_desc->getDtype());
+  PARAM_CHECK(api, voxel_points_count_desc->getDtype() ==
+                       point2voxel_map_desc->getDtype());
   PARAM_CHECK(api,
-              voxel_points_count_desc->getDtype() == point2voxel_map_desc->getDtype());
-  PARAM_CHECK(api, voxel_num_desc->getDtype() == point2voxel_map_desc->getDtype());
+              voxel_num_desc->getDtype() == point2voxel_map_desc->getDtype());
 
   if (reduce_type != MLUOP_REDUCE_DMAX && reduce_type != MLUOP_REDUCE_DMEAN) {
     LOG(ERROR) << api << "Only support max and mean. "
@@ -146,15 +147,20 @@ static mluOpStatus_t DynamicPointToVoxelForwardParamCheck(
 
   // check dim
   PARAM_CHECK(api, feats_desc->getDimIndex(0) == coors_desc->getDimIndex(0));
-  PARAM_CHECK(api, feats_desc->getDimIndex(0) == point2voxel_map_desc->getDimIndex(0));
-  PARAM_CHECK(api, voxel_feats_desc->getDimIndex(0) == voxel_coors_desc->getDimIndex(0));
-  PARAM_CHECK(api,
-              voxel_feats_desc->getDimIndex(0) == voxel_points_count_desc->getDimIndex(0));
+  PARAM_CHECK(
+      api, feats_desc->getDimIndex(0) == point2voxel_map_desc->getDimIndex(0));
+  PARAM_CHECK(api, voxel_feats_desc->getDimIndex(0) ==
+                       voxel_coors_desc->getDimIndex(0));
+  PARAM_CHECK(api, voxel_feats_desc->getDimIndex(0) ==
+                       voxel_points_count_desc->getDimIndex(0));
   PARAM_CHECK(api, voxel_num_desc->getDimIndex(0) == 1);
-  PARAM_CHECK(api, feats_desc->getDimIndex(1) == voxel_feats_desc->getDimIndex(1));
-  PARAM_CHECK(api, coors_desc->getDimIndex(1) == voxel_coors_desc->getDimIndex(1));
+  PARAM_CHECK(api,
+              feats_desc->getDimIndex(1) == voxel_feats_desc->getDimIndex(1));
+  PARAM_CHECK(api,
+              coors_desc->getDimIndex(1) == voxel_coors_desc->getDimIndex(1));
   PARAM_CHECK(api, coors_desc->getDimIndex(1) == 3);
-  PARAM_CHECK(api, feats_desc->getDimIndex(0) >= voxel_feats_desc->getDimIndex(0));
+  PARAM_CHECK(api,
+              feats_desc->getDimIndex(0) >= voxel_feats_desc->getDimIndex(0));
 
   // check large tensor
   const size_t feats_element_num = mluOpGetTensorElementNum(feats_desc);

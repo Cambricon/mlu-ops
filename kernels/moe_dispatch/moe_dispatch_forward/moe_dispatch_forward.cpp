@@ -77,11 +77,13 @@ static mluOpStatus_t MoeDispatchForwardParamCheck(
   PARAM_CHECK_V2(op_name, (indices_desc->getDtype() == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in indices tensor, but the data "
                  "type of tensor is "
-                     << mluOpGetNameOfDataType(indices_desc->getDtype()) << ".");
+                     << mluOpGetNameOfDataType(indices_desc->getDtype())
+                     << ".");
   PARAM_CHECK_V2(op_name, (locations_desc->getDtype() == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in locations tensor, but the data "
                  "type of tensor is "
-                     << mluOpGetNameOfDataType(locations_desc->getDtype()) << ".");
+                     << mluOpGetNameOfDataType(locations_desc->getDtype())
+                     << ".");
 
   // check tensor datatype, support float32
   PARAM_CHECK_V2(op_name, input_desc->getDtype() == MLUOP_DTYPE_FLOAT,
@@ -100,7 +102,8 @@ static mluOpStatus_t MoeDispatchForwardParamCheck(
   PARAM_CHECK(op_name, (samples == indices_desc->getDimIndex(0)));
   PARAM_CHECK(op_name, (samples == locations_desc->getDimIndex(0)));
   PARAM_CHECK(op_name, (samples == input_desc->getDimIndex(0)));
-  PARAM_CHECK(op_name, ((num_experts * capacity) == dispatch_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name,
+              ((num_experts * capacity) == dispatch_desc->getDimIndex(0)));
   PARAM_CHECK(op_name, (hidden == input_desc->getDimIndex(1)));
   PARAM_CHECK(op_name, (hidden == dispatch_desc->getDimIndex(1)));
 

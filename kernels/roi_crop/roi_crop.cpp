@@ -90,8 +90,9 @@ mluOpStatus_t RoiCropForwardParamCheck(
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (grid_desc->getDimIndex(3) != 2) {
-    LOG(ERROR) << op_name
-               << " Check failed: grid_desc->getDimIndex(3) should be equal to 2.";
+    LOG(ERROR)
+        << op_name
+        << " Check failed: grid_desc->getDimIndex(3) should be equal to 2.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   const size_t max_input_num = 2147483648;  // 2^31, 2G num
@@ -157,8 +158,9 @@ mluOpStatus_t RoiCropBackwardParamCheck(
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (grid_desc->getDimIndex(3) != 2) {
-    LOG(ERROR) << op_name
-               << " Check failed: grid_desc->getDimIndex(3) should be equal to 2.";
+    LOG(ERROR)
+        << op_name
+        << " Check failed: grid_desc->getDimIndex(3) should be equal to 2.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   const size_t max_input_num = 2147483648;  // 2^31 2G num

@@ -98,16 +98,20 @@ mluOpStatus_t mluOpBorderAlignForward(
   PARAM_CHECK(API, boxes_desc->getDimIndex(2) == 4);
 
   PARAM_CHECK(API, input_desc->getDimIndex(0) == boxes_desc->getDimIndex(0));
-  PARAM_CHECK(API,
-              input_desc->getDimIndex(1) * input_desc->getDimIndex(2) == boxes_desc->getDimIndex(1));
+  PARAM_CHECK(API, input_desc->getDimIndex(1) * input_desc->getDimIndex(2) ==
+                       boxes_desc->getDimIndex(1));
   PARAM_CHECK_EQ(API, output_desc->getDimIndex(0), input_desc->getDimIndex(0));
   PARAM_CHECK_EQ(API, output_desc->getDimIndex(1), boxes_desc->getDimIndex(1));
   PARAM_CHECK_EQ(API, output_desc->getDimIndex(2), 4);
-  PARAM_CHECK_EQ(API, output_desc->getDimIndex(3), input_desc->getDimIndex(3) / 4);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(0), input_desc->getDimIndex(0));
-  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(1), boxes_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, output_desc->getDimIndex(3),
+                 input_desc->getDimIndex(3) / 4);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(0),
+                 input_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(1),
+                 boxes_desc->getDimIndex(1));
   PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(2), 4);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(3), input_desc->getDimIndex(3) / 4);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(3),
+                 input_desc->getDimIndex(3) / 4);
 
   const size_t input_num = mluOpGetTensorElementNum(input_desc);
   const size_t boxes_num = mluOpGetTensorElementNum(boxes_desc);
@@ -139,8 +143,8 @@ mluOpStatus_t mluOpBorderAlignForward(
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
   CHECK_RETURN(API, KernelBorderAlignForward(
-                        k_dim, k_type, handle->queue, input_desc->getDtype(), input,
-                        boxes, pool_size, origin_n, origin_h, origin_w,
+                        k_dim, k_type, handle->queue, input_desc->getDtype(),
+                        input, boxes, pool_size, origin_n, origin_h, origin_w,
                         origin_c, origin_k, output, (int32_t *)argmax_idx));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

@@ -182,13 +182,14 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
       LOG(ERROR) << "[mluOpMsDeformAttnBackward] The shape of value should be "
                     "the same as grad_value."
                  << " But now value_desc->getDimIndex(" << i << ") is "
-                 << value_desc->getDimIndex(i) << ", and grad_value_desc->dims[" << i
-                 << "] is " << grad_value_desc->getDimIndex(i) << ".";
+                 << value_desc->getDimIndex(i) << ", and grad_value_desc->dims["
+                 << i << "] is " << grad_value_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   for (int32_t i = 0; i < sampling_loc_desc->getDim(); ++i) {
-    if (sampling_loc_desc->getDimIndex(i) != grad_sampling_loc_desc->getDimIndex(i)) {
+    if (sampling_loc_desc->getDimIndex(i) !=
+        grad_sampling_loc_desc->getDimIndex(i)) {
       LOG(ERROR) << "[mluOpMsDeformAttnBackward] The shape of "
                     "sampling_loc_desc should be the "
                     "same as grad_sampling_loc_desc."
@@ -200,7 +201,8 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
     }
   }
   for (int32_t i = 0; i < attn_weight_desc->getDim(); ++i) {
-    if (attn_weight_desc->getDimIndex(i) != grad_attn_weight_desc->getDimIndex(i)) {
+    if (attn_weight_desc->getDimIndex(i) !=
+        grad_attn_weight_desc->getDimIndex(i)) {
       LOG(ERROR) << "[mluOpMsDeformAttnBackward] The shape of "
                     "attn_weight_desc should be the "
                     "same as grad_attn_weight_desc."
@@ -211,26 +213,38 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  PARAM_CHECK_EQ(API, value_desc->getDimIndex(0), attn_weight_desc->getDimIndex(0));
-  PARAM_CHECK_EQ(API, value_desc->getDimIndex(2), attn_weight_desc->getDimIndex(2));
+  PARAM_CHECK_EQ(API, value_desc->getDimIndex(0),
+                 attn_weight_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, value_desc->getDimIndex(2),
+                 attn_weight_desc->getDimIndex(2));
 
-  PARAM_CHECK_EQ(API, spatial_shapes_desc->getDimIndex(0), attn_weight_desc->getDimIndex(3));
+  PARAM_CHECK_EQ(API, spatial_shapes_desc->getDimIndex(0),
+                 attn_weight_desc->getDimIndex(3));
   PARAM_CHECK_EQ(API, spatial_shapes_desc->getDimIndex(1), 2);
 
   PARAM_CHECK_EQ(API, level_start_index_desc->getDimIndex(0),
                  attn_weight_desc->getDimIndex(3));
 
-  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(0), attn_weight_desc->getDimIndex(0));
-  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(1), attn_weight_desc->getDimIndex(1));
-  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(2), attn_weight_desc->getDimIndex(2));
-  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(3), attn_weight_desc->getDimIndex(3));
-  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(4), attn_weight_desc->getDimIndex(4));
+  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(0),
+                 attn_weight_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(1),
+                 attn_weight_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(2),
+                 attn_weight_desc->getDimIndex(2));
+  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(3),
+                 attn_weight_desc->getDimIndex(3));
+  PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(4),
+                 attn_weight_desc->getDimIndex(4));
   PARAM_CHECK_EQ(API, sampling_loc_desc->getDimIndex(5), 2);
 
-  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(0), attn_weight_desc->getDimIndex(0));
-  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(1), attn_weight_desc->getDimIndex(1));
-  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(2), attn_weight_desc->getDimIndex(2));
-  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(3), value_desc->getDimIndex(3));
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(0),
+                 attn_weight_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(1),
+                 attn_weight_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(2),
+                 attn_weight_desc->getDimIndex(2));
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(3),
+                 value_desc->getDimIndex(3));
 
   TENSOR_NUM_CHECK(API, mluOpGetTensorElementNum(value_desc), LARGE_TENSOR_NUM,
                    "");

@@ -57,27 +57,34 @@ static mluOpStatus_t paramcheck(
   PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", pooled_empty_flag_desc->getDim(), 2);
 
   // check tensor shape
+  PARAM_CHECK(
+      "[mluOpRoiPointPool3d]",
+      points_desc->getDimIndex(0) == pooled_features_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-              points_desc->getDimIndex(0) == pooled_features_desc->getDimIndex(0));
+              point_features_desc->getDimIndex(0) ==
+                  pooled_features_desc->getDimIndex(0));
+  PARAM_CHECK(
+      "[mluOpRoiPointPool3d]",
+      boxes3d_desc->getDimIndex(0) == pooled_features_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-              point_features_desc->getDimIndex(0) == pooled_features_desc->getDimIndex(0));
+              pooled_empty_flag_desc->getDimIndex(0) ==
+                  pooled_features_desc->getDimIndex(0));
+  PARAM_CHECK("[mluOpRoiPointPool3d]", pooled_features_desc->getDimIndex(1) ==
+                                           boxes3d_desc->getDimIndex(1));
+  PARAM_CHECK("[mluOpRoiPointPool3d]", pooled_empty_flag_desc->getDimIndex(1) ==
+                                           boxes3d_desc->getDimIndex(1));
+  PARAM_CHECK("[mluOpRoiPointPool3d]", points_desc->getDimIndex(1) ==
+                                           point_features_desc->getDimIndex(1));
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-              boxes3d_desc->getDimIndex(0) == pooled_features_desc->getDimIndex(0));
-  PARAM_CHECK("[mluOpRoiPointPool3d]",
-              pooled_empty_flag_desc->getDimIndex(0) == pooled_features_desc->getDimIndex(0));
-  PARAM_CHECK("[mluOpRoiPointPool3d]",
-              pooled_features_desc->getDimIndex(1) == boxes3d_desc->getDimIndex(1));
-  PARAM_CHECK("[mluOpRoiPointPool3d]",
-              pooled_empty_flag_desc->getDimIndex(1) == boxes3d_desc->getDimIndex(1));
-  PARAM_CHECK("[mluOpRoiPointPool3d]",
-              points_desc->getDimIndex(1) == point_features_desc->getDimIndex(1));
-  PARAM_CHECK("[mluOpRoiPointPool3d]", point_features_desc->getDimIndex(2) + 3 ==
-                                           pooled_features_desc->getDimIndex(3));
+              point_features_desc->getDimIndex(2) + 3 ==
+                  pooled_features_desc->getDimIndex(3));
 
   // check params
-  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", batch_size, points_desc->getDimIndex(0));
+  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", batch_size,
+                 points_desc->getDimIndex(0));
   PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", pts_num, points_desc->getDimIndex(1));
-  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", boxes_num, boxes3d_desc->getDimIndex(1));
+  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", boxes_num,
+                 boxes3d_desc->getDimIndex(1));
   PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", feature_in_len,
                  point_features_desc->getDimIndex(2));
   PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", sampled_pts_num,
@@ -105,8 +112,8 @@ static mluOpStatus_t paramcheck(
   // same
   PARAM_CHECK("[mluOpRoiPointPool3d]",
               points_desc->getDtype() == pooled_features_desc->getDtype());
-  PARAM_CHECK("[mluOpRoiPointPool3d]",
-              point_features_desc->getDtype() == pooled_features_desc->getDtype());
+  PARAM_CHECK("[mluOpRoiPointPool3d]", point_features_desc->getDtype() ==
+                                           pooled_features_desc->getDtype());
   PARAM_CHECK("[mluOpRoiPointPool3d]",
               boxes3d_desc->getDtype() == pooled_features_desc->getDtype());
 
@@ -169,7 +176,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetRoiPointPool3dWorkspaceSize(
   }
 
   // workspace for points_xyz : [3, B, N]
-  *size = points_element_num * mluop::getSizeOfDataType(points_desc->getDtype());
+  *size =
+      points_element_num * mluop::getSizeOfDataType(points_desc->getDtype());
   // workspace for point_features_transpose : [C, B, N]
   *size += point_features_element_num *
            mluop::getSizeOfDataType(point_features_desc->getDtype());

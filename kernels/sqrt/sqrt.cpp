@@ -118,9 +118,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
 
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
   VLOG(5) << "kernel Kernel3StagePipelineSqrt.";
-  CHECK_RETURN("[mluOpSqrt] ",
-               Kernel3StagePipelineSqrt(k_dim, k_type, handle->queue,
-                                        x_desc->getDtype(), prefer, x, y, dim_x));
+  CHECK_RETURN("[mluOpSqrt] ", Kernel3StagePipelineSqrt(
+                                   k_dim, k_type, handle->queue,
+                                   x_desc->getDtype(), prefer, x, y, dim_x));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

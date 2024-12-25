@@ -91,12 +91,14 @@ static mluOpStatus_t checkTensorDim(
   }
   if (3 != px_grad_desc->getDim()) {
     LOG(ERROR) << API_NAME << " The dim of px_grad must be 3. "
-               << "But now the dim of px_grad is " << px_grad_desc->getDim() << ".";
+               << "But now the dim of px_grad is " << px_grad_desc->getDim()
+               << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (3 != py_grad_desc->getDim()) {
     LOG(ERROR) << API_NAME << " The dim of py_grad must be 3. "
-               << "But now the dim of py_grad is " << py_grad_desc->getDim() << ".";
+               << "But now the dim of py_grad is " << py_grad_desc->getDim()
+               << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -120,11 +122,13 @@ static mluOpStatus_t checkTensorShape(
     LOG(ERROR) << API_NAME
                << " px.shape[0], py.shape[0], p.shape[0], ans_grad.shape[0], "
                << "px_grad.shape[0] and py_grad.shape[0] must be same. But now "
-               << "px.shape[0] is " << px_desc->getDimIndex(0) << ", py.shape[0] is "
-               << py_desc->getDimIndex(0) << ", p.shape[0] is " << p_desc->getDimIndex(0)
+               << "px.shape[0] is " << px_desc->getDimIndex(0)
+               << ", py.shape[0] is " << py_desc->getDimIndex(0)
+               << ", p.shape[0] is " << p_desc->getDimIndex(0)
                << ", ans_grad.shape[0] is " << ans_grad_desc->getDimIndex(0)
                << ", px_grad.shape[0] is " << px_grad_desc->getDimIndex(0)
-               << ", py_grad.shape[0] is " << py_grad_desc->getDimIndex(0) << ".";
+               << ", py_grad.shape[0] is " << py_grad_desc->getDimIndex(0)
+               << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -132,8 +136,8 @@ static mluOpStatus_t checkTensorShape(
   if (T + 1 != px_desc->getDimIndex(2)) {
     LOG(ERROR) << API_NAME << " Currently only supports the case that "
                << "px.shape[2] must be equal to py.shape[2] + 1. But now "
-               << "px.shape[2] is " << px_desc->getDimIndex(2) << ", py.shape[2] is "
-               << py_desc->getDimIndex(2) << ".";
+               << "px.shape[2] is " << px_desc->getDimIndex(2)
+               << ", py.shape[2] is " << py_desc->getDimIndex(2) << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -147,14 +151,16 @@ static mluOpStatus_t checkTensorShape(
 
   // The shape of opt_boundary must be [B, 4]
   if (nullptr != opt_boundary_desc &&
-      (B != opt_boundary_desc->getDimIndex(0) || 4 != opt_boundary_desc->getDimIndex(1))) {
+      (B != opt_boundary_desc->getDimIndex(0) ||
+       4 != opt_boundary_desc->getDimIndex(1))) {
     LOG(ERROR) << API_NAME << " When opt_boundary is not NULL, "
                << "opt_boundary.shape[0] and px.shape[0] must be same, and "
                << "opt_boundary.shape[1] must be 4. But now "
                << "px.shape[0] is " << px_desc->getDimIndex(0)
-               << ", opt_boundary.shape[0] is " << opt_boundary_desc->getDimIndex(0)
-               << ", opt_boundary.shape[1] is " << opt_boundary_desc->getDimIndex(1)
-               << ".";
+               << ", opt_boundary.shape[0] is "
+               << opt_boundary_desc->getDimIndex(0)
+               << ", opt_boundary.shape[1] is "
+               << opt_boundary_desc->getDimIndex(1) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -163,9 +169,9 @@ static mluOpStatus_t checkTensorShape(
     LOG(ERROR) << API_NAME << " p.shape[1] and py.shape[1] must be same, and "
                << "p.shape[2] must be equal to py.shape[2] + 1. "
                << "But now p.shape[1] is " << p_desc->getDimIndex(1)
-               << ", py.shape[1] is " << py_desc->getDimIndex(1) << ", p.shape[2] is "
-               << p_desc->getDimIndex(2) << ", py.shape[2] is " << py_desc->getDimIndex(2)
-               << ".";
+               << ", py.shape[1] is " << py_desc->getDimIndex(1)
+               << ", p.shape[2] is " << p_desc->getDimIndex(2)
+               << ", py.shape[2] is " << py_desc->getDimIndex(2) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -175,8 +181,8 @@ static mluOpStatus_t checkTensorShape(
       LOG(ERROR) << API_NAME
                  << " The shape of px and px_grad must be same. But now "
                  << "px.shape[" << i << "] is " << px_desc->getDimIndex(i)
-                 << ", px_grad.shape[" << i << "] is " << px_grad_desc->getDimIndex(i)
-                 << ".";
+                 << ", px_grad.shape[" << i << "] is "
+                 << px_grad_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -187,8 +193,8 @@ static mluOpStatus_t checkTensorShape(
       LOG(ERROR) << API_NAME
                  << " The shape of py and py_grad must be same. But now "
                  << "py.shape[" << i << "] is " << py_desc->getDimIndex(i)
-                 << ", py_grad.shape[" << i << "] is " << py_grad_desc->getDimIndex(i)
-                 << ".";
+                 << ", py_grad.shape[" << i << "] is "
+                 << py_grad_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }

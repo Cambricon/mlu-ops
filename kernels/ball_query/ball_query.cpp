@@ -89,11 +89,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   PARAM_CHECK("[mluOpBallQuery]", idx_desc->getDim() == 3);
 
   // check dim0
-  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->getDimIndex(0) == xyz_desc->getDimIndex(0));
-  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->getDimIndex(0) == idx_desc->getDimIndex(0));
+  PARAM_CHECK("[mluOpBallQuery]",
+              new_xyz_desc->getDimIndex(0) == xyz_desc->getDimIndex(0));
+  PARAM_CHECK("[mluOpBallQuery]",
+              new_xyz_desc->getDimIndex(0) == idx_desc->getDimIndex(0));
 
   // check dim1
-  PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->getDimIndex(1) == idx_desc->getDimIndex(1));
+  PARAM_CHECK("[mluOpBallQuery]",
+              new_xyz_desc->getDimIndex(1) == idx_desc->getDimIndex(1));
 
   // check dim2
   PARAM_CHECK("[mluOpBallQuery]", new_xyz_desc->getDimIndex(2) == 3);
@@ -115,7 +118,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
                << mluOpGetNameOfDataType(new_xyz_desc->getDtype()) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  PARAM_CHECK_EQ("[mluOpBallQuery]", new_xyz_desc->getDtype(), xyz_desc->getDtype());
+  PARAM_CHECK_EQ("[mluOpBallQuery]", new_xyz_desc->getDtype(),
+                 xyz_desc->getDtype());
 
   if (idx_desc->getDtype() != MLUOP_DTYPE_INT32) {
     LOG(ERROR) << "[mluOpBallQuery]:Only int32 is supportedin output idx, but "
@@ -155,7 +159,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
   if (mluOpGetTensorElementNum(new_xyz_desc) == 0) {
     VLOG(5) << "[mluOpBallQuery] new_xyz tensor is a zero element tensor. The "
                "shape of new_xyz tensor is ["
-            << new_xyz_desc->getDimIndex(0) << ", " << new_xyz_desc->getDimIndex(1) << ", "
+            << new_xyz_desc->getDimIndex(0) << ", "
+            << new_xyz_desc->getDimIndex(1) << ", "
             << new_xyz_desc->getDimIndex(2) << "].";
     return MLUOP_STATUS_BAD_PARAM;
   }

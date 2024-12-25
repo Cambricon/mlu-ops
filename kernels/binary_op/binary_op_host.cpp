@@ -139,10 +139,10 @@ mluOpStatus_t binaryOpParamCheck(
     int32_t left_dim_num = input1_desc->getDim();
     int32_t right_dim_num = input2_desc->getDim();
     int32_t max_dim = std::max(left_dim_num, right_dim_num);
-    std::vector<int> left_aligned_dims(input1_desc->getDims(),
-                                       input1_desc->getDims() + input1_desc->getDim());
-    std::vector<int> right_aligned_dims(input2_desc->getDims(),
-                                        input2_desc->getDims() + input2_desc->getDim());
+    std::vector<int> left_aligned_dims(
+        input1_desc->getDims(), input1_desc->getDims() + input1_desc->getDim());
+    std::vector<int> right_aligned_dims(
+        input2_desc->getDims(), input2_desc->getDims() + input2_desc->getDim());
 
     // aligning dimensions to max_dim
     if (left_dim_num < max_dim) {
@@ -177,15 +177,15 @@ mluOpStatus_t binaryOpParamCheck(
       int min_dim_value = std::min(left_aligned_dims[i], right_aligned_dims[i]);
       if ((min_dim_value > 0 && max_dim_value != output_desc->getDimIndex(i)) ||
           (min_dim_value == 0 && output_desc->getDimIndex(i) != 0)) {
-        LOG(ERROR) << op_name
-                   << " The shape of the inferred tensors is not equal"
-                   << " to the output tensor. In the broadcast shape"
-                   << ", the shape of x is "
-                   << array2String(input1_desc->getDim(), input1_desc->getDims())
-                   << ", the shape of y is "
-                   << array2String(input2_desc->getDim(), input2_desc->getDims())
-                   << ", the shape of z is "
-                   << array2String(output_desc->getDim(), output_desc->getDims());
+        LOG(ERROR)
+            << op_name << " The shape of the inferred tensors is not equal"
+            << " to the output tensor. In the broadcast shape"
+            << ", the shape of x is "
+            << array2String(input1_desc->getDim(), input1_desc->getDims())
+            << ", the shape of y is "
+            << array2String(input2_desc->getDim(), input2_desc->getDims())
+            << ", the shape of z is "
+            << array2String(output_desc->getDim(), output_desc->getDims());
         return MLUOP_STATUS_BAD_PARAM;
       }
     }
@@ -238,30 +238,32 @@ mluOpStatus_t binaryOpParamSameShapeCheck(
     const mluOpTensorDescriptor_t input2_desc,
     const mluOpTensorDescriptor_t output_desc) {
   // check dim
-  PARAM_CHECK_EQ("[" + op_name + "]", input1_desc->getDim(), input2_desc->getDim());
-  PARAM_CHECK_EQ("[" + op_name + "]", input1_desc->getDim(), output_desc->getDim());
+  PARAM_CHECK_EQ("[" + op_name + "]", input1_desc->getDim(),
+                 input2_desc->getDim());
+  PARAM_CHECK_EQ("[" + op_name + "]", input1_desc->getDim(),
+                 output_desc->getDim());
 
   // check shape
   for (int i = 0; i < input1_desc->getDim(); i++) {
     if (input1_desc->getDimIndex(i) != input2_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << ":The shape of input1 should be equal to input2"
                  << ". But now input1's shape[" << i << "] is "
-                 << input1_desc->getDimIndex(i) << ", input2's shape[" << i << "] is "
-                 << input2_desc->getDimIndex(i) << ".";
+                 << input1_desc->getDimIndex(i) << ", input2's shape[" << i
+                 << "] is " << input2_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (input1_desc->getDimIndex(i) != output_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << ":The shape of input1 should be equal to output"
                  << ". But now input1's shape[" << i << "] is "
-                 << input1_desc->getDimIndex(i) << ", output's shape[" << i << "] is "
-                 << output_desc->getDimIndex(i) << ".";
+                 << input1_desc->getDimIndex(i) << ", output's shape[" << i
+                 << "] is " << output_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   return MLUOP_STATUS_SUCCESS;
 }
 
-std::string array2String(int32_t dim_num,const int64_t *dims) {
+std::string array2String(int32_t dim_num, const int64_t *dims) {
   std::string res;
   res.push_back('[');
   for (int i = 0; i < dim_num; i++) {

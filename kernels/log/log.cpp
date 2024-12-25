@@ -98,9 +98,10 @@ mluOpLog(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
 
   size_t element_num = mluOpGetTensorElementNum(x_desc);
   VLOG(5) << "kernel Kernel3StagePipelineLog.";
-  CHECK_RETURN("[mluOpLog] ", (Kernel3StagePipelineLog(
-                                  k_dim, k_type, handle->queue, x_desc->getDtype(),
-                                  prefer, x, y, element_num, coef)));
+  CHECK_RETURN(
+      "[mluOpLog] ",
+      (Kernel3StagePipelineLog(k_dim, k_type, handle->queue, x_desc->getDtype(),
+                               prefer, x, y, element_num, coef)));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

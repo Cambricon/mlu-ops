@@ -233,7 +233,8 @@ static mluOpStatus_t baseParamCheck(
                                 : filters_grad_desc->getDimIndex(1);
   auto kw = filter_dim_len == 4 ? filters_grad_desc->getDimIndex(1)
                                 : filters_grad_desc->getDimIndex(2);
-  if (ci != features_desc->getDimIndex(1) || co != output_grad_desc->getDimIndex(1) ||
+  if (ci != features_desc->getDimIndex(1) ||
+      co != output_grad_desc->getDimIndex(1) ||
       features_desc->getDimIndex(0) != indice_pairs_desc->getDimIndex(2) ||
       2 != indice_pairs_desc->getDimIndex(1) ||
       kd * kh * kw != indice_pairs_desc->getDimIndex(0)) {
@@ -284,9 +285,10 @@ static mluOpStatus_t insertTranspose(
   CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                              trans_in_desc, MLUOP_LAYOUT_ARRAY,
                              filters_grad_desc->getDtype(), 3, trans_in_shape));
-  CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
-                             trans_out_desc, MLUOP_LAYOUT_ARRAY,
-                             filters_grad_desc->getDtype(), 3, trans_out_shape));
+  CHECK_RETURN(api_name,
+               mluOpSetTensorDescriptor(trans_out_desc, MLUOP_LAYOUT_ARRAY,
+                                        filters_grad_desc->getDtype(), 3,
+                                        trans_out_shape));
   CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, 3, permute));
   {
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
@@ -398,9 +400,10 @@ static mluOpStatus_t internalIndiceConvBackwardFilter(
     int32_t a_desc_dims[2] = {active_point_num, ci};
     int32_t b_desc_dims[2] = {active_point_num, co};
     int32_t c_desc_dims[2] = {ci, co};
-    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
-                               active_indice_desc, MLUOP_LAYOUT_ARRAY,
-                               indice_pairs_desc->getDtype(), 2, active_indices));
+    CHECK_RETURN(api_name,
+                 mluOpSetTensorDescriptor(
+                     active_indice_desc, MLUOP_LAYOUT_ARRAY,
+                     indice_pairs_desc->getDtype(), 2, active_indices));
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                matmul_a_desc, MLUOP_LAYOUT_ARRAY,
                                features_desc->getDtype(), 2, a_desc_dims));

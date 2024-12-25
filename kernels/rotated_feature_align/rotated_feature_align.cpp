@@ -98,7 +98,8 @@ static mluOpStatus_t RotatedFeatureAlignForwardPreCheck(
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  PARAM_CHECK("[mluOpRotatedFeatureAlignForward]", bboxes_desc->getDimIndex(3) == 5);
+  PARAM_CHECK("[mluOpRotatedFeatureAlignForward]",
+              bboxes_desc->getDimIndex(3) == 5);
 
   const size_t input_element_num = mluOpGetTensorElementNum(input_desc);
   const size_t output_element_num = mluOpGetTensorElementNum(output_desc);
@@ -130,7 +131,8 @@ static mluOpStatus_t RotatedFeatureAlignBackwardPreCheck(
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", bboxes_desc != NULL);
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", bottom_input_desc != NULL);
 
-  PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", top_output_desc->getDim() == 4);
+  PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]",
+              top_output_desc->getDim() == 4);
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", bboxes_desc->getDim() == 4);
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]",
               bottom_input_desc->getDim() == 4);
@@ -170,11 +172,13 @@ static mluOpStatus_t RotatedFeatureAlignBackwardPreCheck(
     if (top_output_desc->getDimIndex(i) != bboxes_desc->getDimIndex(i)) {
       LOG(ERROR) << "[mluOpRotatedFeatureAlignBackward] Check failed: "
                     "top_output_desc->dims["
-                 << i << "] should be equal to bboxes_desc->getDimIndex(" << i << ").";
+                 << i << "] should be equal to bboxes_desc->getDimIndex(" << i
+                 << ").";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", bboxes_desc->getDimIndex(3) == 5);
+  PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]",
+              bboxes_desc->getDimIndex(3) == 5);
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", points == 1 || points == 5);
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", spatial_scale > 0);
 

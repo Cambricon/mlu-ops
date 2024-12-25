@@ -64,26 +64,35 @@ static mluOpStatus_t activeRotatedFilterForwardParamCheck(
   PARAM_CHECK(api_name, output_desc->getDim() == 4);
 
   // check dim
-  PARAM_CHECK(api_name, input_desc->getDimIndex(2) == indices_desc->getDimIndex(0));
-  PARAM_CHECK(api_name, input_desc->getDimIndex(3) == input_desc->getDimIndex(4));
-  PARAM_CHECK(api_name, input_desc->getDimIndex(3) == indices_desc->getDimIndex(1));
-  PARAM_CHECK(api_name, input_desc->getDimIndex(3) == output_desc->getDimIndex(2));
-  PARAM_CHECK(api_name, input_desc->getDimIndex(4) == indices_desc->getDimIndex(2));
-  PARAM_CHECK(api_name, input_desc->getDimIndex(4) == output_desc->getDimIndex(3));
   PARAM_CHECK(api_name,
-              (input_desc->getDimIndex(2) > 0 && input_desc->getDimIndex(2) <= 128));
+              input_desc->getDimIndex(2) == indices_desc->getDimIndex(0));
+  PARAM_CHECK(api_name,
+              input_desc->getDimIndex(3) == input_desc->getDimIndex(4));
+  PARAM_CHECK(api_name,
+              input_desc->getDimIndex(3) == indices_desc->getDimIndex(1));
+  PARAM_CHECK(api_name,
+              input_desc->getDimIndex(3) == output_desc->getDimIndex(2));
+  PARAM_CHECK(api_name,
+              input_desc->getDimIndex(4) == indices_desc->getDimIndex(2));
+  PARAM_CHECK(api_name,
+              input_desc->getDimIndex(4) == output_desc->getDimIndex(3));
+  PARAM_CHECK(api_name, (input_desc->getDimIndex(2) > 0 &&
+                         input_desc->getDimIndex(2) <= 128));
   PARAM_CHECK_V2(api_name,
                  int(log(float(input_desc->getDimIndex(2))) / log(2.0f)) ==
                      log(float(input_desc->getDimIndex(2))) / log(2.0f),
                  "input_desc->getDimIndex(2) should be the power of 2.");
-  PARAM_CHECK(api_name, (input_desc->getDimIndex(3) == 3 || input_desc->getDimIndex(3) == 1));
+  PARAM_CHECK(api_name, (input_desc->getDimIndex(3) == 3 ||
+                         input_desc->getDimIndex(3) == 1));
+  PARAM_CHECK(api_name, (indices_desc->getDimIndex(3) == 2 ||
+                         indices_desc->getDimIndex(3) == 4 ||
+                         indices_desc->getDimIndex(3) == 8));
   PARAM_CHECK(api_name,
-              (indices_desc->getDimIndex(3) == 2 || indices_desc->getDimIndex(3) == 4 ||
-               indices_desc->getDimIndex(3) == 8));
-  PARAM_CHECK(api_name, (output_desc->getDimIndex(0) ==
-                         input_desc->getDimIndex(0) * indices_desc->getDimIndex(3)));
-  PARAM_CHECK(api_name, (output_desc->getDimIndex(1) ==
-                         input_desc->getDimIndex(1) * input_desc->getDimIndex(2)));
+              (output_desc->getDimIndex(0) ==
+               input_desc->getDimIndex(0) * indices_desc->getDimIndex(3)));
+  PARAM_CHECK(api_name,
+              (output_desc->getDimIndex(1) ==
+               input_desc->getDimIndex(1) * input_desc->getDimIndex(2)));
 
   // check stride
   STRIDE_TENSOR_CHECK(api_name + ":", input_desc,

@@ -84,7 +84,8 @@ static mluOpStatus_t diffIouRotatedSortVerticesForwardParamCheck(
   PARAM_CHECK_V2(op_name, (vertices_desc->getDtype() == MLUOP_DTYPE_FLOAT),
                  "Only float are supported in vertices tensor, but the "
                  "data type of tensor is "
-                     << mluOpGetNameOfDataType(vertices_desc->getDtype()) << ".");
+                     << mluOpGetNameOfDataType(vertices_desc->getDtype())
+                     << ".");
 
   PARAM_CHECK_V2(op_name, (mask_desc->getDtype() == MLUOP_DTYPE_BOOL),
                  "Only bool are supported in mask tensor, but the data "
@@ -94,7 +95,8 @@ static mluOpStatus_t diffIouRotatedSortVerticesForwardParamCheck(
   PARAM_CHECK_V2(op_name, (num_valid_desc->getDtype() == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in num_valid tensor, but the data "
                  "type of tensor is "
-                     << mluOpGetNameOfDataType(num_valid_desc->getDtype()) << ".");
+                     << mluOpGetNameOfDataType(num_valid_desc->getDtype())
+                     << ".");
 
   PARAM_CHECK_V2(op_name, (idx_desc->getDtype() == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in idx tensor, but the data "
@@ -105,13 +107,20 @@ static mluOpStatus_t diffIouRotatedSortVerticesForwardParamCheck(
   // int dim_b = vertices_desc->getDimIndex(0);
   // int dim_n = vertices_desc->getDimIndex(1);
   // int dim_m = vertices_desc->getDimIndex(2);
-  PARAM_CHECK(op_name, (vertices_desc->getDimIndex(0) == mask_desc->getDimIndex(0)));
-  PARAM_CHECK(op_name, (vertices_desc->getDimIndex(0) == num_valid_desc->getDimIndex(0)));
-  PARAM_CHECK(op_name, (vertices_desc->getDimIndex(0) == idx_desc->getDimIndex(0)));
-  PARAM_CHECK(op_name, (vertices_desc->getDimIndex(1) == mask_desc->getDimIndex(1)));
-  PARAM_CHECK(op_name, (vertices_desc->getDimIndex(1) == num_valid_desc->getDimIndex(1)));
-  PARAM_CHECK(op_name, (vertices_desc->getDimIndex(1) == idx_desc->getDimIndex(1)));
-  PARAM_CHECK(op_name, (vertices_desc->getDimIndex(2) == mask_desc->getDimIndex(2)));
+  PARAM_CHECK(op_name,
+              (vertices_desc->getDimIndex(0) == mask_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name, (vertices_desc->getDimIndex(0) ==
+                        num_valid_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name,
+              (vertices_desc->getDimIndex(0) == idx_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name,
+              (vertices_desc->getDimIndex(1) == mask_desc->getDimIndex(1)));
+  PARAM_CHECK(op_name, (vertices_desc->getDimIndex(1) ==
+                        num_valid_desc->getDimIndex(1)));
+  PARAM_CHECK(op_name,
+              (vertices_desc->getDimIndex(1) == idx_desc->getDimIndex(1)));
+  PARAM_CHECK(op_name,
+              (vertices_desc->getDimIndex(2) == mask_desc->getDimIndex(2)));
   PARAM_CHECK_V2(
       op_name, (vertices_desc->getDimIndex(2) == 24),
       "vertices and mask tensors dims[2] should be 24, but the input value is "

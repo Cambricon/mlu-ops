@@ -2615,19 +2615,22 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
                                     MLUOP_STATUS_SUCCESS);
   INTERNAL_CHECK(make_plan_api, mluOpCreateTensorDescriptor(&fft_output_desc) ==
                                     MLUOP_STATUS_SUCCESS);
+  INTERNAL_CHECK(
+      make_plan_api,
+      mluOpSetTensorDescriptorEx_v2(
+          fft_input_desc, input_desc->getLayout(), input_desc->getDtype(),
+          input_desc->getDim(), input_desc->getDims(),
+          input_desc->getStrides()) == MLUOP_STATUS_SUCCESS);
   INTERNAL_CHECK(make_plan_api,
-                 mluOpSetTensorDescriptorEx_v2(
-                     fft_input_desc, input_desc->getLayout(), input_desc->getDtype(),
-                     input_desc->getDim(), input_desc->getDims(),
-                     input_desc->getStrides()) == MLUOP_STATUS_SUCCESS);
-  INTERNAL_CHECK(make_plan_api, mluOpSetTensorDescriptorOnchipDataType(
-                                    fft_input_desc, input_desc->getOnchipDtype()) ==
-                                    MLUOP_STATUS_SUCCESS);
-  INTERNAL_CHECK(make_plan_api,
-                 mluOpSetTensorDescriptorEx_v2(
-                     fft_output_desc, output_desc->getLayout(), output_desc->getDtype(),
-                     output_desc->getDim(), output_desc->getDims(),
-                     output_desc->getStrides()) == MLUOP_STATUS_SUCCESS);
+                 mluOpSetTensorDescriptorOnchipDataType(
+                     fft_input_desc, input_desc->getOnchipDtype()) ==
+                     MLUOP_STATUS_SUCCESS);
+  INTERNAL_CHECK(
+      make_plan_api,
+      mluOpSetTensorDescriptorEx_v2(
+          fft_output_desc, output_desc->getLayout(), output_desc->getDtype(),
+          output_desc->getDim(), output_desc->getDims(),
+          output_desc->getStrides()) == MLUOP_STATUS_SUCCESS);
   fft_plan->input_desc = fft_input_desc;
   fft_plan->output_desc = fft_output_desc;
 

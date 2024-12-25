@@ -293,28 +293,39 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
 
   // [N,H,W,A4]
   PARAM_CHECK_EQ(API, bbox_deltas_desc->getDim(), 4);
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->getDimIndex(0), scores_desc->getDimIndex(0));
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->getDimIndex(1), scores_desc->getDimIndex(1));
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->getDimIndex(2), scores_desc->getDimIndex(2));
-  PARAM_CHECK_EQ(API, bbox_deltas_desc->getDimIndex(3), 4 * scores_desc->getDimIndex(3));
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->getDimIndex(0),
+                 scores_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->getDimIndex(1),
+                 scores_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->getDimIndex(2),
+                 scores_desc->getDimIndex(2));
+  PARAM_CHECK_EQ(API, bbox_deltas_desc->getDimIndex(3),
+                 4 * scores_desc->getDimIndex(3));
 
   // [N, 2]
   PARAM_CHECK_EQ(API, im_shape_desc->getDim(), 2);
-  PARAM_CHECK_EQ(API, im_shape_desc->getDimIndex(0), scores_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, im_shape_desc->getDimIndex(0),
+                 scores_desc->getDimIndex(0));
   PARAM_CHECK_EQ(API, im_shape_desc->getDimIndex(1), 2);
 
   // [H, W, A, 4]
   PARAM_CHECK_EQ(API, anchors_desc->getDim(), 4);
-  PARAM_CHECK_EQ(API, anchors_desc->getDimIndex(0), scores_desc->getDimIndex(1));
-  PARAM_CHECK_EQ(API, anchors_desc->getDimIndex(1), scores_desc->getDimIndex(2));
-  PARAM_CHECK_EQ(API, anchors_desc->getDimIndex(2), scores_desc->getDimIndex(3));
+  PARAM_CHECK_EQ(API, anchors_desc->getDimIndex(0),
+                 scores_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, anchors_desc->getDimIndex(1),
+                 scores_desc->getDimIndex(2));
+  PARAM_CHECK_EQ(API, anchors_desc->getDimIndex(2),
+                 scores_desc->getDimIndex(3));
   PARAM_CHECK_EQ(API, anchors_desc->getDimIndex(3), 4);
 
   // [H, W, A, 4]
   PARAM_CHECK_EQ(API, variances_desc->getDim(), 4);
-  PARAM_CHECK_EQ(API, variances_desc->getDimIndex(0), scores_desc->getDimIndex(1));
-  PARAM_CHECK_EQ(API, variances_desc->getDimIndex(1), scores_desc->getDimIndex(2));
-  PARAM_CHECK_EQ(API, variances_desc->getDimIndex(2), scores_desc->getDimIndex(3));
+  PARAM_CHECK_EQ(API, variances_desc->getDimIndex(0),
+                 scores_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, variances_desc->getDimIndex(1),
+                 scores_desc->getDimIndex(2));
+  PARAM_CHECK_EQ(API, variances_desc->getDimIndex(2),
+                 scores_desc->getDimIndex(3));
   PARAM_CHECK_EQ(API, variances_desc->getDimIndex(3), 4);
 
   // check output shape
@@ -329,7 +340,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
   PARAM_CHECK_EQ(API, rpn_roi_probs_desc->getDimIndex(1), 1);
 
   PARAM_CHECK_EQ(API, rpn_rois_num_desc->getDim(), 1);
-  PARAM_CHECK_EQ(API, rpn_rois_num_desc->getDimIndex(0), scores_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, rpn_rois_num_desc->getDimIndex(0),
+                 scores_desc->getDimIndex(0));
 
   PARAM_CHECK_NE(API, scores_desc->getDimIndex(1), 0);
   PARAM_CHECK_NE(API, scores_desc->getDimIndex(2), 0);

@@ -63,15 +63,17 @@ static mluOpStatus_t maskedCol2imForwardPreCheck(
   PARAM_CHECK("[mluOpMaskedCol2imForward]",
               col_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
                   col_desc->getDtype() == MLUOP_DTYPE_HALF);
-  PARAM_CHECK("[mluOpMaskedCol2imForward]", col_desc->getDtype() == im_desc->getDtype());
+  PARAM_CHECK("[mluOpMaskedCol2imForward]",
+              col_desc->getDtype() == im_desc->getDtype());
   PARAM_CHECK("[mluOpMaskedCol2imForward]",
               mask_h_idx_desc->getDtype() == MLUOP_DTYPE_INT32);
   PARAM_CHECK("[mluOpMaskedCol2imForward]",
               mask_w_idx_desc->getDtype() == MLUOP_DTYPE_INT32);
   PARAM_CHECK("[mluOpMaskedCol2imForward]", im_desc->getDimIndex(0) == 1);
 
-  PARAM_CHECK("[mluOpMaskedCol2imForward]",
-              mask_h_idx_desc->getDimIndex(0) == mask_w_idx_desc->getDimIndex(0));
+  PARAM_CHECK(
+      "[mluOpMaskedCol2imForward]",
+      mask_h_idx_desc->getDimIndex(0) == mask_w_idx_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpMaskedCol2imForward]",
               col_desc->getDimIndex(1) == mask_h_idx_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpMaskedCol2imForward]",
@@ -161,9 +163,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMaskedCol2imForwardWorkspaceSize(
   CHECK_RETURN("[mluOpGetMaskedCol2imForwardWorkspaceSize]",
                mluOpCreateTensorDescriptor(&im_NHWC_desc_tmp));
 
-  CHECK_RETURN("[mluOpMaskedCol2imForward]",
-               mluOpSetTensorDescriptor(im_NHWC_desc_tmp, MLUOP_LAYOUT_ARRAY,
-                                        im_desc->getDtype(), im_dim, im_NHWC_dims));
+  CHECK_RETURN(
+      "[mluOpMaskedCol2imForward]",
+      mluOpSetTensorDescriptor(im_NHWC_desc_tmp, MLUOP_LAYOUT_ARRAY,
+                               im_desc->getDtype(), im_dim, im_NHWC_dims));
   CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, im_dim, im_permute));
   {
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
@@ -288,9 +291,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpMaskedCol2imForward(
   mluOpTensorDescriptor_t im_NHWC_desc_tmp;
   CHECK_RETURN("[mluOpMaskedCol2imForward]",
                mluOpCreateTensorDescriptor(&im_NHWC_desc_tmp));
-  CHECK_RETURN("[mluOpMaskedCol2imForward]",
-               mluOpSetTensorDescriptor(im_NHWC_desc_tmp, MLUOP_LAYOUT_ARRAY,
-                                        im_desc->getDtype(), im_dim, im_NHWC_dims));
+  CHECK_RETURN(
+      "[mluOpMaskedCol2imForward]",
+      mluOpSetTensorDescriptor(im_NHWC_desc_tmp, MLUOP_LAYOUT_ARRAY,
+                               im_desc->getDtype(), im_dim, im_NHWC_dims));
   uint64_t fill_value = 0x0;
   {
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
@@ -313,9 +317,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpMaskedCol2imForward(
   mluOpTensorDescriptor_t col_MC_desc_tmp;
   CHECK_RETURN("[mluOpMaskedCol2imForward]",
                mluOpCreateTensorDescriptor(&col_MC_desc_tmp));
-  CHECK_RETURN("[mluOpMaskedCol2imForward]",
-               mluOpSetTensorDescriptor(col_MC_desc_tmp, MLUOP_LAYOUT_ARRAY,
-                                        col_desc->getDtype(), col_dim, col_MC_dims));
+  CHECK_RETURN(
+      "[mluOpMaskedCol2imForward]",
+      mluOpSetTensorDescriptor(col_MC_desc_tmp, MLUOP_LAYOUT_ARRAY,
+                               col_desc->getDtype(), col_dim, col_MC_dims));
   CHECK_RETURN(
       "[mluOpMaskedCol2imForward]",
       transposeTensor(handle, col_desc, col, col_permute, col_MC_desc_tmp,

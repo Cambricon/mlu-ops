@@ -109,9 +109,9 @@ mluOpLogspace(mluOpHandle_t handle, const float start, const float end,
           << k_dim.y << ", " << k_dim.z << "]";
 
   VLOG(5) << "kernel KernelLogspace.";
-  CHECK_RETURN("[mluOpLogspace] ",
-               KernelLogspace(k_dim, k_type, handle->queue, res_desc->getDtype(),
-                              start, end, steps, base, res));
+  CHECK_RETURN("[mluOpLogspace] ", KernelLogspace(k_dim, k_type, handle->queue,
+                                                  res_desc->getDtype(), start,
+                                                  end, steps, base, res));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

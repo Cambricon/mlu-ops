@@ -93,9 +93,10 @@ static mluOpStatus_t psRoiPoolForwardParamCheck(
                       "mapping_channel_desc must be contiguous");
   // roi_num check
   PARAM_CHECK(api, output_desc->getDimIndex(0) == rois_desc->getDimIndex(0));
-  PARAM_CHECK(api, input_desc->getDimIndex(3) == output_desc->getDimIndex(1) *
-                                              output_desc->getDimIndex(2) *
-                                              output_desc->getDimIndex(3));
+  PARAM_CHECK(api,
+              input_desc->getDimIndex(3) == output_desc->getDimIndex(1) *
+                                                output_desc->getDimIndex(2) *
+                                                output_desc->getDimIndex(3));
   for (int i = 0; i < output_desc->getDim(); ++i) {
     if (output_desc->getDimIndex(i) != mapping_channel_desc->getDimIndex(i)) {
       LOG(ERROR) << api << " Check failed: output_desc->dims[" << i
@@ -175,7 +176,8 @@ static mluOpStatus_t psRoiPoolBackwardParamCheck(
   PARAM_CHECK(api, pooled_height == top_grad_desc->getDimIndex(1));
   PARAM_CHECK(api, pooled_width == top_grad_desc->getDimIndex(2));
   PARAM_CHECK(api, output_dim == top_grad_desc->getDimIndex(3));
-  PARAM_CHECK(api, top_grad_desc->getDimIndex(1) == top_grad_desc->getDimIndex(2));
+  PARAM_CHECK(api,
+              top_grad_desc->getDimIndex(1) == top_grad_desc->getDimIndex(2));
   PARAM_CHECK(api, top_grad_desc->getDimIndex(3) >= 1);
   PARAM_CHECK(api, spatial_scale > 0);
   PARAM_CHECK(api, rois_desc->getDimIndex(1) == 5);

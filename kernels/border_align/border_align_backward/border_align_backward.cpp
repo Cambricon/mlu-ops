@@ -96,29 +96,39 @@ mluOpStatus_t mluOpBorderAlignBackward(
                  "(4 represents the number of borders).");
   PARAM_CHECK_NE(API, grad_input_desc->getDimIndex(1), 0);
   PARAM_CHECK_NE(API, grad_input_desc->getDimIndex(2), 0);
-  PARAM_CHECK(API, grad_input_desc->getDimIndex(1) * grad_input_desc->getDimIndex(2) ==
-                       boxes_desc->getDimIndex(1));
+  PARAM_CHECK(
+      API, grad_input_desc->getDimIndex(1) * grad_input_desc->getDimIndex(2) ==
+               boxes_desc->getDimIndex(1));
   PARAM_CHECK(API, boxes_desc->getDim() == 3);
-  PARAM_CHECK(API, boxes_desc->getDimIndex(2) == border_num, "(border_num = 4).");
+  PARAM_CHECK(API, boxes_desc->getDimIndex(2) == border_num,
+              "(border_num = 4).");
   PARAM_CHECK_NE(API, boxes_desc->getDimIndex(1), 0);
   PARAM_CHECK_GT(API, pool_size, 0);
 
-  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(0), grad_input_desc->getDimIndex(0));
-  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(1), boxes_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(0),
+                 grad_input_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(1),
+                 boxes_desc->getDimIndex(1));
   PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(2), border_num,
                  "(border_num = 4).");
-  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(3), grad_input_desc->getDimIndex(3) / 4,
+  PARAM_CHECK_EQ(API, grad_output_desc->getDimIndex(3),
+                 grad_input_desc->getDimIndex(3) / 4,
                  "(4 represents the number of borders).");
 
-  PARAM_CHECK_EQ(API, boxes_desc->getDimIndex(0), grad_input_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, boxes_desc->getDimIndex(0),
+                 grad_input_desc->getDimIndex(0));
   PARAM_CHECK_EQ(API, boxes_desc->getDimIndex(1), boxes_desc->getDimIndex(1));
-  PARAM_CHECK_EQ(API, boxes_desc->getDimIndex(2), border_num, "(border_num = 4).");
+  PARAM_CHECK_EQ(API, boxes_desc->getDimIndex(2), border_num,
+                 "(border_num = 4).");
 
-  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(0), grad_input_desc->getDimIndex(0));
-  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(1), boxes_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(0),
+                 grad_input_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(1),
+                 boxes_desc->getDimIndex(1));
   PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(2), border_num,
                  "(border_num = 4).");
-  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(3), grad_input_desc->getDimIndex(3) / 4,
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(3),
+                 grad_input_desc->getDimIndex(3) / 4,
                  "(4 represents the number of borders).");
 
   TENSOR_NUM_CHECK(API, mluOpGetTensorElementNum(grad_output_desc),

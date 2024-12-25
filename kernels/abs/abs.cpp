@@ -77,8 +77,8 @@ static mluOpStatus_t mluOpAbsParamCheck(mluOpHandle_t handle,
     if (x_desc->getDimIndex(i) != y_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << ":The shape of x should be equal to y"
                  << ". But now x_desc's shape[" << i << "] is "
-                 << x_desc->getDimIndex(i) << ", y_desc's shape[" << i << "] is "
-                 << y_desc->getDimIndex(i) << ".";
+                 << x_desc->getDimIndex(i) << ", y_desc's shape[" << i
+                 << "] is " << y_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -160,12 +160,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpAbs(mluOpHandle_t handle,
     mluop::getTensorShape(x_desc, &x_shape);
     mluop::getTensorShape(y_desc, &y_shape);
     CHECK_RETURN(op_name, Kernel3StagePipelineWithStrideAbs(
-                              k_dim, k_type, handle->queue, x_desc->getDtype(), x,
-                              x_shape, y, y_shape, dim_x));
+                              k_dim, k_type, handle->queue, x_desc->getDtype(),
+                              x, x_shape, y, y_shape, dim_x));
   } else {
     VLOG(5) << "kernel Kernel3StagePipelineAbs";
-    CHECK_RETURN(op_name, Kernel3StagePipelineAbs(k_dim, k_type, handle->queue,
-                                                  x_desc->getDtype(), x, y, dim_x));
+    CHECK_RETURN(op_name,
+                 Kernel3StagePipelineAbs(k_dim, k_type, handle->queue,
+                                         x_desc->getDtype(), x, y, dim_x));
   }
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

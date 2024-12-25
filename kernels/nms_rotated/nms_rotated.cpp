@@ -60,7 +60,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetNmsRotatedWorkspaceSize(
   const uint64_t box_num = boxes_desc->getDimIndex(0);
   const uint64_t box_dim = boxes_desc->getDimIndex(1);
   uint64_t total_num = box_num * box_dim + box_num;
-  *workspace_size = total_num * mluop::getSizeOfDataType(boxes_desc->getDtype());
+  *workspace_size =
+      total_num * mluop::getSizeOfDataType(boxes_desc->getDtype());
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -79,8 +80,10 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
 
   // datatype check
   PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->getDtype() == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK_EQ("[mluOpNmsRotated]", boxes_desc->getDtype(), scores_desc->getDtype());
-  PARAM_CHECK("[mluOpNmsRotated]", output_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK_EQ("[mluOpNmsRotated]", boxes_desc->getDtype(),
+                 scores_desc->getDtype());
+  PARAM_CHECK("[mluOpNmsRotated]",
+              output_desc->getDtype() == MLUOP_DTYPE_INT32);
 
   // dims and shape check
   PARAM_CHECK_EQ("[mluOpNmsRotated]", boxes_desc->getDim(), 2);
@@ -95,8 +98,10 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
   STRIDE_TENSOR_CHECK("[mluOpNmsRotated]:", output_desc,
                       "output_desc must be contiguous");
 
-  PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->getDimIndex(0) == scores_desc->getDimIndex(0));
-  PARAM_CHECK("[mluOpNmsRotated]", boxes_desc->getDimIndex(0) == output_desc->getDimIndex(0));
+  PARAM_CHECK("[mluOpNmsRotated]",
+              boxes_desc->getDimIndex(0) == scores_desc->getDimIndex(0));
+  PARAM_CHECK("[mluOpNmsRotated]",
+              boxes_desc->getDimIndex(0) == output_desc->getDimIndex(0));
   if (boxes_desc->getDimIndex(1) != SINGLE_BOX_DIM &&
       boxes_desc->getDimIndex(1) != (SINGLE_BOX_DIM + 1)) {
     LOG(ERROR) << "[mluOpNmsRotated] Check failed: The Boxes' last dimenstion "

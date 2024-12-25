@@ -95,7 +95,8 @@ static mluOpStatus_t DeformRoiPoolForwardPreCheck(
     PARAM_CHECK("[mluOpDeformRoiPoolForward]", offset_desc->getDim() == 4);
     PARAM_CHECK("[mluOpDeformRoiPoolForward]",
                 offset_desc->getDimIndex(0) == rois_desc->getDimIndex(0));
-    PARAM_CHECK("[mluOpDeformRoiPoolForward]", offset_desc->getDimIndex(1) == 2);
+    PARAM_CHECK("[mluOpDeformRoiPoolForward]",
+                offset_desc->getDimIndex(1) == 2);
     PARAM_CHECK("[mluOpDeformRoiPoolForward]",
                 offset_desc->getDimIndex(2) == pooled_height);
     PARAM_CHECK("[mluOpDeformRoiPoolForward]",
@@ -181,11 +182,14 @@ static mluOpStatus_t DeformRoiPoolBackwardPreCheck(
   for (int i = 0; i < input_desc->getDim(); ++i) {
     if (input_desc->getDimIndex(i) != grad_input_desc->getDimIndex(i)) {
       LOG(ERROR) << "[mluOpDeformRoiPoolBackward] input's shape is ["
-                 << input_desc->getDimIndex(0) << " " << input_desc->getDimIndex(1) << " "
-                 << input_desc->getDimIndex(2) << " " << input_desc->getDimIndex(3)
-                 << "], grad_input's shape is [" << grad_input_desc->getDimIndex(0)
-                 << " " << grad_input_desc->getDimIndex(1) << " "
-                 << grad_input_desc->getDimIndex(2) << " " << grad_input_desc->getDimIndex(3)
+                 << input_desc->getDimIndex(0) << " "
+                 << input_desc->getDimIndex(1) << " "
+                 << input_desc->getDimIndex(2) << " "
+                 << input_desc->getDimIndex(3) << "], grad_input's shape is ["
+                 << grad_input_desc->getDimIndex(0) << " "
+                 << grad_input_desc->getDimIndex(1) << " "
+                 << grad_input_desc->getDimIndex(2) << " "
+                 << grad_input_desc->getDimIndex(3)
                  << "]. They should be the same.";
       return MLUOP_STATUS_BAD_PARAM;
     }
@@ -230,17 +234,20 @@ static mluOpStatus_t DeformRoiPoolBackwardPreCheck(
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]", offset_desc->getDim() == 4);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
                 offset_desc->getDimIndex(0) == rois_desc->getDimIndex(0));
-    PARAM_CHECK("[mluOpDeformRoiPoolBackward]", offset_desc->getDimIndex(1) == 2);
+    PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
+                offset_desc->getDimIndex(1) == 2);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
                 offset_desc->getDimIndex(2) == pooled_height);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
                 offset_desc->getDimIndex(3) == pooled_width);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
                 grad_offset_desc->getDtype() == input_desc->getDtype());
-    PARAM_CHECK("[mluOpDeformRoiPoolBackward]", grad_offset_desc->getDim() == 4);
+    PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
+                grad_offset_desc->getDim() == 4);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
                 grad_offset_desc->getDimIndex(0) == rois_desc->getDimIndex(0));
-    PARAM_CHECK("[mluOpDeformRoiPoolBackward]", grad_offset_desc->getDimIndex(1) == 2);
+    PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
+                grad_offset_desc->getDimIndex(1) == 2);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
                 grad_offset_desc->getDimIndex(2) == pooled_height);
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
@@ -321,7 +328,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(
                   "offset is NULL.";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (input_desc->getDimIndex(0) == 0 || mluOpGetTensorElementNum(rois_desc) == 0 ||
+  if (input_desc->getDimIndex(0) == 0 ||
+      mluOpGetTensorElementNum(rois_desc) == 0 ||
       mluOpGetTensorElementNum(output_desc) == 0) {
     LOG(ERROR) << "[mluOpDeformRoiPoolForward] Zero element tensor failure";
     return MLUOP_STATUS_BAD_PARAM;
@@ -407,7 +415,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolBackward(
   }
 
   if (mluOpGetTensorElementNum(grad_output_desc) == 0 ||
-      input_desc->getDimIndex(0) == 0 || mluOpGetTensorElementNum(rois_desc) == 0) {
+      input_desc->getDimIndex(0) == 0 ||
+      mluOpGetTensorElementNum(rois_desc) == 0) {
     LOG(ERROR) << "[mluOpDeformRoiPoolBackward] Zero element tensor failure";
     return MLUOP_STATUS_BAD_PARAM;
   }

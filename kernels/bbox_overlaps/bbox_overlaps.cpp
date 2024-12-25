@@ -83,7 +83,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  if (bbox1_desc->getDimIndex(bbox1_desc->getDim() - 1) != 4 && bbox1_desc->getDimIndex(0) != 0) {
+  if (bbox1_desc->getDimIndex(bbox1_desc->getDim() - 1) != 4 &&
+      bbox1_desc->getDimIndex(0) != 0) {
     LOG(ERROR)
         << "[mluOpBboxOverlaps] Check failed: The Boxes' last dimenstion "
            "should be 4 or "
@@ -93,7 +94,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  if (bbox2_desc->getDimIndex(bbox2_desc->getDim() - 1) != 4 && bbox2_desc->getDimIndex(0) != 0) {
+  if (bbox2_desc->getDimIndex(bbox2_desc->getDim() - 1) != 4 &&
+      bbox2_desc->getDimIndex(0) != 0) {
     LOG(ERROR)
         << "[mluOpBboxOverlaps] Check failed: The Boxes' last dimenstion "
            "should  be 4 or "
@@ -116,18 +118,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
   size_t batch_num_all = rows;
 
   if (ious_desc->getDimIndex(0) != rows) {
-    LOG(ERROR) << "[mluOpBboxOverlaps] Check failed: Whether it is aligned "
-                  "mode or not,"
-               << "ious_desc->getDimIndex(0) == bbox1_desc->getDimIndex(0). But now "
-               << "ious_desc->getDimIndex(0) is " << ious_desc->getDimIndex(0)
-               << ", bbox1_desc->getDimIndex(0) is " << rows << ".";
+    LOG(ERROR)
+        << "[mluOpBboxOverlaps] Check failed: Whether it is aligned "
+           "mode or not,"
+        << "ious_desc->getDimIndex(0) == bbox1_desc->getDimIndex(0). But now "
+        << "ious_desc->getDimIndex(0) is " << ious_desc->getDimIndex(0)
+        << ", bbox1_desc->getDimIndex(0) is " << rows << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   if (aligned) {
     if (rows != cols) {
       LOG(ERROR) << "[mluOpBboxOverlaps] Check failed: If it is aligned mode, "
-                 << "bbox1_desc->getDimIndex(0) == bbox2_desc->getDimIndex(0). But now "
+                 << "bbox1_desc->getDimIndex(0) == bbox2_desc->getDimIndex(0). "
+                    "But now "
                  << "bbox1_desc->getDimIndex(0) is " << rows
                  << ", bbox2_desc->getDimIndex(0) is " << cols << ".";
       return MLUOP_STATUS_BAD_PARAM;
@@ -146,21 +150,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpBboxOverlaps(
             << ious_desc->getDimIndex(ious_desc->getDim() - 1) << ".";
         return MLUOP_STATUS_BAD_PARAM;
       }
-    } else if ((ious_desc->getDimIndex(0) != rows || ious_desc->getDim() != 1)) {
+    } else if ((ious_desc->getDimIndex(0) != rows ||
+                ious_desc->getDim() != 1)) {
       LOG(ERROR) << "[mluOpBboxOverlaps] Check failed: If it is aligned mode, "
                  << "ious_desc's first dim should equal to bbox1's first dim, "
                     "ious_desc's dim "
                  << "should be 1. But now ious_desc's first dim is "
-                 << ious_desc->getDimIndex(0) << ", bbox1's first dim is " << rows
-                 << ", and ious_desc's dim is " << ious_desc->getDim() << ".";
+                 << ious_desc->getDimIndex(0) << ", bbox1's first dim is "
+                 << rows << ", and ious_desc's dim is " << ious_desc->getDim()
+                 << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {
     if (ious_desc->getDim() != 2) {
       LOG(ERROR)
           << "[mluOpBboxOverlaps] Check failed: If it is non-aligned mode, "
-          << "ious_desc->getDim() == 2. But now ious_desc->getDim() is " << ious_desc->getDim()
-          << ".";
+          << "ious_desc->getDim() == 2. But now ious_desc->getDim() is "
+          << ious_desc->getDim() << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (ious_desc->getDimIndex(0) != rows ||

@@ -104,7 +104,7 @@ struct alignas(64) mluOpTensorStruct {
 
  public:
   /* Offset - 52 */
-  /* To be removed*/
+  /* TODO(2025.1.3):Variables To be removed*/
   int position = 0;
   float scale = 1;
   int offset = 0;
@@ -232,15 +232,6 @@ struct alignas(64) mluOpTensorStruct {
     mluOpDataType_t onchip_dtype = MLUOP_DTYPE_INVALID;
     mluOpTensorLayout_t layout = MLUOP_LAYOUT_ARRAY;
     mluOpPointerMode_t pointer_mode = MLUOP_POINTER_MODE_DEVICE;
-
-    // /* Offset - 52 */
-    // /* To be removed*/
-    // int position = 0;
-    // float scale = 1;
-    // int offset = 0;
-    // std::vector<int> positions;
-    // std::vector<float> scales;
-    // std::vector<int> offsets;
 };
 
 // dim_set(rnn)     [layer_num, direction, cap_of_cell]
@@ -459,7 +450,6 @@ inline int64_t mluOpGetTensordimH(const mluOpTensorDescriptor_t desc) {
     case MLUOP_LAYOUT_NCHW:
     case MLUOP_LAYOUT_NDHWC:
       return desc->getDimIndex(2);
-      return desc->getDimIndex(2);
     case MLUOP_LAYOUT_NCDHW:
       return desc->getDimIndex(3);
     default:
@@ -477,7 +467,6 @@ inline int64_t mluOpGetTensordimW(const mluOpTensorDescriptor_t desc) {
       return desc->getDimIndex(2);
     case MLUOP_LAYOUT_NCHW:
     case MLUOP_LAYOUT_NDHWC:
-      return desc->getDimIndex(3);
       return desc->getDimIndex(3);
     case MLUOP_LAYOUT_NCDHW:
       return desc->getDimIndex(4);

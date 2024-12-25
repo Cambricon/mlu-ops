@@ -79,8 +79,8 @@ static mluOpStatus_t getIndiceInExpand(
     const mluOpTensorDescriptor_t indice_pairs_desc,
     const int input_active_site, size_t *size) {
   size_t total_size = 0;
-  total_size =
-      input_active_site * mluop::getSizeOfDataType(indice_pairs_desc->getDtype());
+  total_size = input_active_site *
+               mluop::getSizeOfDataType(indice_pairs_desc->getDtype());
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }
@@ -98,7 +98,8 @@ static mluOpStatus_t getIndiceUnique(
 static mluOpStatus_t getGridOut(const mluOpTensorDescriptor_t indice_pairs_desc,
                                 int output_size, size_t *size) {
   size_t total_size = 0;
-  total_size = output_size * mluop::getSizeOfDataType(indice_pairs_desc->getDtype());
+  total_size =
+      output_size * mluop::getSizeOfDataType(indice_pairs_desc->getDtype());
   size[0] = total_size;
   return MLUOP_STATUS_SUCCESS;
 }

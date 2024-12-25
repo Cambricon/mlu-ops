@@ -70,12 +70,13 @@ static mluOpStatus_t maskedIm2colForwardPreCheck(
   PARAM_CHECK("[mluOpMaskedIm2colForward]", feature_desc->getDimIndex(0) == 1);
   PARAM_CHECK("[mluOpMaskedIm2colForward]", mask_h_idx_desc->getDim() == 1);
   PARAM_CHECK("[mluOpMaskedIm2colForward]", mask_w_idx_desc->getDim() == 1);
-  PARAM_CHECK("[mluOpMaskedIm2colForward]",
-              mask_h_idx_desc->getDimIndex(0) == mask_w_idx_desc->getDimIndex(0));
-  PARAM_CHECK("[mluOpMaskedIm2colForward]", data_col_desc->getDim() == 2);
   PARAM_CHECK(
       "[mluOpMaskedIm2colForward]",
-      data_col_desc->getDimIndex(0) == feature_desc->getDimIndex(1) * kernel_h * kernel_w);
+      mask_h_idx_desc->getDimIndex(0) == mask_w_idx_desc->getDimIndex(0));
+  PARAM_CHECK("[mluOpMaskedIm2colForward]", data_col_desc->getDim() == 2);
+  PARAM_CHECK("[mluOpMaskedIm2colForward]",
+              data_col_desc->getDimIndex(0) ==
+                  feature_desc->getDimIndex(1) * kernel_h * kernel_w);
   PARAM_CHECK("[mluOpMaskedIm2colForward]",
               data_col_desc->getDimIndex(1) == mask_h_idx_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpMaskedIm2colForward]", kernel_h > 0);
@@ -168,9 +169,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMaskedIm2colForwardWorkspaceSize(
                mluOpCreateTensorDescriptor(&data_col_HWC_desc_tmp));
 
   CHECK_RETURN("[mluOpMaskedIm2colForward]",
-               mluOpSetTensorDescriptor(data_col_HWC_desc_tmp,
-                                        MLUOP_LAYOUT_ARRAY, feature_desc->getDtype(),
-                                        data_col_dim, data_col_HWC_dims));
+               mluOpSetTensorDescriptor(
+                   data_col_HWC_desc_tmp, MLUOP_LAYOUT_ARRAY,
+                   feature_desc->getDtype(), data_col_dim, data_col_HWC_dims));
   CALL_CNNL(
       cnnlSetTransposeDescriptor(trans_desc, data_col_dim, data_col_permute));
   {

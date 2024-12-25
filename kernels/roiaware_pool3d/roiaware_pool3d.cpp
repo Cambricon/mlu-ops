@@ -203,7 +203,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
   PARAM_CHECK(API, pts_idx_of_voxels_desc->getDimIndex(1) == out_x);
   PARAM_CHECK(API, pts_idx_of_voxels_desc->getDimIndex(2) == out_y);
   PARAM_CHECK(API, pts_idx_of_voxels_desc->getDimIndex(3) == out_z);
-  PARAM_CHECK(API, pts_idx_of_voxels_desc->getDimIndex(4) == max_pts_each_voxel);
+  PARAM_CHECK(API,
+              pts_idx_of_voxels_desc->getDimIndex(4) == max_pts_each_voxel);
   PARAM_CHECK(API, pooled_features_desc->getDimIndex(0) == boxes_num);
   PARAM_CHECK(API, pooled_features_desc->getDimIndex(1) == out_x);
   PARAM_CHECK(API, pooled_features_desc->getDimIndex(2) == out_y);
@@ -406,7 +407,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
   int pts_feature_permute[2] = {1, 0};
   int pts_feature_tmp_dims[2] = {0, 0};
   for (int i = 0; i < pts_feature_dim; ++i) {
-    pts_feature_tmp_dims[i] = pts_feature_desc->getDimIndex(pts_feature_permute[i]);
+    pts_feature_tmp_dims[i] =
+        pts_feature_desc->getDimIndex(pts_feature_permute[i]);
   }
   mluOpTensorDescriptor_t pts_feature_desc_tmp = NULL;
   CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
@@ -481,9 +483,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
              "KernelPtsIdxOfVoxels().";
   CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
                KernelPtsIdxOfVoxels(
-                   k_dim, k_type, handle->queue, rois_desc->getDtype(), pool_method,
-                   boxes_num, pts_num, max_pts_each_voxel, out_x, out_y, out_z,
-                   rois, pts_workspace, pts_idx_of_voxels));
+                   k_dim, k_type, handle->queue, rois_desc->getDtype(),
+                   pool_method, boxes_num, pts_num, max_pts_each_voxel, out_x,
+                   out_y, out_z, rois, pts_workspace, pts_idx_of_voxels));
   VLOG(5) << "[mluOpRoiAwarePool3dForward] Finish kernel "
              "KernelPtsIdxOfVoxels.";
 
@@ -547,7 +549,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dBackward(
   PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->getDimIndex(1), out_x);
   PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->getDimIndex(2), out_y);
   PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->getDimIndex(3), out_z);
-  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->getDimIndex(4), max_pts_each_voxel);
+  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->getDimIndex(4),
+                 max_pts_each_voxel);
   PARAM_CHECK_EQ(API, argmax_desc->getDimIndex(0), boxes_num);
   PARAM_CHECK_EQ(API, argmax_desc->getDimIndex(1), out_x);
   PARAM_CHECK_EQ(API, argmax_desc->getDimIndex(2), out_y);

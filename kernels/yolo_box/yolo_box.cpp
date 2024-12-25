@@ -89,12 +89,14 @@ static mluOpStatus_t yoloBoxParamCheck(
   }
 
   // check dim
-  PARAM_CHECK(op_name, (x_desc->getDimIndex(0) == img_size_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name,
+              (x_desc->getDimIndex(0) == img_size_desc->getDimIndex(0)));
   PARAM_CHECK(op_name, (x_desc->getDimIndex(0) == boxes_desc->getDimIndex(0)));
   PARAM_CHECK(op_name, (x_desc->getDimIndex(0) == scores_desc->getDimIndex(0)));
 
   const int anchors_num = anchors_desc->getDimIndex(0) / 2;
-  std::string anchors_num_str = "anchors_num = anchors_desc->getDimIndex(0) / 2.";
+  std::string anchors_num_str =
+      "anchors_num = anchors_desc->getDimIndex(0) / 2.";
   PARAM_CHECK(op_name, (anchors_desc->getDimIndex(0) % 2 == 0));
   PARAM_CHECK_V2(op_name, anchors_num > 0, << anchors_num_str);
   PARAM_CHECK(op_name, class_num > 0);
@@ -111,13 +113,13 @@ static mluOpStatus_t yoloBoxParamCheck(
   PARAM_CHECK_V2(op_name, (boxes_desc->getDimIndex(1) == anchors_num),
                  << anchors_num_str);
   PARAM_CHECK(op_name, (boxes_desc->getDimIndex(2) == 4));
-  PARAM_CHECK(op_name,
-              (boxes_desc->getDimIndex(3) == (x_desc->getDimIndex(2) * x_desc->getDimIndex(3))));
+  PARAM_CHECK(op_name, (boxes_desc->getDimIndex(3) ==
+                        (x_desc->getDimIndex(2) * x_desc->getDimIndex(3))));
   PARAM_CHECK_V2(op_name, (scores_desc->getDimIndex(1) == anchors_num),
                  << anchors_num_str);
   PARAM_CHECK(op_name, (scores_desc->getDimIndex(2) == class_num));
-  PARAM_CHECK(op_name,
-              (scores_desc->getDimIndex(3) == (x_desc->getDimIndex(2) * x_desc->getDimIndex(3))));
+  PARAM_CHECK(op_name, (scores_desc->getDimIndex(3) ==
+                        (x_desc->getDimIndex(2) * x_desc->getDimIndex(3))));
 
   // large tensor
   if ((mluOpGetTensorElementNum(x_desc) >= LARGE_TENSOR_NUM) ||

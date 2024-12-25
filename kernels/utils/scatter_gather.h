@@ -74,7 +74,7 @@ MLUOP_SCATTER_GATHER(scatter, true)
 #elif __BANG_ARCH__ == 592
 #define MLUOP_SCATTER_GATHER(func)                                            \
   template <typename T>                                                       \
-  __mlu_func__ void __mluop_##func(SCATTER_GATHER_PARAMS) {                    \
+  __mlu_func__ void __mluop_##func(SCATTER_GATHER_PARAMS) {                   \
     if (mask) {                                                               \
       __##func(dst, src, offset, mask, transfer_size, dir, stride, data_num); \
     } else {                                                                  \

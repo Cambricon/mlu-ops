@@ -83,13 +83,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
     mluop::getTensorShape(y_desc, &y_shape);
     CHECK_RETURN("[mluOpLgamma]",
                  Kernel3StagePipelineWithStrideLgamma(
-                     k_dim, k_type, handle->queue, x_desc->getDtype(), x, x_shape, y,
-                     y_shape, element_num));
+                     k_dim, k_type, handle->queue, x_desc->getDtype(), x,
+                     x_shape, y, y_shape, element_num));
   } else {
     VLOG(5) << "kernel Kernel3StagePipelineLgamma.";
-    CHECK_RETURN("[mluOpLgamma]",
-                 Kernel3StagePipelineLgamma(k_dim, k_type, handle->queue,
-                                            x_desc->getDtype(), x, y, element_num));
+    CHECK_RETURN("[mluOpLgamma]", Kernel3StagePipelineLgamma(
+                                      k_dim, k_type, handle->queue,
+                                      x_desc->getDtype(), x, y, element_num));
   }
   GEN_CASE_END();
 

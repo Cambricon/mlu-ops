@@ -64,8 +64,9 @@ static mluOpStatus_t foolProof(
   PARAM_CHECK(api_name, indice_pairs_desc->getDtype() == MLUOP_DTYPE_INT32);
   PARAM_CHECK(api_name, features_out_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
                             features_out_desc->getDtype() == MLUOP_DTYPE_HALF);
-  PARAM_CHECK(api_name, features_desc->getDtype() == features_out_desc->getDtype() &&
-                            features_desc->getDtype() == filters_desc->getDtype());
+  PARAM_CHECK(api_name,
+              features_desc->getDtype() == features_out_desc->getDtype() &&
+                  features_desc->getDtype() == filters_desc->getDtype());
 
   // inverse not supported now
   PARAM_CHECK(api_name, sub_m == 0 || sub_m == 1);
@@ -131,8 +132,8 @@ static mluOpStatus_t foolProof(
   auto co = 0;
   if (filters_desc->getLayout() == MLUOP_LAYOUT_ARRAY) {
     ci = filters_desc->getDimIndex(3);
-    num_filter =
-        filters_desc->getDimIndex(0) * filters_desc->getDimIndex(1) * filters_desc->getDimIndex(2);
+    num_filter = filters_desc->getDimIndex(0) * filters_desc->getDimIndex(1) *
+                 filters_desc->getDimIndex(2);
     co = filters_desc->getDimIndex(4);
   } else {
     ci = mluOpGetTensordimC(filters_desc);
@@ -143,7 +144,8 @@ static mluOpStatus_t foolProof(
   }
 
   // features shape check
-  PARAM_CHECK(api_name, features_desc->getDimIndex(0) == indice_pairs_desc->getDimIndex(2));
+  PARAM_CHECK(api_name, features_desc->getDimIndex(0) ==
+                            indice_pairs_desc->getDimIndex(2));
   PARAM_CHECK(api_name, features_desc->getDimIndex(1) == ci);
 
   // indice_pairs shape check
@@ -158,7 +160,8 @@ static mluOpStatus_t foolProof(
   for (int i = 0; i < num_filter; ++i) {
     std::string i_str = "i: " + std::to_string(i) + ".";
     PARAM_CHECK_V2(
-        api_name, indice_num[i] >= 0 && indice_num[i] <= features_desc->getDimIndex(0),
+        api_name,
+        indice_num[i] >= 0 && indice_num[i] <= features_desc->getDimIndex(0),
         << i_str);
   }
 
@@ -203,15 +206,18 @@ static mluOpStatus_t mainIndiceConvolutionForward(
   size_t workspaceSize_gather =
       max_indice_num * ci * mluop::getSizeOfDataType(features_desc->getDtype());
   size_t workspaceSize_matmul =
-      max_indice_num * co * mluop::getSizeOfDataType(features_out_desc->getDtype());
+      max_indice_num * co *
+      mluop::getSizeOfDataType(features_out_desc->getDtype());
   size_t workspaceSize_transpose = 0;
   size_t workspaceSize_transposeExtra = 0;
   if (filters_need_trans) {
     workspaceSize_transpose =
-        num_filter * ci * co * mluop::getSizeOfDataType(filters_desc->getDtype());
+        num_filter * ci * co *
+        mluop::getSizeOfDataType(filters_desc->getDtype());
   }
   size_t workspaceSize_scatter =
-      num_act_out * co * mluop::getSizeOfDataType(features_out_desc->getDtype());
+      num_act_out * co *
+      mluop::getSizeOfDataType(features_out_desc->getDtype());
   size_t workspaceSize_matmulExtra = 0;
   size_t tempSize_matmulExtra = 0;
   size_t workspaceSize_addNExtra = 0;
@@ -345,15 +351,17 @@ static mluOpStatus_t mainIndiceConvolutionForward(
     active_indice[0] = active_point_num;
     matmul_a_shape[0] = active_point_num;
     matmul_c_shape[0] = active_point_num;
-    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
-                               active_indice_desc, MLUOP_LAYOUT_ARRAY,
-                               indice_pairs_desc->getDtype(), 2, active_indice));
+    CHECK_RETURN(api_name,
+                 mluOpSetTensorDescriptor(
+                     active_indice_desc, MLUOP_LAYOUT_ARRAY,
+                     indice_pairs_desc->getDtype(), 2, active_indice));
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                matmul_a_desc, MLUOP_LAYOUT_ARRAY,
                                features_desc->getDtype(), 2, matmul_a_shape));
-    CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
-                               matmul_b_desc, MLUOP_LAYOUT_ARRAY,
-                               features_out_desc->getDtype(), 2, matmul_b_shape));
+    CHECK_RETURN(api_name,
+                 mluOpSetTensorDescriptor(matmul_b_desc, MLUOP_LAYOUT_ARRAY,
+                                          features_out_desc->getDtype(), 2,
+                                          matmul_b_shape));
     CHECK_RETURN(api_name, mluOpSetTensorDescriptor(
                                matmul_c_desc, MLUOP_LAYOUT_ARRAY,
                                features_desc->getDtype(), 2, matmul_c_shape));

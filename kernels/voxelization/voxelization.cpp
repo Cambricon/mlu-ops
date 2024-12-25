@@ -81,18 +81,22 @@ mluOpStatus_t voxelizationParamCheck(
     PARAM_CHECK_EQ("[mluOpVoxelization]", coors_range_desc->getDimIndex(0), 6);
     // params voxels: [max_voxels, max_points, num_features]
     PARAM_CHECK_EQ("[mluOpVoxelization]", voxels_desc->getDim(), 3);
-    PARAM_CHECK_EQ("[mluOpVoxelization]", voxels_desc->getDimIndex(0), max_voxels);
-    PARAM_CHECK_EQ("[mluOpVoxelization]", voxels_desc->getDimIndex(1), max_points);
+    PARAM_CHECK_EQ("[mluOpVoxelization]", voxels_desc->getDimIndex(0),
+                   max_voxels);
+    PARAM_CHECK_EQ("[mluOpVoxelization]", voxels_desc->getDimIndex(1),
+                   max_points);
     PARAM_CHECK_EQ("[mluOpVoxelization]", voxels_desc->getDimIndex(2),
                    points_desc->getDimIndex(1));
     // params coors: [max_voxels, 3]
     PARAM_CHECK_EQ("[mluOpVoxelization]", coors_desc->getDim(), 2);
-    PARAM_CHECK_EQ("[mluOpVoxelization]", coors_desc->getDimIndex(0), max_voxels);
+    PARAM_CHECK_EQ("[mluOpVoxelization]", coors_desc->getDimIndex(0),
+                   max_voxels);
     PARAM_CHECK_EQ("[mluOpVoxelization]", coors_desc->getDimIndex(1), 3);
     // params num_points_per_voxel: [max_voxels]
-    PARAM_CHECK_EQ("[mluOpVoxelization]", num_points_per_voxel_desc->getDim(), 1);
-    PARAM_CHECK_EQ("[mluOpVoxelization]", num_points_per_voxel_desc->getDimIndex(0),
-                   max_voxels);
+    PARAM_CHECK_EQ("[mluOpVoxelization]", num_points_per_voxel_desc->getDim(),
+                   1);
+    PARAM_CHECK_EQ("[mluOpVoxelization]",
+                   num_points_per_voxel_desc->getDimIndex(0), max_voxels);
     // params voxel_num: [1]
     PARAM_CHECK_EQ("[mluOpVoxelization]", voxel_num_desc->getDim(), 1);
     PARAM_CHECK_EQ("[mluOpVoxelization]", voxel_num_desc->getDimIndex(0), 1);
@@ -117,13 +121,16 @@ mluOpStatus_t voxelizationParamCheck(
                         "voxel_num_desc must be contiguous");
 
     // check tensor datatype
-    PARAM_CHECK("[mluOpVoxelization]", points_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+    PARAM_CHECK("[mluOpVoxelization]",
+                points_desc->getDtype() == MLUOP_DTYPE_FLOAT);
     PARAM_CHECK("[mluOpVoxelization]",
                 voxel_size_desc->getDtype() == MLUOP_DTYPE_FLOAT);
     PARAM_CHECK("[mluOpVoxelization]",
                 coors_range_desc->getDtype() == MLUOP_DTYPE_FLOAT);
-    PARAM_CHECK("[mluOpVoxelization]", voxels_desc->getDtype() == MLUOP_DTYPE_FLOAT);
-    PARAM_CHECK("[mluOpVoxelization]", coors_desc->getDtype() == MLUOP_DTYPE_INT32);
+    PARAM_CHECK("[mluOpVoxelization]",
+                voxels_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+    PARAM_CHECK("[mluOpVoxelization]",
+                coors_desc->getDtype() == MLUOP_DTYPE_INT32);
     PARAM_CHECK("[mluOpVoxelization]",
                 num_points_per_voxel_desc->getDtype() == MLUOP_DTYPE_INT32);
     PARAM_CHECK("[mluOpVoxelization]",

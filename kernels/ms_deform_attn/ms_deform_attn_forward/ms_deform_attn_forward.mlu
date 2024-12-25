@@ -86,52 +86,62 @@ static mluOpStatus_t paramcheck(
   // params data_value: [bs, num_keys, num_heads, channels]
   PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_value_desc->getDim(), 4);
   // params data_spatial_shapes: [num_levels, 2]
-  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_spatial_shapes_desc->getDim(),
-                 2);
+  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]",
+                 data_spatial_shapes_desc->getDim(), 2);
   PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]",
                  data_spatial_shapes_desc->getDimIndex(1), 2);
   // params data_level_start_index: [num_levels]
-  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_level_start_index_desc->getDim(),
-                 1);
+  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]",
+                 data_level_start_index_desc->getDim(), 1);
   // params data_sampling_loc:
   // [bs, num_queries, num_heads, num_levels, num_points, 2]
-  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_sampling_loc_desc->getDim(), 6);
-  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_sampling_loc_desc->getDimIndex(5),
-                 2);
+  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_sampling_loc_desc->getDim(),
+                 6);
+  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]",
+                 data_sampling_loc_desc->getDimIndex(5), 2);
   // params data_attn_weight:
   // [bs, num_queries, num_heads, num_levels, num_points]
-  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_attn_weight_desc->getDim(), 5);
+  PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_attn_weight_desc->getDim(),
+                 5);
   // params data_col: [bs, num_queries, num_heads, channels]
   PARAM_CHECK_EQ("[mluOpMsDeformAttnForward]", data_col_desc->getDim(), 4);
   // check tensor shape
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
               data_value_desc->getDimIndex(0) == data_col_desc->getDimIndex(0));
-  PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_sampling_loc_desc->getDimIndex(0) == data_col_desc->getDimIndex(0));
-  PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_attn_weight_desc->getDimIndex(0) == data_col_desc->getDimIndex(0));
+  PARAM_CHECK(
+      "[mluOpMsDeformAttnForward]",
+      data_sampling_loc_desc->getDimIndex(0) == data_col_desc->getDimIndex(0));
+  PARAM_CHECK(
+      "[mluOpMsDeformAttnForward]",
+      data_attn_weight_desc->getDimIndex(0) == data_col_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
               data_value_desc->getDimIndex(2) == data_col_desc->getDimIndex(2));
-  PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_sampling_loc_desc->getDimIndex(2) == data_col_desc->getDimIndex(2));
-  PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_attn_weight_desc->getDimIndex(2) == data_col_desc->getDimIndex(2));
+  PARAM_CHECK(
+      "[mluOpMsDeformAttnForward]",
+      data_sampling_loc_desc->getDimIndex(2) == data_col_desc->getDimIndex(2));
+  PARAM_CHECK(
+      "[mluOpMsDeformAttnForward]",
+      data_attn_weight_desc->getDimIndex(2) == data_col_desc->getDimIndex(2));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
               data_value_desc->getDimIndex(3) == data_col_desc->getDimIndex(3));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
               data_spatial_shapes_desc->getDimIndex(0) ==
                   data_level_start_index_desc->getDimIndex(0));
+  PARAM_CHECK("[mluOpMsDeformAttnForward]",
+              data_spatial_shapes_desc->getDimIndex(0) ==
+                  data_sampling_loc_desc->getDimIndex(3));
+  PARAM_CHECK("[mluOpMsDeformAttnForward]",
+              data_spatial_shapes_desc->getDimIndex(0) ==
+                  data_attn_weight_desc->getDimIndex(3));
   PARAM_CHECK(
       "[mluOpMsDeformAttnForward]",
-      data_spatial_shapes_desc->getDimIndex(0) == data_sampling_loc_desc->getDimIndex(3));
-  PARAM_CHECK("[mluOpMsDeformAttnForward]", data_spatial_shapes_desc->getDimIndex(0) ==
-                                                data_attn_weight_desc->getDimIndex(3));
+      data_sampling_loc_desc->getDimIndex(1) == data_col_desc->getDimIndex(1));
+  PARAM_CHECK(
+      "[mluOpMsDeformAttnForward]",
+      data_attn_weight_desc->getDimIndex(1) == data_col_desc->getDimIndex(1));
   PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_sampling_loc_desc->getDimIndex(1) == data_col_desc->getDimIndex(1));
-  PARAM_CHECK("[mluOpMsDeformAttnForward]",
-              data_attn_weight_desc->getDimIndex(1) == data_col_desc->getDimIndex(1));
-  PARAM_CHECK("[mluOpMsDeformAttnForward]", data_sampling_loc_desc->getDimIndex(4) ==
-                                                data_attn_weight_desc->getDimIndex(4));
+              data_sampling_loc_desc->getDimIndex(4) ==
+                  data_attn_weight_desc->getDimIndex(4));
   // check stride
   STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnForward]:", data_value_desc,
                       "data_value_desc must be contiguous");

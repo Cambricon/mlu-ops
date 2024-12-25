@@ -43,7 +43,8 @@ void unaryOpPolicyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   uint64_t core_in_cluster = handle->core_num_per_cluster;
   uint64_t core_number = union_number * core_in_cluster;
   uint64_t element_num = mluOpGetTensorElementNum(desc);
-  uint64_t tensor_size = element_num * mluop::getSizeOfDataType(desc->getDtype());
+  uint64_t tensor_size =
+      element_num * mluop::getSizeOfDataType(desc->getDtype());
   tensor_size = CEIL_ALIGN(tensor_size, NFU_ALIGN_SIZE);
   uint64_t need_core =
       CEIL_ALIGN(tensor_size / NFU_ALIGN_SIZE, core_in_cluster);
@@ -146,8 +147,8 @@ mluOpStatus_t unaryOpParamCheck(std::string op_name, const mluOpHandle_t handle,
     if (x_desc->getDimIndex(i) != y_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << ":The shape of x should be equal to y"
                  << ". But now x_desc's shape[" << i << "] is "
-                 << x_desc->getDimIndex(i) << ", y_desc's shape[" << i << "] is "
-                 << y_desc->getDimIndex(i) << ".";
+                 << x_desc->getDimIndex(i) << ", y_desc's shape[" << i
+                 << "] is " << y_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }

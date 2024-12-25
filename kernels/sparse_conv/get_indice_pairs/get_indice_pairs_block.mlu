@@ -278,7 +278,7 @@ __mlu_global__ void MLUBlockDefaultGetIndicePairKernel3(
                             0);
       valid_l_num_now = __bang_count((float *)nram_aux, load_l_num);
       __bang_filter((float *)nram_output, (float *)nram_input,
-                     (float *)nram_aux, load_l_num);
+                    (float *)nram_aux, load_l_num);
       int32_t *store_valid_ptr =
           (int32_t *)indice_pair + store_offset * len_l + core_offset_l_valid;
       core_offset_l_valid += valid_l_num_now;

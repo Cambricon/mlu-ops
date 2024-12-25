@@ -131,7 +131,8 @@ static mluOpStatus_t TinShiftPreCheck(
     LOG(ERROR) << "[mluOpTinShift " + direction + "] "
                << "The input batch size should be the same as shifts's,"
                << " input batch size is " << input_desc->getDimIndex(0)
-               << " and shifts batch size is " << shifts_desc->getDimIndex(0) << ".";
+               << " and shifts batch size is " << shifts_desc->getDimIndex(0)
+               << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   const std::string api_ = "[mluOpTinShift " + direction + "]:";
