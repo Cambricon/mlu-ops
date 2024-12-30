@@ -303,7 +303,7 @@ void points_in_boxes_kernel(int batch_size, int boxes_num, int pts_num, const fl
       X = points[0];
       Y = points[m];
       Z = points[2*m];
-      bang_write_zero(last, 0);
+      bang_write_value(last, 0, 0);
       loop boxes for t in range(boxes_num):
         boxes = b * T * 7 + t * 7;
         (cx, cy, cz, dx, dy, dz, rz) = boxes[0:7];
