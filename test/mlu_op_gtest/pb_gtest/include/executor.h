@@ -39,6 +39,8 @@
 #include <unordered_set>
 #include "gtest/gtest.h"
 #include "mlu_op.h"
+#include "bangc_helper_dtype.h"
+#include "bangc_kernels.h"
 #include "core/tensor.h"
 #include "core/tool.h"
 #include "core/type.h"
@@ -138,6 +140,7 @@ struct ExecuteConfig {
   bool random_mlu_address = false;
   bool enable_const_dram = false;
   bool auto_tuning = false;
+  bool enable_lite_interface = getEnv("MLUOP_GTEST_INTERFACE_MODE", 0) == 1;
 // #if GTEST_ENABLE_GPERFTOOLS
 //   // TODO(None) move into global_var
 //   bool gtest_internal_cpu_profile =

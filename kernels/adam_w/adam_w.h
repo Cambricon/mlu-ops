@@ -38,6 +38,6 @@ mluOpStatus_t MLUOP_WIN_API KernelApplyAdamW(
     const cnrtQueue_t queue, void *param, void *param_h, void *grad,
     void *momentum, void *velocity, float lr, float beta1, float beta2,
     float bias1, float bias2, float epsilon, float weight_decay, float scale,
-    bool use_nesterov, size_t size, mluOpDataType_t k_data_type);
+    bool use_nesterov, size_t size);
 
 #endif  // KERNELS_ADAMW_ADAMW_H_

@@ -333,17 +333,17 @@ __mlu_global__ void MLUKernelCarafeBackward(T *input, T *mask, T *grad_output,
                         h_k * wo * group * k_up * k_up +
                         w_k * group * k_up * k_up + group_k * k_up * k_up;
 
-    __bang_write_zero((T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T),
-                      NRAM_BLOCK / sizeof(T));
-    __bang_write_zero((T *)nram_buf + 4 * NRAM_BLOCK / sizeof(T),
-                      NRAM_BLOCK / sizeof(T));
-    __bang_write_zero((T *)nram_buf + 3 * NRAM_BLOCK / sizeof(T),
-                      NRAM_BLOCK / sizeof(T));
+    __bang_write_value((T *)nram_buf + 2 * NRAM_BLOCK / sizeof(T),
+                      NRAM_BLOCK / sizeof(T), (T)0);
+    __bang_write_value((T *)nram_buf + 4 * NRAM_BLOCK / sizeof(T),
+                      NRAM_BLOCK / sizeof(T), (T)0);
+    __bang_write_value((T *)nram_buf + 3 * NRAM_BLOCK / sizeof(T),
+                      NRAM_BLOCK / sizeof(T), (T)0);
 
     __memcpy((T *)nram_buf + NRAM_BLOCK / sizeof(T), (T *)base_mask,
              k_up * k_up * sizeof(T), GDRAM2NRAM);
     for (int i = 0; i < num_per_loop; i++) {
-      __bang_write_zero((T *)nram_buf, NRAM_BLOCK / sizeof(T));
+      __bang_write_value((T *)nram_buf, NRAM_BLOCK / sizeof(T), (T)0);
       T *base_grad_output = (T *)grad_output + n_k * ho * wo * c +
                             h_k * wo * c + w_k * c + group_k * group_size +
                             i * num_align;
@@ -386,7 +386,7 @@ __mlu_global__ void MLUKernelCarafeBackward(T *input, T *mask, T *grad_output,
       }
     }
     if (rem_for_loop) {
-      __bang_write_zero((T *)nram_buf, NRAM_BLOCK / sizeof(T));
+      __bang_write_value((T *)nram_buf, NRAM_BLOCK / sizeof(T), (T)0);
       T *base_grad_output = (T *)grad_output + n_k * ho * wo * c +
                             h_k * wo * c + w_k * c + group_k * group_size +
                             num_per_loop * num_align;

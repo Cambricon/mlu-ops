@@ -281,7 +281,7 @@ void roipoint_pool3d_union1(const int batch_size,
       __memcpy_async(ping_input2, points_y_start + (bs_idx * pts_num) * sizeof(T), span_num_deal_size, GDRAM2NRAM);
       __memcpy_async(ping_input3, points_z_start + (bs_idx * pts_num) * sizeof(T), span_num_deal_size, GDRAM2NRAM);
       __memcpy_async(point_features, point_features_start, span_num_deal_size, GDRAM2NRAM);
-      __bang_write_zero((T *)cnt, boxes_num);
+      __bang_write_value((T *)cnt, boxes_num, (T)0);;
 
       size_t box_start = bs_idx == batch_start ? first_batch_box_start : 0;
       size_t box_end   = bs_idx == batch_end ? last_batch_box_end : boxes_num;
