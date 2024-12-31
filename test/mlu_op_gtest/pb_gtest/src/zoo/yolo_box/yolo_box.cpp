@@ -164,9 +164,9 @@ void YoloBoxExecutor::cpuCompute() {
   memset(boxes_data, 0, boxes_size);
   memset(scores_data, 0, scores_size);
 
-  const int n = x_desc->dims[0];
-  const int h = x_desc->dims[2];
-  const int w = x_desc->dims[3];
+  const int n = x_desc->getDimIndex(0);
+  const int h = x_desc->getDimIndex(2);
+  const int w = x_desc->getDimIndex(3);
   auto anchors_desc = tensor_desc_[2].tensor;
   uint64_t anchors_tensor_num = mluOpGetTensorElementNum(anchors_desc);
   const int an_num = anchors_tensor_num / 2;

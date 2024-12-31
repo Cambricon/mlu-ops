@@ -92,8 +92,8 @@ int64_t FftExecutor::getTheoryOps() {
   auto fft_param = parser_->getProtoNode()->fft_param();
   int rank = fft_param.rank();
   int bc = 1;
-  if (input_tensor->dim != rank) {
-    bc = input_tensor->dims[0];
+  if (input_tensor->getDim() != rank) {
+    bc = input_tensor->getDimIndex(0);
   }
   int n = fft_param.n(0);
 
@@ -125,8 +125,8 @@ int64_t FftExecutor::getTheoryIoSize() {
   auto fft_param = parser_->getProtoNode()->fft_param();
   int rank = fft_param.rank();
   int bc = 1;
-  if (input_tensor->dim != rank) {
-    bc = input_tensor->dims[0];
+  if (input_tensor->getDim() != rank) {
+    bc = input_tensor->getDimIndex(0);
   }
   int n = fft_param.n(0);
 
