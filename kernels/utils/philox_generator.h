@@ -29,7 +29,7 @@
 
 __nram__ uint32_t nram_counter[ONCE_COMPUTE_NUM];
 
-__mlu_func__ void gen_random_u32(
+__mlu_func__ void __mluop_gen_random_u32(
     vv_uint32 *key0, vv_uint32 *key1, uint32_t *nram_counter0,
     uint32_t *nram_counter1, uint32_t *nram_counter2, uint32_t *nram_counter3,
     uint32_t &offset_low, uint32_t &offset_high, int32_t thread_begin,
@@ -140,8 +140,9 @@ __mlu_func__ void gen_random_u32(
 }
 
 template <typename RANGE_TYPE>
-__mlu_func__ void cvtUniform(uint32_t *output, int32_t num, RANGE_TYPE max,
-                             RANGE_TYPE min, bool is_int) {
+__mlu_func__ void __mluop_cvt_uniform(uint32_t *output, int32_t num,
+                                      RANGE_TYPE max, RANGE_TYPE min,
+                                      bool is_int) {
   RANGE_TYPE range = max - min;
   if (is_int && std::is_same<RANGE_TYPE, int32_t>::value) {
     __bang_rem((uint32_t *)output, (uint32_t *)output, (uint32_t)range, num);
@@ -161,7 +162,7 @@ __mlu_func__ void cvtUniform(uint32_t *output, int32_t num, RANGE_TYPE max,
 }
 
 /******************************************************************************
- * MLUOP FUNC: genUniform.
+ * MLUOP FUNC: __mluop_gen_uniform.
  * Generate random data in half, bfloat16 or float data type.
  *
  * The philox algorithm has three parameters: seed, offset and subsequence.
@@ -184,12 +185,13 @@ __mlu_func__ void cvtUniform(uint32_t *output, int32_t num, RANGE_TYPE max,
  * Note: The space size of \p output is \p num * sizeof(float).
  ******************************************************************************/
 template <typename DST_TYPE, typename RANGE_TYPE>
-__mlu_func__ void genUniform(uint32_t key0_begin, uint32_t key1_begin,
-                             DST_TYPE *output, int num, uint32_t &offset_low,
-                             uint32_t &offset_high, RANGE_TYPE max,
-                             RANGE_TYPE min, int32_t thread_begin,
-                             int32_t &thread_acc, int32_t thread_cur_core,
-                             bool is_int) {
+__mlu_func__ void __mluop_gen_uniform(uint32_t key0_begin, uint32_t key1_begin,
+                                      DST_TYPE *output, int num,
+                                      uint32_t &offset_low,
+                                      uint32_t &offset_high, RANGE_TYPE max,
+                                      RANGE_TYPE min, int32_t thread_begin,
+                                      int32_t &thread_acc,
+                                      int32_t thread_cur_core, bool is_int) {
   if (num > 0) {
     // counter nram contribute
     uint32_t *nram_counter0 = nram_counter;
@@ -214,14 +216,16 @@ __mlu_func__ void genUniform(uint32_t key0_begin, uint32_t key1_begin,
     // repeat compute gen random
     int32_t repeat_num = num / ONCE_COMPUTE_NUM;
     for (int32_t i = 0; i < repeat_num; i++) {
-      gen_random_u32(vv_key0, vv_key1, nram_counter0, nram_counter1,
-                     nram_counter2, nram_counter3, offset_low, offset_high,
-                     thread_begin, thread_acc, thread_cur_core, index);
+      __mluop_gen_random_u32(vv_key0, vv_key1, nram_counter0, nram_counter1,
+                             nram_counter2, nram_counter3, offset_low,
+                             offset_high, thread_begin, thread_acc,
+                             thread_cur_core, index);
       __bang_transpose((uint32_t *)output + i * ONCE_COMPUTE_NUM, nram_counter,
                        4, COUNTER_GEN_NUM);
     }
     // cvt random to uniform
-    cvtUniform((uint32_t *)output, num, (float)max, (float)min, is_int);
+    __mluop_cvt_uniform((uint32_t *)output, num, (float)max, (float)min,
+                        is_int);
 
     if (std::is_same<DST_TYPE, half>::value) {
       __bang_float2half_tz((half *)output, (float *)output, num);

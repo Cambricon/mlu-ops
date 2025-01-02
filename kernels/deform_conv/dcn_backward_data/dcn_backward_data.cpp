@@ -24,7 +24,7 @@
 #include <math.h>
 #include <vector>
 
-#include "kernels/utils/cnnl_helper.h"
+#include "core/cnnl_helper.h"
 
 #define DCNBPDATA_API "mluOpDCNBackwardData"
 
