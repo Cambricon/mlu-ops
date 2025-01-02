@@ -41,9 +41,9 @@ void MutualInformationForwardExecutor::initParam() {
     host_p_in = (float *)data_vector_[2].host_ptr;
   }
 
-  B_ = px_desc_->dims[0];
-  S_ = px_desc_->dims[1];
-  T_ = py_desc_->dims[2];
+  B_ = px_desc_->getDimIndex(0);
+  S_ = px_desc_->getDimIndex(1);
+  T_ = py_desc_->getDimIndex(2);
 
   px_index_ = MutualInformationForward::Index3D(S_, T_ + 1);
   py_index_ = MutualInformationForward::Index3D(S_ + 1, T_);

@@ -115,8 +115,9 @@ void SyncBatchnormBackwardElemtV2Executor::compute() {
 
 void SyncBatchnormBackwardElemtV2Executor::cpuCompute() {
   int len_x = parser_->getInputDataCount(0);
-  int len_c = tensor_desc_[0].tensor->dims[tensor_desc_[0].tensor->dim - 1];
-  int len_n = tensor_desc_[0].tensor->dims[0];
+  int len_c =
+      tensor_desc_[0].tensor->getDimIndex(tensor_desc_[0].tensor->getDim() - 1);
+  int len_n = tensor_desc_[0].tensor->getDimIndex(0);
 
   if (len_x == 0 || len_c == 0) {
     VLOG(4) << "SyncBatchnormBackwardElemtV2Executor: cpu compute zero elemt";
@@ -158,7 +159,8 @@ void SyncBatchnormBackwardElemtV2Executor::cpuCompute() {
 int64_t SyncBatchnormBackwardElemtV2Executor::getTheoryOps() {
   int64_t theory_ops = 0;
   int len_x = parser_->getInputDataCount(0);
-  int len_c = tensor_desc_[0].tensor->dims[tensor_desc_[0].tensor->dim - 1];
+  int len_c =
+      tensor_desc_[0].tensor->getDimIndex(tensor_desc_[0].tensor->getDim() - 1);
   if (parser_->getInputNum() == 7) {
     theory_ops = 5 * len_x + 3 * len_c;
   } else {

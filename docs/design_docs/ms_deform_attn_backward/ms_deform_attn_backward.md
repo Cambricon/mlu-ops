@@ -264,8 +264,8 @@ void msDeformAttnCol2imBilinear(){
 
   __memcpy(top_grad, grad_output, deal_num * sizeof(T), GDRAM2NRAM);
   __bang_mul_scalar(top_grad_temp, top_grad, attn_weight, deal_num);
-  __bang_write_zero(grad_h_weight, deal_num);
-  __bang_write_zero(grad_w_weight, deal_num);
+  __bang_write_value(grad_h_weight, deal_num, 0);
+  __bang_write_value(grad_w_weight, deal_num, 0);
   if (h_low >= 0 && w_low >= 0) {
     const int32_t offset1 = h_low_ptr_offset + w_low_ptr_offset + base_ptr;
     __memcpy(grad_output_nram, grad_output + offset1, deal_num * sizeof(T), GDRAM2NRAM);

@@ -41,10 +41,10 @@ void ThreeInterpolateForwardExecutor::compute() {
   auto indices_data_ptr = data_vector_[1].device_ptr;
   auto weights_data_ptr = data_vector_[2].device_ptr;
   auto output_data_ptr = data_vector_[3].device_ptr;
-  b_ = features_desc->dims[0];
-  c_ = features_desc->dims[1];
-  m_ = features_desc->dims[2];
-  n_ = output_desc->dims[2];
+  b_ = features_desc->getDimIndex(0);
+  c_ = features_desc->getDimIndex(1);
+  m_ = features_desc->getDimIndex(2);
+  n_ = output_desc->getDimIndex(2);
   VLOG(4) << "call mluOpThreeInterpolateForward()";
   interface_timer_.start();
   MLUOP_CHECK(mluOpThreeInterpolateForward(

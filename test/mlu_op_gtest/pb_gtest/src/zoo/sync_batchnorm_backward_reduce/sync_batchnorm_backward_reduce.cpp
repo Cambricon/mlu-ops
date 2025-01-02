@@ -230,7 +230,8 @@ void cpuGetSyncBnBkwReduceOuput(
 }
 
 void SyncBatchnormBackwardReduceExecutor::cpuCompute() {
-  int len_c = tensor_desc_[0].tensor->dims[tensor_desc_[0].tensor->dim - 1];
+  int len_c =
+      tensor_desc_[0].tensor->getDimIndex(tensor_desc_[0].tensor->getDim() - 1);
   int len_x = parser_->getInputDataCount(0);
   const bool needs_input_grad0 = parser_->getProtoNode()
                                      ->sync_batchnorm_backward_reduce_param()

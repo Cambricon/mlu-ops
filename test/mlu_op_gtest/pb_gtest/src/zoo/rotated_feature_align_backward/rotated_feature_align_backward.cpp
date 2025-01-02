@@ -103,11 +103,11 @@ void RotatedFeatureAlignBackwardExecutor::cpuCompute() {
   const int output_size = parser_->getOutputDataCount(0);
   auto top_output_desc = tensor_desc_[0].tensor;
   auto bboxes_desc = tensor_desc_[1].tensor;
-  const int batch = top_output_desc->dims[0];
-  const int height = top_output_desc->dims[1];
-  const int width = top_output_desc->dims[2];
-  const int channels = top_output_desc->dims[3];
-  const int bboxes_offset = bboxes_desc->dims[3];
+  const int batch = top_output_desc->getDimIndex(0);
+  const int height = top_output_desc->getDimIndex(1);
+  const int width = top_output_desc->getDimIndex(2);
+  const int channels = top_output_desc->getDimIndex(3);
+  const int bboxes_offset = bboxes_desc->getDimIndex(3);
   float px[5] = {0, 0, 0, 0, 0};
   float py[5] = {0, 0, 0, 0, 0};
   for (int index = 0; index < output_size; index++) {

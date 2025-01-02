@@ -162,15 +162,15 @@ void PsamaskForwardExecutor::cpuCompute() {
   psamaskType_t psa_type = (psamaskType_t)parser_->getProtoNode()
                                ->psamask_forward_param()
                                .psa_type();
-  auto batch = input_desc->dims[0];
-  auto input_c = input_desc->dims[3];
-  auto h_feature = input_desc->dims[1];
-  auto w_feature = input_desc->dims[2];
-  auto output_c = output_desc->dims[3];
+  auto batch = input_desc->getDimIndex(0);
+  auto input_c = input_desc->getDimIndex(3);
+  auto h_feature = input_desc->getDimIndex(1);
+  auto w_feature = input_desc->getDimIndex(2);
+  auto output_c = output_desc->getDimIndex(3);
 
   int half_h_mask = (h_mask - 1) / 2;
   int half_w_mask = (w_mask - 1) / 2;
-  auto input_data_type = input_desc->dtype;
+  auto input_data_type = input_desc->getDtype();
   psamaskType_t psamask_type = (psamaskType_t)psa_type;
 
   void *input = (void *)cpu_fp32_input_[0];

@@ -394,7 +394,7 @@ mluOpPriorBox(mluOpHandle_t handle,
 
     对`one_loop_pixel_num`循环处理，一次循环只初始化一个点的`num_priors`个框的坐标，设该点在`feature_map`上的索引为`pixel_index`
 
-    - 调用__bang_write_zero()将`boxes`置为0，即 boxes = [0,0,0,0,0,0,0,0]
+    - 调用__bang_write_value()将`boxes`置为0，即 boxes = [0,0,0,0,0,0,0,0]
     - 计算当前处理的点的位置，x_index = pixel_index % width，y_index = pixel_index / width，图中x_index = 0,1，y_index = 0,1,2。
     - 将`x_index`（上图中x的坐标）和`x_mask`相乘，得到`tmp_x`（tmp_x为x_index,x_mask相乘的结果），tmp_x = [x_index,0,x_index,0,x_index,0,x_index,0]
 
