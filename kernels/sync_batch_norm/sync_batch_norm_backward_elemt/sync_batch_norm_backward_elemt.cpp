@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "kernels/utils/cnnl_helper.h"
+#include "core/cnnl_helper.h"
 
 mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormBackwardElemt(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t diff_y_desc,

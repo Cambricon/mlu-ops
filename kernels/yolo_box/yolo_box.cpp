@@ -24,13 +24,13 @@
 
 #include <string>
 
+#include "core/cnnl_helper.h"
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "kernels/utils/cnnl_helper.h"
 
 #define MAX_CLASS_NUM_ARCH_200 1534
 #define MAX_CLASS_NUM_ARCH_300 2558

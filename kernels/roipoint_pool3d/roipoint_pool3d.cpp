@@ -22,6 +22,7 @@
  *************************************************************************/
 #include "roipoint_pool3d.h"
 
+#include "core/cnnl_helper.h"
 #include "core/context.h"
 #include "core/logging.h"
 #include "core/gen_case.h"
@@ -30,7 +31,6 @@
 #include "core/tool.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "kernels/utils/cnnl_helper.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 

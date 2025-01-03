@@ -22,11 +22,11 @@
  *************************************************************************/
 #include "kernels/masked_im2col/masked_im2col_forward/masked_im2col_forward.h"
 
+#include "core/cnnl_helper.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "kernels/kernel.h"
-#include "kernels/utils/cnnl_helper.h"
 
 // policy function
 static void policyFunc(const mluOpHandle_t handle, const int mask_cnt,

@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 
+#include "core/cnnl_helper.h"
 #include "core/context.h"
 #include "core/logging.h"
 #include "core/mlu_env.h"
@@ -32,7 +33,6 @@
 #include "kernels/sparse_conv/get_indice_pairs/get_indice_pairs_structs.h"
 #include "kernels/sparse_conv/get_indice_pairs/normal_get_indice_pairs.h"
 #include "kernels/kernel.h"
-#include "kernels/utils/cnnl_helper.h"
 #include "mlu_op.h"
 
 static mluOpStatus_t getIndiceMaskAll(

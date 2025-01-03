@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "core/cnnl_helper.h"
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -34,7 +35,6 @@
 #include "kernels/kernel.h"
 #include "kernels/tensor_stride_process/tensor_stride_process_host.h"
 #include "kernels/tensor_stride_process/tensor_stride_process_mlu.h"
-#include "kernels/utils/cnnl_helper.h"
 
 // 1.creat set destroy
 mluOpStatus_t MLUOP_WIN_API

@@ -5,7 +5,7 @@
 在算子中调用CNNL tranpose 算子。
 ```c++
 // 需要包含该文件
-#include "utils/cnnl_helper.h"
+#include "core/cnnl_helper.h"
 
 // https://github.com/Cambricon/mlu-ops/blob/master/kernels/three_nn_forward/three_nn_forward.cpp
 static mluOpStatus_t transposeTensor(
@@ -67,7 +67,7 @@ static mluOpStatus_t transposeTensor(
 在算子中调用CNNL addN 算子的GetWorkspaceSize, 与示例1不同的点在于，当输入的tensor是数组时的处理方法。
 ```c++
 // 需要包含该文件
-#include "utils/cnnl_helper.h"
+#include "core/cnnl_helper.h"
 
 mluOpStatus_t GetAddNWorkspaceSize(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t input_descs[],
@@ -109,7 +109,7 @@ mluOpStatus_t GetAddNWorkspaceSize(
 ```c++
 // https://github.com/Cambricon/mlu-ops/blob/master/kernels/indice_convolution_backward_data/indice_convolution_backward_data.cpp
 // 需要包含该文件
-#include "utils/cnnl_helper.h"
+#include "core/cnnl_helper.h"
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t output_grad_desc,

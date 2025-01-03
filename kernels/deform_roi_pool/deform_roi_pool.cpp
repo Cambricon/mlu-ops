@@ -29,7 +29,7 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "kernels/utils/cnnl_helper.h"
+#include "core/cnnl_helper.h"
 
 // policy function
 void policyFunc(const mluOpHandle_t handle,

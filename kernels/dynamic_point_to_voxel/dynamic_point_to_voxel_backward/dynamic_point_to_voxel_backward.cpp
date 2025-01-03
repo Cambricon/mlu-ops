@@ -25,13 +25,13 @@
 #include <algorithm>  // std::min
 #include <string>
 
+#include "core/cnnl_helper.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"  // mluop::getSizeOfDataType
 #include "kernels/kernel.h"
-#include "kernels/utils/cnnl_helper.h"
 
 static mluOpStatus_t DynamicPointToVoxelBackwardParamCheck(
     const char *interface_name, const mluOpHandle_t handle,
