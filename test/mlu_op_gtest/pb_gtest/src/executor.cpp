@@ -380,7 +380,7 @@ void Executor::setupForPerfIter(int repeat, int iter, int iter_start) {
           if (perfUseOriginData()) {
             void *src_data = getPerfSrcData(db);
             GTEST_CHECK(cnrtMemcpy(db->device_perf_ptr, src_data, db->size,
-                                   CNRT_MEM_TRANS_DIR_DEV2DEV) ==
+                                   cnrtMemcpyDevToDev) ==
                         cnrtSuccess);
             oss << "copy data from " << src_data;
           } else {
@@ -460,7 +460,7 @@ void Executor::setupForPerfIter(int repeat, int iter, int iter_start) {
       if (skipMallocDevice(db.getMetaTensor())) continue;
       void *src_data = getPerfSrcData(&db);
       GTEST_CHECK(cnrtMemcpy(db.device_perf_ptr, src_data, db.size,
-                             CNRT_MEM_TRANS_DIR_DEV2DEV) == cnrtSuccess);
+                             cnrtMemcpyDevToDev) == cnrtSuccess);
     }
   }
 }
@@ -2148,7 +2148,7 @@ void Executor::copyIn() {
       VLOG(4) << "copy from device_origin_ptr to device_perf_data_ptr";
       GTEST_CHECK(cnrtSuccess ==
                   cnrtMemcpy(db->device_perf_data_ptr, db->device_origin_ptr,
-                             db->size, CNRT_MEM_TRANS_DIR_DEV2DEV));
+                             db->size, cnrtMemcpyDevToDev));
     }
     // for debug
     if (exe_config_->dump_data) {
