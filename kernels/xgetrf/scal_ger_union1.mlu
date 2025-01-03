@@ -477,14 +477,13 @@ __mlu_func__ void MLUKernelCPivot(int m, int n, int step, int batch, int M_size,
       r_src_nram = r_orig + start;
       i_src_nram = i_orig + start;
 
-      float absmax =
-          r_src_nram[0] * r_src_nram[0] + i_src_nram[0] * i_src_nram[0];
+      float absmax = FABS(r_src_nram[0]) + FABS(i_src_nram[0]);
       int max_gb_pos =
           0 + (m_per_core - len) + tx * mp_ + k * MAX_M_SIZE_COMPLEX_PIVOT;
       int max_pos = 0;
 
-      __bang_square(r_src_nram, r_src_nram, len);
-      __bang_square(i_src_nram, i_src_nram, len);
+      __bang_abs(r_src_nram, r_src_nram, len);
+      __bang_abs(i_src_nram, i_src_nram, len);
       __bang_add(r_src_nram, r_src_nram, i_src_nram, len);
       __bang_argmax(r_src_nram, r_src_nram, len);
       absmax = r_src_nram[0];
@@ -509,12 +508,15 @@ __mlu_func__ void MLUKernelCPivot(int m, int n, int step, int batch, int M_size,
   __sync_cluster();
 }
 // Swap rows based on the pivoting results to maintain correctness for complex
-__mlu_func__ void MLUKernelCKSwap(
-    int m, int n, int step, int batch, int M_size, int N_size, float *d_rA,
-    float *d_iA, int lda, int stride_a, float *r_orig, float *i_orig,
-    int ld_orig, int m_per_core, float *k_max, int *k_max_idx, int *k_max_gbidx,
-    float *r_k_max_arr, float *i_k_max_arr, int tx, int taskdim, int batch_id,
-    int mp, int mp_, int *dipiv, int *dipiv2, int *info, int gbstep) {
+__mlu_func__ void MLUKernelCKSwap(int m, int n, int step, int batch, int M_size,
+                                  int N_size, float *d_rA, float *d_iA, int lda,
+                                  int stride_a, float *r_orig, float *i_orig,
+                                  int ld_orig, int m_per_core, float *k_max,
+                                  int *k_max_idx, int *k_max_gbidx,
+                                  float *r_k_max_arr, float *i_k_max_arr,
+                                  int tx, int taskdim, int batch_id, int mp,
+                                  int mp_, int *dipiv, int *dipiv2, int *pivot,
+                                  int *info, int J, int gbstep) {
   float *rA = d_rA;
   float *iA = d_iA;
 
@@ -538,6 +540,7 @@ __mlu_func__ void MLUKernelCKSwap(
       int temp = dipiv[step];
       dipiv[step] = dipiv[k_max_gbidx[0]];
       dipiv[k_max_gbidx[0]] = temp;
+      pivot[step] = k_max_gbidx[0] + 1 + J + gbstep;  // 1-indexing
 
       int temp2 = dipiv2[step];
       dipiv2[step] = dipiv2[k_max_gbidx[0]];
@@ -553,7 +556,8 @@ __mlu_func__ void MLUKernelKSwap(int m, int n, int step, int batch, int M_size,
                                  float *k_max, int *k_max_idx, int *k_max_gbidx,
                                  float *k_max_arr, int tx, int taskdim,
                                  int batch_id, int mp, int mp_, int *dipiv,
-                                 int *dipiv2, int *info, int gbstep) {
+                                 int *dipiv2, int *pivot, int *info, int J,
+                                 int gbstep) {
   float *A = dA;
 
   if (m_per_core > 0) {
@@ -568,6 +572,7 @@ __mlu_func__ void MLUKernelKSwap(int m, int n, int step, int batch, int M_size,
       int temp = dipiv[step];
       dipiv[step] = dipiv[k_max_gbidx[0]];
       dipiv[k_max_gbidx[0]] = temp;
+      pivot[step] = k_max_gbidx[0] + 1 + J + gbstep;
 
       int temp2 = dipiv2[step];
       dipiv2[step] = dipiv2[k_max_gbidx[0]];
@@ -653,7 +658,7 @@ __mlu_func__ void MLUKernelPivotSwap2(
     int ld_orig, int len_extra, int m_e, float *max_arr, float *max_arr_vec,
     int *max_idx, int *max_gbidx, float *shared_y, int tx, int taskdim,
     int batch_id, int m_per_core, int m_per_core_, int *dipiv, int *dipiv2,
-    int *info, int gbstep) {
+    int *pivot, int *info, int J, int gbstep) {
   float *src_nram = L1;
   float *src_nram1 = orig;
   float *sram_buffer =
@@ -761,6 +766,7 @@ __mlu_func__ void MLUKernelPivotSwap2(
       int temp = dipiv[cur_row];
       dipiv[cur_row] = dipiv[max_row];
       dipiv[max_row] = temp;
+      pivot[cur_row] = max_row + 1 + J + gbstep;
 
       int temp2 = dipiv2[cur_row];
       dipiv2[cur_row] = dipiv2[max_row];
@@ -775,8 +781,8 @@ __mlu_func__ void MLUKernelPivotSwap(
     int lda, int stride_a, float *workspace, float *L1, int ldL1, float *orig,
     int ld_orig, int len_extra, int m_e, float *max_arr, float *max_arr_vec,
     int *max_idx, float *shared_y, int tx, int taskdim, int batch_id,
-    int m_per_core, int m_per_core_, int *dipiv, int *dipiv2, int *info,
-    int gbstep) {
+    int m_per_core, int m_per_core_, int *dipiv, int *dipiv2, int *pivot,
+    int *info, int J, int gbstep) {
   float *src_nram = L1;
   float *src_nram1 = orig;
   float *sram_buffer =
@@ -873,6 +879,7 @@ __mlu_func__ void MLUKernelPivotSwap(
       int temp = dipiv[cur_row];
       dipiv[cur_row] = dipiv[max_row];
       dipiv[max_row] = temp;
+      pivot[cur_row] = max_row + 1 + J + gbstep;
 
       int temp2 = dipiv2[cur_row];
       dipiv2[cur_row] = dipiv2[max_row];
@@ -888,7 +895,8 @@ __mlu_func__ void MLUKernelCPivotSwap2(
     int len_extra, int m_e, float *max_arr, float *r_max_arr_vec,
     float *i_max_arr_vec, int *max_idx, int *max_gbidx, float *r_shared_y,
     float *i_shared_y, int tx, int taskdim, int batch_id, int m_per_core,
-    int m_per_core_, int *dipiv, int *dipiv2, int *info, int gbstep) {
+    int m_per_core_, int *dipiv, int *dipiv2, int *pivot, int *info, int J,
+    int gbstep) {
   float *r_src_nram = r_L1;
   float *i_src_nram = i_L1;
   float *r_src_nram1 = r_orig;
@@ -936,13 +944,12 @@ __mlu_func__ void MLUKernelCPivotSwap2(
       r_src_nram = r_L1 + start + step + step * ldL1;
       i_src_nram = i_L1 + start + step + step * ldL1;
 
-      float absmax =
-          r_src_nram[0] * r_src_nram[0] + i_src_nram[0] * i_src_nram[0];
+      float absmax = FABS(r_src_nram[0]) + FABS(i_src_nram[0]);
       int max_gb_pos = 0 + (m_per_core - len) + tx * m_per_core_;
       int max_pos = 0;
 
-      __bang_square(r_src_nram1, r_src_nram, len);
-      __bang_square(i_src_nram1, i_src_nram, len);
+      __bang_abs(r_src_nram1, r_src_nram, len);
+      __bang_abs(i_src_nram1, i_src_nram, len);
       __bang_add(r_src_nram1, r_src_nram1, i_src_nram1, len);
       __bang_argmax(r_src_nram1, r_src_nram1, len);
       absmax = r_src_nram1[0];
@@ -1021,6 +1028,7 @@ __mlu_func__ void MLUKernelCPivotSwap2(
       int temp = dipiv[cur_row];
       dipiv[cur_row] = dipiv[max_row];
       dipiv[max_row] = temp;
+      pivot[cur_row] = max_row + 1 + J + gbstep;
 
       int temp2 = dipiv2[cur_row];
       dipiv2[cur_row] = dipiv2[max_row];
@@ -1036,7 +1044,7 @@ __mlu_func__ void MLUKernelCPivotSwap(
     int len_extra, int m_e, float *max_arr, float *r_max_arr_vec,
     float *i_max_arr_vec, int *max_idx, float *r_shared_y, float *i_shared_y,
     int tx, int taskdim, int batch_id, int m_per_core, int m_per_core_,
-    int *dipiv, int *dipiv2, int *info, int gbstep) {
+    int *dipiv, int *dipiv2, int *pivot, int *info, int J, int gbstep) {
   float *r_src_nram = r_L1;
   float *i_src_nram = i_L1;
   float *r_src_nram1 = r_orig;
@@ -1082,13 +1090,12 @@ __mlu_func__ void MLUKernelCPivotSwap(
       r_src_nram = r_L1 + start + step + step * ldL1;
       i_src_nram = i_L1 + start + step + step * ldL1;
 
-      float absmax =
-          r_src_nram[0] * r_src_nram[0] + i_src_nram[0] * i_src_nram[0];
+      float absmax = FABS(r_src_nram[0]) + FABS(i_src_nram[0]);
       int max_gb_pos = 0 + (m_per_core - len) + tx * m_per_core_;
       int max_pos = 0;
 
-      __bang_square(r_src_nram1, r_src_nram, len);
-      __bang_square(i_src_nram1, i_src_nram, len);
+      __bang_abs(r_src_nram1, r_src_nram, len);
+      __bang_abs(i_src_nram1, i_src_nram, len);
       __bang_add(r_src_nram1, r_src_nram1, i_src_nram1, len);
       __bang_argmax(r_src_nram1, r_src_nram1, len);
       absmax = r_src_nram1[0];
@@ -1158,6 +1165,7 @@ __mlu_func__ void MLUKernelCPivotSwap(
       int temp = dipiv[cur_row];
       dipiv[cur_row] = dipiv[max_row];
       dipiv[max_row] = temp;
+      pivot[cur_row] = max_row + 1 + J + gbstep;
 
       int temp2 = dipiv2[cur_row];
       dipiv2[cur_row] = dipiv2[max_row];
@@ -1212,8 +1220,8 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
                                             int ib, int J, int m, int n,
                                             int step, float *dA, int lda,
                                             int stride_a, float *workspace,
-                                            int *dipiv, int *dipiv2, int *info,
-                                            int gbstep, int mode) {
+                                            int *dipiv, int *dipiv2, int *pivot,
+                                            int *info, int gbstep, int mode) {
   int id, batch_id, tx, taskdim;
   if (batch > 1) {
     id = taskId;
@@ -1319,7 +1327,7 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
       MLUKernelKSwap(m - gbj, ib - STEP, STEP, batch, M_size, N_size, A, lda,
                      stride_a, orig, 1, m_e, k_max, k_max_idx, k_max_gbidx,
                      k_max_arr, tx, taskdim, batch_id, mp, mp_, dipiv, dipiv2,
-                     info, gbstep);
+                     pivot, info, J, gbstep);
 
       __memcpy(shared_y, A + STEP + STEP * lda, (ib - STEP) * sizeof(float),
                GDRAM2NRAM);
@@ -1419,14 +1427,15 @@ __mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
                                 A, lda, stride_a, workspace, L1, ld_L1, orig, n,
                                 len_extra, m_e, max_arr, max_arr_vec, max_idx,
                                 max_gbidx, shared_y, tx, taskdim, batch_id,
-                                m_per_core, mp_, dipiv, dipiv2, info, gbstep);
+                                m_per_core, mp_, dipiv, dipiv2, pivot, info, J,
+                                gbstep);
           } else {
             // Handle pivoting and swapping for smaller-scale matrices
             MLUKernelPivotSwap(m - gbj, ib - STEP, STEP, batch, M_size, N_size,
                                A, lda, stride_a, workspace, L1, ld_L1, orig, n,
                                len_extra, m_e, max_arr, max_arr_vec, max_idx,
                                shared_y, tx, taskdim, batch_id, m_per_core, mp_,
-                               dipiv, dipiv2, info, gbstep);
+                               dipiv, dipiv2, pivot, info, J, gbstep);
           }
 
           MLUSubKernelScal_ger_pivot(m - gbj, ib - STEP, STEP, J, taskdim,
@@ -1539,7 +1548,7 @@ __mlu_func__ void MLUSubKernelCcal_ger_pivot(
 __mlu_global__ void MLUKernelCcal_ger_pivot(
     int batch, int M_size, int N_size, int ib, int J, int m, int n, int step,
     float *d_rA, float *d_iA, int lda, int stride_a, float *workspace,
-    int *dipiv, int *dipiv2, int *info, int gbstep, int mode) {
+    int *dipiv, int *dipiv2, int *pivot, int *info, int gbstep, int mode) {
   int id, batch_id, tx, taskdim;
   if (batch > 1) {
     id = taskId;
@@ -1673,7 +1682,7 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
       MLUKernelCKSwap(m - gbj, ib - STEP, STEP, batch, M_size, N_size, rA, iA,
                       lda, stride_a, r_orig, i_orig, 1, m_e, k_max, k_max_idx,
                       k_max_gbidx, r_k_max_arr, i_k_max_arr, tx, taskdim,
-                      batch_id, mp, mp_, dipiv, dipiv2, info, gbstep);
+                      batch_id, mp, mp_, dipiv, dipiv2, pivot, info, J, gbstep);
 
       __memcpy(r_shared_y, rA + STEP + STEP * lda, (ib - STEP) * sizeof(float),
                GDRAM2NRAM);
@@ -1803,18 +1812,19 @@ __mlu_global__ void MLUKernelCcal_ger_pivot(
       if (gbj < M_size) {
         if (m > MAX_M_SIZE_COMPLEX_PIVOT * TaskUnion1) {
           // Handle pivoting and swapping for large-scale complex matrices
-          MLUKernelCPivotSwap2(
-              m - gbj, ib - STEP, STEP, batch, M_size, N_size, r_L1, i_L1,
-              ld_L1, r_orig, i_orig, n, len_extra, m_e, max_arr, r_max_arr_vec,
-              i_max_arr_vec, max_idx, max_gbidx, r_shared_y, i_shared_y, tx,
-              taskdim, batch_id, m_per_core, mp_, dipiv, dipiv2, info, gbstep);
+          MLUKernelCPivotSwap2(m - gbj, ib - STEP, STEP, batch, M_size, N_size,
+                               r_L1, i_L1, ld_L1, r_orig, i_orig, n, len_extra,
+                               m_e, max_arr, r_max_arr_vec, i_max_arr_vec,
+                               max_idx, max_gbidx, r_shared_y, i_shared_y, tx,
+                               taskdim, batch_id, m_per_core, mp_, dipiv,
+                               dipiv2, pivot, info, J, gbstep);
         } else {
           // Handle pivoting and swapping for smaller-scale complex matrices
           MLUKernelCPivotSwap(
               m - gbj, ib - STEP, STEP, batch, M_size, N_size, r_L1, i_L1,
               ld_L1, r_orig, i_orig, n, len_extra, m_e, max_arr, r_max_arr_vec,
               i_max_arr_vec, max_idx, r_shared_y, i_shared_y, tx, taskdim,
-              batch_id, m_per_core, mp_, dipiv, dipiv2, info, gbstep);
+              batch_id, m_per_core, mp_, dipiv, dipiv2, pivot, info, J, gbstep);
         }
 
         MLUSubKernelCcal_ger_pivot(
@@ -1847,7 +1857,7 @@ mluOpStatus_t MLUOP_WIN_API KernelScal_ger(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, int batch, int M_size, int N_size, int ib, int J,
     int m, int n, int step, float *dA, int lda, int stride_a, float *workspace,
-    int *dipiv, int *dipiv2, int *info, int gbstep, int mode) {
+    int *dipiv, int *dipiv2, int *pivot, int *info, int gbstep, int mode) {
   if (mode == 0) {
     KERNEL_CHECK(MLUKernelScal_ger<<<k_dim, k_type, queue>>>(
         batch, M_size, N_size, ib, J, m, n, step, dA, lda, stride_a, dipiv,
@@ -1855,7 +1865,7 @@ mluOpStatus_t MLUOP_WIN_API KernelScal_ger(
   } else {
     KERNEL_CHECK(MLUKernelScal_ger_pivot<<<k_dim, k_type, queue>>>(
         batch, M_size, N_size, ib, J, m, n, step, dA, lda, stride_a, workspace,
-        dipiv, dipiv2, info, gbstep, mode));
+        dipiv, dipiv2, pivot, info, gbstep, mode));
   }
   return MLUOP_STATUS_SUCCESS;
 }
@@ -1865,7 +1875,7 @@ KernelCcal_ger(cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
                mluOpDataType_t d_type, int batch, int M_size, int N_size,
                int ib, int J, int m, int n, int step, float *d_rA, float *d_iA,
                int lda, int stride_a, float *workspace, int *dipiv, int *dipiv2,
-               int *info, int gbstep, int mode) {
+               int *pivot, int *info, int gbstep, int mode) {
   if (mode == 0) {
     KERNEL_CHECK(MLUKernelCcal_ger<<<k_dim, k_type, queue>>>(
         batch, M_size, N_size, ib, J, m, n, step, d_rA, d_iA, lda, stride_a,
@@ -1873,7 +1883,7 @@ KernelCcal_ger(cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
   } else {
     KERNEL_CHECK(MLUKernelCcal_ger_pivot<<<k_dim, k_type, queue>>>(
         batch, M_size, N_size, ib, J, m, n, step, d_rA, d_iA, lda, stride_a,
-        workspace, dipiv, dipiv2, info, gbstep, mode));
+        workspace, dipiv, dipiv2, pivot, info, gbstep, mode));
   }
   return MLUOP_STATUS_SUCCESS;
 }

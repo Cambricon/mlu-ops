@@ -675,13 +675,14 @@ int get_xgetrf_native_nb(int m, int n) {
 }
 
 int xgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
-               int n, float *dA, float *d_rA, float *d_iA, int ldda, int *dipiv,
-               int *info, int mode, void *workspace) {
+               int n, float *dA, float *d_rA, float *d_iA, int ldda,
+               int *pivots, int *info, int mode, void *workspace) {
   int nb;
   int minmn, liwork;
   int i, j, jb, rows;
   int *diwork, *dinfo;
   int gbm = m;
+  int *dipiv;
 
   /* Check arguments */
   *info = 0;
@@ -707,20 +708,25 @@ int xgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
 
   liwork = 1;
   diwork = (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
-               ? (int *)workspace + 2 * (m * n + m * m) * batch + m
-               : (int *)workspace + batch * 64 * 64 + m;
+               ? (int *)workspace + 2 * (m * n + m * m) * batch + m + 2 * m
+               : (int *)workspace + batch * 64 * 64 + m + 2 * m;
   dinfo = diwork;  // dinfo size = 1
-  // CNRT_CHECK(cnrtMemset(dinfo, 0, sizeof(int)));
+
   cnrtMemcpy2D(handle, 1, 1, 1, (float *)dinfo, 1, 1, NULL, 1, 1, 3,
                handle->queue);  // set dinfo to 0
+  if (mode == 1) {
+    dipiv = (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
+                ? (int *)workspace + 2 * (m * n + m * m) * batch
+                : (int *)workspace + batch * 64 * 64;
+  }
 
   if (nb <= 1 || nb >= MIN(m, n)) {
     if (dtype == MLUOP_DTYPE_FLOAT)
       xgetrf2_native(handle, dtype, batch, m, n, dA, NULL, NULL, ldda, m, n,
-                     dipiv, dinfo, 0, mode, workspace, handle->queue);
+                     dipiv, pivots, dinfo, 0, mode, workspace, handle->queue);
     else if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
       xgetrf2_native(handle, dtype, batch, m, n, dA, d_rA(0, 0), d_iA(0, 0),
-                     ldda, m, n, dipiv, dinfo, 0, mode, workspace,
+                     ldda, m, n, dipiv, pivots, dinfo, 0, mode, workspace,
                      handle->queue);
   } else {
     cnrtQueueSync(handle->queue);  //
@@ -731,12 +737,12 @@ int xgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
       rows = m - j;
       if (dtype == MLUOP_DTYPE_FLOAT)
         xgetrf2_native(handle, dtype, batch, rows, nb, dA(j, j), NULL, NULL,
-                       ldda, m, n, dipiv + j, dinfo, j, mode, workspace,
-                       handle->queue);
+                       ldda, m, n, dipiv + j, pivots + j, dinfo, j, mode,
+                       workspace, handle->queue);
       else if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
         xgetrf2_native(handle, dtype, batch, rows, nb, dA(j, j), d_rA(j, j),
-                       d_iA(j, j), ldda, m, n, dipiv + j, dinfo, j, mode,
-                       workspace, handle->queue);
+                       d_iA(j, j), ldda, m, n, dipiv + j, pivots + j, dinfo, j,
+                       mode, workspace, handle->queue);
 
       cnrtQueueSync(handle->queue);
 
@@ -784,15 +790,15 @@ int xgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
 
       if (dtype == MLUOP_DTYPE_FLOAT) {
         xgetrf2_native(handle, dtype, batch, rows, jb, dA(j, j), NULL, NULL,
-                       ldda, m, n, dipiv + j, dinfo, j, mode, workspace,
-                       handle->queue);
+                       ldda, m, n, dipiv + j, pivots + j, dinfo, j, mode,
+                       workspace, handle->queue);
 
         trsm(handle, dtype, batch, m, n, jb, n - j - jb, dA(j, j), ldda,
              dA(j, j + jb), ldda, (float *)workspace, handle->queue);
       } else if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
         xgetrf2_native(handle, dtype, batch, rows, jb, dA(j, j), d_rA(j, j),
-                       d_iA(j, j), ldda, m, n, dipiv + j, dinfo, j, mode,
-                       workspace, handle->queue);
+                       d_iA(j, j), ldda, m, n, dipiv + j, pivots + j, dinfo, j,
+                       mode, workspace, handle->queue);
 
         ctrsm(handle, dtype, batch, m, n, jb, n - j - jb, d_rA(j, j),
               d_iA(j, j), ldda, d_rA(j, j + jb), d_iA(j, j + jb), ldda,

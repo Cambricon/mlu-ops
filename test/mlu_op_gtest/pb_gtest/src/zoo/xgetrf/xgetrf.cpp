@@ -230,12 +230,36 @@ void swap_rows(float *matrix, int row1, int row2, int cols) {
 
 // Function to apply row swaps to matrix A using ipiv
 void apply_row_swaps(float *A, int m, int n, int *ipiv) {
-  for (int i = 0; i < m; i++) {
+  int minmn = (m < n) ? m : n;
+  for (int i = 0; i < minmn; i++) {
     while (ipiv[i] != i) {
       swap_rows(A, i, ipiv[i], n);
       int temp = ipiv[ipiv[i]];
       ipiv[ipiv[i]] = ipiv[i];
       ipiv[i] = temp;
+    }
+  }
+}
+// Function to apply pivots to permutation in batch
+void apply_pivots(int *pivots, int *ipiv, int m, int n, int batch) {
+  int minmn = (m < n) ? m : n;
+
+  // Loop over batches
+  for (int b = 0; b < batch; b++) {
+    // Initialize ipiv for batch b (0-indexing)
+    for (int i = 0; i < m; i++) {
+      ipiv[b * m + i] = i;
+    }
+    // Apply pivots
+    for (int i = 0; i < minmn; i++) {
+      // printf("%d pivots[%d]: %d\n",i,i,pivots[i]);
+      int pivot_idx = pivots[b * minmn + i] - 1;  // 1-indexed to 0-indexed
+      if (pivot_idx != i) {
+        // Swap ipiv[i] and ipiv[pivots[i] - 1]
+        int temp = ipiv[b * m + i];
+        ipiv[b * m + i] = ipiv[b * m + pivot_idx];
+        ipiv[b * m + pivot_idx] = temp;
+      }
     }
   }
 }
@@ -252,15 +276,15 @@ void XgetrfExecutor::compute() {
 
   auto tensor_x = tensor_desc_[0].tensor;
   auto tensor_y = tensor_desc_[1].tensor;
-  auto dipiv_desc = tensor_desc_[2].tensor;
+  auto dpivots_desc = tensor_desc_[2].tensor;
 
   auto dev_x = data_vector_[0].device_ptr;
   auto dev_y = data_vector_[1].device_ptr;
-  int *dipiv = (int *)data_vector_[2].device_ptr;
+  int *dpivots = (int *)data_vector_[2].device_ptr;
   VLOG(4) << "call mluOpXgetrf()";
   auto dev_a = data_vector_[0].host_ptr;
   auto dev_b = data_vector_[1].host_ptr;
-  int *ipiv = (int *)data_vector_[2].host_ptr;
+  int *pivots = (int *)data_vector_[2].host_ptr;
 
   auto count = parser_->input(0)->shape_count;
   int row, col, batch;
@@ -288,6 +312,7 @@ void XgetrfExecutor::compute() {
   // }
   int m = row;
   int n = col;
+  int minmn = MIN(m, n);
   mluOpDataType_t dtype = tensor_x->dtype;
 
   size_t workspace_size = 0;
@@ -297,17 +322,22 @@ void XgetrfExecutor::compute() {
   if (workspace_size > 0) {
     workspace = mlu_runtime_.allocate(workspace_size);
   }
-  printf("workspace malloced %lu %ld\n", workspace_size, sizeof(size_t));
+  // printf("%d %d %d mode %d workspace malloced %lu %ld\n", batch, m, n, mode,
+  // workspace_size, sizeof(size_t));
   interface_timer_.start();
   MLUOP_CHECK(mluOpXgetrf(handle_, tensor_x, dev_x, tensor_y, dev_y, workspace,
-                          dipiv_desc, dipiv, &info, mode));
+                          dpivots_desc, dpivots, &info, mode));
   interface_timer_.stop();
   mlu_runtime_.deallocate(workspace);
 
   if (mode == 0) {
-    memset(ipiv, 0, batch * m * sizeof(int));
-    cnrtMemcpy(dipiv, ipiv, batch * m * sizeof(int), cnrtMemcpyHostToDev);
+    memset(pivots, 0, batch * minmn * sizeof(int));
+    cnrtMemcpy(dpivots, pivots, batch * minmn * sizeof(int),
+               cnrtMemcpyHostToDev);
   }
+
+  std::unique_ptr<int[]> ipiv_(new int[batch * m]);
+  int *ipiv = ipiv_.get();
 
   float *typed_dev_x = static_cast<float *>(dev_x);
   float *typed_dev_y = static_cast<float *>(dev_y);
@@ -324,11 +354,12 @@ void XgetrfExecutor::compute() {
       cnrtMemcpy(hA2.get(), (void *)(typed_dev_x + offset),
                  m * n * sizeof(float), cnrtMemcpyDevToHost);
       if (mode == 1) {
-        cnrtMemcpy(ipiv + b * m, dipiv + b * m, m * sizeof(int),
+        cnrtMemcpy(pivots + b * minmn, dpivots + b * minmn, minmn * sizeof(int),
                    cnrtMemcpyDevToHost);
+        apply_pivots(pivots + b * minmn, ipiv + b * m, m, n, 1);
         // printf("compute\n");
-        // for(int i=0;i<m;i++)
-        //   printf("%d ",ipiv[i]);
+        // for(int i=0;i<minmn;i++)
+        //   printf("%d ",ipiv[b*m + i]);
         // printf("\n");
         apply_row_swaps(LU_, m, n, ipiv + b * m);
       }
@@ -349,8 +380,9 @@ void XgetrfExecutor::compute() {
       cnrtMemcpy(hA2.get(), (void *)(typed_dev_x + offset),
                  m * n * 2 * sizeof(float), cnrtMemcpyDevToHost);
       if (mode == 1) {
-        cnrtMemcpy(ipiv + b * m, dipiv + b * m, m * sizeof(int),
+        cnrtMemcpy(pivots + b * minmn, dpivots + b * minmn, minmn * sizeof(int),
                    cnrtMemcpyDevToHost);
+        apply_pivots(pivots + b * minmn, ipiv + b * m, m, n, 1);
         // for(int i=0;i<m;i++)
         //   printf("%d ",ipiv[i]);
         // printf("\n");
@@ -360,11 +392,6 @@ void XgetrfExecutor::compute() {
                  cnrtMemcpyHostToDev);
     }
   }
-  // cnrtMemcpy(ipiv, dipiv, m * sizeof(int),
-  //                  cnrtMemcpyDevToHost);
-  // for(int i=0;i< m;i++)
-  //   printf("%d ",ipiv[i]);
-  // printf("\n");
 }
 
 void XgetrfExecutor::cpuCompute() {
@@ -386,18 +413,13 @@ void XgetrfExecutor::cpuCompute() {
 
   int m = row;
   int n = col;
-  int *ipiv = (int *)data_vector_[2].host_ptr;
+  int minmn = MIN(m, n);
+  int *pivots = (int *)data_vector_[2].host_ptr;
 
-  // printf("cpu_fp32_output_\n");
-  for (int i = 0; i < batch * m; i++) {
-    cpu_fp32_output_[1][i] = ipiv[i];
-    // printf("%d ",(int)cpu_fp32_output_[1][i]);
+  for (int i = 0; i < batch * minmn; i++) {
+    cpu_fp32_output_[1][i] = pivots[i];
   }
-  // printf("\n");
-  // printf("cpu_compute\n");
-  // for(int i=0;i<m;i++)
-  //   printf("%d ",ipiv[i]);
-  // printf("\n");
+
   if (tensor_desc_[0].tensor->dtype == MLUOP_DTYPE_FLOAT) {
     for (int i = 0; i < count; ++i) {
       cpu_fp32_output_[0][i] = (cpu_fp32_input_[0][i]);

@@ -31,11 +31,14 @@
 #include "kernels/unary_op/unary_op_host.h"
 #include "kernels/utils/cnnl_helper.h"
 
-mluOpStatus_t MLUOP_WIN_API scal_ger(
-    mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int M_size,
-    int N_size, int ib, int J, int m, int n, int step, float *dA, float *d_rA,
-    float *d_iA, int lda, int stride_a, float *workspace, int *dipiv,
-    int *dipiv2, int *info, int gbstep, int mode, cnrtQueue_t queue) {
+mluOpStatus_t MLUOP_WIN_API scal_ger(mluOpHandle_t handle,
+                                     mluOpDataType_t dtype, int batch,
+                                     int M_size, int N_size, int ib, int J,
+                                     int m, int n, int step, float *dA,
+                                     float *d_rA, float *d_iA, int lda,
+                                     int stride_a, float *workspace, int *dipiv,
+                                     int *dipiv2, int *pivot, int *info,
+                                     int gbstep, int mode, cnrtQueue_t queue) {
   if (m == 0 || n == 0) return MLUOP_STATUS_BAD_PARAM;
 
   cnrtDim3_t k_dim;
@@ -46,12 +49,13 @@ mluOpStatus_t MLUOP_WIN_API scal_ger(
         "[KernelCcal_ger]",
         KernelCcal_ger(k_dim, k_type, queue, dtype, batch, M_size, N_size, ib,
                        J, m, n, step, d_rA, d_iA, lda, stride_a, workspace,
-                       dipiv, dipiv2, info, gbstep, mode));
+                       dipiv, dipiv2, pivot, info, gbstep, mode));
   } else if (dtype == MLUOP_DTYPE_FLOAT) {
-    CHECK_RETURN("[KernelScal_ger]",
-                 KernelScal_ger(k_dim, k_type, queue, dtype, batch, M_size,
-                                N_size, ib, J, m, n, step, dA, lda, stride_a,
-                                workspace, dipiv, dipiv2, info, gbstep, mode));
+    CHECK_RETURN(
+        "[KernelScal_ger]",
+        KernelScal_ger(k_dim, k_type, queue, dtype, batch, M_size, N_size, ib,
+                       J, m, n, step, dA, lda, stride_a, workspace, dipiv,
+                       dipiv2, pivot, info, gbstep, mode));
   }
 
   CNRT_CHECK(cnrtQueueSync(queue));
@@ -78,8 +82,8 @@ mluOpStatus_t MLUOP_WIN_API swap(mluOpHandle_t handle, mluOpDataType_t dtype,
 
 int xgetrf2_native(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
                    int m, int n, float *dA, float *d_rA, float *d_iA, int ldda,
-                   int gbm, int gbn, int *dipiv, int *dinfo, int gbstep,
-                   int mode, void *workspace, cnrtQueue_t queue) {
+                   int gbm, int gbn, int *dipiv, int *pivot, int *dinfo,
+                   int gbstep, int mode, void *workspace, cnrtQueue_t queue) {
   int arginfo = 0;
   if (m < 0) {
     arginfo = -1;
@@ -102,18 +106,21 @@ int xgetrf2_native(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
   int gbj, j, step, ib;
   int *dipiv2;
   if (mode == 1) {
-    dipiv2 = (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
-                 ? (int *)workspace + 2 * (gbm * gbn + gbm * gbm) * batch
-                 : (int *)workspace + batch * 64 * 64;
+    // dipiv2 = (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
+    //              ? (int *)workspace + 2 * (gbm * gbn + gbm * gbm) * batch
+    //              : (int *)workspace + batch * 64 * 64;
+    // pivot = dipiv2 + gbm;
+    dipiv2 = dipiv + gbm;
     CNRT_CHECK(cnrtMemset(dipiv2, 0, m * sizeof(int)));
   }
 
   for (j = 0; j < min_mn; j += nb) {
     ib = MIN(nb, min_mn - j);
     if (dtype == MLUOP_DTYPE_FLOAT) {
-      arginfo = scal_ger(handle, dtype, batch, m, n, ib, j, m - j, ib, j, dA,
-                         NULL, NULL, ldda, gbm * ldda, (float *)workspace,
-                         dipiv + j, dipiv2, dinfo, gbstep, mode, queue);
+      arginfo =
+          scal_ger(handle, dtype, batch, m, n, ib, j, m - j, ib, j, dA, NULL,
+                   NULL, ldda, gbm * ldda, (float *)workspace, dipiv + j,
+                   dipiv2, pivot + j, dinfo, gbstep, mode, queue);
       if (mode == 1) {
         if (gbn - (j + ib) - gbstep > 0) {
           swap(handle, dtype, batch, m, n, ib, j, m - j,
@@ -128,9 +135,10 @@ int xgetrf2_native(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
         }
       }
     } else if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
-      arginfo = scal_ger(handle, dtype, batch, m, n, ib, j, m - j, ib, j, NULL,
-                         d_rA, d_iA, ldda, gbm * ldda, (float *)workspace,
-                         dipiv + j, dipiv2, dinfo, gbstep, mode, queue);
+      arginfo =
+          scal_ger(handle, dtype, batch, m, n, ib, j, m - j, ib, j, NULL, d_rA,
+                   d_iA, ldda, gbm * ldda, (float *)workspace, dipiv + j,
+                   dipiv2, pivot + j, dinfo, gbstep, mode, queue);
       if (mode == 1) {
         if (gbn - (j + ib) - gbstep > 0) {
           swap(handle, dtype, batch, m, n, ib, j, m - j,

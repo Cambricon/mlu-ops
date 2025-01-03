@@ -75,20 +75,22 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetXgetrfWorkspaceSize(
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpXgetrf(
-    mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc, const void *x,
-    const mluOpTensorDescriptor_t y_desc, void *y, void *workspace,
-    const mluOpTensorDescriptor_t dipiv_desc, int *dipiv, int *info, int mode) {
+mluOpStatus_t MLUOP_WIN_API
+mluOpXgetrf(mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc,
+            const void *x, const mluOpTensorDescriptor_t y_desc, void *y,
+            void *workspace, const mluOpTensorDescriptor_t pivots_desc,
+            int *pivots, int *info, int mode) {
   /* parameter check*/
   size_t m, n;
+
   int batch;
   mluOpDataType_t dtype = x_desc->dtype;
   PARAM_CHECK("mluOpXgetrf", x_desc != NULL);
   PARAM_CHECK("mluOpXgetrf", y_desc != NULL);
-  PARAM_CHECK("mluOpXgetrf", dipiv_desc != NULL);
+  PARAM_CHECK("mluOpXgetrf", pivots_desc != NULL);
   PARAM_CHECK("mluOpXgetrf", x != NULL);
   PARAM_CHECK("mluOpXgetrf", y != NULL);
-  PARAM_CHECK("mluOpXgetrf", dipiv != NULL);
+  PARAM_CHECK("mluOpXgetrf", pivots != NULL);
   PARAM_CHECK("mluOpXgetrf",
               x_desc->dim == 2 || x_desc->dim == 3 || x_desc->dim == 4);
 
@@ -128,6 +130,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpXgetrf(
   mluOpGetQueue(handle, &(handle->queue));
 
   size_t ldda = n;
+  size_t minmn = MIN(m, n);
   if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
     transpose(handle, MLUOP_DTYPE_COMPLEX_FLOAT, batch, m, n, (float *)x,
               (float *)y, handle->queue);
@@ -140,22 +143,22 @@ mluOpStatus_t MLUOP_WIN_API mluOpXgetrf(
   if (mode == 0) {
     if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT)
       xgetrf_mlu(handle, dtype, batch, m, n, (float *)y, (float *)y,
-                 (float *)y + batch * m * ldda, ldda, dipiv, info, mode,
+                 (float *)y + batch * m * ldda, ldda, pivots, info, mode,
                  workspace);
     else if (dtype == MLUOP_DTYPE_FLOAT)
       xgetrf_mlu(handle, dtype, batch, m, n, (float *)y, NULL, NULL, ldda,
-                 dipiv, info, mode, workspace);
+                 pivots, info, mode, workspace);
   } else {
     if (dtype == MLUOP_DTYPE_COMPLEX_FLOAT) {
       for (int b = 0; b < batch; b++) {
         xgetrf_mlu(handle, dtype, 1, m, n, NULL, (float *)y + b * m * n,
                    (float *)y + batch * m * ldda + b * m * n, ldda,
-                   dipiv + b * m, info, mode, workspace);
+                   pivots + b * minmn, info, mode, workspace);
       }
     } else if (dtype == MLUOP_DTYPE_FLOAT) {
       for (int b = 0; b < batch; b++) {
         xgetrf_mlu(handle, dtype, 1, m, n, (float *)y + b * m * n, NULL, NULL,
-                   ldda, dipiv + b * m, info, mode, workspace);
+                   ldda, pivots + b * minmn, info, mode, workspace);
       }
     }
   }

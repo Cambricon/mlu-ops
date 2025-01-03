@@ -50,6 +50,7 @@
 
 #define CEILDIV(x, y) ((x + y - 1) / y)
 #define ROUNDUP(x, y) (CEILDIV(x, y) * y)
+#define FABS(x) ((x) < 0 ? -(x) : (x))
 enum FUNCTYPE { INV, MEMCPY, SCALGER, SWAP };
 void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                 cnrtFunctionType_t *k_type, int batch, FUNCTYPE func);
@@ -61,12 +62,13 @@ mluOpStatus_t MLUOP_WIN_API KernelScal_ger(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpDataType_t d_type, int batch, int M_size, int N_size, int ib, int J,
     int m, int n, int step, float *dA, int lda, int stride_a, float *workspace,
-    int *dipiv, int *dipiv2, int *info, int gbstep, int mode);
-mluOpStatus_t MLUOP_WIN_API KernelCcal_ger(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    mluOpDataType_t d_type, int batch, int M_size, int N_size, int ib, int J,
-    int m, int n, int step, float *d_rA, float *d_iA, int lda, int stride_a,
-    float *workspace, int *dipiv, int *dipiv2, int *info, int gbstep, int mode);
+    int *dipiv, int *dipiv2, int *pivot, int *info, int gbstep, int mode);
+mluOpStatus_t MLUOP_WIN_API
+KernelCcal_ger(cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+               mluOpDataType_t d_type, int batch, int M_size, int N_size,
+               int ib, int J, int m, int n, int step, float *d_rA, float *d_iA,
+               int lda, int stride_a, float *workspace, int *dipiv, int *dipiv2,
+               int *pivot, int *info, int gbstep, int mode);
 
 mluOpStatus_t MLUOP_WIN_API
 KernelMatrixAdd(cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
@@ -140,10 +142,10 @@ mluOpStatus_t MLUOP_WIN_API cnrtMemcpy2D(mluOpHandle_t handle, int batch, int m,
 
 int xgetrf2_native(mluOpHandle_t handle, mluOpDataType_t dtype, int batch,
                    int m, int n, float *dA, float *d_rA, float *d_iA, int ldda,
-                   int gbm, int gbn, int *dipiv, int *dinfo, int gbstep,
-                   int mode, void *workspace, cnrtQueue_t queue);
+                   int gbm, int gbn, int *dipiv, int *pivot, int *dinfo,
+                   int gbstep, int mode, void *workspace, cnrtQueue_t queue);
 
 int xgetrf_mlu(mluOpHandle_t handle, mluOpDataType_t dtype, int batch, int m,
-               int n, float *dA, float *d_rA, float *d_iA, int ldda, int *ipiv,
-               int *info, int mode, void *workspace);
+               int n, float *dA, float *d_rA, float *d_iA, int ldda,
+               int *pivots, int *info, int mode, void *workspace);
 #endif  // KERNELS_SGETRF2_SGETRF2_H
