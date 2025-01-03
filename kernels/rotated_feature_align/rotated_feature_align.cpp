@@ -34,9 +34,9 @@
 static void policyFunc(const mluOpHandle_t handle,
                        const mluOpTensorDescriptor_t output_desc,
                        cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type) {
-  const size_t num_rois = output_desc->dims[0];
-  const size_t pooled_height = output_desc->dims[1];
-  const size_t pooled_width = output_desc->dims[2];
+  const size_t num_rois = output_desc->getDimIndex(0);
+  const size_t pooled_height = output_desc->getDimIndex(1);
+  const size_t pooled_width = output_desc->getDimIndex(2);
   const size_t num_bin = num_rois * pooled_height * pooled_width;
   size_t core_num = handle->core_num_per_cluster;
   size_t cluster_num = mluop::runtime::getJobLimitCapability(handle) / core_num;
@@ -56,22 +56,22 @@ static mluOpStatus_t RotatedFeatureAlignForwardPreCheck(
   PARAM_CHECK("[mluOpRotatedFeatureAlignForward]", bboxes_desc != NULL);
   PARAM_CHECK("[mluOpRotatedFeatureAlignForward]", output_desc != NULL);
 
-  PARAM_CHECK("[mluOpRotatedFeatureAlignForward]", input_desc->dim == 4);
-  PARAM_CHECK("[mluOpRotatedFeatureAlignForward]", bboxes_desc->dim == 4);
-  PARAM_CHECK("[mluOpRotatedFeatureAlignForward]", output_desc->dim == 4);
+  PARAM_CHECK("[mluOpRotatedFeatureAlignForward]", input_desc->getDim() == 4);
+  PARAM_CHECK("[mluOpRotatedFeatureAlignForward]", bboxes_desc->getDim() == 4);
+  PARAM_CHECK("[mluOpRotatedFeatureAlignForward]", output_desc->getDim() == 4);
 
   PARAM_CHECK("[mluOpRotatedFeatureAlignForward]",
-              input_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                  input_desc->dtype == MLUOP_DTYPE_HALF);
+              input_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
+                  input_desc->getDtype() == MLUOP_DTYPE_HALF);
   PARAM_CHECK("[mluOpRotatedFeatureAlignForward]",
-              input_desc->dtype == bboxes_desc->dtype);
+              input_desc->getDtype() == bboxes_desc->getDtype());
   PARAM_CHECK("[mluOpRotatedFeatureAlignForward]",
-              input_desc->dtype == output_desc->dtype);
+              input_desc->getDtype() == output_desc->getDtype());
 
   PARAM_CHECK("[mluOpRotatedFeatureAlignForward]",
-              input_desc->layout == MLUOP_LAYOUT_NHWC);
+              input_desc->getLayout() == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK("[mluOpRotatedFeatureAlignForward]",
-              output_desc->layout == MLUOP_LAYOUT_NHWC);
+              output_desc->getLayout() == MLUOP_LAYOUT_NHWC);
 
   // check stride
   STRIDE_TENSOR_CHECK("[mluOpRotatedFeatureAlignForward]:", input_desc,
@@ -81,24 +81,25 @@ static mluOpStatus_t RotatedFeatureAlignForwardPreCheck(
   STRIDE_TENSOR_CHECK("[mluOpRotatedFeatureAlignForward]:", output_desc,
                       "output_desc must be contiguous");
 
-  for (int i = 0; i < input_desc->dim; i++) {
-    if (input_desc->dims[i] != output_desc->dims[i]) {
+  for (int i = 0; i < input_desc->getDim(); i++) {
+    if (input_desc->getDimIndex(i) != output_desc->getDimIndex(i)) {
       LOG(ERROR)
           << "[mluOpRotatedFeatureAlignForward] Check failed: input_desc->dims["
-          << i << "] should be equal to output_desc->dims[" << i << "].";
+          << i << "] should be equal to output_desc->getDimIndex(" << i << ").";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
 
-  for (int i = 0; i < input_desc->dim - 1; i++) {
-    if (input_desc->dims[i] != bboxes_desc->dims[i]) {
+  for (int i = 0; i < input_desc->getDim() - 1; i++) {
+    if (input_desc->getDimIndex(i) != bboxes_desc->getDimIndex(i)) {
       LOG(ERROR)
           << "[mluOpRotatedFeatureAlignForward] Check failed: input_desc->dims["
-          << i << "] should be equal to bboxes_desc->dims[" << i << "].";
+          << i << "] should be equal to bboxes_desc->getDimIndex(" << i << ").";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  PARAM_CHECK("[mluOpRotatedFeatureAlignForward]", bboxes_desc->dims[3] == 5);
+  PARAM_CHECK("[mluOpRotatedFeatureAlignForward]",
+              bboxes_desc->getDimIndex(3) == 5);
 
   const size_t input_element_num = mluOpGetTensorElementNum(input_desc);
   const size_t output_element_num = mluOpGetTensorElementNum(output_desc);
@@ -130,23 +131,24 @@ static mluOpStatus_t RotatedFeatureAlignBackwardPreCheck(
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", bboxes_desc != NULL);
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", bottom_input_desc != NULL);
 
-  PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", top_output_desc->dim == 4);
-  PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", bboxes_desc->dim == 4);
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]",
-              bottom_input_desc->dim == 4);
+              top_output_desc->getDim() == 4);
+  PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", bboxes_desc->getDim() == 4);
+  PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]",
+              bottom_input_desc->getDim() == 4);
 
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]",
-              top_output_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                  top_output_desc->dtype == MLUOP_DTYPE_HALF);
+              top_output_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
+                  top_output_desc->getDtype() == MLUOP_DTYPE_HALF);
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]",
-              top_output_desc->dtype == bboxes_desc->dtype);
+              top_output_desc->getDtype() == bboxes_desc->getDtype());
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]",
-              top_output_desc->dtype == bottom_input_desc->dtype);
+              top_output_desc->getDtype() == bottom_input_desc->getDtype());
 
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]",
-              top_output_desc->layout == MLUOP_LAYOUT_NHWC);
+              top_output_desc->getLayout() == MLUOP_LAYOUT_NHWC);
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]",
-              bottom_input_desc->layout == MLUOP_LAYOUT_NHWC);
+              bottom_input_desc->getLayout() == MLUOP_LAYOUT_NHWC);
 
   // check stride
   STRIDE_TENSOR_CHECK("[mluOpRotatedFeatureAlignBackward]:", top_output_desc,
@@ -156,8 +158,8 @@ static mluOpStatus_t RotatedFeatureAlignBackwardPreCheck(
   STRIDE_TENSOR_CHECK("[mluOpRotatedFeatureAlignBackward]:", bottom_input_desc,
                       "bottom_input_desc must be contiguous");
 
-  for (int i = 0; i < top_output_desc->dim; i++) {
-    if (top_output_desc->dims[i] != bottom_input_desc->dims[i]) {
+  for (int i = 0; i < top_output_desc->getDim(); i++) {
+    if (top_output_desc->getDimIndex(i) != bottom_input_desc->getDimIndex(i)) {
       LOG(ERROR) << "[mluOpRotatedFeatureAlignBackward] Check failed: "
                     "top_output_desc->dims["
                  << i << "] should be equal to bottom_input_desc->dims[" << i
@@ -166,15 +168,17 @@ static mluOpStatus_t RotatedFeatureAlignBackwardPreCheck(
     }
   }
 
-  for (int i = 0; i < top_output_desc->dim - 1; i++) {
-    if (top_output_desc->dims[i] != bboxes_desc->dims[i]) {
+  for (int i = 0; i < top_output_desc->getDim() - 1; i++) {
+    if (top_output_desc->getDimIndex(i) != bboxes_desc->getDimIndex(i)) {
       LOG(ERROR) << "[mluOpRotatedFeatureAlignBackward] Check failed: "
                     "top_output_desc->dims["
-                 << i << "] should be equal to bboxes_desc->dims[" << i << "].";
+                 << i << "] should be equal to bboxes_desc->getDimIndex(" << i
+                 << ").";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", bboxes_desc->dims[3] == 5);
+  PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]",
+              bboxes_desc->getDimIndex(3) == 5);
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", points == 1 || points == 5);
   PARAM_CHECK("[mluOpRotatedFeatureAlignBackward]", spatial_scale > 0);
 
@@ -241,12 +245,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpRotatedFeatureAlignForward(
 
   policyFunc(handle, output_desc, &k_dim, &k_type);
 
-  const int batches = input_desc->dims[0];
-  const int height = input_desc->dims[1];
-  const int width = input_desc->dims[2];
-  const int channels = input_desc->dims[3];
-  const int offset_rois = bboxes_desc->dims[3];
-  mluOpDataType_t data_dtype = input_desc->dtype;
+  const int batches = input_desc->getDimIndex(0);
+  const int height = input_desc->getDimIndex(1);
+  const int width = input_desc->getDimIndex(2);
+  const int channels = input_desc->getDimIndex(3);
+  const int offset_rois = bboxes_desc->getDimIndex(3);
+  mluOpDataType_t data_dtype = input_desc->getDtype();
   VLOG(5) << "[mluOpRotatedFeatureAlignForward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "].";
   CHECK_RETURN(
@@ -309,12 +313,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpRotatedFeatureAlignBackward(
   cnrtFunctionType_t k_type;
   policyFunc(handle, top_output_desc, &k_dim, &k_type);
 
-  const int batches = top_output_desc->dims[0];
-  const int height = top_output_desc->dims[1];
-  const int width = top_output_desc->dims[2];
-  const int channels = top_output_desc->dims[3];
-  const int offset_rois = bboxes_desc->dims[3];
-  mluOpDataType_t data_dtype = top_output_desc->dtype;
+  const int batches = top_output_desc->getDimIndex(0);
+  const int height = top_output_desc->getDimIndex(1);
+  const int width = top_output_desc->getDimIndex(2);
+  const int channels = top_output_desc->getDimIndex(3);
+  const int offset_rois = bboxes_desc->getDimIndex(3);
+  mluOpDataType_t data_dtype = top_output_desc->getDtype();
   VLOG(5) << "[mluOpRotatedFeatureAlignBackward] launch kernel policyFunc["
           << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << "].";
   CHECK_RETURN("[mluOpRotatedFeatureAlignBackward]",

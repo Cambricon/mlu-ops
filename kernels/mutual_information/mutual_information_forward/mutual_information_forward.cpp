@@ -57,31 +57,31 @@ static mluOpStatus_t checkTensorDim(
     const mluOpTensorDescriptor_t opt_boundary_desc,
     const mluOpTensorDescriptor_t p_desc,
     const mluOpTensorDescriptor_t ans_desc) {
-  if (3 != px_desc->dim) {
+  if (3 != px_desc->getDim()) {
     LOG(ERROR) << API_NAME << " The dim of px must be 3. "
-               << "But now the dim of px is " << px_desc->dim << ".";
+               << "But now the dim of px is " << px_desc->getDim() << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (3 != py_desc->dim) {
+  if (3 != py_desc->getDim()) {
     LOG(ERROR) << API_NAME << " The dim of py must be 3. "
-               << "But now the dim of py is " << py_desc->dim << ".";
+               << "But now the dim of py is " << py_desc->getDim() << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (nullptr != opt_boundary_desc && 2 != opt_boundary_desc->dim) {
+  if (nullptr != opt_boundary_desc && 2 != opt_boundary_desc->getDim()) {
     LOG(ERROR) << API_NAME
                << " The dim of opt_boundary must be 2 when opt_boundary is "
                << "not NULL. But now the dim of opt_boundary is "
-               << opt_boundary_desc->dim << ".";
+               << opt_boundary_desc->getDim() << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (3 != p_desc->dim) {
+  if (3 != p_desc->getDim()) {
     LOG(ERROR) << API_NAME << " The dim of p must be 3. "
-               << "But now the dim of p is " << p_desc->dim << ".";
+               << "But now the dim of p is " << p_desc->getDim() << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (1 != ans_desc->dim) {
+  if (1 != ans_desc->getDim()) {
     LOG(ERROR) << API_NAME << " The dim of ans must be 1. "
-               << "But now the dim of ans is " << ans_desc->dim << ".";
+               << "But now the dim of ans is " << ans_desc->getDim() << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -94,57 +94,61 @@ static mluOpStatus_t checkTensorShape(
     const mluOpTensorDescriptor_t opt_boundary_desc,
     const mluOpTensorDescriptor_t p_desc,
     const mluOpTensorDescriptor_t ans_desc) {
-  const int B = px_desc->dims[0];
-  const int S = px_desc->dims[1];
-  const int T = py_desc->dims[2];
-  if (B != py_desc->dims[0] || B != p_desc->dims[0] || B != ans_desc->dims[0]) {
+  const int B = px_desc->getDimIndex(0);
+  const int S = px_desc->getDimIndex(1);
+  const int T = py_desc->getDimIndex(2);
+  if (B != py_desc->getDimIndex(0) || B != p_desc->getDimIndex(0) ||
+      B != ans_desc->getDimIndex(0)) {
     LOG(ERROR) << API_NAME
                << " px.shape[0], py.shape[0], p.shape[0], ans.shape[0], "
                << "must be same. But now "
-               << "px.shape[0] is " << px_desc->dims[0] << ", py.shape[0] is "
-               << py_desc->dims[0] << ", p.shape[0] is " << p_desc->dims[0]
-               << ", ans.shape[0] is " << ans_desc->dims[0] << ".";
+               << "px.shape[0] is " << px_desc->getDimIndex(0)
+               << ", py.shape[0] is " << py_desc->getDimIndex(0)
+               << ", p.shape[0] is " << p_desc->getDimIndex(0)
+               << ", ans.shape[0] is " << ans_desc->getDimIndex(0) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // Currently only supports !modified, so the shape of px must be [B, S, T+1]
-  if (T + 1 != px_desc->dims[2]) {
+  if (T + 1 != px_desc->getDimIndex(2)) {
     LOG(ERROR) << API_NAME << " Currently only supports the case that "
                << "px.shape[2] must be equal to py.shape[2] + 1. But now "
-               << "px.shape[2] is " << px_desc->dims[2] << ", py.shape[2] is "
-               << py_desc->dims[2] << ".";
+               << "px.shape[2] is " << px_desc->getDimIndex(2)
+               << ", py.shape[2] is " << py_desc->getDimIndex(2) << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   // The shape of py must be [B, S+1, T]
-  if (S + 1 != py_desc->dims[1]) {
+  if (S + 1 != py_desc->getDimIndex(1)) {
     LOG(ERROR) << API_NAME << " py.shape[1] must be equal to px.shape[1] + 1. "
-               << "But now px.shape[1] is " << px_desc->dims[1]
-               << ", py.shape[1] is " << py_desc->dims[1] << ".";
+               << "But now px.shape[1] is " << px_desc->getDimIndex(1)
+               << ", py.shape[1] is " << py_desc->getDimIndex(1) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // The shape of opt_boundary must be [B, 4]
   if (nullptr != opt_boundary_desc &&
-      (B != opt_boundary_desc->dims[0] || 4 != opt_boundary_desc->dims[1])) {
+      (B != opt_boundary_desc->getDimIndex(0) ||
+       4 != opt_boundary_desc->getDimIndex(1))) {
     LOG(ERROR) << API_NAME << " When opt_boundary is not NULL, "
                << "opt_boundary.shape[0] and px.shape[0] must be same, and "
                << "opt_boundary.shape[1] must be 4. But now "
-               << "px.shape[0] is " << px_desc->dims[0]
-               << ", opt_boundary.shape[0] is " << opt_boundary_desc->dims[0]
-               << ", opt_boundary.shape[1] is " << opt_boundary_desc->dims[1]
-               << ".";
+               << "px.shape[0] is " << px_desc->getDimIndex(0)
+               << ", opt_boundary.shape[0] is "
+               << opt_boundary_desc->getDimIndex(0)
+               << ", opt_boundary.shape[1] is "
+               << opt_boundary_desc->getDimIndex(1) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // The shape of p must be [B, S+1, T+1]
-  if (S + 1 != p_desc->dims[1] || T + 1 != p_desc->dims[2]) {
+  if (S + 1 != p_desc->getDimIndex(1) || T + 1 != p_desc->getDimIndex(2)) {
     LOG(ERROR) << API_NAME << " p.shape[1] and py.shape[1] must be same, and "
                << "p.shape[2] must be equal to py.shape[2] + 1. "
-               << "But now p.shape[1] is " << p_desc->dims[1]
-               << ", py.shape[1] is " << py_desc->dims[1] << ", p.shape[2] is "
-               << p_desc->dims[2] << ", py.shape[2] is " << py_desc->dims[2]
-               << ".";
+               << "But now p.shape[1] is " << p_desc->getDimIndex(1)
+               << ", py.shape[1] is " << py_desc->getDimIndex(1)
+               << ", p.shape[2] is " << p_desc->getDimIndex(2)
+               << ", py.shape[2] is " << py_desc->getDimIndex(2) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -157,40 +161,40 @@ static mluOpStatus_t checkTensorDatatype(
     const mluOpTensorDescriptor_t opt_boundary_desc,
     const mluOpTensorDescriptor_t p_desc,
     const mluOpTensorDescriptor_t ans_desc) {
-  if (MLUOP_DTYPE_FLOAT != px_desc->dtype) {
+  if (MLUOP_DTYPE_FLOAT != px_desc->getDtype()) {
     LOG(ERROR) << API_NAME
                << "The data type of px currently only support float. But now "
                << "the data type of px is "
-               << mluOpGetNameOfDataType(px_desc->dtype) << ".";
+               << mluOpGetNameOfDataType(px_desc->getDtype()) << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  if (MLUOP_DTYPE_FLOAT != py_desc->dtype) {
+  if (MLUOP_DTYPE_FLOAT != py_desc->getDtype()) {
     LOG(ERROR) << API_NAME
                << "The data type of py currently only support float. But now "
                << "the data type of py is "
-               << mluOpGetNameOfDataType(py_desc->dtype) << ".";
+               << mluOpGetNameOfDataType(py_desc->getDtype()) << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (nullptr != opt_boundary_desc &&
-      MLUOP_DTYPE_INT64 != opt_boundary_desc->dtype) {
+      MLUOP_DTYPE_INT64 != opt_boundary_desc->getDtype()) {
     LOG(ERROR) << API_NAME
                << "The data type of opt_boundary currently only support int64."
                << " But now the data type of opt_boundary is "
-               << mluOpGetNameOfDataType(opt_boundary_desc->dtype) << ".";
+               << mluOpGetNameOfDataType(opt_boundary_desc->getDtype()) << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  if (MLUOP_DTYPE_FLOAT != p_desc->dtype) {
+  if (MLUOP_DTYPE_FLOAT != p_desc->getDtype()) {
     LOG(ERROR) << API_NAME
                << "The data type of p currently only support float. But now "
                << "the data type of p is "
-               << mluOpGetNameOfDataType(p_desc->dtype) << ".";
+               << mluOpGetNameOfDataType(p_desc->getDtype()) << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
-  if (MLUOP_DTYPE_FLOAT != ans_desc->dtype) {
+  if (MLUOP_DTYPE_FLOAT != ans_desc->getDtype()) {
     LOG(ERROR) << API_NAME
                << "The data type of ans currently only support float. "
                << "But now the data type of ans is "
-               << mluOpGetNameOfDataType(ans_desc->dtype) << ".";
+               << mluOpGetNameOfDataType(ans_desc->getDtype()) << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -314,9 +318,9 @@ static mluOpStatus_t mutualInformationForwardParamCheck(
     return check_status;
   }
 
-  const int B = px_desc->dims[0];
-  const int S = px_desc->dims[1];
-  const int T = py_desc->dims[2];
+  const int B = px_desc->getDimIndex(0);
+  const int S = px_desc->getDimIndex(1);
+  const int T = py_desc->getDimIndex(2);
 
   // 8. check zero element.
   if (0 == B) {
@@ -375,9 +379,9 @@ static mluOpStatus_t launchMutualInformationForward3PipelineKernel(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t px_desc, const void *px,
     const mluOpTensorDescriptor_t py_desc, const void *py,
     const bool has_boundary, const void *opt_boundary, void *p, void *ans) {
-  const int B = px_desc->dims[0];
-  const int S = px_desc->dims[1];
-  const int T = py_desc->dims[2];
+  const int B = px_desc->getDimIndex(0);
+  const int S = px_desc->getDimIndex(1);
+  const int T = py_desc->getDimIndex(2);
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
@@ -628,9 +632,9 @@ static mluOpStatus_t launchMutualInformationForwardDefaultKernel(
   //    diagonal number
   // 3. Launch default kernels by diagonal in parallel, with check of MaxDimX
 
-  const int B = px_desc->dims[0];
-  const int S = px_desc->dims[1];
-  const int T = py_desc->dims[2];
+  const int B = px_desc->getDimIndex(0);
+  const int S = px_desc->getDimIndex(1);
+  const int T = py_desc->getDimIndex(2);
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
@@ -723,8 +727,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpMutualInformationForward(
   }
 
   // Choose to launch 3pipeline kernel or default kernel
-  const int S = px_desc->dims[1];
-  const int T = py_desc->dims[2];
+  const int S = px_desc->getDimIndex(1);
+  const int T = py_desc->getDimIndex(2);
   bool is_launch_3pipeline = true;
 
   // Check 3pipeline kernel scale limit for computing p

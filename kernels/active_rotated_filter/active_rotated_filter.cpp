@@ -42,7 +42,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetActiveRotatedFilterForwardWorkspaceSize(
   PARAM_CHECK(api_name, input_desc != NULL);
   PARAM_CHECK(api_name, workspace_size != NULL);
 
-  *workspace_size = input_desc->total_tensor_size;
+  *workspace_size = input_desc->getTotalTensorSize();
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -59,31 +59,40 @@ static mluOpStatus_t activeRotatedFilterForwardParamCheck(
   PARAM_CHECK(api_name, output_desc != NULL);
 
   // check tensor dim
-  PARAM_CHECK(api_name, input_desc->dim == 5);
-  PARAM_CHECK(api_name, indices_desc->dim == 4);
-  PARAM_CHECK(api_name, output_desc->dim == 4);
+  PARAM_CHECK(api_name, input_desc->getDim() == 5);
+  PARAM_CHECK(api_name, indices_desc->getDim() == 4);
+  PARAM_CHECK(api_name, output_desc->getDim() == 4);
 
   // check dim
-  PARAM_CHECK(api_name, input_desc->dims[2] == indices_desc->dims[0]);
-  PARAM_CHECK(api_name, input_desc->dims[3] == input_desc->dims[4]);
-  PARAM_CHECK(api_name, input_desc->dims[3] == indices_desc->dims[1]);
-  PARAM_CHECK(api_name, input_desc->dims[3] == output_desc->dims[2]);
-  PARAM_CHECK(api_name, input_desc->dims[4] == indices_desc->dims[2]);
-  PARAM_CHECK(api_name, input_desc->dims[4] == output_desc->dims[3]);
   PARAM_CHECK(api_name,
-              (input_desc->dims[2] > 0 && input_desc->dims[2] <= 128));
+              input_desc->getDimIndex(2) == indices_desc->getDimIndex(0));
+  PARAM_CHECK(api_name,
+              input_desc->getDimIndex(3) == input_desc->getDimIndex(4));
+  PARAM_CHECK(api_name,
+              input_desc->getDimIndex(3) == indices_desc->getDimIndex(1));
+  PARAM_CHECK(api_name,
+              input_desc->getDimIndex(3) == output_desc->getDimIndex(2));
+  PARAM_CHECK(api_name,
+              input_desc->getDimIndex(4) == indices_desc->getDimIndex(2));
+  PARAM_CHECK(api_name,
+              input_desc->getDimIndex(4) == output_desc->getDimIndex(3));
+  PARAM_CHECK(api_name, (input_desc->getDimIndex(2) > 0 &&
+                         input_desc->getDimIndex(2) <= 128));
   PARAM_CHECK_V2(api_name,
-                 int(log(float(input_desc->dims[2])) / log(2.0f)) ==
-                     log(float(input_desc->dims[2])) / log(2.0f),
-                 "input_desc->dims[2] should be the power of 2.");
-  PARAM_CHECK(api_name, (input_desc->dims[3] == 3 || input_desc->dims[3] == 1));
+                 int(log(float(input_desc->getDimIndex(2))) / log(2.0f)) ==
+                     log(float(input_desc->getDimIndex(2))) / log(2.0f),
+                 "input_desc->getDimIndex(2) should be the power of 2.");
+  PARAM_CHECK(api_name, (input_desc->getDimIndex(3) == 3 ||
+                         input_desc->getDimIndex(3) == 1));
+  PARAM_CHECK(api_name, (indices_desc->getDimIndex(3) == 2 ||
+                         indices_desc->getDimIndex(3) == 4 ||
+                         indices_desc->getDimIndex(3) == 8));
   PARAM_CHECK(api_name,
-              (indices_desc->dims[3] == 2 || indices_desc->dims[3] == 4 ||
-               indices_desc->dims[3] == 8));
-  PARAM_CHECK(api_name, (output_desc->dims[0] ==
-                         input_desc->dims[0] * indices_desc->dims[3]));
-  PARAM_CHECK(api_name, (output_desc->dims[1] ==
-                         input_desc->dims[1] * input_desc->dims[2]));
+              (output_desc->getDimIndex(0) ==
+               input_desc->getDimIndex(0) * indices_desc->getDimIndex(3)));
+  PARAM_CHECK(api_name,
+              (output_desc->getDimIndex(1) ==
+               input_desc->getDimIndex(1) * input_desc->getDimIndex(2)));
 
   // check stride
   STRIDE_TENSOR_CHECK(api_name + ":", input_desc,
@@ -95,17 +104,17 @@ static mluOpStatus_t activeRotatedFilterForwardParamCheck(
 
   // check tensor datatype, support float16 and float32
   PARAM_CHECK_V2(api_name,
-                 (input_desc->dtype == MLUOP_DTYPE_HALF) ||
-                     (input_desc->dtype == MLUOP_DTYPE_FLOAT),
+                 (input_desc->getDtype() == MLUOP_DTYPE_HALF) ||
+                     (input_desc->getDtype() == MLUOP_DTYPE_FLOAT),
                  "Only half and float are supported in input tensor, but the "
                  "data type of tensor is "
-                     << mluOpGetNameOfDataType(input_desc->dtype) << ".");
-  PARAM_CHECK(api_name, input_desc->dtype == output_desc->dtype);
+                     << mluOpGetNameOfDataType(input_desc->getDtype()) << ".");
+  PARAM_CHECK(api_name, input_desc->getDtype() == output_desc->getDtype());
 
   PARAM_CHECK_V2(
-      api_name, (indices_desc->dtype == MLUOP_DTYPE_INT32),
+      api_name, (indices_desc->getDtype() == MLUOP_DTYPE_INT32),
       "Only int32 are supported in indices idx, but the data type of tensor is "
-          << mluOpGetNameOfDataType(indices_desc->dtype) << ".");
+          << mluOpGetNameOfDataType(indices_desc->getDtype()) << ".");
 
   const size_t input_element_num = mluOpGetTensorElementNum(input_desc);
   const size_t indices_element_num = mluOpGetTensorElementNum(indices_desc);
@@ -149,12 +158,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpActiveRotatedFilterForward(
   if (status_paramcheck != MLUOP_STATUS_SUCCESS) {
     return status_paramcheck;
   }
-  const int output_planes = input_desc->dims[0];
-  const int input_planes = input_desc->dims[1];
-  const int orientations = input_desc->dims[2];
-  const int kH = input_desc->dims[3];
-  const int kW = input_desc->dims[4];
-  const int rotations = indices_desc->dims[3];
+  const int output_planes = input_desc->getDimIndex(0);
+  const int input_planes = input_desc->getDimIndex(1);
+  const int orientations = input_desc->getDimIndex(2);
+  const int kH = input_desc->getDimIndex(3);
+  const int kW = input_desc->getDimIndex(4);
+  const int rotations = indices_desc->getDimIndex(3);
 
   // generate mluOpActiveRotatedFilterForward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
@@ -168,7 +177,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpActiveRotatedFilterForward(
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 0.003, 0.003, 0);
   }
 
-  mluOpDataType_t input_dtype = input_desc->dtype;
+  mluOpDataType_t input_dtype = input_desc->getDtype();
 
   // start UX task, occupy all available clusters
   cnrtDim3_t k_dims;

@@ -33,8 +33,8 @@ __mlu_func__ void setNanInfToZero(float *src, float *mask, const int num) {
       "fuse.nram.s32 [%[dst]], %[size], [%[src0]],"
       ".and(%[src1]), .ne(%[src2]), .mul(%[src3]);\n" ::[dst] "r"(
           (int32_t *)mask),
-      [ size ] "r"(num), [ src0 ] "r"((int32_t *)src), [ src1 ] "r"(0x7f800000),
-      [ src2 ] "r"(0x7f800000), [ src3 ] "r"(-1));
+      [size] "r"(num), [src0] "r"((int32_t *)src), [src1] "r"(0x7f800000),
+      [src2] "r"(0x7f800000), [src3] "r"(-1));
   __bang_band((int8_t *)src, (int8_t *)src, (int8_t *)mask,
               num * sizeof(float));
 }

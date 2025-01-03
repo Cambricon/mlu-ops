@@ -44,44 +44,51 @@ static mluOpStatus_t paramcheck(
     const mluOpTensorDescriptor_t pooled_empty_flag_desc) {
   // check tensor dim
   // params points: [B, N, 3]
-  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", points_desc->dim, 3);
-  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", points_desc->dims[2], 3);
+  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", points_desc->getDim(), 3);
+  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", points_desc->getDimIndex(2), 3);
   // params point_features: [B, N, C]
-  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", point_features_desc->dim, 3);
+  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", point_features_desc->getDim(), 3);
   // params boxes3d: [B, M, 7]
-  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", boxes3d_desc->dim, 3);
-  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", boxes3d_desc->dims[2], 7);
+  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", boxes3d_desc->getDim(), 3);
+  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", boxes3d_desc->getDimIndex(2), 7);
   // params pooled_features: [B, M, sampled_pts_num, 3+C]
-  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", pooled_features_desc->dim, 4);
+  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", pooled_features_desc->getDim(), 4);
   // params pooled_empty_flag: [B, M]
-  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", pooled_empty_flag_desc->dim, 2);
+  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", pooled_empty_flag_desc->getDim(), 2);
 
   // check tensor shape
+  PARAM_CHECK(
+      "[mluOpRoiPointPool3d]",
+      points_desc->getDimIndex(0) == pooled_features_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-              points_desc->dims[0] == pooled_features_desc->dims[0]);
+              point_features_desc->getDimIndex(0) ==
+                  pooled_features_desc->getDimIndex(0));
+  PARAM_CHECK(
+      "[mluOpRoiPointPool3d]",
+      boxes3d_desc->getDimIndex(0) == pooled_features_desc->getDimIndex(0));
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-              point_features_desc->dims[0] == pooled_features_desc->dims[0]);
+              pooled_empty_flag_desc->getDimIndex(0) ==
+                  pooled_features_desc->getDimIndex(0));
+  PARAM_CHECK("[mluOpRoiPointPool3d]", pooled_features_desc->getDimIndex(1) ==
+                                           boxes3d_desc->getDimIndex(1));
+  PARAM_CHECK("[mluOpRoiPointPool3d]", pooled_empty_flag_desc->getDimIndex(1) ==
+                                           boxes3d_desc->getDimIndex(1));
+  PARAM_CHECK("[mluOpRoiPointPool3d]", points_desc->getDimIndex(1) ==
+                                           point_features_desc->getDimIndex(1));
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-              boxes3d_desc->dims[0] == pooled_features_desc->dims[0]);
-  PARAM_CHECK("[mluOpRoiPointPool3d]",
-              pooled_empty_flag_desc->dims[0] == pooled_features_desc->dims[0]);
-  PARAM_CHECK("[mluOpRoiPointPool3d]",
-              pooled_features_desc->dims[1] == boxes3d_desc->dims[1]);
-  PARAM_CHECK("[mluOpRoiPointPool3d]",
-              pooled_empty_flag_desc->dims[1] == boxes3d_desc->dims[1]);
-  PARAM_CHECK("[mluOpRoiPointPool3d]",
-              points_desc->dims[1] == point_features_desc->dims[1]);
-  PARAM_CHECK("[mluOpRoiPointPool3d]", point_features_desc->dims[2] + 3 ==
-                                           pooled_features_desc->dims[3]);
+              point_features_desc->getDimIndex(2) + 3 ==
+                  pooled_features_desc->getDimIndex(3));
 
   // check params
-  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", batch_size, points_desc->dims[0]);
-  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", pts_num, points_desc->dims[1]);
-  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", boxes_num, boxes3d_desc->dims[1]);
+  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", batch_size,
+                 points_desc->getDimIndex(0));
+  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", pts_num, points_desc->getDimIndex(1));
+  PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", boxes_num,
+                 boxes3d_desc->getDimIndex(1));
   PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", feature_in_len,
-                 point_features_desc->dims[2]);
+                 point_features_desc->getDimIndex(2));
   PARAM_CHECK_EQ("[mluOpRoiPointPool3d]", sampled_pts_num,
-                 pooled_features_desc->dims[2]);
+                 pooled_features_desc->getDimIndex(2));
 
   // check stride
   STRIDE_TENSOR_CHECK("[mluOpRoiPointPool3d]:", points_desc,
@@ -97,18 +104,18 @@ static mluOpStatus_t paramcheck(
 
   // check tensor datatype
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-              (points_desc->dtype == MLUOP_DTYPE_FLOAT) ||
-                  (points_desc->dtype == MLUOP_DTYPE_HALF));
+              (points_desc->getDtype() == MLUOP_DTYPE_FLOAT) ||
+                  (points_desc->getDtype() == MLUOP_DTYPE_HALF));
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-              pooled_empty_flag_desc->dtype == MLUOP_DTYPE_INT32);
+              pooled_empty_flag_desc->getDtype() == MLUOP_DTYPE_INT32);
   // points, point_features, boxes3d_desc, pooled_features datatype must be the
   // same
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-              points_desc->dtype == pooled_features_desc->dtype);
+              points_desc->getDtype() == pooled_features_desc->getDtype());
+  PARAM_CHECK("[mluOpRoiPointPool3d]", point_features_desc->getDtype() ==
+                                           pooled_features_desc->getDtype());
   PARAM_CHECK("[mluOpRoiPointPool3d]",
-              point_features_desc->dtype == pooled_features_desc->dtype);
-  PARAM_CHECK("[mluOpRoiPointPool3d]",
-              boxes3d_desc->dtype == pooled_features_desc->dtype);
+              boxes3d_desc->getDtype() == pooled_features_desc->getDtype());
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -169,10 +176,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetRoiPointPool3dWorkspaceSize(
   }
 
   // workspace for points_xyz : [3, B, N]
-  *size = points_element_num * mluop::getSizeOfDataType(points_desc->dtype);
+  *size =
+      points_element_num * mluop::getSizeOfDataType(points_desc->getDtype());
   // workspace for point_features_transpose : [C, B, N]
   *size += point_features_element_num *
-           mluop::getSizeOfDataType(point_features_desc->dtype);
+           mluop::getSizeOfDataType(point_features_desc->getDtype());
 
   cnnlTransposeDescriptor_t trans_desc;
   size_t transpose_workspace_size0 = 0;
@@ -281,27 +289,27 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
   // point_features : [B, C, N]
   void *point_features_transpose =
       (int8_t *)workspace +
-      points_element_num * mluop::getSizeOfDataType(points_desc->dtype);
+      points_element_num * mluop::getSizeOfDataType(points_desc->getDtype());
   void *transpose_workspace =
       (int8_t *)point_features_transpose +
       point_features_element_num *
-          mluop::getSizeOfDataType(point_features_desc->dtype);
+          mluop::getSizeOfDataType(point_features_desc->getDtype());
   size_t transpose_workspace_size = 0;
   mluOpTensorDescriptor_t output_transpose_desc;
   cnnlTransposeDescriptor_t trans_desc;
   const int dims = 3;
   int points_permute[3] = {2, 0, 1};
   int points_dims[3];
-  points_dims[0] = points_desc->dims[2];
-  points_dims[1] = points_desc->dims[0];
-  points_dims[2] = points_desc->dims[1];
+  points_dims[0] = points_desc->getDimIndex(2);
+  points_dims[1] = points_desc->getDimIndex(0);
+  points_dims[2] = points_desc->getDimIndex(1);
 
   CHECK_RETURN("[mluOpGetRoiPointPool3d]",
                mluOpCreateTensorDescriptor(&output_transpose_desc));
   CHECK_RETURN(
       "[mluOpGetRoiPointPool3d]",
       mluOpSetTensorDescriptor(output_transpose_desc, MLUOP_LAYOUT_ARRAY,
-                               points_desc->dtype, dims, points_dims));
+                               points_desc->getDtype(), dims, points_dims));
   CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
   CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, dims, points_permute));
   {
@@ -328,13 +336,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
 
   int point_features_permute[3] = {0, 2, 1};
   int point_features_dims[3];
-  point_features_dims[0] = point_features_desc->dims[0];
-  point_features_dims[1] = point_features_desc->dims[2];
-  point_features_dims[2] = point_features_desc->dims[1];
+  point_features_dims[0] = point_features_desc->getDimIndex(0);
+  point_features_dims[1] = point_features_desc->getDimIndex(2);
+  point_features_dims[2] = point_features_desc->getDimIndex(1);
   CHECK_RETURN("[mluOpGetRoiPointPool3d]",
                mluOpSetTensorDescriptor(
                    output_transpose_desc, MLUOP_LAYOUT_ARRAY,
-                   point_features_desc->dtype, dims, point_features_dims));
+                   point_features_desc->getDtype(), dims, point_features_dims));
   CALL_CNNL(
       cnnlSetTransposeDescriptor(trans_desc, dims, point_features_permute));
   {
@@ -378,7 +386,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
             << ">>>";
     CHECK_RETURN("[RoipointPool3d]",
                  KernelRoipointPool3d(
-                     k_dims, k_type, handle->queue, points_desc->dtype,
+                     k_dims, k_type, handle->queue, points_desc->getDtype(),
                      batch_size, pts_num, boxes_num, feature_in_len,
                      sampled_pts_num, (int8_t *)points_xyz,
                      (int8_t *)point_features_transpose, (int8_t *)boxes3d,
@@ -389,7 +397,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
             << k_dims.z << ">>>";
     CHECK_RETURN("[RoipointPool3dLargeBoxesNum]",
                  KernelRoipointPool3dLargeBoxesNum(
-                     k_dims, k_type, handle->queue, points_desc->dtype,
+                     k_dims, k_type, handle->queue, points_desc->getDtype(),
                      batch_size, pts_num, boxes_num, feature_in_len,
                      sampled_pts_num, (int8_t *)points_xyz,
                      (int8_t *)point_features_transpose, (int8_t *)boxes3d,

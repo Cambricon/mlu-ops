@@ -59,29 +59,29 @@ static mluOpStatus_t psRoiPoolForwardParamCheck(
   PARAM_CHECK(api, rois_desc != NULL);
   PARAM_CHECK(api, output_desc != NULL);
   PARAM_CHECK(api, mapping_channel_desc != NULL);
-  PARAM_CHECK(api, input_desc->dim == 4);
-  PARAM_CHECK(api, rois_desc->dim == 2);
-  PARAM_CHECK(api, output_desc->dim == 4);
-  PARAM_CHECK(api, mapping_channel_desc->dim == 4);
+  PARAM_CHECK(api, input_desc->getDim() == 4);
+  PARAM_CHECK(api, rois_desc->getDim() == 2);
+  PARAM_CHECK(api, output_desc->getDim() == 4);
+  PARAM_CHECK(api, mapping_channel_desc->getDim() == 4);
   // check the input and output datatype
-  PARAM_CHECK(api, input_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(api, rois_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(api, output_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(api, mapping_channel_desc->dtype == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(api, input_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, rois_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, output_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, mapping_channel_desc->getDtype() == MLUOP_DTYPE_INT32);
   // check layout
-  PARAM_CHECK(api, input_desc->layout == MLUOP_LAYOUT_NHWC);
-  PARAM_CHECK(api, output_desc->layout == MLUOP_LAYOUT_NHWC);
-  PARAM_CHECK(api, mapping_channel_desc->layout == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(api, input_desc->getLayout() == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(api, output_desc->getLayout() == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(api, mapping_channel_desc->getLayout() == MLUOP_LAYOUT_NHWC);
   // param check
-  PARAM_CHECK(api, pooled_height == output_desc->dims[1]);
-  PARAM_CHECK(api, pooled_width == output_desc->dims[2]);
-  PARAM_CHECK(api, output_dim == output_desc->dims[3]);
-  PARAM_CHECK(api, group_size == output_desc->dims[1]);
-  PARAM_CHECK(api, output_desc->dims[1] == output_desc->dims[2]);
+  PARAM_CHECK(api, pooled_height == output_desc->getDimIndex(1));
+  PARAM_CHECK(api, pooled_width == output_desc->getDimIndex(2));
+  PARAM_CHECK(api, output_dim == output_desc->getDimIndex(3));
+  PARAM_CHECK(api, group_size == output_desc->getDimIndex(1));
+  PARAM_CHECK(api, output_desc->getDimIndex(1) == output_desc->getDimIndex(2));
   PARAM_CHECK(api, group_size >= 1);
-  PARAM_CHECK(api, output_desc->dims[3] >= 1);
+  PARAM_CHECK(api, output_desc->getDimIndex(3) >= 1);
   PARAM_CHECK(api, spatial_scale > 0);
-  PARAM_CHECK(api, rois_desc->dims[1] == 5);
+  PARAM_CHECK(api, rois_desc->getDimIndex(1) == 5);
   // stride check
   STRIDE_TENSOR_CHECK("[mluOpPsRoiPoolForward]:", input_desc,
                       "input_desc must be contiguous");
@@ -92,12 +92,13 @@ static mluOpStatus_t psRoiPoolForwardParamCheck(
   STRIDE_TENSOR_CHECK("[mluOpPsRoiPoolForward]:", mapping_channel_desc,
                       "mapping_channel_desc must be contiguous");
   // roi_num check
-  PARAM_CHECK(api, output_desc->dims[0] == rois_desc->dims[0]);
-  PARAM_CHECK(api, input_desc->dims[3] == output_desc->dims[1] *
-                                              output_desc->dims[2] *
-                                              output_desc->dims[3]);
-  for (int i = 0; i < output_desc->dim; ++i) {
-    if (output_desc->dims[i] != mapping_channel_desc->dims[i]) {
+  PARAM_CHECK(api, output_desc->getDimIndex(0) == rois_desc->getDimIndex(0));
+  PARAM_CHECK(api,
+              input_desc->getDimIndex(3) == output_desc->getDimIndex(1) *
+                                                output_desc->getDimIndex(2) *
+                                                output_desc->getDimIndex(3));
+  for (int i = 0; i < output_desc->getDim(); ++i) {
+    if (output_desc->getDimIndex(i) != mapping_channel_desc->getDimIndex(i)) {
       LOG(ERROR) << api << " Check failed: output_desc->dims[" << i
                  << "] should be equal to mapping_channel_desc->dims[" << i
                  << "].";
@@ -105,16 +106,16 @@ static mluOpStatus_t psRoiPoolForwardParamCheck(
     }
   }
   if ((mluOpGetTensorElementNum(output_desc) *
-           mluop::getSizeOfDataType(output_desc->dtype) >=
+           mluop::getSizeOfDataType(output_desc->getDtype()) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(input_desc) *
-           mluop::getSizeOfDataType(input_desc->dtype) >=
+           mluop::getSizeOfDataType(input_desc->getDtype()) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(rois_desc) *
-           mluop::getSizeOfDataType(rois_desc->dtype) >=
+           mluop::getSizeOfDataType(rois_desc->getDtype()) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(mapping_channel_desc) *
-           mluop::getSizeOfDataType(mapping_channel_desc->dtype) >=
+           mluop::getSizeOfDataType(mapping_channel_desc->getDtype()) >=
        LARGE_TENSOR_SIZE)) {
     LOG(ERROR) << api << " Overflow max tensor size."
                << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
@@ -158,27 +159,28 @@ static mluOpStatus_t psRoiPoolBackwardParamCheck(
   PARAM_CHECK(api, rois_desc != NULL);
   PARAM_CHECK(api, mapping_channel_desc != NULL);
   PARAM_CHECK(api, bottom_grad_desc != NULL);
-  PARAM_CHECK(api, top_grad_desc->dim == 4);
-  PARAM_CHECK(api, rois_desc->dim == 2);
-  PARAM_CHECK(api, mapping_channel_desc->dim == 4);
-  PARAM_CHECK(api, bottom_grad_desc->dim == 4);
+  PARAM_CHECK(api, top_grad_desc->getDim() == 4);
+  PARAM_CHECK(api, rois_desc->getDim() == 2);
+  PARAM_CHECK(api, mapping_channel_desc->getDim() == 4);
+  PARAM_CHECK(api, bottom_grad_desc->getDim() == 4);
   // check the input and output datatype
-  PARAM_CHECK(api, top_grad_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(api, rois_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(api, mapping_channel_desc->dtype == MLUOP_DTYPE_INT32);
-  PARAM_CHECK(api, bottom_grad_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, top_grad_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, rois_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, mapping_channel_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(api, bottom_grad_desc->getDtype() == MLUOP_DTYPE_FLOAT);
   // check layout
-  PARAM_CHECK(api, top_grad_desc->layout == MLUOP_LAYOUT_NHWC);
-  PARAM_CHECK(api, mapping_channel_desc->layout == MLUOP_LAYOUT_NHWC);
-  PARAM_CHECK(api, bottom_grad_desc->layout == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(api, top_grad_desc->getLayout() == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(api, mapping_channel_desc->getLayout() == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(api, bottom_grad_desc->getLayout() == MLUOP_LAYOUT_NHWC);
   // param check
-  PARAM_CHECK(api, pooled_height == top_grad_desc->dims[1]);
-  PARAM_CHECK(api, pooled_width == top_grad_desc->dims[2]);
-  PARAM_CHECK(api, output_dim == top_grad_desc->dims[3]);
-  PARAM_CHECK(api, top_grad_desc->dims[1] == top_grad_desc->dims[2]);
-  PARAM_CHECK(api, top_grad_desc->dims[3] >= 1);
+  PARAM_CHECK(api, pooled_height == top_grad_desc->getDimIndex(1));
+  PARAM_CHECK(api, pooled_width == top_grad_desc->getDimIndex(2));
+  PARAM_CHECK(api, output_dim == top_grad_desc->getDimIndex(3));
+  PARAM_CHECK(api,
+              top_grad_desc->getDimIndex(1) == top_grad_desc->getDimIndex(2));
+  PARAM_CHECK(api, top_grad_desc->getDimIndex(3) >= 1);
   PARAM_CHECK(api, spatial_scale > 0);
-  PARAM_CHECK(api, rois_desc->dims[1] == 5);
+  PARAM_CHECK(api, rois_desc->getDimIndex(1) == 5);
   // stride check
   STRIDE_TENSOR_CHECK("[mluOpPsRoiPoolBackward]:", top_grad_desc,
                       "top_grad_desc must be contiguous");
@@ -189,11 +191,11 @@ static mluOpStatus_t psRoiPoolBackwardParamCheck(
   STRIDE_TENSOR_CHECK("[mluOpPsRoiPoolBackward]:", bottom_grad_desc,
                       "bottom_grad_desc must be contiguous");
   // roi_num check
-  PARAM_CHECK(api, top_grad_desc->dims[0] == rois_desc->dims[0]);
-  PARAM_CHECK(api, bottom_grad_desc->dims[3] ==
+  PARAM_CHECK(api, top_grad_desc->getDimIndex(0) == rois_desc->getDimIndex(0));
+  PARAM_CHECK(api, bottom_grad_desc->getDimIndex(3) ==
                        output_dim * pooled_width * pooled_height);
-  for (int i = 0; i < top_grad_desc->dim; ++i) {
-    if (top_grad_desc->dims[i] != mapping_channel_desc->dims[i]) {
+  for (int i = 0; i < top_grad_desc->getDim(); ++i) {
+    if (top_grad_desc->getDimIndex(i) != mapping_channel_desc->getDimIndex(i)) {
       LOG(ERROR) << api << " Check failed: top_grad_desc->dims[" << i
                  << "] should be equal to mapping_channel_desc->dims[" << i
                  << "].";
@@ -202,16 +204,16 @@ static mluOpStatus_t psRoiPoolBackwardParamCheck(
   }
 
   if ((mluOpGetTensorElementNum(top_grad_desc) *
-           mluop::getSizeOfDataType(top_grad_desc->dtype) >=
+           mluop::getSizeOfDataType(top_grad_desc->getDtype()) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(bottom_grad_desc) *
-           mluop::getSizeOfDataType(bottom_grad_desc->dtype) >=
+           mluop::getSizeOfDataType(bottom_grad_desc->getDtype()) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(rois_desc) *
-           mluop::getSizeOfDataType(rois_desc->dtype) >=
+           mluop::getSizeOfDataType(rois_desc->getDtype()) >=
        LARGE_TENSOR_SIZE) ||
       (mluOpGetTensorElementNum(mapping_channel_desc) *
-           mluop::getSizeOfDataType(mapping_channel_desc->dtype) >=
+           mluop::getSizeOfDataType(mapping_channel_desc->getDtype()) >=
        LARGE_TENSOR_SIZE)) {
     LOG(ERROR) << api << " Overflow max tensor size."
                << " Currently, MLU-OPS supports tensor size smaller than 2^31.";
@@ -239,12 +241,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolForward(
     return ret;
   }
 
-  const int batch_size = input_desc->dims[0];
-  const int height = input_desc->dims[1];
-  const int width = input_desc->dims[2];
-  const int channels = input_desc->dims[3];
-  const int rois_sum = output_desc->dims[0];
-  const int rois_offset = rois_desc->dims[1];
+  const int batch_size = input_desc->getDimIndex(0);
+  const int height = input_desc->getDimIndex(1);
+  const int width = input_desc->getDimIndex(2);
+  const int channels = input_desc->getDimIndex(3);
+  const int rois_sum = output_desc->getDimIndex(0);
+  const int rois_offset = rois_desc->getDimIndex(1);
 
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("psroipool_forward", "PSROIPOOL_FORWARD");
@@ -314,12 +316,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpPsRoiPoolBackward(
   PARAM_CHECK(api, bottom_grad != NULL);
   PARAM_CHECK(api, mapping_channel != NULL);
 
-  const int batch_size = bottom_grad_desc->dims[0];
-  const int height = bottom_grad_desc->dims[1];
-  const int width = bottom_grad_desc->dims[2];
-  const int channels = bottom_grad_desc->dims[3];
-  const int rois_sum = rois_desc->dims[0];
-  const int rois_offset = rois_desc->dims[1];
+  const int batch_size = bottom_grad_desc->getDimIndex(0);
+  const int height = bottom_grad_desc->getDimIndex(1);
+  const int width = bottom_grad_desc->getDimIndex(2);
+  const int channels = bottom_grad_desc->getDimIndex(3);
+  const int rois_sum = rois_desc->getDimIndex(0);
+  const int rois_offset = rois_desc->getDimIndex(1);
 
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("psroipool_backward", "PSROIPOOL_BACKWARD");

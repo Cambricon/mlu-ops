@@ -176,16 +176,16 @@ __mlu_global__ void MLUKernelMsDeformAttnForwardSmallChannel(
       // generate x and y coordinate vector
       // generate spatial_x and spatial_y spatial vector
       __bang_filter((float *)coord_y, (float *)grid_ram, (float *)mask_ram,
-                     deal_num * 2);  // y
+                    deal_num * 2);  // y
       __bang_filter((float *)spatial_x_temp, (float *)data_spatial_shapes_nram,
-                     (float *)mask_ram,
-                     num_levels * 2);  // spatial_x
+                    (float *)mask_ram,
+                    num_levels * 2);  // spatial_x
       __bang_not((float *)mask_ram, (float *)mask_ram, deal_num * 2);
       __bang_filter((float *)coord_x, (float *)grid_ram, (float *)mask_ram,
-                     deal_num * 2);  // x
+                    deal_num * 2);  // x
       __bang_filter((float *)spatial_y_temp, (float *)data_spatial_shapes_nram,
-                     (float *)mask_ram,
-                     num_levels * 2);  // spatial_y
+                    (float *)mask_ram,
+                    num_levels * 2);  // spatial_y
       for (int32_t i = 0; i < num_levels; i++) {
         __bang_write_value((int32_t *)spatial_x + i * num_points, num_points,
                            ((int32_t *)spatial_x_temp)[i]);

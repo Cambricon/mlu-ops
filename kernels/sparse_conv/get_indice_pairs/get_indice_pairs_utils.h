@@ -143,10 +143,12 @@ __mlu_func__ void computeOutputIndex(float *nram_output, float *nram_input,
   for (int i = 0; i < 3; ++i) {
     int32_t out_offset = offset - deal_num;
     float stride_s = i == 0 ? stride_sd : i == 1 ? stride_sh : stride_sw;
-    int32_t padding_p =
-        i == 0 ? padding.p_d : i == 1 ? (padding.p_h) : (padding.p_w);
-    int32_t dilation_d =
-        i == 0 ? dilation.d_d : i == 1 ? dilation.d_h : dilation.d_w;
+    int32_t padding_p = i == 0   ? padding.p_d
+                        : i == 1 ? (padding.p_h)
+                                 : (padding.p_w);
+    int32_t dilation_d = i == 0   ? dilation.d_d
+                         : i == 1 ? dilation.d_h
+                                  : dilation.d_w;
     float *temp_filter_index =
         i == 0 ? filter_kd_index : (i == 1 ? filter_kh_index : filter_kw_index);
     __bang_add_scalar(nram_output + out_offset, nram_input + offset,

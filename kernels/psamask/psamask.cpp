@@ -34,10 +34,10 @@
 
 inline void getNHWC(const mluOpTensorDescriptor_t desc, int *n, int *h, int *w,
                     int *c) {
-  *n = desc->dims[0];
-  *h = desc->dims[1];
-  *w = desc->dims[2];
-  *c = desc->dims[3];
+  *n = desc->getDimIndex(0);
+  *h = desc->getDimIndex(1);
+  *w = desc->getDimIndex(2);
+  *c = desc->getDimIndex(3);
 }
 
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim_ptr,
@@ -160,24 +160,24 @@ mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
                           const mluOpTensorDescriptor_t output_desc,
                           const int h_mask, const int w_mask,
                           const std::string api) {
-  PARAM_CHECK(api, input_desc->dim == 4);
-  PARAM_CHECK(api, output_desc->dim == 4);
+  PARAM_CHECK(api, input_desc->getDim() == 4);
+  PARAM_CHECK(api, output_desc->getDim() == 4);
   int x_n, x_h, x_w, x_c;
   int y_n, y_h, y_w, y_c;
   getNHWC(input_desc, &x_n, &x_h, &x_w, &x_c);
   getNHWC(output_desc, &y_n, &y_h, &y_w, &y_c);
-  if (input_desc->layout != MLUOP_LAYOUT_NHWC ||
-      output_desc->layout != MLUOP_LAYOUT_NHWC) {
+  if (input_desc->getLayout() != MLUOP_LAYOUT_NHWC ||
+      output_desc->getLayout() != MLUOP_LAYOUT_NHWC) {
     LOG(ERROR) << api
                << " Check failed: Only support MLUOP_LAYOUT_NHWC input and "
                   "output, but now input is "
-               << mluOpGetNameOfTensorLayout(input_desc->layout)
+               << mluOpGetNameOfTensorLayout(input_desc->getLayout())
                << ", and output is "
-               << mluOpGetNameOfTensorLayout(output_desc->layout) << ".";
+               << mluOpGetNameOfTensorLayout(output_desc->getLayout()) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (input_desc->dtype != output_desc->dtype ||
-      input_desc->dtype != MLUOP_DTYPE_FLOAT) {
+  if (input_desc->getDtype() != output_desc->getDtype() ||
+      input_desc->getDtype() != MLUOP_DTYPE_FLOAT) {
     LOG(ERROR)
         << api
         << " Check failed: The data type of input and output should be float.";
@@ -232,18 +232,18 @@ mluOpStatus_t mluOpPsamaskForward(mluOpHandle_t handle, const int psa_type,
       MLUOP_STATUS_SUCCESS) {
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (!x_desc->total_element_num) {
+  if (!x_desc->getTotalElementNum()) {
     return MLUOP_STATUS_SUCCESS;
   }
   PARAM_CHECK(api, x != nullptr);
   PARAM_CHECK(api, y != nullptr);
 
-  auto n = x_desc->dims[0];
-  auto h_feature = x_desc->dims[1];
-  auto w_feature = x_desc->dims[2];
-  auto x_c = x_desc->dims[3];
-  auto y_c = y_desc->dims[3];
-  auto x_data_type = x_desc->dtype;
+  auto n = x_desc->getDimIndex(0);
+  auto h_feature = x_desc->getDimIndex(1);
+  auto w_feature = x_desc->getDimIndex(2);
+  auto x_c = x_desc->getDimIndex(3);
+  auto y_c = y_desc->getDimIndex(3);
+  auto x_data_type = x_desc->getDtype();
   auto half_h_mask = (h_mask - 1) >> 1;
   auto half_w_mask = (w_mask - 1) >> 1;
 
@@ -302,18 +302,18 @@ mluOpStatus_t mluOpPsamaskBackward(mluOpHandle_t handle, const int psa_type,
       MLUOP_STATUS_SUCCESS) {
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (!dy_desc->total_element_num) {
+  if (!dy_desc->getTotalElementNum()) {
     return MLUOP_STATUS_SUCCESS;
   }
   PARAM_CHECK(api, dy != nullptr);
   PARAM_CHECK(api, dx != nullptr);
 
-  auto n = dy_desc->dims[0];
-  auto h_feature = dy_desc->dims[1];
-  auto w_feature = dy_desc->dims[2];
-  auto dy_c = dy_desc->dims[3];
-  auto dx_c = dx_desc->dims[3];
-  auto dy_type = dy_desc->dtype;
+  auto n = dy_desc->getDimIndex(0);
+  auto h_feature = dy_desc->getDimIndex(1);
+  auto w_feature = dy_desc->getDimIndex(2);
+  auto dy_c = dy_desc->getDimIndex(3);
+  auto dx_c = dx_desc->getDimIndex(3);
+  auto dy_type = dy_desc->getDtype();
   auto half_h_mask = (h_mask - 1) >> 1;
   auto half_w_mask = (w_mask - 1) >> 1;
 

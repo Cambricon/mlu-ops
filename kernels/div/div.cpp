@@ -77,12 +77,12 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
   if (handle->arch == MLUOP_MLU370) {
     CHECK_RETURN("mluOpDiv",
                  Kernel3StagePipelineDiv(k_dim, k_type, handle->queue,
-                                         x_desc->dtype, prefer, (void *)x,
+                                         x_desc->getDtype(), prefer, (void *)x,
                                          (void *)y, (void *)z, element_num));
   } else {
     CHECK_RETURN("mluOpDiv",
                  Kernel5StagePipelineDiv(k_dim, k_type, handle->queue,
-                                         x_desc->dtype, prefer, (void *)x,
+                                         x_desc->getDtype(), prefer, (void *)x,
                                          (void *)y, (void *)z, element_num));
   }
   GEN_CASE_END();

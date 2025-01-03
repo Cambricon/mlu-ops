@@ -97,11 +97,11 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
   PARAM_CHECK("[mluOpAdamW]", momentum_desc != nullptr);
   PARAM_CHECK("[mluOpAdamW]", velocity_desc != nullptr);
   PARAM_CHECK("[mluOpAdamW]", grad_desc != nullptr);
-  PARAM_CHECK("[mluOpAdamW]", param_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK("[mluOpAdamW]", paramh_desc->dtype == MLUOP_DTYPE_BFLOAT16);
-  PARAM_CHECK("[mluOpAdamW]", momentum_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK("[mluOpAdamW]", velocity_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK("[mluOpAdamW]", grad_desc->dtype == MLUOP_DTYPE_BFLOAT16);
+  PARAM_CHECK("[mluOpAdamW]", param_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK("[mluOpAdamW]", paramh_desc->getDtype() == MLUOP_DTYPE_BFLOAT16);
+  PARAM_CHECK("[mluOpAdamW]", momentum_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK("[mluOpAdamW]", velocity_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK("[mluOpAdamW]", grad_desc->getDtype() == MLUOP_DTYPE_BFLOAT16);
 
   PARAM_CHECK_LE("[mluOpAdamW]", beta1, 1.0);
   PARAM_CHECK_GE("[mluOpAdamW]", beta1, 0.0);

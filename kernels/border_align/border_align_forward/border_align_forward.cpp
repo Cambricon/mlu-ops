@@ -53,10 +53,10 @@ mluOpStatus_t mluOpBorderAlignForward(
   PARAM_CHECK(API, output_desc != nullptr);
   PARAM_CHECK(API, argmax_idx_desc != nullptr);
 
-  PARAM_CHECK(API, input_desc->dim == 4);
-  PARAM_CHECK(API, boxes_desc->dim == 3);
-  PARAM_CHECK(API, output_desc->dim == 4);
-  PARAM_CHECK(API, argmax_idx_desc->dim == 4);
+  PARAM_CHECK(API, input_desc->getDim() == 4);
+  PARAM_CHECK(API, boxes_desc->getDim() == 3);
+  PARAM_CHECK(API, output_desc->getDim() == 4);
+  PARAM_CHECK(API, argmax_idx_desc->getDim() == 4);
 
   // stride check
   STRIDE_TENSOR_CHECK("[mluOpBorderAlignForward]:", input_desc,
@@ -70,44 +70,48 @@ mluOpStatus_t mluOpBorderAlignForward(
 
   const int32_t border_num = 4;
   const int32_t coord_num = 4;
-  const int32_t origin_n = input_desc->dims[0];
-  const int32_t origin_h = input_desc->dims[1];
-  const int32_t origin_w = input_desc->dims[2];
-  const int32_t origin_c = input_desc->dims[3] / border_num;
-  const int32_t origin_k = boxes_desc->dims[1];
+  const int32_t origin_n = input_desc->getDimIndex(0);
+  const int32_t origin_h = input_desc->getDimIndex(1);
+  const int32_t origin_w = input_desc->getDimIndex(2);
+  const int32_t origin_c = input_desc->getDimIndex(3) / border_num;
+  const int32_t origin_k = boxes_desc->getDimIndex(1);
 
-  PARAM_CHECK(API, input_desc->dtype == boxes_desc->dtype);
-  PARAM_CHECK(API, input_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                       input_desc->dtype == MLUOP_DTYPE_HALF);
-  PARAM_CHECK(API, boxes_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                       boxes_desc->dtype == MLUOP_DTYPE_HALF);
-  PARAM_CHECK(API, output_desc->dtype == input_desc->dtype);
-  PARAM_CHECK(API, argmax_idx_desc->dtype == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(API, input_desc->getDtype() == boxes_desc->getDtype());
+  PARAM_CHECK(API, input_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
+                       input_desc->getDtype() == MLUOP_DTYPE_HALF);
+  PARAM_CHECK(API, boxes_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
+                       boxes_desc->getDtype() == MLUOP_DTYPE_HALF);
+  PARAM_CHECK(API, output_desc->getDtype() == input_desc->getDtype());
+  PARAM_CHECK(API, argmax_idx_desc->getDtype() == MLUOP_DTYPE_INT32);
 
-  PARAM_CHECK(API, input_desc->layout == MLUOP_LAYOUT_NHWC);
-  PARAM_CHECK(API, output_desc->layout == MLUOP_LAYOUT_NHWC);
-  PARAM_CHECK(API, argmax_idx_desc->layout == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(API, input_desc->getLayout() == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(API, output_desc->getLayout() == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(API, argmax_idx_desc->getLayout() == MLUOP_LAYOUT_NHWC);
 
-  PARAM_CHECK(API, input_desc->dims[3] % 4 == 0);
-  PARAM_CHECK_NE(API, input_desc->dims[0], 0);
-  PARAM_CHECK_NE(API, input_desc->dims[3] / 4, 0);
-  PARAM_CHECK_NE(API, input_desc->dims[1], 0);
-  PARAM_CHECK_NE(API, input_desc->dims[2], 0);
-  PARAM_CHECK_NE(API, boxes_desc->dims[1], 0);
-  PARAM_CHECK(API, boxes_desc->dim == 3);
-  PARAM_CHECK(API, boxes_desc->dims[2] == 4);
+  PARAM_CHECK(API, input_desc->getDimIndex(3) % 4 == 0);
+  PARAM_CHECK_NE(API, input_desc->getDimIndex(0), 0);
+  PARAM_CHECK_NE(API, input_desc->getDimIndex(3) / 4, 0);
+  PARAM_CHECK_NE(API, input_desc->getDimIndex(1), 0);
+  PARAM_CHECK_NE(API, input_desc->getDimIndex(2), 0);
+  PARAM_CHECK_NE(API, boxes_desc->getDimIndex(1), 0);
+  PARAM_CHECK(API, boxes_desc->getDim() == 3);
+  PARAM_CHECK(API, boxes_desc->getDimIndex(2) == 4);
 
-  PARAM_CHECK(API, input_desc->dims[0] == boxes_desc->dims[0]);
-  PARAM_CHECK(API,
-              input_desc->dims[1] * input_desc->dims[2] == boxes_desc->dims[1]);
-  PARAM_CHECK_EQ(API, output_desc->dims[0], input_desc->dims[0]);
-  PARAM_CHECK_EQ(API, output_desc->dims[1], boxes_desc->dims[1]);
-  PARAM_CHECK_EQ(API, output_desc->dims[2], 4);
-  PARAM_CHECK_EQ(API, output_desc->dims[3], input_desc->dims[3] / 4);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[0], input_desc->dims[0]);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[1], boxes_desc->dims[1]);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[2], 4);
-  PARAM_CHECK_EQ(API, argmax_idx_desc->dims[3], input_desc->dims[3] / 4);
+  PARAM_CHECK(API, input_desc->getDimIndex(0) == boxes_desc->getDimIndex(0));
+  PARAM_CHECK(API, input_desc->getDimIndex(1) * input_desc->getDimIndex(2) ==
+                       boxes_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, output_desc->getDimIndex(0), input_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, output_desc->getDimIndex(1), boxes_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, output_desc->getDimIndex(2), 4);
+  PARAM_CHECK_EQ(API, output_desc->getDimIndex(3),
+                 input_desc->getDimIndex(3) / 4);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(0),
+                 input_desc->getDimIndex(0));
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(1),
+                 boxes_desc->getDimIndex(1));
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(2), 4);
+  PARAM_CHECK_EQ(API, argmax_idx_desc->getDimIndex(3),
+                 input_desc->getDimIndex(3) / 4);
 
   const size_t input_num = mluOpGetTensorElementNum(input_desc);
   const size_t boxes_num = mluOpGetTensorElementNum(boxes_desc);
@@ -139,8 +143,8 @@ mluOpStatus_t mluOpBorderAlignForward(
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
   CHECK_RETURN(API, KernelBorderAlignForward(
-                        k_dim, k_type, handle->queue, input_desc->dtype, input,
-                        boxes, pool_size, origin_n, origin_h, origin_w,
+                        k_dim, k_type, handle->queue, input_desc->getDtype(),
+                        input, boxes, pool_size, origin_n, origin_h, origin_w,
                         origin_c, origin_k, output, (int32_t *)argmax_idx));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

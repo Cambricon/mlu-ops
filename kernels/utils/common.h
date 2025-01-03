@@ -436,8 +436,8 @@ __mlu_func__ void __mluop_get_stage_indices_tfuse(int *dst_nram, int length) {
         "fuse.nram.u32 [%[dst_nram]], %[once_process_num], "
         "[%[src_nram]], .add(%[region_length]); \n\t" ::[dst_nram] "r"(
             dst_nram + count * align_num),
-        [ src_nram ] "r"(dst_nram), [ once_process_num ] "r"(count * align_num),
-        [ region_length ] "r"(count * align_num));
+        [src_nram] "r"(dst_nram), [once_process_num] "r"(count * align_num),
+        [region_length] "r"(count * align_num));
     count *= 2;
   }
   if (remain > 0) {
@@ -445,17 +445,16 @@ __mlu_func__ void __mluop_get_stage_indices_tfuse(int *dst_nram, int length) {
         "fuse.nram.u32 [%[dst_nram]], %[once_process_num], "
         "[%[src_nram]], .add(%[region_length]); \n\t" ::[dst_nram] "r"(
             dst_nram + count * align_num),
-        [ src_nram ] "r"(dst_nram),
-        [ once_process_num ] "r"(remain * align_num),
-        [ region_length ] "r"(count * align_num));
+        [src_nram] "r"(dst_nram), [once_process_num] "r"(remain * align_num),
+        [region_length] "r"(count * align_num));
   }
   if (global_remain > 0) {
     __asm__ volatile(
         "fuse.nram.u32 [%[dst_nram]], %[once_process_num], "
         "[%[src_nram]], .add(%[region_length]); \n\t" ::[dst_nram] "r"(
             dst_nram + count * align_num + remain * align_num),
-        [ src_nram ] "r"(dst_nram), [ once_process_num ] "r"(global_remain),
-        [ region_length ] "r"(count * align_num + remain * align_num));
+        [src_nram] "r"(dst_nram), [once_process_num] "r"(global_remain),
+        [region_length] "r"(count * align_num + remain * align_num));
   }
 #endif
 }
@@ -477,8 +476,8 @@ __mlu_vector__ void __mluop_get_indices(float *dst, float start_index,
   vv_float r_out, r_dim;
   unsigned BlockDim = __vv_get_length() / sizeof(float);
   __asm__ volatile("index.vvr.f32 %[dst], %[base], 1;\n\t"
-                   : [ dst ] "+r"(r_out)
-                   : [ base ] "r"(start_index));
+                   : [dst] "+r"(r_out)
+                   : [base] "r"(start_index));
   __vv_move(r_dim, BlockDim);
   int repeat = DIV_UP(len, BlockDim);
   for (int iter = 0; iter < repeat; iter++) {
@@ -534,19 +533,19 @@ __mlu_vector__ void __mlu_op_arange_vv_(T *dst_nram, T start_index, T step) {
   const uint32_t vv_num = __vv_get_length() / sizeof(T);
 
 #if _BANG_ARCH_ <= 592
-  if constexpr(std::is_same<T, uint32_t>::value) {
+  if constexpr (std::is_same<T, uint32_t>::value) {
     MLUOP_ARANGE_VV_IMPL(vv_uint32, vv_num, dst_nram, start_index, step);
-  } else if constexpr(std::is_same<T, int32_t>::value) {
+  } else if constexpr (std::is_same<T, int32_t>::value) {
     MLUOP_ARANGE_VV_IMPL(vv_int32, vv_num, dst_nram, start_index, step);
   }
 #endif  // if _BANG_ARCH_ <= 592
-  if constexpr(std::is_same<T, uint16_t>::value) {
+  if constexpr (std::is_same<T, uint16_t>::value) {
     MLUOP_ARANGE_VV_IMPL(vv_uint16, vv_num, dst_nram, start_index, step);
-  } else if constexpr(std::is_same<T, int16_t>::value) {
+  } else if constexpr (std::is_same<T, int16_t>::value) {
     MLUOP_ARANGE_VV_IMPL(vv_int16, vv_num, dst_nram, start_index, step);
-  } else if constexpr(std::is_same<T, float>::value) {
+  } else if constexpr (std::is_same<T, float>::value) {
     MLUOP_ARANGE_VV_IMPL(vv_float, vv_num, dst_nram, start_index, step);
-  } else if constexpr(std::is_same<T, half>::value) {
+  } else if constexpr (std::is_same<T, half>::value) {
     MLUOP_ARANGE_VV_IMPL(vv_half, vv_num, dst_nram, start_index, step);
   }
   return;
@@ -643,15 +642,15 @@ __mlu_func__ void __mlu_op_arange_by_expand_(T *dst_nram, uint32_t numel,
   // base_num = 2^exp
   uint32_t exp = 0;
   asm volatile("findlast1.gpr.b32 %[dst], %[src];\n\t"
-               : [ dst ] "+&r"(exp)
-               : [ src ] "r"(base_num));
+               : [dst] "+&r"(exp)
+               : [src] "r"(base_num));
   // numel = count * base_num + remain
   const uint32_t segnum = numel >> exp;
   // count = 2^repeat
   uint32_t repeat = 0;
   asm volatile("findlast1.gpr.b32 %[dst], %[src];\n\t"
-               : [ dst ] "+&r"(repeat)
-               : [ src ] "r"(segnum));
+               : [dst] "+&r"(repeat)
+               : [src] "r"(segnum));
   uint32_t count = 1;
   for (uint32_t i = 0; i < repeat; ++i) {
     __bang_add_scalar(dst_nram + count * base_num, dst_nram,

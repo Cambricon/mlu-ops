@@ -1718,7 +1718,7 @@ mluOpStatus_t computeFFT2dMatMulColumnC2R(mluOpHandle_t handle,
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_d_desc);
-  c_desc->onchip_dtype = in_e_dtype;
+  c_desc->setOnchipDtype(in_e_dtype);
   CALL_CNNL(cnnlGetMatMulAlgoHeuristic(cnnl_handle, matmul_desc, cnnl_a_desc,
                                        cnnl_b_desc, cnnl_c_desc, cnnl_d_desc,
                                        nullptr, requested_algo_count,
@@ -1812,8 +1812,8 @@ mluOpStatus_t computeFFT2dMatMulRowC2R(mluOpHandle_t handle,
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
 
-  // c_desc->onchip_dtype = MLUOP_DTYPE_FLOAT;
-  c_desc->onchip_dtype = in_e_dtype;
+  // c_desc->setOnchipDtype(MLUOP_DTYPE_FLOAT);
+  c_desc->setOnchipDtype(in_e_dtype);
   float alpha = 1.0;
   float beta = 0.0;
 

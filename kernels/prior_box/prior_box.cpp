@@ -48,9 +48,10 @@ static void policyFuncPriorBox(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
 static int getNumPriors(const mluOpTensorDescriptor_t min_sizes_desc,
                         const mluOpTensorDescriptor_t aspect_ratios_desc,
                         const mluOpTensorDescriptor_t max_sizes_desc) {
-  int num_priors = min_sizes_desc->dims[0] * aspect_ratios_desc->dims[0];
-  if (max_sizes_desc->total_element_num != 0) {
-    num_priors += max_sizes_desc->dims[0];
+  int num_priors =
+      min_sizes_desc->getDimIndex(0) * aspect_ratios_desc->getDimIndex(0);
+  if (max_sizes_desc->getTotalElementNum() != 0) {
+    num_priors += max_sizes_desc->getDimIndex(0);
   }
   return num_priors;
 }
@@ -75,27 +76,27 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
   PARAM_CHECK(api, output_desc != nullptr);
   PARAM_CHECK(api, var_desc != nullptr);
   // check dim
-  PARAM_CHECK(api, min_sizes_desc->dim == 1);
-  PARAM_CHECK(api, aspect_ratios_desc->dim == 1);
-  PARAM_CHECK(api, variances_desc->dim == 1);
-  PARAM_CHECK(api, max_sizes_desc->dim == 1);
-  PARAM_CHECK(api, output_desc->dim == 4);
-  PARAM_CHECK(api, var_desc->dim == 4);
+  PARAM_CHECK(api, min_sizes_desc->getDim() == 1);
+  PARAM_CHECK(api, aspect_ratios_desc->getDim() == 1);
+  PARAM_CHECK(api, variances_desc->getDim() == 1);
+  PARAM_CHECK(api, max_sizes_desc->getDim() == 1);
+  PARAM_CHECK(api, output_desc->getDim() == 4);
+  PARAM_CHECK(api, var_desc->getDim() == 4);
   // check shape
-  PARAM_CHECK(api, variances_desc->dims[0] == 4);
-  PARAM_CHECK(api, output_desc->dims[0] == height);
-  PARAM_CHECK(api, output_desc->dims[1] == width);
-  PARAM_CHECK(api, output_desc->dims[3] == 4);
-  PARAM_CHECK(api, var_desc->dims[3] == 4);
+  PARAM_CHECK(api, variances_desc->getDimIndex(0) == 4);
+  PARAM_CHECK(api, output_desc->getDimIndex(0) == height);
+  PARAM_CHECK(api, output_desc->getDimIndex(1) == width);
+  PARAM_CHECK(api, output_desc->getDimIndex(3) == 4);
+  PARAM_CHECK(api, var_desc->getDimIndex(3) == 4);
   PARAM_CHECK_GE(api, height, 0);
   PARAM_CHECK_GE(api, width, 0);
   // check data type
-  PARAM_CHECK(api, min_sizes_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(api, aspect_ratios_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(api, variances_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(api, max_sizes_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(api, output_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(api, var_desc->dtype == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, min_sizes_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, aspect_ratios_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, variances_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, max_sizes_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, output_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(api, var_desc->getDtype() == MLUOP_DTYPE_FLOAT);
   // check scalar param
   PARAM_CHECK_GT(api, step_h, 0);
   PARAM_CHECK_GT(api, step_w, 0);
@@ -115,19 +116,22 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
 
   // check param depand
 
-  for (int i = 0; i < output_desc->dim; i++) {
+  for (int i = 0; i < output_desc->getDim(); i++) {
     std::string i_str = "i: " + std::to_string(i);
-    PARAM_CHECK(api, output_desc->dims[i] == var_desc->dims[i], i_str);
+    PARAM_CHECK(api, output_desc->getDimIndex(i) == var_desc->getDimIndex(i),
+                i_str);
   }
-  if (max_sizes_desc->total_element_num != 0) {
-    PARAM_CHECK(api, max_sizes_desc->dims[0] == min_sizes_desc->dims[0]);
-    PARAM_CHECK(api,
-                max_sizes_desc->dims[0] +
-                        min_sizes_desc->dims[0] * aspect_ratios_desc->dims[0] ==
-                    output_desc->dims[2]);
+  if (max_sizes_desc->getTotalElementNum() != 0) {
+    PARAM_CHECK(
+        api, max_sizes_desc->getDimIndex(0) == min_sizes_desc->getDimIndex(0));
+    PARAM_CHECK(api, max_sizes_desc->getDimIndex(0) +
+                             min_sizes_desc->getDimIndex(0) *
+                                 aspect_ratios_desc->getDimIndex(0) ==
+                         output_desc->getDimIndex(2));
   } else {
-    PARAM_CHECK(api, min_sizes_desc->dims[0] * aspect_ratios_desc->dims[0] ==
-                         output_desc->dims[2]);
+    PARAM_CHECK(api, min_sizes_desc->getDimIndex(0) *
+                             aspect_ratios_desc->getDimIndex(0) ==
+                         output_desc->getDimIndex(2));
   }
   const int num_priors =
       getNumPriors(min_sizes_desc, aspect_ratios_desc, max_sizes_desc);
@@ -192,16 +196,16 @@ mluOpStatus_t mluOpPriorBox(
   PARAM_CHECK(api, variances != nullptr);
   PARAM_CHECK(api, output != nullptr);
   PARAM_CHECK(api, var != nullptr);
-  if (max_sizes_desc->total_element_num > 0) {
+  if (max_sizes_desc->getTotalElementNum() > 0) {
     PARAM_CHECK(api, max_sizes != nullptr);
   }
 
-  const int min_sizes_num = min_sizes_desc->dims[0];
-  const int aspect_ratios_num = aspect_ratios_desc->dims[0];
-  const int variances_num = variances_desc->dims[0];
-  const int max_sizes_num = max_sizes_desc->dims[0];
-  const int output_size = output_desc->total_element_num;
-  const int var_size = var_desc->total_element_num;
+  const int min_sizes_num = min_sizes_desc->getDimIndex(0);
+  const int aspect_ratios_num = aspect_ratios_desc->getDimIndex(0);
+  const int variances_num = variances_desc->getDimIndex(0);
+  const int max_sizes_num = max_sizes_desc->getDimIndex(0);
+  const int output_size = output_desc->getTotalElementNum();
+  const int var_size = var_desc->getTotalElementNum();
   const int num_priors = max_sizes_num > 0
                              ? min_sizes_num * aspect_ratios_num + max_sizes_num
                              : min_sizes_num * aspect_ratios_num;
