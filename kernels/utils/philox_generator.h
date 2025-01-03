@@ -162,7 +162,7 @@ __mlu_func__ void __mluop_cvt_uniform(uint32_t *output, int32_t num,
 }
 
 /******************************************************************************
- * MLUOP FUNC: __mluop_gen_uniform.
+ * FUNC: __mluop_gen_uniform.
  * Generate random data in half, bfloat16 or float data type.
  *
  * The philox algorithm has three parameters: seed, offset and subsequence.
