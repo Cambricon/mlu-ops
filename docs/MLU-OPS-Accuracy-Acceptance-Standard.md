@@ -28,7 +28,7 @@ $$
 **$diff2$：标准相对误差**
 
 $$
-diff2 = \sqrt{\frac{ \sum (evaluated \\_ data - baseline \\_ data)^2}{\sum  baseline \\_ data^2 }}
+diff2 = \sqrt{\left(\frac{\sum (evaluated \\_ data - baseline \\_ data)^2}{\sum baseline \\_ data^2}\right)}
 $$
 
 **$diff3_1$：最大单点相对误差**
