@@ -1,10 +1,11 @@
 {
   "criterion" : {
-    "good": [0.6, 1.0],
+    "good": [0.6, Infinity],
     "qualified": [0.3, 0.6],
-    "unqualified": [0.0, 0.3]
+    "unqualified": [0.02, 0.3],
+    "poor": [-Infinity, 0.02]
   },
   "ignore_case": {
-      "mlu_hardware_time": 30
+      "mlu_hardware_time": 15
   }
 }
