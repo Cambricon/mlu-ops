@@ -348,7 +348,7 @@ __mlu_global__ void roiAlignRotatedForward(
     bin_order_num = 16;
   }
 
-  __mlu_op_gen_stage_index(order, bin_order_num, (T)0.5);
+  __mluop_gen_stage_index(order, bin_order_num, (T)0.5);
   const uint32_t bin_hw_order_num = bin_order_num * bin_order_num;
 
   const uint32_t cache_channels_num = 1024;

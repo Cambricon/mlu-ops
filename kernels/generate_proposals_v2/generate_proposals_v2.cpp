@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <string>
 
+#include "core/cnnl_helper.h"
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -32,7 +33,6 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "kernels/utils/cnnl_helper.h"
 
 #define GDRAM_ALIGN_SIZE 128
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,

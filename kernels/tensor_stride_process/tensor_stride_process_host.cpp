@@ -27,8 +27,8 @@
 #include <algorithm>
 #include <vector>
 
+#include "core/cnnl_helper.h"
 #include "kernels/tensor_stride_process/tensor_stride_process_mlu.h"
-#include "kernels/utils/cnnl_helper.h"
 
 using std::vector;
 

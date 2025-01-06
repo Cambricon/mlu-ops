@@ -61,10 +61,10 @@
     }                                                                        \
   }
 
-/* __mlu_op_scatter
- * __mlu_op_scatter_async
- * __mlu_op_gather
- * __mlu_op_gather_async
+/* __mluop_scatter
+ * __mluop_scatter_async
+ * __mluop_gather
+ * __mluop_gather_async
  */
 MLUOP_SCATTER_GATHER(gather_async, false)
 MLUOP_SCATTER_GATHER(gather, false)

@@ -23,13 +23,13 @@
 #include <algorithm>
 #include <string>
 
+#include "core/cnnl_helper.h"
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/mlu_env.h"
 #include "core/tensor.h"
 #include "kernels/sparse_conv/get_indice_pairs/get_indice_pairs_structs.h"
-#include "kernels/utils/cnnl_helper.h"
 #include "mlu_op.h"
 
 inline bool isFloatDtype(const mluOpDataType_t &dtype) {
