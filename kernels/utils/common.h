@@ -64,7 +64,7 @@ __mlu_func__ T __mluop_max(T a, T b) {
 }
 
 /******************************************************************************
- * MLUOP FUNC: __mluop_float2half
+ * FUNC: __mluop_float2half
  * param 'dst' is the destination pointer in NRAM.
  * param 'src' is the source pointer in NRAM.
  * param 'src_count' is the src element count.
@@ -78,7 +78,7 @@ __mlu_func__ void __mluop_float2half(half *dst, float *src, int src_count) {
 __mlu_func__ half __mluop_float2half(float a) { return __float2half_rn(a); }
 
 /******************************************************************************
- * MLUOP FUNC: __mluop_div
+ * FUNC: __mluop_div
  * param 'nram_dst' is the nram destination address, which supports half or
  * float data type.  
  * param 'nram_src0' is the nram source address, which has the same data
@@ -91,10 +91,10 @@ __mlu_func__ half __mluop_float2half(float a) { return __float2half_rn(a); }
  * param 'deal_num' is the num of input data.
  *
  * remarks:
- * 1. nram_dst and nram_src can not be homologous operand if architecture <
- * 300.  
- * 2. On MLU2XX, nram_src1(dividend) must be positive due to limitations
- * of bang_active_reciphp.
+ *    1. nram_dst and nram_src can not be homologous operand if architecture
+ *       < 300.  
+ *    2. On MLU2XX, nram_src1(dividend) must be positive due to limitations
+ *       of bang_active_reciphp.
 *******************************************************************************/
 template <typename T>
 __mlu_func__ void __mluop_div(T *nram_dst, T *nram_src0, T *nram_src1,
@@ -139,17 +139,20 @@ __mlu_func__ void __mluop_div(T *nram_dst, T *nram_src0, T *nram_src1,
 }
 
 /*******************************************************************************
- * MLUOPS FUNC: __mluop_recip
+ * FUNC: __mluop_recip
  * param 'nram_dst' is the nram destination address, which supports half or
- * float data type. param 'nram_src' is the nram source address, which has the
- * same data type as nram_dst. param 'nram_addition' is the nram addition
- * address. Pass NULL if the data type of nram_src is float, otherwise the space
- * size is at least twice as much as nram_src. param 'is_high_precision' is the
- * precision flag. param 'deal_num' is the num of input data. remarks:
+ * float data type.
+ * param 'nram_src' is the nram source address, which has the same data type as
+ * nram_dst.
+ * param 'nram_addition' is the nram addition address. Pass NULL if the data type
+ * of nram_src is float, otherwise the space size is at least twice as much as
+ * nram_src.
+ * param 'is_high_precision' is the precision flag.
+ * param 'deal_num' is the num of input data. remarks:
  *   1. nram_dst and nram_src can be homologous operand.
  *   2. On MLU2XX, input must be in the range [0.00391, 2e6] for float and
- * [0.00391, 65504] for half. Please refer to bangC Developer Guide for detailed
- * information.
+ *      [0.00391, 65504] for half. Please refer to bangC Developer Guide for
+ *      detailed information.
  ******************************************************************************/
 template <typename T>
 __mlu_func__ void __mluop_recip(T *nram_dst, T *nram_src, void *nram_addition,
@@ -167,14 +170,17 @@ __mlu_func__ void __mluop_recip(T *nram_dst, T *nram_src, void *nram_addition,
 }
 
 /******************************************************************************
- * MLUOPS FUNC: __mluop_exp
+ * FUNC: __mluop_exp
  * param 'nram_dst' is the nram destination address, which supports half or
- * float data type. param 'nram_src' is the nram source address, which has the
- * same data type as nram_dst. param 'nram_addition' is the nram addition
- * address. Pass NULL if the data type of nram_src is float, otherwise the space
- * size is at least twice as much as nram_src. param 'is_high_precision' is the
- * precision flag. param 'deal_num' is the num of input data. remarks: nram_dst
- * and nram_src can be homologous operand.
+ * float data type. 
+ * param 'nram_src' is the nram source address, which has the same data type as
+ * nram_dst. 
+ * param 'nram_addition' is the nram addition address. Pass NULL if the data
+ * type of nram_src is float, otherwise the space size is at least twice as
+ * much as nram_src.
+ * param 'is_high_precision' is the precision flag.
+ * param 'deal_num' is the num of input data. remarks: nram_dst and nram_src can
+ * be homologous operand.
  ******************************************************************************/
 template <typename T>
 __mlu_func__ void __mluop_exp(T *nram_dst, T *nram_src, void *nram_addition,
@@ -199,7 +205,7 @@ __mlu_func__ void __mluop_exp(T *nram_dst, T *nram_src, void *nram_addition,
 }
 
 /******************************************************************************
- * MLUOPS FUNC: __mluop_log
+ * FUNC: __mluop_log
  * param 'nram_dst' is the nram destination address, which supports half or
  * float data type.
  * param 'nram_src' is the nram source address, which has the same data type
@@ -236,13 +242,16 @@ __mlu_func__ void __mluop_log(T *nram_dst, T *nram_src, void *nram_addition,
 }
 
 /******************************************************************************
- * MLUOPS FUNC: __mluop_sigmoid
+ * FUNC: __mluop_sigmoid
  * param 'nram_dst' is the nram destination address, which supports half or
- * float data type. param 'nram_src' is the nram source address, which has the
- * same data type as nram_dst. param 'nram_addition' is the nram addition
- * address. Pass NULL if the data type of nram_src is float, otherwise the space
- * size is at least twice as much as nram_src. param 'is_high_precision' is the
- * precision flag. param 'deal_num' is the num of input data. remarks: nram_dst
+ * float data type.
+ * param 'nram_src' is the nram source address, which has the same data type as
+ * nram_dst.
+ * param 'nram_addition' is the nram addition address. Pass NULL if the data type
+ * of nram_src is float, otherwise the space size is at least twice as much as
+ * nram_src.
+ * param 'is_high_precision' is the precision flag.
+ * param 'deal_num' is the num of input data. remarks: nram_dst
  * and nram_src can be homologous operand.
  ******************************************************************************/
 template <typename T>
@@ -272,7 +281,7 @@ __mlu_func__ void __mluop_sigmoid(T *nram_dst, T *nram_src, void *nram_addition,
 }
 
 /******************************************************************************
- * MLUOPS FUNC: __mluop_recursive_sum_pool
+ * FUNC: __mluop_recursive_sum_pool
  * param 'dst' is the src and dst nram addr
  * param 'low_dim' is the number of low dim
  * param 'high_dim' is the number of high dim
@@ -300,7 +309,7 @@ __mlu_func__ void __mluop_recursive_sum_pool(T *dst, int low_dim, int high_dim,
 }
 
 /******************************************************************************
- * MLUOPS FUNC: __mluop_load_str_2D
+ * FUNC: __mluop_load_str_2D
  * param 'size' is the getC size.
  * param 'seg_num' is the loop times.
  * param 'dst_str' is nram stride, c_align on onchip.
@@ -329,7 +338,7 @@ __mlu_func__ void __mluop_load_str_2D(T *dst, T *src, int size, int dst_str,
 }
 
 /******************************************************************************
- * MLUOPS FUNC: __mluop_load_str_3D
+ * FUNC: __mluop_load_str_3D
  * param 'size' is the getC size.
  * param 'seg_num_in' is the in loop times.
  * param 'seg_num_out' is the out loop times.
@@ -354,7 +363,7 @@ __mlu_func__ void __mluop_load_str_3D(T *dst, T *src, int size, int seg_num_in,
 }
 
 /******************************************************************************
- * MLUOPS FUNC: __mluop_store_str_2D
+ * FUNC: __mluop_store_str_2D
  * param 'size' is the getC size.
  * param 'seg_num' is the loop times.
  * param 'dst_str' is gdram stride, c_align on onchip.
@@ -381,7 +390,7 @@ __mlu_func__ void __mluop_store_str_2D(T *dst, T *src, int size, int seg_num,
 }
 
 /******************************************************************************
- * MLUOPS FUNC: __mluop_store_str_3D
+ * FUNC: __mluop_store_str_3D
  * param 'size' is the getC size.
  * param 'seg_num_in' is the in loop times.
  * param 'seg_num_out' is the out loop times.
@@ -409,7 +418,7 @@ __mlu_func__ void __mluop_store_str_3D(T *dst, T *src, int size, int seg_num_in,
 }
 
 /*******************************************************************************
- * MLUOPS FUNC: __mluop_get_stage_indices_tfuse
+ * FUNC: __mluop_get_stage_indices_tfuse
  * param 'dst_nram' is nram space for store result
  * param 'length' is the continuous indices length
  * Note:
@@ -460,7 +469,7 @@ __mlu_func__ void __mluop_get_stage_indices_tfuse(int *dst_nram, int length) {
 }
 
 /***************************************************************************
- * MLUOPS FUNC: __mluop_get_indices.
+ * FUNC: __mluop_get_indices.
  * param "dst" is needed for holding the final result.
  * param "start_index" is the smallest integer to be generated.
  * param "len" is the total number of integers to be generated.
@@ -487,8 +496,8 @@ __mlu_vector__ void __mluop_get_indices(float *dst, float start_index,
 }
 
 template <typename T>
-__mlu_func__ void __mlu_op_arange_base_(T *dst_nram, uint32_t numel,
-                                        T start_index, T step) {
+__mlu_func__ void __mluop_arange_base_(T *dst_nram, uint32_t numel,
+                                       T start_index, T step) {
   for (uint32_t i = 0; i < numel; i++) {
     dst_nram[i] = start_index + i * step;
   }
@@ -516,18 +525,18 @@ __mlu_func__ void __mlu_op_arange_base_(T *dst_nram, uint32_t numel,
   } while (false)
 
 template <typename T>
-__mlu_vector__ void __mlu_op_arange_vv_(T *dst_nram, T start_index, T step) {
+__mlu_vector__ void __mluop_arange_vv_(T *dst_nram, T start_index, T step) {
 #if 592 < _BANG_ARCH_
   static_assert(
       (std::is_same<T, float>::value || std::is_same<T, half>::value ||
        std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value),
-      "__mlu_op_arange_vv type error!");
+      "__mluop_arange_vv type error!");
 #else  // #if 592 < _BANG_ARCH_
   static_assert(
       (std::is_same<T, float>::value || std::is_same<T, half>::value ||
        std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value ||
        std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value),
-      "__mlu_op_arange_vv type error!");
+      "__mluop_arange_vv type error!");
 #endif
 
   const uint32_t vv_num = __vv_get_length() / sizeof(T);
@@ -553,13 +562,13 @@ __mlu_vector__ void __mlu_op_arange_vv_(T *dst_nram, T start_index, T step) {
 
 #if 592 < _BANG_ARCH_
 template <typename T>
-__mlu_func__ void __mlu_op_gen_integer_incr_seq_(T *dst_nram,
-                                                 uint32_t elem_count,
-                                                 T start = 0, T step = 1) {
+__mlu_func__ void __mluop_gen_integer_incr_seq_(T *dst_nram,
+                                                uint32_t elem_count,
+                                                T start = 0, T step = 1) {
   static_assert(
       (std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value ||
        std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>),
-      "__mlu_op_gen_integer_incr_seq type error!");
+      "__mluop_gen_integer_incr_seq type error!");
   if (std::is_same<T, uint32_t>::value) {
     __bang_incseq(reinterpret_cast<int32_t *>(dst_nram), elem_count);
   } else if (std::is_same<T, uint64_t>::value) {
@@ -584,20 +593,20 @@ __mlu_func__ void __mlu_op_gen_integer_incr_seq_(T *dst_nram,
 #define u32_sizeof(T) ((uint32_t)sizeof(T))
 
 template <typename T>
-__mlu_func__ void __mlu_op_arange_by_expand_(T *dst_nram, uint32_t numel,
-                                             T start_index = 0, T step = 1) {
+__mlu_func__ void __mluop_arange_by_expand_(T *dst_nram, uint32_t numel,
+                                            T start_index = 0, T step = 1) {
 #if 592 < _BANG_ARCH_
   static_assert(
       (std::is_same<T, float>::value || std::is_same<T, half>::value ||
        std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value),
-      "__mlu_op_arange_by_expand type error!");
+      "__mluop_arange_by_expand type error!");
 #else   // if 592 < _BANG_ARCH_
   static_assert(
       (std::is_same<T, float>::value || std::is_same<T, half>::value ||
        std::is_same<T, int16_t>::value || std::is_same<T, uint16_t>::value ||
        std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value ||
        std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value),
-      "__mlu_op_arange_by_expand type error!");
+      "__mluop_arange_by_expand type error!");
 #endif  // if 592 < _BANG_ARCH_
 
   // using AluGenSize = std::integral_constant<uint32_t, NFU_ALIGN_SIZE>;
@@ -608,7 +617,7 @@ __mlu_func__ void __mlu_op_arange_by_expand_(T *dst_nram, uint32_t numel,
 #if _BANG_ARCH_ <= 592
   if (std::is_same<T, uint64_t>::value || std::is_same<T, int64_t>::value) {
     const uint32_t prologue_num = std::min(numel, base_num);
-    __mlu_op_arange_base_(dst_nram, prologue_num, start_index, step);
+    __mluop_arange_base_(dst_nram, prologue_num, start_index, step);
 
     if (numel <= base_num) {
       return;
@@ -616,26 +625,26 @@ __mlu_func__ void __mlu_op_arange_by_expand_(T *dst_nram, uint32_t numel,
   } else {
     if (numel <= gu_gen_num) {
       const uint32_t prologue_num = std::min(numel, base_num);
-      __mlu_op_arange_base_(dst_nram, prologue_num, start_index, step);
+      __mluop_arange_base_(dst_nram, prologue_num, start_index, step);
 
       if (numel <= base_num) {
         return;
       }
     } else {
-      __mlu_op_arange_vv_(dst_nram, start_index, step);
+      __mluop_arange_vv_(dst_nram, start_index, step);
       base_num = gu_gen_num;
     }
   }
 #else
   if (numel <= gu_gen_num) {
     const uint32_t prologue_num = std::min(numel, base_num);
-    __mlu_op_arange_base_(dst_nram, prologue_num, start_index, step);
+    __mluop_arange_base_(dst_nram, prologue_num, start_index, step);
 
     if (numel <= base_num) {
       return;
     }
   } else {
-    __mlu_op_arange_vv_(dst_nram, start_index, step);
+    __mluop_arange_vv_(dst_nram, start_index, step);
     base_num = gu_gen_num;
   }
 #endif
@@ -665,29 +674,30 @@ __mlu_func__ void __mlu_op_arange_by_expand_(T *dst_nram, uint32_t numel,
   }
 }
 /***************************************************************************
-
-    CNNL FUNC: __mlu_op_gen_stage_index.
-    param "dst_nram" is a nram pointer to the generated result.
-    param "numel" is the element number of to be generated.
-    param "start_index" is the starting value for the set of points. Default: 0.
-    param "step" is the gap between each pair of adjacent points points.
-   Default: 1. dst_addition. remarks: Detailed introduction for reference
-    http://wiki.cambricon.com/pages/viewpage.action?pageId=119467501.
-    int64_t and uint64_t types are under-optimized and can be improved with GU.
-    *************************************************************************/
+ * FUNC: __mluop_gen_stage_index.
+ * param "dst_nram" is a nram pointer to the generated result.
+ * param "numel" is the element number of to be generated.
+ * param "start_index" is the starting value for the set of points. Default: 0.
+ * param "step" is the gap between each pair of adjacent points points.
+ * Default: 
+ *    1. dst_addition. remarks: Detailed introduction for reference
+ *       http://wiki.cambricon.com/pages/viewpage.action?pageId=119467501.
+ *       int64_t and uint64_t types are under-optimized and can be improved
+ *       with GU.
+ **************************************************************************/
 
 template <typename T>
-__mlu_func__ void __mlu_op_gen_stage_index(T *dst_nram, uint32_t numel,
-                                           T start_index = 0, T step = 1) {
+__mlu_func__ void __mluop_gen_stage_index(T *dst_nram, uint32_t numel,
+                                          T start_index = 0, T step = 1) {
 #if 592 < _BANG_ARCH_
   if (std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value ||
       std::is_same<T, int64_t>::value || std::is_same<T, uint64_t>::value) {
-    __mlu_op_gen_integer_incr_seq_(dst_nram, numel, start_index, step);
+    __mluop_gen_integer_incr_seq_(dst_nram, numel, start_index, step);
   } else {
-    __mlu_op_arange_by_expand_(dst_nram, numel, start_index, step);
+    __mluop_arange_by_expand_(dst_nram, numel, start_index, step);
   }
 #else
-  __mlu_op_arange_by_expand_(dst_nram, numel, start_index, step);
+  __mluop_arange_by_expand_(dst_nram, numel, start_index, step);
 #endif
 }
 

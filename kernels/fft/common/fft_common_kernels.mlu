@@ -150,7 +150,7 @@ __mlu_func__ void generateRFFTHalfDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mlu_op_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
+  __mluop_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
 
   // generate sin and cos vectors
   const float scale = -2.0 * M_PI / n;
@@ -234,7 +234,7 @@ __mlu_func__ void generateRFFTFullDFTMatrixImpl(int row, int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mlu_op_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
+  __mluop_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
 
   // generate sin and cos vectors
   const float scale = -2.0 * M_PI / n;
@@ -323,7 +323,7 @@ __mlu_func__ void generateIRFFTHalfDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mlu_op_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
+  __mluop_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
 
   // generate sin and cos coefficient vectors
   __bang_write_value((float *)cos_coeff_addr, deal_size, (float)2.0);
@@ -418,7 +418,7 @@ __mlu_func__ void generateIRFFTFullDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mlu_op_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
+  __mluop_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
 
   // generate sin and cos vectors
   const float scale = 2.0 * M_PI / n;
@@ -514,7 +514,7 @@ __mlu_func__ void generateC2CFFTDFTMatrixImpl(int n, void *output) {
   float *row_addr = temp_addr;
 
   // generate 0 to n indices
-  __mlu_op_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
+  __mluop_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
 
   // generate sin and cos vectors
   const float forward_scale = -2.0 * M_PI / n;

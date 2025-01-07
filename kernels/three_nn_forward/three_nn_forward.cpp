@@ -22,6 +22,7 @@
  *************************************************************************/
 #include "three_nn_forward.h"
 
+#include "core/cnnl_helper.h"
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -29,7 +30,6 @@
 #include "core/tensor.h"
 #include "core/type.h"
 #include "kernels/kernel.h"
-#include "kernels/utils/cnnl_helper.h"
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetThreeNNForwardWorkspaceSize(
     const mluOpHandle_t handle, const mluOpTensorDescriptor_t known_desc,

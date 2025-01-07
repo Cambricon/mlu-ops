@@ -24,6 +24,7 @@
 
 #include <string>
 
+#include "core/cnnl_helper.h"
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -32,7 +33,6 @@
 #include "core/type.h"
 #include "core/tool.h"
 #include "kernels/kernel.h"
-#include "kernels/utils/cnnl_helper.h"
 
 static void policyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                        cnrtFunctionType_t *k_type) {

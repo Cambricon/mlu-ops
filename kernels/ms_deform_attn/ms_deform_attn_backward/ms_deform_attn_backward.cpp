@@ -24,6 +24,7 @@
 
 #include <string>
 
+#include "core/cnnl_helper.h"
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
@@ -33,7 +34,6 @@
 #include "core/type.h"
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
-#include "kernels/utils/cnnl_helper.h"
 
 char API[] = "[mluOpMsDeformAttnBackward]";
 

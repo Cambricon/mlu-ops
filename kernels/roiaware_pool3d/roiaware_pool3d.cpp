@@ -24,13 +24,13 @@
 
 #include <string>
 
+#include "core/cnnl_helper.h"
 #include "core/context.h"
 #include "core/gen_case.h"
 #include "core/logging.h"
 #include "core/runtime/device.h"
 #include "core/tensor.h"
 #include "core/type.h"
-#include "kernels/utils/cnnl_helper.h"
 
 #define THRESHOLD_OF_BOXES_NUM_AND_CHANNELS 65536
 #define THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD 2976

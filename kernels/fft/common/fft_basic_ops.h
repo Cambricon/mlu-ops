@@ -26,11 +26,12 @@
 
 #include <algorithm>
 #include <string>
-#include "core/tensor.h"
+
+#include "core/cnnl_helper.h"
 #include "core/context.h"
+#include "core/tensor.h"
 #include "core/tool.h"
 #include "kernels/kernel.h"
-#include "kernels/utils/cnnl_helper.h"
 #include "mlu_op.h"
 
 bool fftIsIntDtype(const mluOpDataType_t dtype);
