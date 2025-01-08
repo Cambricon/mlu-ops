@@ -314,9 +314,9 @@ __device__ get_pts_idx_of_voxels(int max_pts_each_voxel, int out_x, int out_y, i
   float voxels_y_res = y_size / out_y;
   float voxels_z_res = z_size / out_z;
 
-  nram float X_idx = float2int((local_X + x_size / 2) / voxels_x_res);
-  nram float Y_idx = float2int((local_Y + y_size / 2) / voxels_y_res);
-  nram float Z_idx = float2int(local_Z                / voxels_z_res);
+  nram float X_idx = float2int32((local_X + x_size / 2) / voxels_x_res);
+  nram float Y_idx = float2int32((local_Y + y_size / 2) / voxels_y_res);
+  nram float Z_idx = float2int32(local_Z                / voxels_z_res);
   nram voxels_index = X_idx * out_y * out_z +
                       Y_idx * out_z +
                       Z_idx ;
