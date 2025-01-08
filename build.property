@@ -1,7 +1,7 @@
 {
   "version": "1.4.2-1",
   "python": "3.6.0",
-  "build_requires": {"cntoolkit": ["release","3.15.2-1"],
+  "build_requires": {"cntoolkit": ["release","3.15.5-1"],
                      "cnnl":["release","1.28.0-1"],
                      "driver": "6.0.3",
                      "eigen3": "3.4.0",
