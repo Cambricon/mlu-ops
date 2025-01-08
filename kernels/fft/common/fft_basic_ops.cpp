@@ -836,6 +836,12 @@ mluOpStatus_t fftOptensor(mluOpHandle_t handle, int elem_num, void *in1_ptr,
   // destroy descriptor
   CALL_CNNL(cnnlDestroyOpTensorDescriptor(opTensor_desc));
 
+  status = mluOpDestroyTensorDescriptor(in1_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(in2_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(out_desc);
+  CHECK_RETURN(api, status);
   // destroy cnnl descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_in1_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_in2_desc);
