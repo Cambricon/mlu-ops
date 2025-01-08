@@ -69,6 +69,8 @@ mluOpStatus_t fftGetQuantizeParamWorkspaceSize(mluOpHandle_t handle,
     CALL_CNNL(cnnlGetQuantizeParamWorkspaceSize(cnnl_handle, cnnl_input_desc,
                                                 &required_size));
 
+    status = mluOpDestroyTensorDescriptor(input_desc);
+    CHECK_RETURN(api, status);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
@@ -107,7 +109,8 @@ mluOpStatus_t fftQuantizePositionScale(mluOpHandle_t handle, int array_length,
     CALL_CNNL(cnnlQuantizeParam(cnnl_handle, mode, cnnl_quant_desc, input,
                                 bit_width, workspace, workspace_size, position,
                                 scale, nullptr));
-
+    status = mluOpDestroyTensorDescriptor(quant_desc);
+    CHECK_RETURN(api, status);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_quant_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
@@ -672,6 +675,8 @@ mluOpStatus_t fftGetTransposeWorkspaceSize(mluOpHandle_t handle,
   CALL_CNNL(cnnlGetTransposeWorkspaceSize(cnnl_handle, cnnl_input_desc,
                                           trans_desc, &workspace_size));
 
+  status = mluOpDestroyTensorDescriptor(input_desc);
+  CHECK_RETURN(api, status);
   // destroy descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   CALL_CNNL(cnnlDestroyTransposeDescriptor(trans_desc));
@@ -722,6 +727,8 @@ mluOpStatus_t fftTranspose(mluOpHandle_t handle, int dim_num,
                              cnnl_transed_input_desc, transed_ptr, workspace,
                              workspace_size));
 
+  status = mluOpDestroyTensorDescriptor(input_desc);
+  CHECK_RETURN(api, status);
   // destroy descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_transed_input_desc);
@@ -774,7 +781,12 @@ mluOpStatus_t fftGetOptensorWorkspaceSize(mluOpHandle_t handle,
                                          cnnl_in2_desc, cnnl_out_desc,
                                          &workspace_size));
   CHECK_RETURN(api, status);
-
+  status = mluOpDestroyTensorDescriptor(in1_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(in2_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(out_desc);
+  CHECK_RETURN(api, status);
   // destroy descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_in1_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_in2_desc);

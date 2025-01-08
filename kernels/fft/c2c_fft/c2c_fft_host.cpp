@@ -1257,6 +1257,10 @@ static mluOpStatus_t padFFT1dContiguousInput(mluOpHandle_t handle,
                       fft_plan->prime ? fft_plan->matmul_addrs.input_pad_addr
                                       : fft_plan->mlu_addrs.input_pad_addr));
 
+    status = mluOpDestroyTensorDescriptor(input_desc);
+    CHECK_RETURN(api, status);
+    status = mluOpDestroyTensorDescriptor(padded_input_desc);
+    CHECK_RETURN(api, status);
     // destroy cnnl descriptor
     VLOG(5) << "c2cfft cnnlOpPad end";
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
@@ -1329,6 +1333,10 @@ static mluOpStatus_t padFFT2dContiguousInput(mluOpHandle_t handle,
                           ? fft_plan->mlu_addrs.input_pad_addr
                           : fft_plan->matmul_addrs.input_pad_addr));
 
+    status = mluOpDestroyTensorDescriptor(input_desc);
+    CHECK_RETURN(api, status);
+    status = mluOpDestroyTensorDescriptor(padded_input_desc);
+    CHECK_RETURN(api, status);
     // destroy cnnl descriptor
     VLOG(5) << "c2cfft cnnlOpPad end";
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
@@ -1788,6 +1796,10 @@ static mluOpStatus_t makeFFT1dContiguousOutput(mluOpHandle_t handle,
                                                  cnnl_copy_dst_desc);
     CALL_CNNL(cnnlCopy_v2(cnnl_handle, cnnl_copy_src_desc, copy_src_addr,
                           cnnl_copy_dst_desc, output, NULL, 0));
+    status = mluOpDestroyTensorDescriptor(copy_src_desc);
+    CHECK_RETURN(api, status);
+    status = mluOpDestroyTensorDescriptor(copy_dst_desc);
+    CHECK_RETURN(api, status);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_copy_src_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_copy_dst_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
@@ -1839,7 +1851,10 @@ static mluOpStatus_t makeFFT2dContiguousOutput(mluOpHandle_t handle,
                                                  cnnl_copy_dst_desc);
     CALL_CNNL(cnnlCopy_v2(cnnl_handle, cnnl_copy_src_desc, copy_src_addr,
                           cnnl_copy_dst_desc, output, NULL, 0));
-
+    status = mluOpDestroyTensorDescriptor(copy_src_desc);
+    CHECK_RETURN(api, status);
+    status = mluOpDestroyTensorDescriptor(copy_dst_desc);
+    CHECK_RETURN(api, status);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_copy_src_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_copy_dst_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);

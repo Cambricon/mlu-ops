@@ -2619,7 +2619,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
           fft_input_desc, input_desc->getLayout(), input_desc->getDtype(),
           input_desc->getDim(), input_desc->getDims(),
           input_desc->getStrides()));
-  INTERNAL_CHECK(make_plan_api,
+  CHECK_RETURN(make_plan_api,
                  mluOpSetTensorDescriptorOnchipDataType(
                      fft_input_desc, input_desc->getOnchipDtype()));
   CHECK_RETURN(

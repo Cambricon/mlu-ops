@@ -869,6 +869,10 @@ static mluOpStatus_t padIRFFT1dContiguousInput(mluOpHandle_t handle,
                       (fft_plan->prime) ? fft_plan->matmul_addrs.input_pad_addr
                                         : fft_plan->mlu_addrs.input_pad_addr));
 
+    status = mluOpDestroyTensorDescriptor(input_desc);
+    CHECK_RETURN(api, status);
+    status = mluOpDestroyTensorDescriptor(padded_input_desc);
+    CHECK_RETURN(api, status);
     // destroy cnnl descriptor
     VLOG(5) << "irfft cnnlOpPad end";
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
@@ -942,7 +946,10 @@ static mluOpStatus_t padIRFFT2dContiguousInput(mluOpHandle_t handle,
                        FFT_HALF(n1) > fft_plan->inembed[1])
                           ? fft_plan->mlu_addrs.input_pad_addr
                           : fft_plan->matmul_addrs.input_pad_addr));
-
+    status = mluOpDestroyTensorDescriptor(input_desc);
+    CHECK_RETURN(api, status);
+    status = mluOpDestroyTensorDescriptor(padded_input_desc);
+    CHECK_RETURN(api, status);
     // destroy cnnl descriptor
     VLOG(5) << "irfft cnnlOpPad end";
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
@@ -1097,6 +1104,10 @@ static mluOpStatus_t mergeIRFFT1dInput(mluOpHandle_t handle,
                          cnnl_concat_output_desc, concat_out_addr));
     VLOG(5) << "launch mluOpConcat end";
 
+    status = mluOpDestroyTensorDescriptor(ss_input_desc);
+    CHECK_RETURN(api, status);
+    status = mluOpDestroyTensorDescriptor(ss_output_desc);
+    CHECK_RETURN(api, status);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_ss_input_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_ss_output_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_concat_output_desc);
@@ -1485,7 +1496,10 @@ static mluOpStatus_t makeIRFFT1dContiguousOutput(mluOpHandle_t handle,
 
     CALL_CNNL(cnnlCopy_v2(cnnl_handle, cnnl_copy_src_desc, copy_src_addr,
                           cnnl_copy_dst_desc, output, NULL, 0));
-
+    status = mluOpDestroyTensorDescriptor(copy_src_desc);
+    CHECK_RETURN(api, status);
+    status = mluOpDestroyTensorDescriptor(copy_dst_desc);
+    CHECK_RETURN(api, status);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_copy_src_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_copy_dst_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
@@ -1955,7 +1969,10 @@ static mluOpStatus_t makeIRFFT2dContiguousOutput(mluOpHandle_t handle,
 
     CALL_CNNL(cnnlCopy_v2(cnnl_handle, cnnl_copy_src_desc, copy_src_addr,
                           cnnl_copy_dst_desc, output, NULL, 0));
-
+    status = mluOpDestroyTensorDescriptor(copy_src_desc);
+    CHECK_RETURN(api, status);
+    status = mluOpDestroyTensorDescriptor(copy_dst_desc);
+    CHECK_RETURN(api, status);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_copy_src_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_copy_dst_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
