@@ -62,9 +62,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
   PARAM_CHECK(op_name_forward, x_desc != NULL);
   PARAM_CHECK(op_name_forward, y_desc != NULL);
   bool x_dtype_transform = false;
-  if (x_desc->dtype == MLUOP_DTYPE_INT32 &&
-      y_desc->dtype == MLUOP_DTYPE_FLOAT) {
-    x_desc->dtype = MLUOP_DTYPE_FLOAT;
+  if (x_desc->getDtype() == MLUOP_DTYPE_INT32 &&
+      y_desc->getDtype() == MLUOP_DTYPE_FLOAT) {
+    x_desc->setDtype(MLUOP_DTYPE_FLOAT);
     x_dtype_transform = true;
   }
 
@@ -83,7 +83,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
   }
   // correct the input's type
   if (x_dtype_transform) {
-    x_desc->dtype = MLUOP_DTYPE_INT32;
+    x_desc->setDtype(MLUOP_DTYPE_INT32);
   }
 
   if (param_check != MLUOP_STATUS_SUCCESS) {
@@ -118,9 +118,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
 
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
   VLOG(5) << "kernel Kernel3StagePipelineSqrt.";
-  CHECK_RETURN("[mluOpSqrt] ",
-               Kernel3StagePipelineSqrt(k_dim, k_type, handle->queue,
-                                        x_desc->dtype, prefer, x, y, dim_x));
+  CHECK_RETURN("[mluOpSqrt] ", Kernel3StagePipelineSqrt(
+                                   k_dim, k_type, handle->queue,
+                                   x_desc->getDtype(), prefer, x, y, dim_x));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
@@ -164,7 +164,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
   VLOG(5) << "Kernel Kernel3StagePipelineSqrtBackward.";
   CHECK_RETURN("[mluOpSqrtBackward] ",
                Kernel3StagePipelineSqrtBackward(k_dim, k_type, handle->queue,
-                                                y_desc->dtype, y, diff_y,
+                                                y_desc->getDtype(), y, diff_y,
                                                 diff_x, num_elem));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

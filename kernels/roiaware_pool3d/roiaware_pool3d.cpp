@@ -46,7 +46,7 @@ static mluOpStatus_t kernelPtsIdxOfVoxelsPolicyFunc(
   const int core_limit =
       mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   const int core_num = core_limit * cluster_limit;
-  const int boxes_num = pts_idx_of_voxels_desc->dims[0];
+  const int boxes_num = pts_idx_of_voxels_desc->getDimIndex(0);
   const int task_dim = boxes_num > core_num ? core_num : boxes_num;
   k_dim->x = core_limit;
   k_dim->y = (task_dim / core_limit) > 0 ? (task_dim / core_limit) : 1;
@@ -64,10 +64,10 @@ static mluOpStatus_t kernelRoiawarePool3dForwardPolicyFunc(
   const int core_limit =
       mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   const int core_num = core_limit * cluster_limit;
-  const int boxes_num = pooled_features_desc->dims[0];
-  const int out_x = pooled_features_desc->dims[1];
-  const int out_y = pooled_features_desc->dims[2];
-  const int out_z = pooled_features_desc->dims[3];
+  const int boxes_num = pooled_features_desc->getDimIndex(0);
+  const int out_x = pooled_features_desc->getDimIndex(1);
+  const int out_y = pooled_features_desc->getDimIndex(2);
+  const int out_z = pooled_features_desc->getDimIndex(3);
   const int voxeles_num = boxes_num * out_x * out_y * out_z;
   const int task_dim = voxeles_num > core_num ? core_num : voxeles_num;
   k_dim->x = core_limit;
@@ -85,10 +85,10 @@ static mluOpStatus_t kernelRoiawarePool3dBackwardPolicyFunc(
   const int core_limit =
       mluop::runtime::getCoreNumOfEachUnionCapability(handle);
   const int core_num = core_limit * cluster_limit;
-  const int boxes_num = grad_out_desc->dims[0];
-  const int out_x = grad_out_desc->dims[1];
-  const int out_y = grad_out_desc->dims[2];
-  const int out_z = grad_out_desc->dims[3];
+  const int boxes_num = grad_out_desc->getDimIndex(0);
+  const int out_x = grad_out_desc->getDimIndex(1);
+  const int out_y = grad_out_desc->getDimIndex(2);
+  const int out_z = grad_out_desc->getDimIndex(3);
   const int voxels_num = boxes_num * out_x * out_y * out_z;
   const int task_dim = voxels_num > core_num ? core_num : voxels_num;
   k_dim->x = core_limit;
@@ -103,7 +103,7 @@ static mluOpStatus_t transposeTensor(
     const void *input, const int *permute,
     const mluOpTensorDescriptor_t workspace_dst_desc, void *workspace_dst,
     void *transpose_workspace) {
-  int input_dim = input_desc->dim;
+  int input_dim = input_desc->getDim();
   cnnlTransposeDescriptor_t trans_desc = NULL;
   size_t transpose_workspace_size = 0;
   CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
@@ -143,8 +143,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetRoiAwarePool3dForwardWorkspaceSize(
               pts_feature_desc != nullptr);
   PARAM_CHECK("[mluOpGetRoiAwarePool3dForwardWorkspaceSize]",
               workspace_size != nullptr);
-  const int pts_num = pts_feature_desc->dims[0];
-  const int channels = pts_feature_desc->dims[1];
+  const int pts_num = pts_feature_desc->getDimIndex(0);
+  const int channels = pts_feature_desc->getDimIndex(1);
   int element_num = pts_num * 3 + pts_num * channels;
   element_num += (channels > 3) ? (pts_num * channels) : (pts_num * 3);
   // check zero
@@ -153,7 +153,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetRoiAwarePool3dForwardWorkspaceSize(
     return MLUOP_STATUS_SUCCESS;
   }
   *workspace_size =
-      element_num * mluop::getSizeOfDataType(pts_feature_desc->dtype);
+      element_num * mluop::getSizeOfDataType(pts_feature_desc->getDtype());
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -186,37 +186,38 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
   PARAM_CHECK(API, pooled_features_desc != NULL);
 
   // check dim
-  PARAM_CHECK(API, rois_desc->dim == 2);
-  PARAM_CHECK(API, pts_desc->dim == 2);
-  PARAM_CHECK(API, pts_feature_desc->dim == 2);
-  PARAM_CHECK(API, pts_idx_of_voxels_desc->dim == 5);
-  PARAM_CHECK(API, pooled_features_desc->dim == 5);
+  PARAM_CHECK(API, rois_desc->getDim() == 2);
+  PARAM_CHECK(API, pts_desc->getDim() == 2);
+  PARAM_CHECK(API, pts_feature_desc->getDim() == 2);
+  PARAM_CHECK(API, pts_idx_of_voxels_desc->getDim() == 5);
+  PARAM_CHECK(API, pooled_features_desc->getDim() == 5);
 
   // check shape
-  PARAM_CHECK(API, rois_desc->dims[0] == boxes_num);
-  PARAM_CHECK(API, rois_desc->dims[1] == 7);
-  PARAM_CHECK(API, pts_desc->dims[0] == pts_num);
-  PARAM_CHECK(API, pts_desc->dims[1] == 3);
-  PARAM_CHECK(API, pts_feature_desc->dims[0] == pts_num);
-  PARAM_CHECK(API, pts_feature_desc->dims[1] == channels);
-  PARAM_CHECK(API, pts_idx_of_voxels_desc->dims[0] == boxes_num);
-  PARAM_CHECK(API, pts_idx_of_voxels_desc->dims[1] == out_x);
-  PARAM_CHECK(API, pts_idx_of_voxels_desc->dims[2] == out_y);
-  PARAM_CHECK(API, pts_idx_of_voxels_desc->dims[3] == out_z);
-  PARAM_CHECK(API, pts_idx_of_voxels_desc->dims[4] == max_pts_each_voxel);
-  PARAM_CHECK(API, pooled_features_desc->dims[0] == boxes_num);
-  PARAM_CHECK(API, pooled_features_desc->dims[1] == out_x);
-  PARAM_CHECK(API, pooled_features_desc->dims[2] == out_y);
-  PARAM_CHECK(API, pooled_features_desc->dims[3] == out_z);
-  PARAM_CHECK(API, pooled_features_desc->dims[4] == channels);
+  PARAM_CHECK(API, rois_desc->getDimIndex(0) == boxes_num);
+  PARAM_CHECK(API, rois_desc->getDimIndex(1) == 7);
+  PARAM_CHECK(API, pts_desc->getDimIndex(0) == pts_num);
+  PARAM_CHECK(API, pts_desc->getDimIndex(1) == 3);
+  PARAM_CHECK(API, pts_feature_desc->getDimIndex(0) == pts_num);
+  PARAM_CHECK(API, pts_feature_desc->getDimIndex(1) == channels);
+  PARAM_CHECK(API, pts_idx_of_voxels_desc->getDimIndex(0) == boxes_num);
+  PARAM_CHECK(API, pts_idx_of_voxels_desc->getDimIndex(1) == out_x);
+  PARAM_CHECK(API, pts_idx_of_voxels_desc->getDimIndex(2) == out_y);
+  PARAM_CHECK(API, pts_idx_of_voxels_desc->getDimIndex(3) == out_z);
+  PARAM_CHECK(API,
+              pts_idx_of_voxels_desc->getDimIndex(4) == max_pts_each_voxel);
+  PARAM_CHECK(API, pooled_features_desc->getDimIndex(0) == boxes_num);
+  PARAM_CHECK(API, pooled_features_desc->getDimIndex(1) == out_x);
+  PARAM_CHECK(API, pooled_features_desc->getDimIndex(2) == out_y);
+  PARAM_CHECK(API, pooled_features_desc->getDimIndex(3) == out_z);
+  PARAM_CHECK(API, pooled_features_desc->getDimIndex(4) == channels);
 
   // check dtype
-  PARAM_CHECK(API, rois_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                       rois_desc->dtype == MLUOP_DTYPE_HALF);
-  PARAM_CHECK(API, pts_desc->dtype == rois_desc->dtype);
-  PARAM_CHECK(API, pts_feature_desc->dtype == rois_desc->dtype);
-  PARAM_CHECK(API, pts_idx_of_voxels_desc->dtype == MLUOP_DTYPE_INT32);
-  PARAM_CHECK(API, pooled_features_desc->dtype == rois_desc->dtype);
+  PARAM_CHECK(API, rois_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
+                       rois_desc->getDtype() == MLUOP_DTYPE_HALF);
+  PARAM_CHECK(API, pts_desc->getDtype() == rois_desc->getDtype());
+  PARAM_CHECK(API, pts_feature_desc->getDtype() == rois_desc->getDtype());
+  PARAM_CHECK(API, pts_idx_of_voxels_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(API, pooled_features_desc->getDtype() == rois_desc->getDtype());
 
   // check other parms : pool_method
   PARAM_CHECK(API, pool_method == 0 || pool_method == 1);
@@ -260,7 +261,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
 
   /* max_pts_each_voxel affects the allocation of NRAM memory space,
      so it's limited by the size of NRAM memory space. */
-  if (rois_desc->dtype == MLUOP_DTYPE_FLOAT) {
+  if (rois_desc->getDtype() == MLUOP_DTYPE_FLOAT) {
     if (max_pts_each_voxel > THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD) {
       LOG(ERROR) << API << " Check failed: "
                  << "When the data type is float, "
@@ -319,13 +320,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
   // pool_method: 0 'max'  1 'avg'
   if (pool_method == 0) {
     PARAM_CHECK(API, argmax_desc != NULL);
-    PARAM_CHECK(API, argmax_desc->dim == 5);
-    PARAM_CHECK(API, argmax_desc->dims[0] == boxes_num);
-    PARAM_CHECK(API, argmax_desc->dims[1] == out_x);
-    PARAM_CHECK(API, argmax_desc->dims[2] == out_y);
-    PARAM_CHECK(API, argmax_desc->dims[3] == out_z);
-    PARAM_CHECK(API, argmax_desc->dims[4] == channels);
-    PARAM_CHECK(API, argmax_desc->dtype == MLUOP_DTYPE_INT32);
+    PARAM_CHECK(API, argmax_desc->getDim() == 5);
+    PARAM_CHECK(API, argmax_desc->getDimIndex(0) == boxes_num);
+    PARAM_CHECK(API, argmax_desc->getDimIndex(1) == out_x);
+    PARAM_CHECK(API, argmax_desc->getDimIndex(2) == out_y);
+    PARAM_CHECK(API, argmax_desc->getDimIndex(3) == out_z);
+    PARAM_CHECK(API, argmax_desc->getDimIndex(4) == channels);
+    PARAM_CHECK(API, argmax_desc->getDtype() == MLUOP_DTYPE_INT32);
     const uint64_t tensor_argmax_num = mluOpGetTensorElementNum(argmax_desc);
     TENSOR_NUM_CHECK(API, tensor_argmax_num, LARGE_TENSOR_NUM, "");
     PARAM_CHECK(API, tensor_argmax_num > 0);
@@ -367,7 +368,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
   }
   // generate mluOpRoiAwarePool3dForward prototxt end!
 
-  mluOpDataType_t data_dtype = pts_desc->dtype;
+  mluOpDataType_t data_dtype = pts_desc->getDtype();
   uint64_t pts_dtype_size =
       mluOpGetTensorElementNum(pts_desc) * mluop::getSizeOfDataType(data_dtype);
   uint64_t pts_feature_dtype_size = mluOpGetTensorElementNum(pts_feature_desc) *
@@ -378,11 +379,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
       (int8_t *)pts_feature_workspace + pts_feature_dtype_size;
 
   VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlTranspose pts start.";
-  int pts_dim = pts_desc->dim;
+  int pts_dim = pts_desc->getDim();
   int pts_permute[2] = {1, 0};
   int pts_tmp_dims[2] = {0, 0};
   for (int i = 0; i < pts_dim; ++i) {
-    pts_tmp_dims[i] = pts_desc->dims[pts_permute[i]];
+    pts_tmp_dims[i] = pts_desc->getDimIndex(pts_permute[i]);
   }
   mluOpTensorDescriptor_t pts_desc_tmp = NULL;
   CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
@@ -402,11 +403,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
   VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlTranspose pts end.";
 
   VLOG(5) << "[mluOpRoiAwarePool3dForward] cnnlTranspose pts_feature start.";
-  int pts_feature_dim = pts_feature_desc->dim;
+  int pts_feature_dim = pts_feature_desc->getDim();
   int pts_feature_permute[2] = {1, 0};
   int pts_feature_tmp_dims[2] = {0, 0};
   for (int i = 0; i < pts_feature_dim; ++i) {
-    pts_feature_tmp_dims[i] = pts_feature_desc->dims[pts_feature_permute[i]];
+    pts_feature_tmp_dims[i] =
+        pts_feature_desc->getDimIndex(pts_feature_permute[i]);
   }
   mluOpTensorDescriptor_t pts_feature_desc_tmp = NULL;
   CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
@@ -481,9 +483,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
              "KernelPtsIdxOfVoxels().";
   CHECK_RETURN("[mluOpRoiAwarePool3dForward]",
                KernelPtsIdxOfVoxels(
-                   k_dim, k_type, handle->queue, rois_desc->dtype, pool_method,
-                   boxes_num, pts_num, max_pts_each_voxel, out_x, out_y, out_z,
-                   rois, pts_workspace, pts_idx_of_voxels));
+                   k_dim, k_type, handle->queue, rois_desc->getDtype(),
+                   pool_method, boxes_num, pts_num, max_pts_each_voxel, out_x,
+                   out_y, out_z, rois, pts_workspace, pts_idx_of_voxels));
   VLOG(5) << "[mluOpRoiAwarePool3dForward] Finish kernel "
              "KernelPtsIdxOfVoxels.";
 
@@ -504,7 +506,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
   CHECK_RETURN(
       "[mluOpRoiAwarePool3dForward]",
       KernelRoiawarePool3dForward(
-          k_dim, k_type, handle->queue, pooled_features_desc->dtype,
+          k_dim, k_type, handle->queue, pooled_features_desc->getDtype(),
           pool_method, boxes_num, pts_num, channels, max_pts_each_voxel, out_x,
           out_y, out_z, pts_feature_workspace, pts_idx_of_voxels,
           pooled_features, argmax));
@@ -537,41 +539,42 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dBackward(
   PARAM_CHECK(API, grad_in_desc != NULL);
 
   // check dim
-  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->dim, 5);
-  PARAM_CHECK_EQ(API, argmax_desc->dim, 5);
-  PARAM_CHECK_EQ(API, grad_out_desc->dim, 5);
-  PARAM_CHECK_EQ(API, grad_in_desc->dim, 2);
+  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->getDim(), 5);
+  PARAM_CHECK_EQ(API, argmax_desc->getDim(), 5);
+  PARAM_CHECK_EQ(API, grad_out_desc->getDim(), 5);
+  PARAM_CHECK_EQ(API, grad_in_desc->getDim(), 2);
 
   // check shape
-  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->dims[0], boxes_num);
-  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->dims[1], out_x);
-  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->dims[2], out_y);
-  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->dims[3], out_z);
-  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->dims[4], max_pts_each_voxel);
-  PARAM_CHECK_EQ(API, argmax_desc->dims[0], boxes_num);
-  PARAM_CHECK_EQ(API, argmax_desc->dims[1], out_x);
-  PARAM_CHECK_EQ(API, argmax_desc->dims[2], out_y);
-  PARAM_CHECK_EQ(API, argmax_desc->dims[3], out_z);
-  PARAM_CHECK_EQ(API, argmax_desc->dims[4], channels);
-  PARAM_CHECK_EQ(API, grad_out_desc->dims[0], boxes_num);
-  PARAM_CHECK_EQ(API, grad_out_desc->dims[1], out_x);
-  PARAM_CHECK_EQ(API, grad_out_desc->dims[2], out_y);
-  PARAM_CHECK_EQ(API, grad_out_desc->dims[3], out_z);
-  PARAM_CHECK_EQ(API, grad_out_desc->dims[4], channels);
-  // grad_in_desc->dims[0] == pts_num
-  PARAM_CHECK_EQ(API, grad_in_desc->dims[1], channels);
+  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->getDimIndex(0), boxes_num);
+  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->getDimIndex(1), out_x);
+  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->getDimIndex(2), out_y);
+  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->getDimIndex(3), out_z);
+  PARAM_CHECK_EQ(API, pts_idx_of_voxels_desc->getDimIndex(4),
+                 max_pts_each_voxel);
+  PARAM_CHECK_EQ(API, argmax_desc->getDimIndex(0), boxes_num);
+  PARAM_CHECK_EQ(API, argmax_desc->getDimIndex(1), out_x);
+  PARAM_CHECK_EQ(API, argmax_desc->getDimIndex(2), out_y);
+  PARAM_CHECK_EQ(API, argmax_desc->getDimIndex(3), out_z);
+  PARAM_CHECK_EQ(API, argmax_desc->getDimIndex(4), channels);
+  PARAM_CHECK_EQ(API, grad_out_desc->getDimIndex(0), boxes_num);
+  PARAM_CHECK_EQ(API, grad_out_desc->getDimIndex(1), out_x);
+  PARAM_CHECK_EQ(API, grad_out_desc->getDimIndex(2), out_y);
+  PARAM_CHECK_EQ(API, grad_out_desc->getDimIndex(3), out_z);
+  PARAM_CHECK_EQ(API, grad_out_desc->getDimIndex(4), channels);
+  // grad_in_desc->getDimIndex(0) == pts_num
+  PARAM_CHECK_EQ(API, grad_in_desc->getDimIndex(1), channels);
 
   // check dtype
-  PARAM_CHECK(API, pts_idx_of_voxels_desc->dtype == MLUOP_DTYPE_INT32);
-  PARAM_CHECK(API, argmax_desc->dtype == MLUOP_DTYPE_INT32);
-  PARAM_CHECK(API, grad_out_desc->dtype == MLUOP_DTYPE_FLOAT ||
-                       grad_out_desc->dtype == MLUOP_DTYPE_HALF);
-  PARAM_CHECK(API, grad_in_desc->dtype == grad_out_desc->dtype);
+  PARAM_CHECK(API, pts_idx_of_voxels_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(API, argmax_desc->getDtype() == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(API, grad_out_desc->getDtype() == MLUOP_DTYPE_FLOAT ||
+                       grad_out_desc->getDtype() == MLUOP_DTYPE_HALF);
+  PARAM_CHECK(API, grad_in_desc->getDtype() == grad_out_desc->getDtype());
 
   // check other parms : pool_method
   PARAM_CHECK(API, pool_method == 0 || pool_method == 1);
 
-  const int pts_num = grad_in_desc->dims[0];
+  const int pts_num = grad_in_desc->getDimIndex(0);
 
   // check tensor dim
   PARAM_CHECK(API, boxes_num > 0);
@@ -649,7 +652,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dBackward(
           << ", out_x = " << out_x << ", out_y = " << out_y
           << ", out_z = " << out_z << ", channels = " << channels
           << ", max_pts_each_voxel = " << max_pts_each_voxel
-          << ", points num = " << grad_in_desc->dims[0];
+          << ", points num = " << grad_in_desc->getDimIndex(0);
 
   // generate mluOpRoiAwarePool3dBackward prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
@@ -709,7 +712,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dBackward(
   CHECK_RETURN(
       "[mluOpRoiAwarePool3dBackward]",
       KernelRoiawarePool3dBackward(
-          k_dim, k_type, handle->queue, grad_out_desc->dtype, pool_method,
+          k_dim, k_type, handle->queue, grad_out_desc->getDtype(), pool_method,
           boxes_num, out_x, out_y, out_z, channels, max_pts_each_voxel,
           pts_idx_of_voxels, argmax, grad_out, grad_in));
   VLOG(5) << "[mluOpRoiAwarePool3dBackward] Finish kernel "

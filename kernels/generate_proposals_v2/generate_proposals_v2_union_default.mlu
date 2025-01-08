@@ -370,7 +370,7 @@ __mlu_func__ void filterBoxes(T *proposal_scores, T *proposal_boxes,
     __bang_add_scalar(w, w, offset, align_count * 2);
   }
 
-// cx = box[0] + 0.5 * w, cy = box[1] + 0.5 * h
+  // cx = box[0] + 0.5 * w, cy = box[1] + 0.5 * h
   __bang_fusion(FUSION_FMA, cx, w, (T)0.5, xmin, align_count, align_count);
   __bang_fusion(FUSION_FMA, cy, h, (T)0.5, ymin, align_count, align_count);
 

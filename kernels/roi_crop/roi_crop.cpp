@@ -59,15 +59,15 @@ mluOpStatus_t RoiCropForwardParamCheck(
   PARAM_CHECK(op_name, grid_desc != NULL);
   PARAM_CHECK(op_name, output_desc != NULL);
   // check data type and dim
-  PARAM_CHECK(op_name, input_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(op_name, input_desc->dim == 4);
-  PARAM_CHECK(op_name, grid_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(op_name, grid_desc->dim == 4);
-  PARAM_CHECK(op_name, output_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(op_name, output_desc->dim == 4);
+  PARAM_CHECK(op_name, input_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, input_desc->getDim() == 4);
+  PARAM_CHECK(op_name, grid_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, grid_desc->getDim() == 4);
+  PARAM_CHECK(op_name, output_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, output_desc->getDim() == 4);
   // check shape and layout
-  PARAM_CHECK(op_name, input_desc->layout == MLUOP_LAYOUT_NHWC);
-  PARAM_CHECK(op_name, output_desc->layout == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(op_name, input_desc->getLayout() == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(op_name, output_desc->getLayout() == MLUOP_LAYOUT_NHWC);
   // check stride
   STRIDE_TENSOR_CHECK("[mluOpRoiCropForward]:", input_desc,
                       "input_desc must be contiguous");
@@ -76,22 +76,23 @@ mluOpStatus_t RoiCropForwardParamCheck(
   STRIDE_TENSOR_CHECK("[mluOpRoiCropForward]:", output_desc,
                       "output_desc must be contiguous");
 
-  for (int i = 0; i < output_desc->dim - 1; ++i) {
-    if (output_desc->dims[i] != grid_desc->dims[i]) {
+  for (int i = 0; i < output_desc->getDim() - 1; ++i) {
+    if (output_desc->getDimIndex(i) != grid_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << " Check failed: output_desc->dims[" << i
-                 << "] should be equal to grid_desc->dims[" << i << "].";
+                 << "] should be equal to grid_desc->getDimIndex(" << i << ").";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  if (output_desc->dims[3] != input_desc->dims[3]) {
+  if (output_desc->getDimIndex(3) != input_desc->getDimIndex(3)) {
     LOG(ERROR) << op_name
-               << " Check failed: output_desc->dims[3] should be "
-                  "equal to input_desc->dims[3].";
+               << " Check failed: output_desc->getDimIndex(3) should be "
+                  "equal to input_desc->getDimIndex(3).";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (grid_desc->dims[3] != 2) {
-    LOG(ERROR) << op_name
-               << " Check failed: grid_desc->dims[3] should be equal to 2.";
+  if (grid_desc->getDimIndex(3) != 2) {
+    LOG(ERROR)
+        << op_name
+        << " Check failed: grid_desc->getDimIndex(3) should be equal to 2.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   const size_t max_input_num = 2147483648;  // 2^31, 2G num
@@ -126,15 +127,15 @@ mluOpStatus_t RoiCropBackwardParamCheck(
   PARAM_CHECK(op_name, grid_desc != NULL);
   PARAM_CHECK(op_name, grad_input_desc != NULL);
   // check data type
-  PARAM_CHECK(op_name, grad_output_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(op_name, grad_output_desc->dim == 4);
-  PARAM_CHECK(op_name, grid_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(op_name, grid_desc->dim == 4);
-  PARAM_CHECK(op_name, grad_input_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(op_name, grad_input_desc->dim == 4);
+  PARAM_CHECK(op_name, grad_output_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, grad_output_desc->getDim() == 4);
+  PARAM_CHECK(op_name, grid_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, grid_desc->getDim() == 4);
+  PARAM_CHECK(op_name, grad_input_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(op_name, grad_input_desc->getDim() == 4);
   // check shape and layout
-  PARAM_CHECK(op_name, grad_output_desc->layout == MLUOP_LAYOUT_NHWC);
-  PARAM_CHECK(op_name, grad_input_desc->layout == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(op_name, grad_output_desc->getLayout() == MLUOP_LAYOUT_NHWC);
+  PARAM_CHECK(op_name, grad_input_desc->getLayout() == MLUOP_LAYOUT_NHWC);
   // check stride
   STRIDE_TENSOR_CHECK("[mluOpRoiCropBackward]:", grad_output_desc,
                       "grad_output_desc must be contiguous");
@@ -143,22 +144,23 @@ mluOpStatus_t RoiCropBackwardParamCheck(
   STRIDE_TENSOR_CHECK("[mluOpRoiCropBackward]:", grad_input_desc,
                       "grad_input_desc must be contiguous");
 
-  for (int i = 0; i < grad_output_desc->dim - 1; ++i) {
-    if (grad_output_desc->dims[i] != grid_desc->dims[i]) {
+  for (int i = 0; i < grad_output_desc->getDim() - 1; ++i) {
+    if (grad_output_desc->getDimIndex(i) != grid_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << " Check failed: grad_output_desc->dims[" << i
-                 << "] should be equal to grid_desc->dims[" << i << "].";
+                 << "] should be equal to grid_desc->getDimIndex(" << i << ").";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
-  if (grad_output_desc->dims[3] != grad_input_desc->dims[3]) {
+  if (grad_output_desc->getDimIndex(3) != grad_input_desc->getDimIndex(3)) {
     LOG(ERROR) << op_name
-               << " Check failed: grad_output_desc->dims[3] should be "
-                  "equal to grad_input_desc->dims[3].";
+               << " Check failed: grad_output_desc->getDimIndex(3) should be "
+                  "equal to grad_input_desc->getDimIndex(3).";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (grid_desc->dims[3] != 2) {
-    LOG(ERROR) << op_name
-               << " Check failed: grid_desc->dims[3] should be equal to 2.";
+  if (grid_desc->getDimIndex(3) != 2) {
+    LOG(ERROR)
+        << op_name
+        << " Check failed: grid_desc->getDimIndex(3) should be equal to 2.";
     return MLUOP_STATUS_BAD_PARAM;
   }
   const size_t max_input_num = 2147483648;  // 2^31 2G num
@@ -194,13 +196,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropForward(
     return param_check;
   }
 
-  uint32_t batch = input_desc->dims[0];
-  uint32_t height = input_desc->dims[1];
-  uint32_t width = input_desc->dims[2];
-  uint32_t channels = input_desc->dims[3];
-  uint32_t grid_n = grid_desc->dims[0];
-  uint32_t output_h = output_desc->dims[1];
-  uint32_t output_w = output_desc->dims[2];
+  uint32_t batch = input_desc->getDimIndex(0);
+  uint32_t height = input_desc->getDimIndex(1);
+  uint32_t width = input_desc->getDimIndex(2);
+  uint32_t channels = input_desc->getDimIndex(3);
+  uint32_t grid_n = grid_desc->getDimIndex(0);
+  uint32_t output_h = output_desc->getDimIndex(1);
+  uint32_t output_w = output_desc->getDimIndex(2);
   uint32_t bin_num = grid_n * output_h * output_w;
 
   if (MLUOP_GEN_CASE_ON_NEW) {
@@ -241,13 +243,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiCropBackward(
     return param_check;
   }
 
-  uint32_t batch = grad_input_desc->dims[0];
-  uint32_t height = grad_input_desc->dims[1];
-  uint32_t width = grad_input_desc->dims[2];
-  uint32_t channels = grad_input_desc->dims[3];
-  uint32_t grid_n = grid_desc->dims[0];
-  uint32_t output_h = grad_output_desc->dims[1];
-  uint32_t output_w = grad_output_desc->dims[2];
+  uint32_t batch = grad_input_desc->getDimIndex(0);
+  uint32_t height = grad_input_desc->getDimIndex(1);
+  uint32_t width = grad_input_desc->getDimIndex(2);
+  uint32_t channels = grad_input_desc->getDimIndex(3);
+  uint32_t grid_n = grid_desc->getDimIndex(0);
+  uint32_t output_h = grad_output_desc->getDimIndex(1);
+  uint32_t output_w = grad_output_desc->getDimIndex(2);
   uint32_t bin_num = grid_n * output_h * output_w;
 
   if (MLUOP_GEN_CASE_ON_NEW) {

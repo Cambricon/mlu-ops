@@ -37,82 +37,83 @@ static mluOpStatus_t pointsInBoxesPreCheck(
     const mluOpTensorDescriptor_t boxes_desc,
     const mluOpTensorDescriptor_t points_indices_desc) {
   // tensor dim check
-  if (points_desc->dim != 3 || boxes_desc->dim != 3) {
+  if (points_desc->getDim() != 3 || boxes_desc->getDim() != 3) {
     LOG(ERROR) << "[mluOpPointsInBoxes] The dim size of the points and boxes"
                << " tensor must be 3."
-               << " points dim size is " << points_desc->dim
-               << ", boxes dim size is " << boxes_desc->dim;
+               << " points dim size is " << points_desc->getDim()
+               << ", boxes dim size is " << boxes_desc->getDim();
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (points_indices_desc->dim != 2) {
+  if (points_indices_desc->getDim() != 2) {
     LOG(ERROR) << "[mluOpPointsInBoxes] The dim size of the points_indices"
                << " tensor must be 2."
-               << " points_indices dim size is " << points_indices_desc->dim;
+               << " points_indices dim size is "
+               << points_indices_desc->getDim();
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // input tensor datatype check
-  if (points_desc->dtype != MLUOP_DTYPE_FLOAT ||
-      boxes_desc->dtype != MLUOP_DTYPE_FLOAT) {
+  if (points_desc->getDtype() != MLUOP_DTYPE_FLOAT ||
+      boxes_desc->getDtype() != MLUOP_DTYPE_FLOAT) {
     LOG(ERROR) << "[mluOpPointsInBoxes] The data type of the points and boxes"
                << " tensor must be MLUOP_DTYPE_FLOAT.";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // output tensor datatype check
-  if (points_indices_desc->dtype != MLUOP_DTYPE_INT32) {
+  if (points_indices_desc->getDtype() != MLUOP_DTYPE_INT32) {
     LOG(ERROR) << "[mluOpPointsInBoxes] The data type of the points_indices"
                << " tensor must be MLUOP_DTYPE_INT32.";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // input tensor layout check
-  if (points_desc->layout != MLUOP_LAYOUT_ARRAY ||
-      boxes_desc->layout != MLUOP_LAYOUT_ARRAY) {
+  if (points_desc->getLayout() != MLUOP_LAYOUT_ARRAY ||
+      boxes_desc->getLayout() != MLUOP_LAYOUT_ARRAY) {
     LOG(ERROR) << "[mluOpPointsInBoxes] The layout of the points and boxes"
                << " tensor must be MLUOP_LAYOUT_ARRAY.";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // output tensor layout check
-  if (points_indices_desc->layout != MLUOP_LAYOUT_ARRAY) {
+  if (points_indices_desc->getLayout() != MLUOP_LAYOUT_ARRAY) {
     LOG(ERROR) << "[mluOpPointsInBoxes] The layout of the points_indices"
                << " tensor must be MLUOP_LAYOUT_ARRAY.";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // tensor shape check
-  if ((points_desc->dims[0] != boxes_desc->dims[0]) ||
-      (points_desc->dims[0] != points_indices_desc->dims[0])) {
+  if ((points_desc->getDimIndex(0) != boxes_desc->getDimIndex(0)) ||
+      (points_desc->getDimIndex(0) != points_indices_desc->getDimIndex(0))) {
     LOG(ERROR) << "[mluOpPointsInBoxes] The batch size of the points, boxes, "
                   "points_indices "
                << "tensor must be same."
-               << " points batch size is " << points_desc->dims[0]
-               << ", boxes batch size is " << boxes_desc->dims[0]
+               << " points batch size is " << points_desc->getDimIndex(0)
+               << ", boxes batch size is " << boxes_desc->getDimIndex(0)
                << ", points_indices batch size is "
-               << points_indices_desc->dims[0];
+               << points_indices_desc->getDimIndex(0);
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (points_desc->dims[1] != points_indices_desc->dims[1]) {
+  if (points_desc->getDimIndex(1) != points_indices_desc->getDimIndex(1)) {
     LOG(ERROR) << "[mluOpPointsInBoxes] The points num of the points and "
                   "points_indices"
                << " tensor must be same."
-               << " num of the points is " << points_desc->dims[1]
+               << " num of the points is " << points_desc->getDimIndex(1)
                << ", num of the points_indices is "
-               << points_indices_desc->dims[1];
+               << points_indices_desc->getDimIndex(1);
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (points_desc->dims[2] != 3) {
+  if (points_desc->getDimIndex(2) != 3) {
     LOG(ERROR) << "[mluOpPointsInBoxes] The points "
                << "must be 3D Coordinate System ie [x, y, z]. vs "
-               << points_desc->dims[2];
+               << points_desc->getDimIndex(2);
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (boxes_desc->dims[2] != 7) {
+  if (boxes_desc->getDimIndex(2) != 7) {
     LOG(ERROR)
         << "[mluOpPointsInBoxes] The boxes "
         << "must be 3D Coordinate System ie [x, y, z, dx, dy, dz, heading]. vs "
-        << boxes_desc->dims[2];
+        << boxes_desc->getDimIndex(2);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -143,7 +144,7 @@ static bool isPointsInBoxes(const mluOpHandle_t handle, cnrtDim3_t &k_dim,
   uint32_t max_nram_size = mluop::runtime::getNramSizeInBytes(handle);
 
   uint32_t boxes_size =
-      boxes_desc->dims[1] * boxes_desc->dims[2] * sizeof(float);
+      boxes_desc->getDimIndex(1) * boxes_desc->getDimIndex(2) * sizeof(float);
   uint32_t nram_low_space = 9 * sizeof(float) + boxes_size;
 
   if (nram_low_space > max_nram_size) {
@@ -152,7 +153,8 @@ static bool isPointsInBoxes(const mluOpHandle_t handle, cnrtDim3_t &k_dim,
 
   uint32_t cluster_num = mluop::runtime::getClusterLimitCapability(handle);
   uint32_t core_dim = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
-  uint32_t cluster_used = PAD_UP(points_desc->dims[1], core_dim) / core_dim;
+  uint32_t cluster_used =
+      PAD_UP(points_desc->getDimIndex(1), core_dim) / core_dim;
   cluster_used = cluster_used > cluster_num ? cluster_num : cluster_used;
   k_type = cnrtFuncTypeBlock;
   k_dim.x = 1;
@@ -161,9 +163,9 @@ static bool isPointsInBoxes(const mluOpHandle_t handle, cnrtDim3_t &k_dim,
 
   uint32_t points_deal_num = (max_nram_size - boxes_size) / (9 * sizeof(float));
 
-  points_in_boxes_info.points_batch_offset = points_desc->dims[1] * 3;
-  points_in_boxes_info.boxes_batch_offset = boxes_desc->dims[1] * 7;
-  points_in_boxes_info.idx_batch_offset = points_indices_desc->dims[1];
+  points_in_boxes_info.points_batch_offset = points_desc->getDimIndex(1) * 3;
+  points_in_boxes_info.boxes_batch_offset = boxes_desc->getDimIndex(1) * 7;
+  points_in_boxes_info.idx_batch_offset = points_indices_desc->getDimIndex(1);
   points_in_boxes_info.points_deal_num = points_deal_num;
   points_in_boxes_info.points_deal_offset = points_deal_num * 3;
   points_in_boxes_info.idx_deal_num = points_deal_num;
@@ -211,7 +213,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpPointsInBoxes(
                        points_indices_desc, points_in_boxes_info)) {
     LOG(ERROR) << "[mluOpPointsInBoxes] The boxes "
                << "must be not exceed 23404 on MLU370 or 14042 on MLU590. vs "
-               << boxes_desc->dims[1] << ".";
+               << boxes_desc->getDimIndex(1) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
   // generate points_in_boxes prototxt start!
@@ -228,16 +230,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpPointsInBoxes(
   VLOG(5) << "[[mluOpPointsInBoxes]] Launch Kernel "
              "KernelPointsInBoxes.";
   CHECK_RETURN("[mluOpPointsInBoxes]",
-               KernelPointsInBoxes(k_dim, k_type, handle->queue,
-                                   points_desc->dims[0], points_desc->dims[1],
-                                   boxes_desc->dims[1], (float *)points,
-                                   (float *)boxes, (int *)points_indices,
-                                   points_in_boxes_info.points_batch_offset,
-                                   points_in_boxes_info.boxes_batch_offset,
-                                   points_in_boxes_info.idx_batch_offset,
-                                   points_in_boxes_info.points_deal_num,
-                                   points_in_boxes_info.points_deal_offset,
-                                   points_in_boxes_info.idx_deal_num));
+               KernelPointsInBoxes(
+                   k_dim, k_type, handle->queue, points_desc->getDimIndex(0),
+                   points_desc->getDimIndex(1), boxes_desc->getDimIndex(1),
+                   (float *)points, (float *)boxes, (int *)points_indices,
+                   points_in_boxes_info.points_batch_offset,
+                   points_in_boxes_info.boxes_batch_offset,
+                   points_in_boxes_info.idx_batch_offset,
+                   points_in_boxes_info.points_deal_num,
+                   points_in_boxes_info.points_deal_offset,
+                   points_in_boxes_info.idx_deal_num));
 
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;

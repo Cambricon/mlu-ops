@@ -43,7 +43,8 @@ void unaryOpPolicyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
   uint64_t core_in_cluster = handle->core_num_per_cluster;
   uint64_t core_number = union_number * core_in_cluster;
   uint64_t element_num = mluOpGetTensorElementNum(desc);
-  uint64_t tensor_size = element_num * mluop::getSizeOfDataType(desc->dtype);
+  uint64_t tensor_size =
+      element_num * mluop::getSizeOfDataType(desc->getDtype());
   tensor_size = CEIL_ALIGN(tensor_size, NFU_ALIGN_SIZE);
   uint64_t need_core =
       CEIL_ALIGN(tensor_size / NFU_ALIGN_SIZE, core_in_cluster);
@@ -61,7 +62,7 @@ void unaryOpPolicyFunc(mluOpHandle_t handle, cnrtDim3_t *k_dim,
 void unaryOpPolicyFuncBlock(mluOpHandle_t handle, cnrtDim3_t *k_dim,
                             cnrtFunctionType_t *k_type,
                             mluOpTensorDescriptor_t desc) {
-  uint64_t data_size = desc->total_tensor_size;
+  uint64_t data_size = desc->getTotalTensorSize();
   uint32_t core_dim = handle->core_num_per_cluster;
   uint32_t cluster_num = mluop::runtime::getClusterLimitCapability(handle);
   uint32_t core_num = core_dim * cluster_num;
@@ -87,7 +88,7 @@ void unaryOpPolicyFuncBlock_v2(mluOpHandle_t handle,
     single_core_min_load_size =
         std::max(llc_pending_size, single_core_min_load_size);
   }
-  const size_t dtype_size = mluop::getSizeOfDataType(desc->dtype);
+  const size_t dtype_size = mluop::getSizeOfDataType(desc->getDtype());
   const size_t aligned_num = DIV_UP(single_core_min_load_size, dtype_size);
   const size_t element_num = mluOpGetTensorElementNum(desc);
   const size_t core_number =
@@ -132,22 +133,22 @@ mluOpStatus_t unaryOpParamCheck(std::string op_name, const mluOpHandle_t handle,
   PARAM_CHECK(op_name, y_desc != NULL);
 
   // check dim and dtype
-  PARAM_CHECK_EQ(op_name, x_desc->dtype, y_desc->dtype);
-  PARAM_CHECK_EQ(op_name, x_desc->dim, y_desc->dim);
+  PARAM_CHECK_EQ(op_name, x_desc->getDtype(), y_desc->getDtype());
+  PARAM_CHECK_EQ(op_name, x_desc->getDim(), y_desc->getDim());
   // check data type
-  if (!isSupportType(x_desc->dtype, support_type, len)) {
+  if (!isSupportType(x_desc->getDtype(), support_type, len)) {
     LOG(ERROR) << op_name << ":x_desc's data type is not supported.";
     return MLUOP_STATUS_BAD_PARAM;
   }
 
-  PARAM_CHECK_GT(op_name, x_desc->dim, 0);
-  PARAM_CHECK_GT(op_name, y_desc->dim, 0);
-  for (int i = 0; i < x_desc->dim; i++) {
-    if (x_desc->dims[i] != y_desc->dims[i]) {
+  PARAM_CHECK_GT(op_name, x_desc->getDim(), 0);
+  PARAM_CHECK_GT(op_name, y_desc->getDim(), 0);
+  for (int i = 0; i < x_desc->getDim(); i++) {
+    if (x_desc->getDimIndex(i) != y_desc->getDimIndex(i)) {
       LOG(ERROR) << op_name << ":The shape of x should be equal to y"
                  << ". But now x_desc's shape[" << i << "] is "
-                 << x_desc->dims[i] << ", y_desc's shape[" << i << "] is "
-                 << y_desc->dims[i] << ".";
+                 << x_desc->getDimIndex(i) << ", y_desc's shape[" << i
+                 << "] is " << y_desc->getDimIndex(i) << ".";
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -164,7 +165,7 @@ mluOpStatus_t unaryOpParamCheck(std::string op_name, const mluOpHandle_t handle,
                      "input tensor num is too large. ");
   }
   if (needStrideProcess(x_desc, y_desc)) {
-    PARAM_CHECK(op_name, x_desc->dim <= MLUOP_DIM_MAX);
+    PARAM_CHECK(op_name, x_desc->getDim() <= MLUOP_DIM_MAX);
     if (handle->arch < MLUOP_MLU590) {
       // num_with_stride affects offset (related with mul op, which cannot
       // exceed 32-bit on MLU300)

@@ -289,7 +289,7 @@ __mlu_entry__ void MLUMultiKernelPtsIdxOfVoxels(
                       compute_pts_num - load_pts_num, (float)0.0);
       }
       __bang_filter((float *)temp_buffer4, (float *)nram_pts_idx_seq,
-                     (float *)fp_nram_pts_in_flag, compute_pts_num);
+                    (float *)fp_nram_pts_in_flag, compute_pts_num);
       int pts_num_in_cur_roi =
           (int)__bang_count((float *)fp_nram_pts_in_flag, compute_pts_num);
       int *pts_idx_cur_voxels =

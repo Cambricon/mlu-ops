@@ -57,6 +57,6 @@ mluOpStatus_t binaryOpParamSameShapeCheck(
     const mluOpTensorDescriptor_t output_desc);
 
 // convert c array to string
-std::string array2String(int32_t dim_num, int64_t *dims);
+std::string array2String(int32_t dim_num, const int64_t *dims);
 
 #endif  //  KERNELS_BINARY_OP_BINARY_OP_HOST_H_

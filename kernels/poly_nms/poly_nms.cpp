@@ -52,10 +52,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetPolyNmsWorkspaceSize(
   PARAM_CHECK(API, size != NULL);
 
   // check inputs shape
-  PARAM_CHECK_EQ(API, boxes_desc->dim, 2);
-  PARAM_CHECK_EQ(API, boxes_desc->dims[1], 9);
+  PARAM_CHECK_EQ(API, boxes_desc->getDim(), 2);
+  PARAM_CHECK_EQ(API, boxes_desc->getDimIndex(1), 9);
 
-  int box_num = boxes_desc->dims[0];
+  int box_num = boxes_desc->getDimIndex(0);
   auto mask_sz = getMaskMatrixByteSize(box_num);
   auto sort_info_sz = box_num * sizeof(int);
   auto area_sz = box_num * sizeof(int);
@@ -76,19 +76,19 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
   PARAM_CHECK(API, output_size != NULL);
 
   // check inputs/outputs data type
-  PARAM_CHECK(API, boxes_desc->dtype == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK(API, output_desc->dtype == MLUOP_DTYPE_INT32);
+  PARAM_CHECK(API, boxes_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  PARAM_CHECK(API, output_desc->getDtype() == MLUOP_DTYPE_INT32);
 
   // check inputs layout
-  PARAM_CHECK(API, boxes_desc->layout == MLUOP_LAYOUT_ARRAY);
+  PARAM_CHECK(API, boxes_desc->getLayout() == MLUOP_LAYOUT_ARRAY);
 
   // check inputs shape
-  PARAM_CHECK_EQ(API, boxes_desc->dim, 2);
-  PARAM_CHECK_EQ(API, boxes_desc->dims[1], 9);
+  PARAM_CHECK_EQ(API, boxes_desc->getDim(), 2);
+  PARAM_CHECK_EQ(API, boxes_desc->getDimIndex(1), 9);
   // check output shape
-  PARAM_CHECK_EQ(API, output_desc->dim, 1);
+  PARAM_CHECK_EQ(API, output_desc->getDim(), 1);
 
-  PARAM_CHECK(API, boxes_desc->dims[0] == output_desc->dims[0]);
+  PARAM_CHECK(API, boxes_desc->getDimIndex(0) == output_desc->getDimIndex(0));
 
   // check stride
   STRIDE_TENSOR_CHECK("[mluOpPolyNms]:", boxes_desc,
@@ -96,7 +96,7 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
   STRIDE_TENSOR_CHECK("[mluOpPolyNms]:", output_desc,
                       "output_desc must be contiguous");
 
-  int input_boxes_num = boxes_desc->dims[0];
+  int input_boxes_num = boxes_desc->getDimIndex(0);
 
   if (input_boxes_num == 0) {
     VLOG(5) << API << " skip zero element tensor.";
@@ -111,8 +111,8 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
     PARAM_CHECK(API, workspace != NULL);
   }
 
-  int box_num = boxes_desc->dims[0];
-  int real_width = boxes_desc->strides[0];
+  int box_num = boxes_desc->getDimIndex(0);
+  int real_width = boxes_desc->getStrideIndex(0);
   auto mask_col_num = getMaskColNum(box_num);
   if ((10 * box_num + mask_col_num * 2) > (MAX_NRAM_SIZE / sizeof(float))) {
     LOG(ERROR) << API << " Too many input boxes, kernel cannot work."

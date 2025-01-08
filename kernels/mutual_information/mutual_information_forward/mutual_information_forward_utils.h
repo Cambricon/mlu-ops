@@ -41,9 +41,8 @@ __mlu_func__ void logAddVector(float *dst, float *src1, float *src2,
       "fuse.nram.s32 [%[dst]], %[size], [%[src0]],"
       ".and(%[src1]), .ge(%[src2]), .mul(%[src3]),"
       ".and([%[src4]]);\n" ::[dst] "r"((int32_t *)temp),
-      [ size ] "r"(data_num), [ src0 ] "r"((int32_t *)src1),
-      [ src1 ] "r"(0x7fffffff), [ src2 ] "r"(0x7f800001), [ src3 ] "r"(-1),
-      [ src4 ] "r"((int32_t *)src1));
+      [size] "r"(data_num), [src0] "r"((int32_t *)src1), [src1] "r"(0x7fffffff),
+      [src2] "r"(0x7f800001), [src3] "r"(-1), [src4] "r"((int32_t *)src1));
   __bang_add(max_value, max_value, temp, data_num);
 
   // Compute log sum exp: max_value + log1p(exp(min_value - max_value))
@@ -59,8 +58,8 @@ __mlu_func__ void logAddVector(float *dst, float *src1, float *src2,
   __asm__ volatile(
       "fuse.nram.s32 [%[dst]], %[size], [%[src0]],"
       ".eq(%[src1]), .mul(%[src2]);\n" ::[dst] "r"((int32_t *)mask),
-      [ size ] "r"(data_num), [ src0 ] "r"((int32_t *)mask),
-      [ src1 ] "r"(0x3f800000), [ src2 ] "r"(-1));
+      [size] "r"(data_num), [src0] "r"((int32_t *)mask), [src1] "r"(0x3f800000),
+      [src2] "r"(-1));
   __bang_band((int8_t *)dst, (int8_t *)dst, (int8_t *)mask,
               data_num * sizeof(float));
 

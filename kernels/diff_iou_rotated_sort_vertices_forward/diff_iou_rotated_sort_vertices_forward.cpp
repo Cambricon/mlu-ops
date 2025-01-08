@@ -66,10 +66,10 @@ static mluOpStatus_t diffIouRotatedSortVerticesForwardParamCheck(
   PARAM_CHECK(op_name, idx_desc != NULL);
 
   // check shape
-  PARAM_CHECK(op_name, vertices_desc->dim == 4);
-  PARAM_CHECK(op_name, mask_desc->dim == 3);
-  PARAM_CHECK(op_name, num_valid_desc->dim == 2);
-  PARAM_CHECK(op_name, idx_desc->dim == 3);
+  PARAM_CHECK(op_name, vertices_desc->getDim() == 4);
+  PARAM_CHECK(op_name, mask_desc->getDim() == 3);
+  PARAM_CHECK(op_name, num_valid_desc->getDim() == 2);
+  PARAM_CHECK(op_name, idx_desc->getDim() == 3);
 
   // check stride
   STRIDE_TENSOR_CHECK(op_name + ":", vertices_desc,
@@ -81,47 +81,56 @@ static mluOpStatus_t diffIouRotatedSortVerticesForwardParamCheck(
 
   // check data type
   // check tensor datatype, support float32
-  PARAM_CHECK_V2(op_name, (vertices_desc->dtype == MLUOP_DTYPE_FLOAT),
+  PARAM_CHECK_V2(op_name, (vertices_desc->getDtype() == MLUOP_DTYPE_FLOAT),
                  "Only float are supported in vertices tensor, but the "
                  "data type of tensor is "
-                     << mluOpGetNameOfDataType(vertices_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(vertices_desc->getDtype())
+                     << ".");
 
-  PARAM_CHECK_V2(op_name, (mask_desc->dtype == MLUOP_DTYPE_BOOL),
+  PARAM_CHECK_V2(op_name, (mask_desc->getDtype() == MLUOP_DTYPE_BOOL),
                  "Only bool are supported in mask tensor, but the data "
                  "type of tensor is "
-                     << mluOpGetNameOfDataType(mask_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(mask_desc->getDtype()) << ".");
 
-  PARAM_CHECK_V2(op_name, (num_valid_desc->dtype == MLUOP_DTYPE_INT32),
+  PARAM_CHECK_V2(op_name, (num_valid_desc->getDtype() == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in num_valid tensor, but the data "
                  "type of tensor is "
-                     << mluOpGetNameOfDataType(num_valid_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(num_valid_desc->getDtype())
+                     << ".");
 
-  PARAM_CHECK_V2(op_name, (idx_desc->dtype == MLUOP_DTYPE_INT32),
+  PARAM_CHECK_V2(op_name, (idx_desc->getDtype() == MLUOP_DTYPE_INT32),
                  "Only int32 are supported in idx tensor, but the data "
                  "type of tensor is "
-                     << mluOpGetNameOfDataType(idx_desc->dtype) << ".");
+                     << mluOpGetNameOfDataType(idx_desc->getDtype()) << ".");
 
   // check dim
-  // int dim_b = vertices_desc->dims[0];
-  // int dim_n = vertices_desc->dims[1];
-  // int dim_m = vertices_desc->dims[2];
-  PARAM_CHECK(op_name, (vertices_desc->dims[0] == mask_desc->dims[0]));
-  PARAM_CHECK(op_name, (vertices_desc->dims[0] == num_valid_desc->dims[0]));
-  PARAM_CHECK(op_name, (vertices_desc->dims[0] == idx_desc->dims[0]));
-  PARAM_CHECK(op_name, (vertices_desc->dims[1] == mask_desc->dims[1]));
-  PARAM_CHECK(op_name, (vertices_desc->dims[1] == num_valid_desc->dims[1]));
-  PARAM_CHECK(op_name, (vertices_desc->dims[1] == idx_desc->dims[1]));
-  PARAM_CHECK(op_name, (vertices_desc->dims[2] == mask_desc->dims[2]));
+  // int dim_b = vertices_desc->getDimIndex(0);
+  // int dim_n = vertices_desc->getDimIndex(1);
+  // int dim_m = vertices_desc->getDimIndex(2);
+  PARAM_CHECK(op_name,
+              (vertices_desc->getDimIndex(0) == mask_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name, (vertices_desc->getDimIndex(0) ==
+                        num_valid_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name,
+              (vertices_desc->getDimIndex(0) == idx_desc->getDimIndex(0)));
+  PARAM_CHECK(op_name,
+              (vertices_desc->getDimIndex(1) == mask_desc->getDimIndex(1)));
+  PARAM_CHECK(op_name, (vertices_desc->getDimIndex(1) ==
+                        num_valid_desc->getDimIndex(1)));
+  PARAM_CHECK(op_name,
+              (vertices_desc->getDimIndex(1) == idx_desc->getDimIndex(1)));
+  PARAM_CHECK(op_name,
+              (vertices_desc->getDimIndex(2) == mask_desc->getDimIndex(2)));
   PARAM_CHECK_V2(
-      op_name, (vertices_desc->dims[2] == 24),
+      op_name, (vertices_desc->getDimIndex(2) == 24),
       "vertices and mask tensors dims[2] should be 24, but the input value is "
-          << vertices_desc->dims[2] << ".");
-  PARAM_CHECK_V2(op_name, (vertices_desc->dims[3] == 2),
+          << vertices_desc->getDimIndex(2) << ".");
+  PARAM_CHECK_V2(op_name, (vertices_desc->getDimIndex(3) == 2),
                  "vertices tensor dims[3] should be 2, but the input value is "
-                     << vertices_desc->dims[3] << ".");
-  PARAM_CHECK_V2(op_name, (idx_desc->dims[2] == 9),
+                     << vertices_desc->getDimIndex(3) << ".");
+  PARAM_CHECK_V2(op_name, (idx_desc->getDimIndex(2) == 9),
                  "idx tensor dims[2] should be 9, but the input value is "
-                     << idx_desc->dims[2] << ".");
+                     << idx_desc->getDimIndex(2) << ".");
 
   const size_t vertices_element_num = mluOpGetTensorElementNum(vertices_desc);
   const size_t mask_element_num = mluOpGetTensorElementNum(mask_desc);
@@ -136,7 +145,7 @@ static mluOpStatus_t diffIouRotatedSortVerticesForwardParamCheck(
 
   // check element num zero
   if (vertices_element_num == 0) {
-    if (vertices_desc->dims[1] == 0) {
+    if (vertices_desc->getDimIndex(1) == 0) {
       *zero_element = true;
       return MLUOP_STATUS_SUCCESS;
     } else {
@@ -187,9 +196,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpDiffIouRotatedSortVerticesForward(
     GEN_CASE_TEST_PARAM_NEW(false, false, true, 0, 0, 0);
   }
 
-  const int dim_b = vertices_desc->dims[0];
-  const int dim_n = vertices_desc->dims[1];
-  const int dim_m = vertices_desc->dims[2];
+  const int dim_b = vertices_desc->getDimIndex(0);
+  const int dim_n = vertices_desc->getDimIndex(1);
+  const int dim_m = vertices_desc->getDimIndex(2);
   const int bn_num = dim_b * dim_n;
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
