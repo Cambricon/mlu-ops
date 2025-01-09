@@ -52,13 +52,13 @@ mluOpStatus_t fftGetQuantizeParamWorkspaceSize(mluOpHandle_t handle,
     // create descriptor
     mluOpTensorDescriptor_t input_desc;
     status = mluOpCreateTensorDescriptor(&input_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN(api, status);
 
     // set descriptor
     int64_t input_dims[1] = {array_length};
     status = mluOpSetTensorDescriptor_v2(input_desc, MLUOP_LAYOUT_ARRAY,
                                          data_type, 1, input_dims);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN(api, status);
 
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
                                       cnnl_handle);  // convert to cnnl_handle
@@ -69,6 +69,8 @@ mluOpStatus_t fftGetQuantizeParamWorkspaceSize(mluOpHandle_t handle,
     CALL_CNNL(cnnlGetQuantizeParamWorkspaceSize(cnnl_handle, cnnl_input_desc,
                                                 &required_size));
 
+    status = mluOpDestroyTensorDescriptor(input_desc);
+    CHECK_RETURN(api, status);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
@@ -87,13 +89,13 @@ mluOpStatus_t fftQuantizePositionScale(mluOpHandle_t handle, int array_length,
     // create descriptor
     mluOpTensorDescriptor_t quant_desc;
     status = mluOpCreateTensorDescriptor(&quant_desc);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN(api, status);
 
     // set descriptor
     int64_t quant_dims[1] = {array_length};
     status = mluOpSetTensorDescriptor_v2(quant_desc, MLUOP_LAYOUT_ARRAY,
                                          data_type, 1, quant_dims);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN(api, status);
 
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
                                       cnnl_handle);  // convert to cnnl_handle
@@ -107,7 +109,8 @@ mluOpStatus_t fftQuantizePositionScale(mluOpHandle_t handle, int array_length,
     CALL_CNNL(cnnlQuantizeParam(cnnl_handle, mode, cnnl_quant_desc, input,
                                 bit_width, workspace, workspace_size, position,
                                 scale, nullptr));
-
+    status = mluOpDestroyTensorDescriptor(quant_desc);
+    CHECK_RETURN(api, status);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_quant_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
   }
@@ -128,11 +131,11 @@ mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(
   mluOpTensorDescriptor_t b_desc = nullptr;
   mluOpTensorDescriptor_t c_desc = nullptr;
   status = mluOpCreateTensorDescriptor(&a_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&b_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&c_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
 
   // set descriptor
   int64_t a_dims[2];
@@ -154,28 +157,28 @@ mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(
   }
   status = mluOpSetTensorDescriptor_v2(a_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
                                        a_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptorOnchipDataType(a_desc, a_compute_type);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(b_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
                                        b_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptorOnchipDataType(b_desc, b_compute_type);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
                                        c_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   if (a_compute_type == MLUOP_DTYPE_INT31 ||
       b_compute_type == MLUOP_DTYPE_INT31) {
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN(api, status);
   } else if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type) &&
              c_desc->getDtype() == MLUOP_DTYPE_HALF) {
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN(api, status);
   } else {
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, data_type);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN(api, status);
   }
 
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
@@ -246,6 +249,12 @@ mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(
     CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
   }
 
+  status = mluOpDestroyTensorDescriptor(a_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(b_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(c_desc);
+  CHECK_RETURN(api, status);
   // destroy cnnl descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
@@ -273,11 +282,11 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
   mluOpTensorDescriptor_t b_desc = nullptr;
   mluOpTensorDescriptor_t c_desc = nullptr;
   status = mluOpCreateTensorDescriptor(&a_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&b_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&c_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
 
   // set descriptor
   int64_t a_dims[2];
@@ -300,28 +309,28 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
 
   status = mluOpSetTensorDescriptor_v2(a_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
                                        a_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptorOnchipDataType(a_desc, a_compute_type);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(b_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
                                        b_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptorOnchipDataType(b_desc, b_compute_type);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
                                        c_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   if (a_compute_type == MLUOP_DTYPE_INT31 ||
       b_compute_type == MLUOP_DTYPE_INT31) {
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN(api, status);
   } else if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type) &&
              c_desc->getDtype() == MLUOP_DTYPE_HALF) {
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, MLUOP_DTYPE_FLOAT);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN(api, status);
   } else {
     status = mluOpSetTensorDescriptorOnchipDataType(c_desc, data_type);
-    INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN(api, status);
   }
 
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
@@ -406,6 +415,12 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
     CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
   }
 
+  status = mluOpDestroyTensorDescriptor(a_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(b_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(c_desc);
+  CHECK_RETURN(api, status);
   // destroy cnnl descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
@@ -435,11 +450,11 @@ mluOpStatus_t fftGetBatchMatMulBcastWorkspaceSize(
   mluOpTensorDescriptor_t b_desc = nullptr;
   mluOpTensorDescriptor_t c_desc = nullptr;
   status = mluOpCreateTensorDescriptor(&a_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&b_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&c_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
 
   // set descriptor
   int64_t a_dims[2];
@@ -461,19 +476,18 @@ mluOpStatus_t fftGetBatchMatMulBcastWorkspaceSize(
   }
   status = mluOpSetTensorDescriptor_v2(a_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
                                        a_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptorOnchipDataType(a_desc, a_compute_type);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(b_desc, MLUOP_LAYOUT_ARRAY, data_type, 3,
                                        b_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptorOnchipDataType(b_desc, b_compute_type);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY, data_type, 3,
                                        c_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   c_desc->setOnchipDtype(MLUOP_DTYPE_FLOAT);
-
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
                                     cnnl_handle);  // convert to cnnl_handle
 
@@ -500,6 +514,12 @@ mluOpStatus_t fftGetBatchMatMulBcastWorkspaceSize(
       requested_algo_count, &heuristic_result, &return_algo_count);
   cnnlGetBatchMatMulExHeuristicResult(heuristic_result, algo, &workspace_size);
   // destroy descriptor
+  status = mluOpDestroyTensorDescriptor(a_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(b_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(c_desc);
+  CHECK_RETURN(api, status);
   // destroy cnnl descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
@@ -532,11 +552,11 @@ mluOpStatus_t fftBatchMatMulBcast(
   mluOpTensorDescriptor_t b_desc = nullptr;
   mluOpTensorDescriptor_t c_desc = nullptr;
   status = mluOpCreateTensorDescriptor(&a_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&b_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&c_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
 
   // set descriptor
   int64_t a_dims[2];
@@ -558,17 +578,17 @@ mluOpStatus_t fftBatchMatMulBcast(
   }
   status = mluOpSetTensorDescriptor_v2(a_desc, MLUOP_LAYOUT_ARRAY, data_type, 2,
                                        a_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptorOnchipDataType(a_desc, a_compute_type);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(b_desc, MLUOP_LAYOUT_ARRAY, data_type, 3,
                                        b_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptorOnchipDataType(b_desc, b_compute_type);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(c_desc, MLUOP_LAYOUT_ARRAY, data_type, 3,
                                        c_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   c_desc->setOnchipDtype(MLUOP_DTYPE_FLOAT);
 
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
@@ -610,6 +630,12 @@ mluOpStatus_t fftBatchMatMulBcast(
                               cnnl_c_desc, c_ptr, (void *)workspace,
                               workspace_size));
   // destroy descriptor
+  status = mluOpDestroyTensorDescriptor(a_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(b_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(c_desc);
+  CHECK_RETURN(api, status);
   // destroy cnnl descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
@@ -632,7 +658,7 @@ mluOpStatus_t fftGetTransposeWorkspaceSize(mluOpHandle_t handle,
   // create descriptor
   mluOpTensorDescriptor_t input_desc = nullptr;
   status = mluOpCreateTensorDescriptor(&input_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
 
   cnnlTransposeDescriptor_t trans_desc = nullptr;
   CALL_CNNL(cnnlCreateTransposeDescriptor(&trans_desc));
@@ -642,13 +668,15 @@ mluOpStatus_t fftGetTransposeWorkspaceSize(mluOpHandle_t handle,
   // set descriptor
   status = mluOpSetTensorDescriptor_v2(input_desc, MLUOP_LAYOUT_ARRAY,
                                        data_type, dim_num, ori_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR_v2(input_desc, cnnl_input_desc);
   CALL_CNNL(cnnlSetTransposeDescriptor(trans_desc, dim_num, permute));
   // get workspace
   CALL_CNNL(cnnlGetTransposeWorkspaceSize(cnnl_handle, cnnl_input_desc,
                                           trans_desc, &workspace_size));
 
+  status = mluOpDestroyTensorDescriptor(input_desc);
+  CHECK_RETURN(api, status);
   // destroy descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   CALL_CNNL(cnnlDestroyTransposeDescriptor(trans_desc));
@@ -667,17 +695,17 @@ mluOpStatus_t fftTranspose(mluOpHandle_t handle, int dim_num,
   mluOpTensorDescriptor_t input_desc = nullptr;
   mluOpTensorDescriptor_t transed_input_desc = nullptr;
   status = mluOpCreateTensorDescriptor(&input_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&transed_input_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
 
   // set descriptor
   status = mluOpSetTensorDescriptor_v2(input_desc, MLUOP_LAYOUT_ARRAY,
                                        data_type, dim_num, ori_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(transed_input_desc, MLUOP_LAYOUT_ARRAY,
                                        data_type, dim_num, transed_dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
 
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
                                     cnnl_handle);  // convert to cnnl_handle
@@ -699,6 +727,8 @@ mluOpStatus_t fftTranspose(mluOpHandle_t handle, int dim_num,
                              cnnl_transed_input_desc, transed_ptr, workspace,
                              workspace_size));
 
+  status = mluOpDestroyTensorDescriptor(input_desc);
+  CHECK_RETURN(api, status);
   // destroy descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_transed_input_desc);
@@ -720,23 +750,23 @@ mluOpStatus_t fftGetOptensorWorkspaceSize(mluOpHandle_t handle,
   mluOpTensorDescriptor_t in2_desc = nullptr;
   mluOpTensorDescriptor_t out_desc = nullptr;
   status = mluOpCreateTensorDescriptor(&in1_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&in2_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&out_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
 
   // set descriptor
   int64_t dims[1] = {elem_num};
   status = mluOpSetTensorDescriptor_v2(in1_desc, MLUOP_LAYOUT_ARRAY, data_type,
                                        1, dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(in2_desc, MLUOP_LAYOUT_ARRAY, data_type,
                                        1, dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(out_desc, MLUOP_LAYOUT_ARRAY, data_type,
                                        1, dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
 
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
                                     cnnl_handle);  // convert to cnnl_handle
@@ -750,8 +780,13 @@ mluOpStatus_t fftGetOptensorWorkspaceSize(mluOpHandle_t handle,
   CALL_CNNL(cnnlGetOpTensorWorkspaceSize(cnnl_handle, cnnl_in1_desc,
                                          cnnl_in2_desc, cnnl_out_desc,
                                          &workspace_size));
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(in1_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(in2_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(out_desc);
+  CHECK_RETURN(api, status);
   // destroy descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_in1_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_in2_desc);
@@ -774,23 +809,23 @@ mluOpStatus_t fftOptensor(mluOpHandle_t handle, int elem_num, void *in1_ptr,
   mluOpTensorDescriptor_t in2_desc = nullptr;
   mluOpTensorDescriptor_t out_desc = nullptr;
   status = mluOpCreateTensorDescriptor(&in1_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&in2_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpCreateTensorDescriptor(&out_desc);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
 
   // set descriptor
   int64_t dims[1] = {elem_num};
   status = mluOpSetTensorDescriptor_v2(in1_desc, MLUOP_LAYOUT_ARRAY, data_type,
                                        1, dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(in2_desc, MLUOP_LAYOUT_ARRAY, data_type,
                                        1, dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
   status = mluOpSetTensorDescriptor_v2(out_desc, MLUOP_LAYOUT_ARRAY, data_type,
                                        1, dims);
-  INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+  CHECK_RETURN(api, status);
 
   DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
                                     cnnl_handle);  // convert to cnnl_handle
@@ -813,6 +848,12 @@ mluOpStatus_t fftOptensor(mluOpHandle_t handle, int elem_num, void *in1_ptr,
   // destroy descriptor
   CALL_CNNL(cnnlDestroyOpTensorDescriptor(opTensor_desc));
 
+  status = mluOpDestroyTensorDescriptor(in1_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(in2_desc);
+  CHECK_RETURN(api, status);
+  status = mluOpDestroyTensorDescriptor(out_desc);
+  CHECK_RETURN(api, status);
   // destroy cnnl descriptor
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_in1_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_in2_desc);

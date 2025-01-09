@@ -1064,10 +1064,10 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
     int *cur_facbuf = &facbuf[small_factors_offset];
     status =
         fftFactor(r, facbuf, small_factors_offset, factor_type, large_count);
-    INTERNAL_CHECK("[fftTwoStepFactor]", status == MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN("[fftTwoStepFactor]", status);
     status = setMaxParallelNum(handle, fft_plan, cur_facbuf, stage_num, r,
                                is_row_major);
-    INTERNAL_CHECK("[fftTwoStepFactor]", status == MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN("[fftTwoStepFactor]", status);
     out_stride *= r;
     large_count++;
   }
@@ -2611,26 +2611,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
   // create input and output descriptor for gen_case
   // because mluOpExecFFT don't have input and output descriptor
   mluOpTensorDescriptor_t fft_input_desc, fft_output_desc;
-  INTERNAL_CHECK(make_plan_api, mluOpCreateTensorDescriptor(&fft_input_desc) ==
-                                    MLUOP_STATUS_SUCCESS);
-  INTERNAL_CHECK(make_plan_api, mluOpCreateTensorDescriptor(&fft_output_desc) ==
-                                    MLUOP_STATUS_SUCCESS);
-  INTERNAL_CHECK(
+  CHECK_RETURN(make_plan_api, mluOpCreateTensorDescriptor(&fft_input_desc));
+  CHECK_RETURN(make_plan_api, mluOpCreateTensorDescriptor(&fft_output_desc));
+  CHECK_RETURN(
       make_plan_api,
       mluOpSetTensorDescriptorEx_v2(
           fft_input_desc, input_desc->getLayout(), input_desc->getDtype(),
           input_desc->getDim(), input_desc->getDims(),
-          input_desc->getStrides()) == MLUOP_STATUS_SUCCESS);
-  INTERNAL_CHECK(make_plan_api,
+          input_desc->getStrides()));
+  CHECK_RETURN(make_plan_api,
                  mluOpSetTensorDescriptorOnchipDataType(
-                     fft_input_desc, input_desc->getOnchipDtype()) ==
-                     MLUOP_STATUS_SUCCESS);
-  INTERNAL_CHECK(
+                     fft_input_desc, input_desc->getOnchipDtype()));
+  CHECK_RETURN(
       make_plan_api,
       mluOpSetTensorDescriptorEx_v2(
           fft_output_desc, output_desc->getLayout(), output_desc->getDtype(),
           output_desc->getDim(), output_desc->getDims(),
-          output_desc->getStrides()) == MLUOP_STATUS_SUCCESS);
+          output_desc->getStrides()));
   fft_plan->input_desc = fft_input_desc;
   fft_plan->output_desc = fft_output_desc;
 
@@ -2887,14 +2884,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan) {
   const std::string destroy_api = "[mluOpDestroyFFTPlan]";
   PARAM_CHECK_NE("[mluOpDestroyFFTPlan]", fft_plan, NULL);
   if (fft_plan->input_desc != NULL) {
-    INTERNAL_CHECK(destroy_api,
-                   mluOpDestroyTensorDescriptor(fft_plan->input_desc) ==
-                       MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN(destroy_api,
+                 mluOpDestroyTensorDescriptor(fft_plan->input_desc));
   }
   if (fft_plan->output_desc != NULL) {
-    INTERNAL_CHECK(destroy_api,
-                   mluOpDestroyTensorDescriptor(fft_plan->output_desc) ==
-                       MLUOP_STATUS_SUCCESS);
+    CHECK_RETURN(destroy_api,
+                 mluOpDestroyTensorDescriptor(fft_plan->output_desc));
   }
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
   switch (fft_plan->fft_type) {
