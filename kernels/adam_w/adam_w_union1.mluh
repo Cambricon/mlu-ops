@@ -1,0 +1,222 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
+#include <mlu.h>
+
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+#define SIZE_NRAM_PER_REGION PAD_DOWN((MAX_NRAM_SIZE / 12), NFU_ALIGN_SIZE)
+#define HIGH_PRECISION_MODE 1
+
+__nram__ int8_t nbuf_head[MAX_NRAM_SIZE];
+
+__mlu_func__ void computeAdamW(bfloat16_t *nbuf_paramh, bfloat16_t *nbuf_grad,
+                               float *nbuf_param, float *nbuf_grad_ptr,
+                               float *nbuf_momentum, float *nbuf_velocity,
+                               float *temp_1, float *temp_2, float lr,
+                               float beta1, float beta2, float bias1,
+                               float bias2, float epsilon, float weight_decay,
+                               float scale, bool use_nesterov, int deal_num,
+                               int offset, int param_flag) {
+#if __BANG_ARCH__ >= 500
+  if (!param_flag) {
+    __bang_bfloat162float(nbuf_param + offset, nbuf_paramh + offset, deal_num);
+  }
+  __bang_bfloat162float(nbuf_grad_ptr + offset, nbuf_grad + offset * 2,
+                        deal_num);
+  __bang_mul_scalar(nbuf_grad_ptr + offset, nbuf_grad_ptr + offset,
+                    1.0f / scale, deal_num);
+
+  // m = m * beta1 + (1 - beta1) * g
+  __bang_mul_scalar(nbuf_momentum + offset, nbuf_momentum + offset, beta1,
+                    deal_num);
+  __bang_mul_scalar(temp_1, nbuf_grad_ptr + offset, 1.0f - beta1, deal_num);
+  __bang_add(nbuf_momentum + offset, nbuf_momentum + offset, temp_1, deal_num);
+
+  // v = v * beta2 + (1 - beta2) * g * g
+  __bang_mul_scalar(nbuf_velocity + offset, nbuf_velocity + offset, beta2,
+                    deal_num);
+  __bang_mul_scalar(temp_1, nbuf_grad_ptr + offset, 1.0f - beta2, deal_num);
+  __bang_mul(temp_1, temp_1, nbuf_grad_ptr + offset, deal_num);
+  __bang_add(nbuf_velocity + offset, nbuf_velocity + offset, temp_1, deal_num);
+
+  // param = param - lr * m / bias1 / (sqrt(v / bias2) + epsilon) - lr *
+  // weight_decay * param
+  __bang_mul_scalar(nbuf_param + offset, nbuf_param + offset,
+                    1.0f - lr * weight_decay, deal_num);
+  __bang_mul_scalar(temp_1, nbuf_momentum + offset, lr, deal_num);
+  __bang_mul_scalar(temp_1, temp_1, 1.0f / bias1, deal_num);
+  __bang_mul_scalar(temp_2, nbuf_velocity + offset, 1.0f / bias2, deal_num);
+  __bang_sqrt(temp_2, temp_2, deal_num);
+  __bang_add_scalar(temp_2, temp_2, epsilon, deal_num);
+  __bang_div(temp_1, temp_1, temp_2, deal_num);
+  __bang_sub(nbuf_param + offset, nbuf_param + offset, temp_1, deal_num);
+  __bang_float2bfloat16_rn(nbuf_paramh + offset, nbuf_param + offset, deal_num);
+#endif
+}
+
+template <typename T>
+__mlu_func__ void computeAdamW(T *nbuf_paramh, T *nbuf_grad, float *nbuf_param,
+                               float *nbuf_grad_ptr, float *nbuf_momentum,
+                               float *nbuf_velocity, float *temp_1,
+                               float *temp_2, float lr, float beta1,
+                               float beta2, float bias1, float bias2,
+                               float epsilon, float weight_decay, float scale,
+                               bool use_nesterov, int deal_num, int offset,
+                               int param_flag) {
+  return;
+}
+
+template <typename T>
+__mlu_func__ void loadData(T *nbuf_paramh, T *nbuf_grad, float *nbuf_param,
+                           float *nbuf_momentum, float *nbuf_velocity,
+                           T *ddr_paramh, T *ddr_grad, float *ddr_param,
+                           float *ddr_momentum, float *ddr_velocity,
+                           const int data_num, const int offset) {
+  if (ddr_paramh != nullptr) {
+    __memcpy_async(nbuf_paramh + offset, ddr_paramh, data_num * sizeof(T),
+                   GDRAM2NRAM);
+  }
+  if (ddr_param != nullptr) {
+    __memcpy_async(nbuf_param + offset, ddr_param, data_num * sizeof(float),
+                   GDRAM2NRAM);
+  }
+  __memcpy_async(nbuf_grad + offset * 2, ddr_grad, data_num * sizeof(T),
+                 GDRAM2NRAM);
+  __memcpy_async(nbuf_momentum + offset, ddr_momentum, data_num * sizeof(float),
+                 GDRAM2NRAM);
+  __memcpy_async(nbuf_velocity + offset, ddr_velocity, data_num * sizeof(float),
+                 GDRAM2NRAM);
+}
+
+template <typename T>
+__mlu_func__ void storeData(T *ddr_paramh, float *ddr_param,
+                            float *ddr_momentum, float *ddr_velocity,
+                            T *nbuf_paramh, float *nbuf_param,
+                            float *nbuf_momentum, float *nbuf_velocity,
+                            const int data_num, const int offset) {
+  if (ddr_paramh != nullptr) {
+    __memcpy_async(ddr_paramh, nbuf_paramh + offset, data_num * sizeof(T),
+                   NRAM2GDRAM);
+  }
+
+  if (ddr_param != nullptr) {
+    __memcpy_async(ddr_param, nbuf_param + offset, data_num * sizeof(float),
+                   NRAM2GDRAM);
+  }
+  __memcpy_async(ddr_momentum, nbuf_momentum + offset, data_num * sizeof(float),
+                 NRAM2GDRAM);
+  __memcpy_async(ddr_velocity, nbuf_velocity + offset, data_num * sizeof(float),
+                 NRAM2GDRAM);
+}
+
+template <typename T>
+__mlu_global__ void unionApplyAdamW(T *param_h, T *grad, float *param,
+                                    float *momentum, float *velocity, float lr,
+                                    float beta1, float beta2, float bias1,
+                                    float bias2, float epsilon,
+                                    float weight_decay, float scale,
+                                    bool use_nesterov, size_t size) {
+  PERF_TIME_BEGIN();
+  if (__is_mpu()) {
+    return;
+  }
+  // assign task to per core
+  int num_align = NFU_ALIGN_SIZE / sizeof(float);
+  size_t num_var = size / sizeof(float);
+  size_t num_per_task = num_var / taskDim;
+  size_t rem_idx = num_var % taskDim;
+  size_t task_offset = 0;
+  size_t num_task = 0;
+  if (taskId < rem_idx) {
+    task_offset = taskId * (num_per_task + 1);
+    num_task = num_per_task + 1;
+  } else {
+    task_offset = taskId * num_per_task + rem_idx;
+    num_task = num_per_task;
+  }
+  // when dtype is float, NRAM is split to 11 part for ping-pong pipeline
+  int num_nbuf_part = 11;
+  int num_x =
+      PAD_DOWN(MAX_NRAM_SIZE / sizeof(float) / num_nbuf_part, num_align);
+  int pong = num_x;
+
+  // | param |     |  param_h  |    |  grad  |     |   m  |     | v |    |
+  // temp_1  |  temp_2  |
+  float *nbuf_param = (float *)nbuf_head;
+  T *nbuf_paramh = (T *)(nbuf_param + 2 * num_x);
+  float *nbuf_grad = (float *)(nbuf_paramh + 2 * num_x);
+  float *nbuf_momentum = nbuf_grad + 2 * num_x;
+  float *nbuf_velocity = nbuf_momentum + 2 * num_x;
+  float *temp_1 = nbuf_velocity + 2 * num_x;
+  float *temp_2 = nbuf_velocity + 3 * num_x;
+
+  int paramh_flag = param_h == nullptr ? 0 : 1;
+  T *ddr_paramh = param_h + task_offset * paramh_flag;
+  T *ddr_grad = grad + task_offset;
+
+  int param_flag = param == nullptr ? 0 : 1;
+  float *ddr_param = param + task_offset * param_flag;
+
+  float *ddr_momentum = momentum + task_offset;
+  float *ddr_velocity = velocity + task_offset;
+  int num_iter = (num_task + num_x - 1) / num_x;
+
+  // 3 stage pipeline
+  for (int i = 0; i < num_iter + 2; ++i) {
+    // store data
+    if (i >= 2) {
+      storeData(ddr_paramh - 2 * num_x * paramh_flag,
+                ddr_param - 2 * num_x * param_flag, ddr_momentum - 2 * num_x,
+                ddr_velocity - 2 * num_x, nbuf_paramh, nbuf_param,
+                nbuf_momentum, nbuf_velocity,
+                MIN(num_x, (int)(num_task - (i - 2) * num_x)),
+                (i - 2) % 2 * pong);
+    }
+    // load data
+    if (i <= num_iter - 1) {
+      loadData(nbuf_paramh, (T *)(nbuf_grad + pong / 2), nbuf_param,
+               nbuf_momentum, nbuf_velocity, ddr_paramh, ddr_grad, ddr_param,
+               ddr_momentum, ddr_velocity,
+               MIN(num_x, (int)(num_task - i * num_x)), i % 2 * pong);
+    }
+    // compute
+    if (i >= 1 && i <= num_iter) {
+      computeAdamW(nbuf_paramh, (T *)(nbuf_grad + pong / 2), nbuf_param,
+                   nbuf_grad, nbuf_momentum, nbuf_velocity, temp_1, temp_2, lr,
+                   beta1, beta2, bias1, bias2, epsilon, weight_decay, scale,
+                   use_nesterov, MIN(num_x, (int)(num_task - (i - 1) * num_x)),
+                   (i - 1) % 2 * pong, param_flag);
+    }
+    ddr_paramh += num_x * paramh_flag;
+    ddr_grad += num_x;
+    ddr_param += num_x * param_flag;
+    ddr_momentum += num_x;
+    ddr_velocity += num_x;
+    __asm__ volatile("sync;");
+  }
+  PERF_TIME_END();
+}

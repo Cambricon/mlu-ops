@@ -39,8 +39,7 @@
 #include <unordered_set>
 #include "gtest/gtest.h"
 #include "mlu_op.h"
-#include "bangc_helper_dtype.h"
-#include "bangc_kernels.h"
+#include "bangc_kernels_collection.h"
 #include "core/tensor.h"
 #include "core/tool.h"
 #include "core/type.h"

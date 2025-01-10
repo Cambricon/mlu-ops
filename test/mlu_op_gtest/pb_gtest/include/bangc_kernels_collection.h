@@ -20,21 +20,13 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#ifndef TEST_MLU_OP_GTEST_BANGC_KERNELS_COLLECTION_H_
+#define TEST_MLU_OP_GTEST_BANGC_KERNELS_COLLECTION_H_
 
-#include "adam_w.h"
+#include "bangc_helper_dtype.h"
+#include "bangc_kernels.h"
 
-#include "adam_w_union1.mluh"
+// mluAdamW
+#include "kernels/adam_w/adam_w_lite.h"
 
-mluOpStatus_t MLUOP_WIN_API KernelApplyAdamW(
-    const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
-    const cnrtQueue_t queue, void *param, void *param_h, void *grad,
-    void *momentum, void *velocity, float lr, float beta1, float beta2,
-    float bias1, float bias2, float epsilon, float weight_decay, float scale,
-    bool use_nesterov, size_t size) {
-  // launch kernel
-  unionApplyAdamW<bfloat16_t><<<k_dim, k_type, queue>>>(
-      (bfloat16_t *)param_h, (bfloat16_t *)grad, (float *)param,
-      (float *)momentum, (float *)velocity, lr, beta1, beta2, bias1, bias2,
-      epsilon, weight_decay, scale, use_nesterov, size);
-  return MLUOP_STATUS_SUCCESS;
-}
+#endif  // TEST_MLU_OP_GTEST_BANGC_KERNELS_COLLECTION_H_

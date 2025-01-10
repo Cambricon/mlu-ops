@@ -1,0 +1,64 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
+#include "adam_w_lite.h"
+
+#include "adam_w_union1.mluh"
+
+NAMESPACE_BANGC_KERNELS_BEGIN
+
+template <typename T>
+bangcKernelsStatus_t BANGC_KERNELS_WIN_API
+mluAdamW(const cnrtQueue_t queue, const float lr, const float beta1,
+         const float beta2, const float bias1, const float bias2,
+         const float epsilon, const float weight_decay, const float scale,
+         const bool use_nesterov, size_t size, T *param_h, T *grad,
+         float *param, float *momentum, float *velocity) {
+  // set job type
+  int ordinal = -1;
+  int cluster_num;
+  int core_dim;
+  cnrtGetDevice(&ordinal);
+  cnrtDeviceGetAttribute(&core_dim, cnrtAttrMcorePerCluster, ordinal);
+  cnrtDeviceGetAttribute(&cluster_num, cnrtAttrMaxClusterPerUnionLimitTask,
+                         ordinal);
+  cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
+  cnrtDim3_t k_dim{.x = (uint32_t)core_dim, .y = (uint32_t)cluster_num, .z = 1};
+
+  // launch kernel
+  unionApplyAdamW<<<k_dim, k_type, queue>>>(
+      BANG_UNWRAP_T(param_h), BANG_UNWRAP_T(grad), param, momentum, velocity,
+      lr, beta1, beta2, bias1, bias2, epsilon, weight_decay, scale,
+      use_nesterov, size);
+  return BANGC_KERNELS_STATUS_SUCCESS;
+}
+
+#define IMPL_MLU_APPLY_ADAMW_KERNEL(DType)                                   \
+  template bangcKernelsStatus_t BANGC_KERNELS_WIN_API mluAdamW(              \
+      const cnrtQueue_t, const float, const float, const float, const float, \
+      const float, const float, const float, const float, const bool,        \
+      const size_t, DType *, DType *, float *, float *, float *)
+
+IMPL_MLU_APPLY_ADAMW_KERNEL(bang_bfloat16_t);
+
+NAMESPACE_BANGC_KERNELS_END
