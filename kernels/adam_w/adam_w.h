@@ -24,8 +24,6 @@
 #define KERNELS_ADAMW_ADAMW_H_
 
 #include "mlu_op.h"
-#include "kernels/debug.h"
-#include "kernels/kernel.h"
 
 struct mluOpAdamWStruct {
   float weight_decay = 0;

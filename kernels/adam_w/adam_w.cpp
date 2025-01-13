@@ -27,6 +27,7 @@
 #include "core/runtime/device.h"
 #include "core/type.h"
 #include "core/tool.h"
+#include "kernels/kernel.h"
 
 mluOpStatus_t MLUOP_WIN_API
 mluOpCreateAdamWDescriptor(mluOpAdamWDescriptor_t *adamw_desc) {
