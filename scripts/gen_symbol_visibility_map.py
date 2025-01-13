@@ -43,7 +43,7 @@ def create_map_file(map_file,node_msg_cp_finished):
 
 if __name__ == '__main__':
     try:
-        # argv: map_file, bangc_kernels_collection.h, mlu_op.h
+        # argv: *, map_file, bangc_kernels_collection.h, mlu_op.h
         assert len(sys.argv) == 4, "len(sys.argv) should be equal to 4."
         map_file = sys.argv[1]
         kernels_header_map.append(sys.argv[2])
