@@ -155,7 +155,6 @@ function main () {
     fi
 
     parse_args "$@"
-    export MLU_VISIBLE_DEVICES=${DEVICE_ID}
     process
 }
 

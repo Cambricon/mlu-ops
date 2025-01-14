@@ -224,11 +224,11 @@ __mlu_func__ void getRoiInfo(const T *rois_dram, int roi_idx,
     roi_bin_grid_w = params.sample_ratio;
   } else {
     if constexpr (std::is_same<T, half>::value) {
-      roi_bin_grid_h = __half2int_up(bin_size_h);
-      roi_bin_grid_w = __half2int_up(bin_size_w);
+      roi_bin_grid_h = __half2int32_up(bin_size_h);
+      roi_bin_grid_w = __half2int32_up(bin_size_w);
     } else {
-      roi_bin_grid_h = __float2int_up(bin_size_h);
-      roi_bin_grid_w = __float2int_up(bin_size_w);
+      roi_bin_grid_h = __float2int32_up(bin_size_h);
+      roi_bin_grid_w = __float2int32_up(bin_size_w);
     }
   }
 
@@ -286,11 +286,11 @@ __mlu_func__ void bilinearInterpolatePosWeight(
 
     int y_low, x_low, y_high, x_high;
     if constexpr (std::is_same<T, half>::value) {
-      y_low = __half2int(y);
-      x_low = __half2int(x);
+      y_low = __half2int32(y);
+      x_low = __half2int32(x);
     } else {
-      y_low = __float2int(y);
-      x_low = __float2int(x);
+      y_low = __float2int32(y);
+      x_low = __float2int32(x);
     }
 
     if (y_low >= height - 1) {
