@@ -107,6 +107,6 @@ mluOpStatus_t fftOptensor(mluOpHandle_t handle, int elem_num, void *in1_ptr,
                           cnnlOpTensorDesc_t op_type, void *workspace,
                           size_t workspace_size, const std::string api);
 
-int findFFTOptLimit(mluOpHandle_t handle, const int n, int &m, int &L, int &s,
-                    int &L_sub, bool &find_stockham);
+int findFFTOptLimit(mluOpHandle_t handle, const int n, const int batch, int &m,
+                    int &L, int &s, int &L_sub, bool &find_stockham);
 #endif  // KERNELS_FFT_COMMON_FFT_BASIC_OPS_H_
