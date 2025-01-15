@@ -56,9 +56,11 @@ mluOpStatus_t selectFFTStrategy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
     // strategy_status: 0 means select MLUOP_FUNC_STOCKHAM, 1 means selelct
     // COOLEY_TUKEY,
     //                  -1 means still select CNFFT_FUNC_MATMUL.
-    int strategy_status =
-        findFFTOptLimit(handle, fft_plan->n[0], fft_plan->m, fft_plan->L,
-                        fft_plan->s, fft_plan->L_sub, find_stockham);
+    VLOG(5) << "signal_length: " << fft_plan->n[0];
+    VLOG(5) << "batch: " << fft_plan->batch;
+    int strategy_status = findFFTOptLimit(
+        handle, fft_plan->n[0], fft_plan->batch, fft_plan->m, fft_plan->L,
+        fft_plan->s, fft_plan->L_sub, find_stockham);
     if (strategy_status == 1) {
       fft_plan->fft_strategy = CNFFT_FUNC_COOLEY_TUKEY;
     } else if (strategy_status == 0) {
@@ -2694,6 +2696,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       fft_plan->prime ||
       ((n[0] <= 2 || n[0] == 400 || n[0] == 512 || n[0] == 48000) && rank == 1);
 
+
+  VLOG(5) << "fft_plan->prime: " << fft_plan->prime;
   /*
    * decision part
    */
