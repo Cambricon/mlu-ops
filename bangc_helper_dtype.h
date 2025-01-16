@@ -20,7 +20,9 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#pragma once
+
+#ifndef BANGC_HELPER_DTYPE_H_
+#define BANGC_HELPER_DTYPE_H_
 
 /**
  * Provides `BANG_WRAP_T(ptr_arg)` for .cc and `BANG_UNWRAP_T(ptr_arg)` for .mlu
@@ -111,3 +113,5 @@ using bang_unwrap_data_t = typename bang_unwrap_data<T>::type;
 #define BANG_UNWRAP_T(a) reinterpret_cast<bang_unwrap_data_t<decltype(a)>>(a)
 
 #endif  // __BANG__
+
+#endif  // BANGC_HELPER_DTYPE_H_

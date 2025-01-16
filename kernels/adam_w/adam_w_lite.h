@@ -21,6 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 
+#ifndef KERNELS_ADAM_W_LITE_ADAM_W_LITE_H_
+#define KERNELS_ADAM_W_LITE_ADAM_W_LITE_H_
+
 #include "bangc_helper_dtype.h"
 #include "bangc_kernels.h"
 
@@ -116,3 +119,5 @@ bangcKernelsStatus_t BANGC_KERNELS_WIN_API mluAdamW(const cnrtQueue_t queue,
                                                     float *velocity);
 
 NAMESPACE_BANGC_KERNELS_END
+
+#endif  // KERNELS_ADAM_W_LITE_ADAM_W_LITE_H_

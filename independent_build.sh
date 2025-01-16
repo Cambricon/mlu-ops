@@ -5,10 +5,13 @@ SCRIPT_DIR=`dirname $0`
 BUILD_PATH=${SCRIPT_DIR}/build
 CMAKE=cmake
 MLUOP_TARGET_CPU_ARCH=`uname -m`
+
 GEN_SYMBOL_VIS_FILE_PY="./scripts/gen_symbol_visibility_map.py"
+GEN_BANGC_KERNELS_COLLECTION_H_PY="./scripts/bangc_kernels_path_config/bangc_kernels_gen_header_file_for_mlu_ops.py"
+BANGC_KERNEL_PATH_CHECK="./scripts/bangc_kernels_path_config/bangc_kernels_path_check.py"
 MLUOP_SYMBOL_VIS_FILE="symbol_visibility.map"
 TARGET_SYMBOL_FILE="mlu_op.h"
-TARGET_SYMBOL_FILE_LITE_COLLECTION="test/mlu_op_gtest/pb_gtest/include/bangc_kernels_collection.h"
+TARGET_SYMBOL_FILE_LITE_COLLECTION="bangc_kernels_collection.h"
 PACKAGE_EXTRACT_DIR="dep_libs_extract"
 
 PROG_NAME=$(basename $0)  # current script filename, DO NOT EDIT
@@ -458,6 +461,11 @@ else
 fi
 export PATH=${NEUWARE_HOME}/bin:$PATH
 export LD_LIBRARY_PATH=${NEUWARE_HOME}/lib64:$LD_LIBRARY_PATH
+
+# GEN_BANGC_KERNELS_COLLECTION_H_PY="scripts/bangc_kernels_path_config/bangc_kernels_gen_header_file_for_mlu_ops.py"
+# BANGC_KERNEL_PATH_CHECK="scripts/bangc_kernels_path_config/bangc_kernels_path_check.py"
+python3 ${BANGC_KERNEL_PATH_CHECK}
+python3 ${GEN_BANGC_KERNELS_COLLECTION_H_PY}
 
 prog_log_info "generate ${MLUOP_SYMBOL_VIS_FILE} file."
 prog_log_info "python3 ${GEN_SYMBOL_VIS_FILE_PY} ${BUILD_PATH}/${MLUOP_SYMBOL_VIS_FILE} ${TARGET_SYMBOL_FILE} ${TARGET_SYMBOL_FILE_LITE_COLLECTION}"
