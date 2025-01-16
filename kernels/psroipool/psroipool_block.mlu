@@ -35,9 +35,9 @@ __nram__ int8_t nram_ptr[MAX_NRAM_SIZE];
 template <typename T>
 __mlu_func__ T scalarRound(T key) {
   if (sizeof(T) == 2) {
-    return (T)(__half2int_rd(T(key)));
+    return (T)(__half2int32_rd(T(key)));
   } else {
-    return (T)(__float2int_rd(T(key)));
+    return (T)(__float2int32_rd(T(key)));
   }
 }
 
