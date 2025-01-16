@@ -2696,8 +2696,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       fft_plan->prime ||
       ((n[0] <= 2 || n[0] == 400 || n[0] == 512 || n[0] == 48000) && rank == 1);
 
-
-  VLOG(5) << "fft_plan->prime: " << fft_plan->prime;
   /*
    * decision part
    */

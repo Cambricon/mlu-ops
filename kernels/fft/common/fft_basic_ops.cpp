@@ -24,7 +24,8 @@
 #include "fft_basic_ops.h"
 
 #ifndef FFT_STOCK_BATCH_LIMIT
-#define FFT_STOCK_BATCH_LIMIT 512
+#define FFT_STOCK_BATCH_LIMIT \
+  512  // Numerical values derived from testing experience
 #endif
 
 bool fftIsIntDtype(const mluOpDataType_t dtype) {
@@ -967,19 +968,19 @@ int findFFTOptLimit(mluOpHandle_t handle, const int n, const int batch, int &m,
   int flag_stockham;
   int flag_cooleyTuky;
   flag_stockham = findStockham(handle, L, m, L_sub, find_stockham);
-  flag_cooleyTuky = findCooleyTukey(handle, L, m, s);
-  if (flag_stockham && flag_cooleyTuky) {
-    if (batch > FFT_STOCK_BATCH_LIMIT && L > 30 * std::pow(2, m)) {
-      flag = 1;  // cooley_tuky has better performance
+  if (flag_stockham && batch > FFT_STOCK_BATCH_LIMIT &&
+      L > 30 * std::pow(2, m)) {
+    flag_cooleyTuky = findCooleyTukey(handle, L, m, s);
+    // try cooley tuky algo, which may has better performace
+    if (flag_cooleyTuky) {
+      flag = 1;  // cooley tuky algo has better performance
     } else {
-      flag = 0;  // stockham has better performance
+      flag = 0;  // stockham algo has better performance
     }
   }
-  if (flag_stockham && !flag_cooleyTuky) {
-    flag = 0;
-  }
-  if (flag_cooleyTuky && !flag_stockham) {
-    flag = 1;
+  if (!flag_stockham) {  // if cannot deal by stockham algo, try cooley tuky
+                         // algo
+    flag = findCooleyTukey(handle, L, m, s);
   }
   return flag;
 }
