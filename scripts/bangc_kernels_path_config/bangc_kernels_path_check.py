@@ -68,7 +68,7 @@ def get_relative_paths(absolute_path):
 
 
 # parsing JSON file
-def extract_headers(json_file_path, common_flag=True, header_flag=True, other_flag=True):
+def extract_headers(json_file_path, common_flag=True, header_flag=True, sources_flag=True):
     header_files = []
     op_name = []
     try:
@@ -85,7 +85,7 @@ def extract_headers(json_file_path, common_flag=True, header_flag=True, other_fl
     if 'common' in config and common_flag:
         header_files.extend(config['common'])
 
-    # JSON.operators {op_name, header, other}
+    # JSON.operators {op_name, header, sources}
     if 'operators' in config:
         for operator in config['operators']:
             if 'name' in operator:
@@ -100,11 +100,11 @@ def extract_headers(json_file_path, common_flag=True, header_flag=True, other_fl
                 else:
                     header_files.append(operator['header'])
             
-            if 'other' in operator and other_flag:
-                if isinstance(operator['other'], list):
-                    header_files.extend(operator['other'])
+            if 'sources' in operator and sources_flag:
+                if isinstance(operator['sources'], list):
+                    header_files.extend(operator['sources'])
                 else:
-                    header_files.append(operator['other'])
+                    header_files.append(operator['sources'])
 
     return header_files, op_name
 

@@ -11,7 +11,7 @@
       {
         "name": "mluAdamW",
         "header": "kernels/adam_w/adam_w_lite.h",
-        "other": [
+        "sources": [
             "kernels/adam_w/adam_w_union1.mluh",
             "kernels/adam_w/adam_w_lite_union1.mlu"
         ]
