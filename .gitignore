@@ -1,8 +1,9 @@
-test/mlu_op_gtest/pb_gtest/src/gtest/case_list.cpp
-test/mlu_op_gtest/pb_gtest/src/gtest/op_register.h
+bangc_kernels_collection.h
 daily.software.cambricon.com/
 dep_libs_extract
 dependency.txt
+test/mlu_op_gtest/pb_gtest/src/gtest/case_list.cpp
+test/mlu_op_gtest/pb_gtest/src/gtest/op_register.h
 
 # Swap
 [._]*.s[a-v][a-z]

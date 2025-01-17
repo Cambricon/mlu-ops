@@ -1,0 +1,20 @@
+{
+    "common": [
+        "bangc_helper_dtype.h",
+        "bangc_kernels.h",
+        "kernels/debug.h",
+        "kernels/device_check.h",
+        "kernels/kernel.h"
+    ],
+
+    "operators": [
+      {
+        "name": "mluAdamW",
+        "header": "kernels/adam_w/adam_w_lite.h",
+        "sources": [
+            "kernels/adam_w/adam_w_union1.mluh",
+            "kernels/adam_w/adam_w_lite_union1.mlu"
+        ]
+      }
+    ]
+}
