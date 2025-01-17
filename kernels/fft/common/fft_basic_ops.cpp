@@ -966,17 +966,17 @@ int findFFTOptLimit(mluOpHandle_t handle, const int n, const int batch, int &m,
   initBasicParam(n, L, m);
   int flag = 0;
   int flag_stockham;
-  int flag_cooleyTukey;
+  int flag_cooley_tukey;
   flag_stockham = findStockham(handle, L, m, L_sub, find_stockham);
   if (flag_stockham && batch > FFT_STOCK_BATCH_LIMIT &&
       L > 30 * std::pow(2, m)) {
-    flag_cooleyTukey = findCooleyTukey(handle, L, m, s);
+    flag_cooley_tukey = findCooleyTukey(handle, L, m, s);
     // try cooleyTukey algo, which may has better performace
-    if (flag_cooleyTukey) {
-      flag = 1;  // cooleyTukey algo has better performance
+    if (flag_cooley_tukey) {
+      flag = 1;  // Cooley-Tukey algo has better performance
     }
   }
-  if (!flag_stockham) {  // if cannot deal by stockham algo, try cooleyTukey
+  if (!flag_stockham) {  // if cannot deal by Stockham algo, try Cooley-Tukey
                          // algo
     flag = findCooleyTukey(handle, L, m, s);
   }
