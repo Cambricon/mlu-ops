@@ -41,7 +41,7 @@ def extract_include_paths(file_path):
 def get_mluops(input_file):
     node_msg_cp_finished=""
     pattern = re.compile(r'(?P<api>mluOp\w+) *\(')
-    pattern_lite = re.compile(r'(?P<api>mlu\w+) *\(')
+    pattern_lite = re.compile(r'(?P<api>mlu(?!Op)\w+) *\(')
     with open(input_file,'r', encoding='utf8') as f:
         for line in f:
             match = pattern.search(line)
