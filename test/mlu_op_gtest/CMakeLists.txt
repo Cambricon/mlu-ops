@@ -94,6 +94,10 @@ if (NOT EXISTS ${PROTO_FILES})
   file(GLOB PROTO_FILES "${PROTO_PATH}/mlu_op_test.proto")
 endif()
 
+execute_process(
+  COMMAND python3 "merge_proto_files.py"
+  WORKING_DIRECTORY ${PROTO_PATH}
+)
 
 # protoc code
 set(PROTOBUF_PROTOC_EXECUTABLE protoc CACHE STRING "protoc command location")
