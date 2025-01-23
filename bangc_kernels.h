@@ -23,6 +23,8 @@
 #ifndef BANGC_KERNELS_H_
 #define BANGC_KERNELS_H_
 
+#include "cnrt.h"
+
 #ifndef NAMESPACE_BANGC_KERNELS_BEGIN
 #define NAMESPACE_BANGC_KERNELS_BEGIN namespace bangc_kernels {
 #endif
@@ -38,8 +40,8 @@ NAMESPACE_BANGC_KERNELS_BEGIN
 #endif
 
 typedef enum {
-  BANGC_KERNELS_STATUS_SUCCESS =
-      0, /*!< The operation is successfully completed. */
+  BANGC_KERNELS_STATUS_SUCCESS = 0,
+  /*!< The operation is successfully completed. */
   BANGC_KERNELS_STATUS_ALLOC_FAILED = 1,
   /*!< This error occurs when the resource allocation fails, which is usually
      caused by failing to call cnMallocHost due to exceeded memory usage. Make
