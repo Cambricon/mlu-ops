@@ -48,13 +48,37 @@ void NmsExecutor::workspaceMalloc() {
       box_dim_ = tensor_boxes->getDimIndex(0);
     }
   }
+  float iou_threshold = parser_->getProtoNode()->nms_param().iou_threshold();
+  mluOpNmsOutputMode_t mode =
+      (mluOpNmsOutputMode_t)parser_->getProtoNode()->nms_param().mode();
+  mluOpNmsAlgo_t algo =
+      (mluOpNmsAlgo_t)parser_->getProtoNode()->nms_param().algo();
+  float offset = parser_->getProtoNode()->nms_param().offset();
+  int max_output_size = parser_->getProtoNode()->nms_param().max_output_boxes();
+  float confidence_threshold =
+      parser_->getProtoNode()->nms_param().confidence_threshold();
+  bool pad_to_max_output_size =
+      parser_->getProtoNode()->nms_param().pad_to_max_output_size();
+
+  mluOpNmsBoxPointMode_t box_mode =
+      (mluOpNmsBoxPointMode_t)parser_->getProtoNode()->nms_param().box_mode();
+  float soft_nms_sigma = parser_->getProtoNode()->nms_param().soft_nms_sigma();
+  mluOpNmsMethodMode_t method_mode =
+      (mluOpNmsMethodMode_t)parser_->getProtoNode()->nms_param().method_mode();
+  mluOpNmsDescriptor_t nms_desc;
+  nms_desc = cpu_runtime_.allocate(mluOpCreateNmsDescriptor,
+                                   mluOpDestroyNmsDescriptor);
+  MLUOP_CHECK(mluOpSetNmsDescriptor(
+      nms_desc, box_mode, mode, algo, method_mode, iou_threshold,
+      soft_nms_sigma, max_output_size, confidence_threshold, offset,
+      input_layout, pad_to_max_output_size));
   VLOG(4) << "box_dim_: " << box_dim_;
   if (box_dim_ == 4) {
-    MLUOP_CHECK(mluOpGetNmsWorkspaceSize(handle_, tensor_boxes, tensor_confi,
+    MLUOP_CHECK(mluOpGetNmsWorkspaceSize(handle_, nms_desc, tensor_boxes, tensor_confi,
                                          &workspace_size_));
   } else {
     // box_dim_ = 7
-    MLUOP_CHECK(mluOpGetNmsWorkspaceSize(handle_, tensor_boxes, nullptr,
+    MLUOP_CHECK(mluOpGetNmsWorkspaceSize(handle_, nms_desc, tensor_boxes, nullptr,
                                          &workspace_size_));
   }
   VLOG(4) << "Malloc workspace space.";
@@ -62,10 +86,6 @@ void NmsExecutor::workspaceMalloc() {
     workspace_ = mlu_runtime_.allocate(workspace_size_);
   }
   VLOG(4) << "Malloc addr=" << workspace_ << ", size=" << workspace_size_;
-
-  bool pad_to_max_output_size =
-      parser_->getProtoNode()->nms_param().pad_to_max_output_size();
-  VLOG(4) << "pad_to_max_output_size is " << pad_to_max_output_size;
 
   // this op will modify input data.
   // when repeat != 1, after second compute(), input data has been modified.

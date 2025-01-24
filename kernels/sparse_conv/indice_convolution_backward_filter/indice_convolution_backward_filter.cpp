@@ -362,8 +362,8 @@ static mluOpStatus_t internalIndiceConvBackwardFilter(
   CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_a_desc));
   CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_b_desc));
   CHECK_RETURN(api_name, mluOpCreateTensorDescriptor(&matmul_c_desc));
-  CALL_CNNL(cnnlMatMulDescCreate(&matmul_desc));
-  CALL_CNNL(cnnlMatMulAlgoCreate(&matmul_algo));
+  CALL_CNNL(cnnlCreateMatMulDescriptor(&matmul_desc));
+  CALL_CNNL(cnnlCreateMatMulAlgo(&matmul_algo));
   CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
   CHECK_RETURN(
       api_name,
@@ -450,9 +450,9 @@ static mluOpStatus_t internalIndiceConvBackwardFilter(
                                                      cnnl_indices_desc);
         DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_a_desc,
                                                      cnnl_output_desc);
-        CALL_CNNL(cnnlGatherNd(cnnl_handle, cnnl_params_desc, features,
-                               cnnl_indices_desc, gather_input_indice,
-                               cnnl_output_desc, input_temp));
+        CALL_CNNL(cnnlGatherNd_v2(cnnl_handle, 0, cnnl_params_desc, features,
+                                  cnnl_indices_desc, gather_input_indice,
+                                  cnnl_output_desc, input_temp));
         DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_params_desc);
         DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
         DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
@@ -467,7 +467,7 @@ static mluOpStatus_t internalIndiceConvBackwardFilter(
                                                      cnnl_indices_desc);
         DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_b_desc,
                                                      cnnl_output_desc);
-        CALL_CNNL(cnnlGatherNd(cnnl_handle, cnnl_params_desc, output_grad,
+        CALL_CNNL(cnnlGatherNd_v2(cnnl_handle, 0, cnnl_params_desc, output_grad,
                                cnnl_indices_desc, gather_output_grad,
                                cnnl_output_desc, diffy_temp));
         DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_params_desc);
@@ -522,8 +522,8 @@ static mluOpStatus_t internalIndiceConvBackwardFilter(
   CHECK_RETURN(api_name, mluOpDestroyTensorDescriptor(matmul_a_desc));
   CHECK_RETURN(api_name, mluOpDestroyTensorDescriptor(matmul_b_desc));
   CHECK_RETURN(api_name, mluOpDestroyTensorDescriptor(matmul_c_desc));
-  CALL_CNNL(cnnlMatMulDescDestroy(matmul_desc));
-  CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo));
+  CALL_CNNL(cnnlDestroyMatMulDescriptor(matmul_desc));
+  CALL_CNNL(cnnlDestroyMatMulAlgo(matmul_algo));
   CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
   return MLUOP_STATUS_SUCCESS;
 }

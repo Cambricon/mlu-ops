@@ -107,12 +107,11 @@ mluOpStatus_t fftQuantizePositionScale(mluOpHandle_t handle, int array_length,
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(quant_desc, cnnl_quant_desc);
 
     // get quantize param
-    int bit_width;
-    mluop::castDtypeToBitwidth(compute_type, &bit_width);
     cnnlQuantizeMode_t mode = CNNL_QUANTIZE_POSITION_SCALE;
-    CALL_CNNL(cnnlQuantizeParam(cnnl_handle, mode, cnnl_quant_desc, input,
-                                bit_width, workspace, workspace_size, position,
-                                scale, nullptr));
+    cnnlQuantizeScheme_t quant_scheme = CNNL_QUANTIZE_NONE;
+    CALL_CNNL(cnnlQuantizeParam_v2(cnnl_handle, quant_scheme, mode, cnnl_quant_desc, input,
+                                   cnnlDataType_t(compute_type), workspace, workspace_size,
+                                   nullptr, position, nullptr, scale, nullptr, nullptr));
     status = mluOpDestroyTensorDescriptor(quant_desc);
     CHECK_RETURN(api, status);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_quant_desc);
@@ -195,28 +194,28 @@ mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(
 
   // get matmul workspace
   if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type)) {
-    cnnlMatMulDescriptor_t matmul_desc;
-    CALL_CNNL(cnnlMatMulDescCreate(&matmul_desc));
-    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_COMPUTE_TYPE,
-                                    &data_type, sizeof(int32_t)));
-    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSA,
+    cnnlMatMulExDescriptor_t matmul_desc;
+    CALL_CNNL(cnnlCreateMatMulExDescriptor(&matmul_desc));
+    CALL_CNNL(cnnlSetMatMulExDescAttr(matmul_desc, CNNL_MATMUL_EX_DESC_COMPUTE_TYPE,
+                                      &data_type, sizeof(int32_t)));
+    CALL_CNNL(cnnlSetMatMulExDescAttr(matmul_desc, CNNL_MATMUL_EX_DESC_TRANSA,
                                     &trans_a_int, sizeof(int32_t)));
-    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSB,
+    CALL_CNNL(cnnlSetMatMulExDescAttr(matmul_desc, CNNL_MATMUL_EX_DESC_TRANSB,
                                     &trans_b_int, sizeof(int32_t)));
+    cnnlMatMulExHeuristicResult_t result;
+    CALL_CNNL(cnnlCreateMatMulExHeuristicResult(&result));
+    cnnlMatMulExAlgo_t matmul_algo;
+    int returned_algo_count = 0;
+    CALL_CNNL(cnnlCreateMatMulExAlgo(&matmul_algo));
+    CALL_CNNL(cnnlGetMatMulExAlgoHeuristic(
+                  cnnl_handle, matmul_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc, cnnl_c_desc,
+                  nullptr, 1, &result, &returned_algo_count
+    ));
 
-    cnnlMatMulAlgo_t matmul_algo;
-    CALL_CNNL(cnnlMatMulAlgoCreate(&matmul_algo));
-    cnnlMatMulPreference_t preference = CNNL_MATMUL_FASTEST;
-    CALL_CNNL(cnnlGetQuantizeMatMulAlgorithm(
-        cnnl_handle, matmul_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc,
-        preference, &matmul_algo));
+    CALL_CNNL(cnnlGetMatMulExHeuristicResult(result, matmul_algo, &workspace_size));
 
-    CALL_CNNL(cnnlGetQuantizeMatMulWorkspaceSize(
-        cnnl_handle, matmul_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc,
-        matmul_algo, &workspace_size));
-
-    CALL_CNNL(cnnlMatMulDescDestroy(matmul_desc));
-    CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo));
+    CALL_CNNL(cnnlDestroyMatMulExDescriptor(matmul_desc));
+    CALL_CNNL(cnnlDestroyMatMulExAlgo(matmul_algo));
   } else {
     // workspace_size = 0;  // mluOpMatmul doesn't need workspace.
     cnnlMatMulDescriptor_t matmul_desc;
@@ -227,7 +226,7 @@ mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(
     cnnlDataType_t cnnl_compute_type = CNNL_DTYPE_FLOAT;  // (TODO)
 
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_d_desc);
-    CALL_CNNL(cnnlMatMulDescCreate(&matmul_desc));
+    CALL_CNNL(cnnlCreateMatMulDescriptor(&matmul_desc));
     CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSA,
                                     &trans_a_int, sizeof(int32_t)));
     CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSB,
@@ -237,7 +236,7 @@ mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(
     CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_COMPUTE_TYPE,
                                     &cnnl_compute_type,
                                     sizeof(cnnl_compute_type)));
-    CALL_CNNL(cnnlMatMulAlgoCreate(&matmul_algo));
+    CALL_CNNL(cnnlCreateMatMulAlgo(&matmul_algo));
     CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
     int32_t requested_algo_count = 1, return_algo_count = 0;
 
@@ -248,8 +247,8 @@ mluOpStatus_t fftGetQuantizeMatMulWorkspaceSize(
     CALL_CNNL(cnnlGetMatMulHeuristicResult(heuristic_result, matmul_algo,
                                            &workspace_size));
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_d_desc);
-    CALL_CNNL(cnnlMatMulDescDestroy(matmul_desc));
-    CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo));
+    CALL_CNNL(cnnlDestroyMatMulDescriptor(matmul_desc));
+    CALL_CNNL(cnnlDestroyMatMulAlgo(matmul_algo));
     CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
   }
 
@@ -348,28 +347,31 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
 
   // compute matmul result
   if (fftIsIntDtype(a_compute_type) && fftIsIntDtype(b_compute_type)) {
-    cnnlMatMulDescriptor_t matmul_desc;
-    CALL_CNNL(cnnlMatMulDescCreate(&matmul_desc));
-    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_COMPUTE_TYPE,
+    cnnlMatMulExDescriptor_t matmul_desc;
+    CALL_CNNL(cnnlCreateMatMulExDescriptor(&matmul_desc));
+    CALL_CNNL(cnnlSetMatMulExDescAttr(matmul_desc, CNNL_MATMUL_EX_DESC_COMPUTE_TYPE,
                                     &data_type, sizeof(int32_t)));
-    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSA,
+    CALL_CNNL(cnnlSetMatMulExDescAttr(matmul_desc, CNNL_MATMUL_EX_DESC_TRANSA,
                                     &trans_a_int, sizeof(int32_t)));
-    CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSB,
+    CALL_CNNL(cnnlSetMatMulExDescAttr(matmul_desc, CNNL_MATMUL_EX_DESC_TRANSB,
                                     &trans_b_int, sizeof(int32_t)));
+    cnnlMatMulExHeuristicResult_t result;
+    CALL_CNNL(cnnlCreateMatMulExHeuristicResult(&result));
+    cnnlMatMulExAlgo_t matmul_algo;
+    int returned_algo_count = 0;
+    CALL_CNNL(cnnlCreateMatMulExAlgo(&matmul_algo));
+    CALL_CNNL(cnnlGetMatMulExAlgoHeuristic(
+                  cnnl_handle, matmul_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc, cnnl_c_desc,
+                  nullptr, 1, &result, &returned_algo_count
+    ));
 
-    cnnlMatMulAlgo_t matmul_algo;
-    CALL_CNNL(cnnlMatMulAlgoCreate(&matmul_algo));
-    cnnlMatMulPreference_t preference = CNNL_MATMUL_FASTEST;
-    CALL_CNNL(cnnlGetQuantizeMatMulAlgorithm(
-        cnnl_handle, matmul_desc, cnnl_a_desc, cnnl_b_desc, cnnl_c_desc,
-        preference, &matmul_algo));
+    CALL_CNNL(cnnlGetMatMulExHeuristicResult(result, matmul_algo, &workspace_size));
 
     const float one = 1.0;
     const float zero = 0.0;
-    CALL_CNNL(cnnlQuantizeMatMul(
-        cnnl_handle, matmul_desc, &one, cnnl_a_desc, a_ptr, a_pos, a_scale,
-        nullptr, cnnl_b_desc, b_ptr, b_pos, b_scale, nullptr, &zero,
-        cnnl_c_desc, c_ptr, matmul_algo, workspace, workspace_size));
+    CALL_CNNL(cnnlMatMulEx_v2(cnnl_handle, matmul_desc, matmul_algo, &one, cnnl_a_desc,
+                              a_ptr, cnnl_b_desc, b_ptr, &zero, cnnl_c_desc, c_ptr,
+                              workspace, workspace_size, cnnl_c_desc, c_ptr));
 
     if ((alpha != 1.0) || (beta != 0.0)) {
       CALL_CNNL(cnnlTransform_v2(cnnl_handle, CNNL_POINTER_MODE_HOST, &alpha,
@@ -377,8 +379,8 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
                                  c_ptr));
     }
 
-    CALL_CNNL(cnnlMatMulDescDestroy(matmul_desc));
-    CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo));
+    CALL_CNNL(cnnlDestroyMatMulExDescriptor(matmul_desc));
+    CALL_CNNL(cnnlDestroyMatMulExAlgo(matmul_algo));
   } else {
     c_desc->setOnchipDtype(MLUOP_DTYPE_FLOAT);
     cnnlMatMulDescriptor_t matmul_desc;
@@ -388,14 +390,14 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
     bool allow_tf32 = false;
     cnnlDataType_t cnnl_compute_type = CNNL_DTYPE_FLOAT;  // (TODO)
 
-    CALL_CNNL(cnnlMatMulDescCreate(&matmul_desc));
+    CALL_CNNL(cnnlCreateMatMulDescriptor(&matmul_desc));
     CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSA,
                                     &trans_a_int, sizeof(int32_t)));
     CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_DESC_TRANSB,
                                     &trans_b_int, sizeof(int32_t)));
     CALL_CNNL(cnnlSetMatMulDescAttr(matmul_desc, CNNL_MATMUL_ALLOW_TF32,
                                     &allow_tf32, sizeof(int32_t)));
-    CALL_CNNL(cnnlMatMulAlgoCreate(&matmul_algo));
+    CALL_CNNL(cnnlCreateMatMulAlgo(&matmul_algo));
     CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
     int32_t requested_algo_count = 1, return_algo_count = 0;
 
@@ -414,8 +416,8 @@ mluOpStatus_t fftQuantMatMul(mluOpHandle_t handle, int m, int k, int n,
                             cnnl_c_desc, c_ptr, workspace, workspace_size,
                             cnnl_d_desc, c_ptr));
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_d_desc);
-    CALL_CNNL(cnnlMatMulDescDestroy(matmul_desc));
-    CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo));
+    CALL_CNNL(cnnlDestroyMatMulDescriptor(matmul_desc));
+    CALL_CNNL(cnnlDestroyMatMulAlgo(matmul_algo));
     CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
   }
 
@@ -500,11 +502,10 @@ mluOpStatus_t fftGetBatchMatMulBcastWorkspaceSize(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(b_desc, cnnl_b_desc);
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
   cnnlMatMulAlgo_t algo;
-  CALL_CNNL(cnnlMatMulAlgoCreate(&algo));
+  CALL_CNNL(cnnlCreateMatMulAlgo(&algo));
   cnnlMatMulDescriptor_t bmm_bcast_desc;
   bool use_stride = false;
-  auto cast_mode = CNNL_MATMUL_BYPASS_QUANTIZE;
-  CALL_CNNL(cnnlMatMulDescCreate(&bmm_bcast_desc));
+  CALL_CNNL(cnnlCreateMatMulDescriptor(&bmm_bcast_desc));
   CALL_CNNL(cnnlSetMatMulDescAttr(bmm_bcast_desc, CNNL_MATMUL_DESC_TRANSA,
                                   &trans_a_int, sizeof(int32_t)));
   CALL_CNNL(cnnlSetMatMulDescAttr(bmm_bcast_desc, CNNL_MATMUL_DESC_TRANSB,
@@ -528,8 +529,8 @@ mluOpStatus_t fftGetBatchMatMulBcastWorkspaceSize(
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
-  CALL_CNNL(cnnlMatMulDescDestroy(bmm_bcast_desc));
-  CALL_CNNL(cnnlMatMulAlgoDestroy(algo));
+  CALL_CNNL(cnnlDestroyMatMulDescriptor(bmm_bcast_desc));
+  CALL_CNNL(cnnlDestroyMatMulAlgo(algo));
   CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
 
   DESTROY_CNNL_HANDLE(cnnl_handle);
@@ -604,11 +605,10 @@ mluOpStatus_t fftBatchMatMulBcast(
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(c_desc, cnnl_c_desc);
 
   cnnlMatMulAlgo_t algo;
-  CALL_CNNL(cnnlMatMulAlgoCreate(&algo));
+  CALL_CNNL(cnnlCreateMatMulAlgo(&algo));
   cnnlMatMulDescriptor_t bmm_bcast_desc;
   bool use_stride = false;
-  auto cast_mode = CNNL_MATMUL_BYPASS_QUANTIZE;
-  CALL_CNNL(cnnlMatMulDescCreate(&bmm_bcast_desc));
+  CALL_CNNL(cnnlCreateMatMulDescriptor(&bmm_bcast_desc));
   CALL_CNNL(cnnlSetMatMulDescAttr(bmm_bcast_desc, CNNL_MATMUL_DESC_TRANSA,
                                   &trans_a_int, sizeof(int32_t)));
   CALL_CNNL(cnnlSetMatMulDescAttr(bmm_bcast_desc, CNNL_MATMUL_DESC_TRANSB,
@@ -644,8 +644,8 @@ mluOpStatus_t fftBatchMatMulBcast(
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_c_desc);
-  CALL_CNNL(cnnlMatMulDescDestroy(bmm_bcast_desc));
-  CALL_CNNL(cnnlMatMulAlgoDestroy(algo));
+  CALL_CNNL(cnnlDestroyMatMulDescriptor(bmm_bcast_desc));
+  CALL_CNNL(cnnlDestroyMatMulAlgo(algo));
   CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
 
   DESTROY_CNNL_HANDLE(cnnl_handle);

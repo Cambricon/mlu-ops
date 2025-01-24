@@ -44,17 +44,35 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetNmsDescriptor(
     const float confidence_threshold, const float offset,
     const int input_layout, const bool pad_to_max_output_size) {
   PARAM_CHECK("mluOpSetNmsDescriptor", nms_desc != NULL);
-  CALL_CNNL(cnnlSetNmsDescriptor_v5(
-      nms_desc, (cnnlNmsBoxPointMode_t)box_mode,
-      (cnnlNmsOutputMode_t)output_mode, (cnnlNmsAlgo_t)algo,
-      (cnnlNmsMethodMode_t)method_mode, iou_threshold, soft_nms_sigma,
-      max_output_size, confidence_threshold, offset, input_layout,
-      pad_to_max_output_size));
+  CALL_CNNL(cnnlSetNmsDescAttr(nms_desc,
+      (cnnlNmsDescAttribute_t)CNNL_NMS_DESC_IOU_THRESHOLD,
+      &iou_threshold, sizeof(float)));
+  CALL_CNNL(cnnlSetNmsDescAttr(nms_desc,
+      (cnnlNmsDescAttribute_t)CNNL_NMS_DESC_INPUT_LAYOUT,
+      &input_layout, sizeof(int)));
+  CALL_CNNL(cnnlSetNmsDescAttr(nms_desc,
+      (cnnlNmsDescAttribute_t)CNNL_NMS_DESC_MAX_OUTPUT_SIZE,
+      &max_output_size, sizeof(int)));
+  CALL_CNNL(cnnlSetNmsDescAttr(nms_desc,
+      (cnnlNmsDescAttribute_t)CNNL_NMS_DESC_CONFIDENCE_THRESHOLD,
+      &confidence_threshold, sizeof(float)));
+  CALL_CNNL(cnnlSetNmsDescAttr(nms_desc,
+      (cnnlNmsDescAttribute_t)CNNL_NMS_DESC_OUTPUT_MODE,
+      &output_mode, sizeof(cnnlNmsOutputMode_t)));
+  CALL_CNNL(cnnlSetNmsDescAttr(nms_desc,
+      (cnnlNmsDescAttribute_t)CNNL_NMS_DESC_OFFSET,
+      &offset, sizeof(float)));
+  CALL_CNNL(cnnlSetNmsDescAttr(nms_desc,
+      (cnnlNmsDescAttribute_t)CNNL_NMS_DESC_BOX_MODE,
+      &box_mode, sizeof(cnnlNmsBoxPointMode_t)));
+  CALL_CNNL(cnnlSetNmsDescAttr(nms_desc,
+      (cnnlNmsDescAttribute_t)CNNL_NMS_DESC_PAD_TO_MAX_OUTPUT_SIZE,
+      &pad_to_max_output_size,sizeof(bool)));
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetNmsWorkspaceSize(
-    mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
+    mluOpHandle_t handle, mluOpNmsDescriptor_t nms_desc, const mluOpTensorDescriptor_t boxes_desc,
     const mluOpTensorDescriptor_t confidence_desc, size_t *workspace_size) {
   PARAM_CHECK("mluOpGetNmsWorkspaceSize", handle != NULL);
   PARAM_CHECK("mluOpGetNmsWorkspaceSize", boxes_desc != NULL);
@@ -68,7 +86,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetNmsWorkspaceSize(
                                           cnnl_confidence_desc);
   }
 
-  CALL_CNNL(cnnlGetNmsWorkspaceSize_v3(cnnl_handle, cnnl_boxes_desc,
+  CALL_CNNL(cnnlGetNmsWorkspaceSize_v4(cnnl_handle, nms_desc, cnnl_boxes_desc,
                                        cnnl_confidence_desc, workspace_size));
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
   if (cnnl_confidence_desc != NULL) {

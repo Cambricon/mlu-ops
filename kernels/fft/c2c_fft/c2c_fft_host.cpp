@@ -2265,8 +2265,8 @@ mluOpStatus_t computeFFT2dMatMulColumn(mluOpHandle_t handle,
   cnnlMatMulHeuristicResult_t heuristic_result;
   size_t matmul_ws_size = 0, workspace_size = 0;
 
-  CALL_CNNL(cnnlMatMulDescCreate(&matmul_desc));
-  CALL_CNNL(cnnlMatMulAlgoCreate(&matmul_algo));
+  CALL_CNNL(cnnlCreateMatMulDescriptor(&matmul_desc));
+  CALL_CNNL(cnnlCreateMatMulAlgo(&matmul_algo));
   CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
   int32_t requested_algo_count = 1, return_algo_count = 0;
 
@@ -2300,8 +2300,8 @@ mluOpStatus_t computeFFT2dMatMulColumn(mluOpHandle_t handle,
   status = mluOpDestroyTensorDescriptor(c_desc);
   CHECK_RETURN(api, status);
   // destroy cnnl descriptor
-  CALL_CNNL(cnnlMatMulDescDestroy(matmul_desc));
-  CALL_CNNL(cnnlMatMulAlgoDestroy(matmul_algo));
+  CALL_CNNL(cnnlDestroyMatMulDescriptor(matmul_desc));
+  CALL_CNNL(cnnlDestroyMatMulAlgo(matmul_algo));
   CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);
@@ -2405,9 +2405,9 @@ mluOpStatus_t computeFFT2dMatMulRow(mluOpHandle_t handle,
   float beta = 0.0;
 
   cnnlMatMulAlgo_t algo;
-  CALL_CNNL(cnnlMatMulAlgoCreate(&algo));
+  CALL_CNNL(cnnlCreateMatMulAlgo(&algo));
   cnnlMatMulDescriptor_t bmm_bcast_desc;
-  CALL_CNNL(cnnlMatMulDescCreate(&bmm_bcast_desc));
+  CALL_CNNL(cnnlCreateMatMulDescriptor(&bmm_bcast_desc));
 
   cnnlMatMulHeuristicResult_t heuristic_result;
   CALL_CNNL(cnnlCreateMatMulHeuristicResult(&heuristic_result));
@@ -2439,8 +2439,8 @@ mluOpStatus_t computeFFT2dMatMulRow(mluOpHandle_t handle,
   status = mluOpDestroyTensorDescriptor(c_desc);
   CHECK_RETURN(api, status);
   // destroy cnnl descriptor
-  CALL_CNNL(cnnlMatMulDescDestroy(bmm_bcast_desc));
-  CALL_CNNL(cnnlMatMulAlgoDestroy(algo));
+  CALL_CNNL(cnnlDestroyMatMulDescriptor(bmm_bcast_desc));
+  CALL_CNNL(cnnlDestroyMatMulAlgo(algo));
   CALL_CNNL(cnnlDestroyMatMulHeuristicResult(heuristic_result));
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_a_desc);
   DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_b_desc);

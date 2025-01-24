@@ -28,26 +28,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignBackward(
     const void *grads, const mluOpTensorDescriptor_t boxes_desc,
     const void *boxes, const mluOpTensorDescriptor_t grads_image_desc,
     void *grads_image) {
-  PARAM_CHECK("mluOpRoiAlignBackward", handle != NULL);
-  PARAM_CHECK("mluOpRoiAlignBackward", grads_desc != NULL);
-  PARAM_CHECK("mluOpRoiAlignBackward", grads != NULL);
-  PARAM_CHECK("mluOpRoiAlignBackward", boxes_desc != NULL);
-  PARAM_CHECK("mluOpRoiAlignBackward", boxes != NULL);
-  PARAM_CHECK("mluOpRoiAlignBackward", grads_image_desc != NULL);
-  PARAM_CHECK("mluOpRoiAlignBackward", grads_image != NULL);
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_desc, cnnl_grads_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(boxes_desc, cnnl_boxes_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(grads_image_desc,
-                                               cnnl_grads_image_desc);
-  CALL_CNNL(cnnlRoiAlignBackward(
-      cnnl_handle, spatial_scale, sampling_ratio, aligned, cnnl_grads_desc,
-      grads, cnnl_boxes_desc, boxes, cnnl_grads_image_desc, grads_image));
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_boxes_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_grads_image_desc);
-  DESTROY_CNNL_HANDLE(cnnl_handle);
-  return MLUOP_STATUS_SUCCESS;
+  LOG(ERROR) << "[mluOpRoiAlignBackward] This API is deprecated. Use "
+             << "mluOpRoiAlignBackward_v2 instead.";
+  return MLUOP_STATUS_NOT_SUPPORTED;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignBackward_v2(

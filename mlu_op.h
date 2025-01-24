@@ -4531,6 +4531,8 @@ mluOpNms(mluOpHandle_t handle,
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the Nms operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] nms_desc
+ * The descriptor of the Nms function. For detailed information, see ::mluOpNmsDescriptor_t.
  * @param[in] boxes_desc
  * The descriptor of the tensor \b boxes, which contains dimension, data type, and
  * data layout of input \b boxes. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -4575,6 +4577,7 @@ mluOpNms(mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
+                         mluOpNmsDescriptor_t nms_desc,
                          const mluOpTensorDescriptor_t boxes_desc,
                          const mluOpTensorDescriptor_t confidence_desc,
                          size_t *size);

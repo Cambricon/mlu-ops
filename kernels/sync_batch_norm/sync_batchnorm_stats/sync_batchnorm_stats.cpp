@@ -43,27 +43,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormStats(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc, const void *x,
     const float eps, const mluOpTensorDescriptor_t mean_desc, void *mean,
     const mluOpTensorDescriptor_t invstd_desc, void *invstd) {
-  PARAM_CHECK("[mluOpSyncBatchNormStats]", handle != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormStats]", x_desc != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormStats]", mean_desc != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormStats]", invstd_desc != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormStats]", x != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormStats]", mean != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormStats]", invstd != NULL);
-
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(x_desc, cnnl_x_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(mean_desc, cnnl_mean_desc);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(invstd_desc, cnnl_invstd_desc);
-
-  CALL_CNNL(cnnlSyncBatchNormStats(cnnl_handle, cnnl_x_desc, x, eps,
-                                   cnnl_mean_desc, mean, cnnl_invstd_desc,
-                                   invstd));
-
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_x_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_mean_desc);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_invstd_desc);
-  DESTROY_CNNL_HANDLE(cnnl_handle);
+  LOG(ERROR) << "[mluOpSyncBatchNormStats] " << "This API is depreated. "
+             << "Please use mluOpSyncBatchNormStats_v2 instead.";
   return MLUOP_STATUS_SUCCESS;
 }
 

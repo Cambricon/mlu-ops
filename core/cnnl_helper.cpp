@@ -79,27 +79,6 @@ cnnlStatus_t mluOpConvertDescriptor(mluOpTensorDescriptor_t desc,
           dims, strides),
       CNNL_STATUS_SUCCESS, "Internal set tensor descriptor Ex failed.",
       CNNL_STATUS_INTERNAL_ERROR);
-  CHECK_FUNC_RETURN(
-      cnnlSetTensorDescriptorOnchipDataType(
-          _desc,
-          mluOpConvertEnum<mluOpDataType_t, cnnlDataType_t>(onchip_dtype)),
-      CNNL_STATUS_SUCCESS, "Internal set tensor descriptor Ex failed.",
-      CNNL_STATUS_INTERNAL_ERROR);
-  int position;
-  float scale;
-  int offset;
-  CHECK_FUNC_RETURN(
-      mluOpGetTensorDescriptorPositionScaleAndOffset(desc, &position, &scale,
-                                                     &offset),
-      MLUOP_STATUS_SUCCESS,
-      "MLUOPS get tensor descriptor position scale and offset failed.",
-      CNNL_STATUS_INTERNAL_ERROR);
-  CHECK_FUNC_RETURN(
-      cnnlSetTensorDescriptorPositionScaleAndOffset(_desc, position, scale,
-                                                    offset),
-      CNNL_STATUS_SUCCESS,
-      "Internal set tensor descriptor position scale and offset failed.",
-      CNNL_STATUS_INTERNAL_ERROR);
   delete[] dims;
   delete[] strides;
   return CNNL_STATUS_SUCCESS;
@@ -143,27 +122,6 @@ cnnlStatus_t mluOpConvertDescriptor_v2(mluOpTensorDescriptor_t desc,
           mluOpConvertEnum<mluOpDataType_t, cnnlDataType_t>(dtype), tensor_dim,
           dims, strides),
       CNNL_STATUS_SUCCESS, "Internal set tensor descriptor Ex failed.",
-      CNNL_STATUS_INTERNAL_ERROR);
-  CHECK_FUNC_RETURN(
-      cnnlSetTensorDescriptorOnchipDataType(
-          _desc,
-          mluOpConvertEnum<mluOpDataType_t, cnnlDataType_t>(onchip_dtype)),
-      CNNL_STATUS_SUCCESS, "Internal set tensor descriptor Ex failed.",
-      CNNL_STATUS_INTERNAL_ERROR);
-  int position;
-  float scale;
-  int offset;
-  CHECK_FUNC_RETURN(
-      mluOpGetTensorDescriptorPositionScaleAndOffset(desc, &position, &scale,
-                                                     &offset),
-      MLUOP_STATUS_SUCCESS,
-      "MLUOPS get tensor descriptor position scale and offset failed.",
-      CNNL_STATUS_INTERNAL_ERROR);
-  CHECK_FUNC_RETURN(
-      cnnlSetTensorDescriptorPositionScaleAndOffset(_desc, position, scale,
-                                                    offset),
-      CNNL_STATUS_SUCCESS,
-      "Internal set tensor descriptor position scale and offset failed.",
       CNNL_STATUS_INTERNAL_ERROR);
   delete[] dims;
   delete[] strides;
