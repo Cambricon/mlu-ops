@@ -49,11 +49,11 @@ MLU-OPS™提供了以下功能：
 ## 依赖条件
 
 - 操作系统：
-  - 支持 x86_64 架构下的 Ubuntu22.04、Centos7.6、Centos8.5、Kylin10
+  - 支持 x86_64 架构下的 Ubuntu22.04、Centos7.6、Centos8.5、Kylin10、Debian10、Debian12。
   - MLU-OPS™ v1.0.0版本后将不再支持 Ubuntu18.04。
   - MLU-OPS™ v1.4.1版本后将不再支持 Ubuntu20.04。
 - 寒武纪 MLU SDK：
-  - 编译和运行时依赖 CNToolkit v3.15.2 或更高版本，CNNL v1.28.0 或者更高版本
+  - 编译和运行时依赖 CNToolkit v4.0.0 或更高版本，CNNL v1.28.0 或者更高版本
 - 寒武纪 MLU 驱动：
   - 运行时依赖驱动 v6.0.3 或更高版本
 - 外部链接库：
@@ -66,7 +66,7 @@ MLU-OPS™提供了以下功能：
 
 - 获取 MLU-OPS™ 代码
 
-以Ubuntu20.04版本为例
+以Ubuntu22.04版本为例
 
   ```sh
   git clone https://github.com/Cambricon/mlu-ops.git
@@ -82,7 +82,7 @@ MLU-OPS™提供了以下功能：
   sudo apt-get install ./cntoolkit-x.x.x-x.ubuntu22.04_amd64.deb
   sudo apt-get update
   sudo apt-get install cncc cnas cnbin cndrv cndev cnrt cnrtc cngdb cnperf
-  sudo apt-get install ./cnnl_x.x.x-x.ubuntu20.04_amd64.deb
+  sudo apt-get install ./cnnl_x.x.x-x.ubuntu22.04_amd64.deb
   ```
 
 - 准备 Python-3.8.0 环境

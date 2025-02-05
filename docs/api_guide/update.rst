@@ -3,6 +3,24 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V1.5.0
+
+  **Date:** February 5, 2025
+
+  **Changes:**
+
+  - Support mtp_613 compilation.
+  - Introduce a new way of API implement that discards redundant encapsulation shell.
+  - Update cntoolkit version to v4.0.0.
+  - Bug fixes
+
+      - Solve protobuf version compatibility.
+      - Fix memset compiling warning in mluOpRotatedFeatureAlignForward.
+      - Fix core dump problem, memory leak and some other bugs for mluOpExecFFT.
+      - Fix memory-race error for mluOpRoiAlignRotatedForward and mluOpNmsRotated.
+      - Remove deprecated instruction for cntoolkit 4.0.0.
+      - Auto-merge extend proto if new proto file is cloned for lite APIs.
+
 * V1.4.2
 
   **Date:** December 11, 2024
