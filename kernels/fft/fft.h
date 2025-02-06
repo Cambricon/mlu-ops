@@ -43,7 +43,15 @@
 #endif
 
 #ifndef FFT_L_LIMIT
-#define FFT_L_LIMIT 4098
+#define FFT_L_LIMIT 4096
+#endif
+
+#ifndef FFT_L_LIMIT_MATMUL_300
+#define FFT_L_LIMIT_MATMUL_300 4096
+#endif
+
+#ifndef FFT_L_LIMIT_MATMUL_500
+#define FFT_L_LIMIT_MATMUL_500 4098
 #endif
 
 #ifndef COMPLEX
