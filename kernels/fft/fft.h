@@ -43,7 +43,7 @@
 #endif
 
 #ifndef FFT_L_LIMIT
-#define FFT_L_LIMIT 4096
+#define FFT_L_LIMIT 4098
 #endif
 
 #ifndef COMPLEX
