@@ -44,13 +44,13 @@ mluOpStatus_t selectFFTStrategy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
   fft_plan->fft_strategy = CNFFT_FUNC_MATMUL;
   // The basic conditions for entering the optimization.
-  if (fft_plan->n[0] > 4096) {
+  if ((handle->arch > MLUOP_MLU370 && fft_plan->n[0] > 4098) ||
+      (handle->arch == MLUOP_MLU370 && fft_plan->n[0] > 4096)) {
     bool find_stockham = 0;
     // CNFFT_FUNC_STOCKHAM optimizaion currently has more retrictions as
     // follows:
-    if (handle->arch >= 300 &&
-        (fft_plan->execution_dtype == MLUOP_DTYPE_HALF ||
-         fft_plan->execution_dtype == MLUOP_DTYPE_FLOAT)) {
+    if (fft_plan->execution_dtype == MLUOP_DTYPE_HALF ||
+        fft_plan->execution_dtype == MLUOP_DTYPE_FLOAT) {
       find_stockham = true;
     }
     // strategy_status: 0 means select MLUOP_FUNC_STOCKHAM, 1 means selelct
@@ -2615,21 +2615,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
   mluOpTensorDescriptor_t fft_input_desc, fft_output_desc;
   CHECK_RETURN(make_plan_api, mluOpCreateTensorDescriptor(&fft_input_desc));
   CHECK_RETURN(make_plan_api, mluOpCreateTensorDescriptor(&fft_output_desc));
-  CHECK_RETURN(
-      make_plan_api,
-      mluOpSetTensorDescriptorEx_v2(
-          fft_input_desc, input_desc->getLayout(), input_desc->getDtype(),
-          input_desc->getDim(), input_desc->getDims(),
-          input_desc->getStrides()));
   CHECK_RETURN(make_plan_api,
-                 mluOpSetTensorDescriptorOnchipDataType(
-                     fft_input_desc, input_desc->getOnchipDtype()));
-  CHECK_RETURN(
-      make_plan_api,
-      mluOpSetTensorDescriptorEx_v2(
-          fft_output_desc, output_desc->getLayout(), output_desc->getDtype(),
-          output_desc->getDim(), output_desc->getDims(),
-          output_desc->getStrides()));
+               mluOpSetTensorDescriptorEx_v2(
+                   fft_input_desc, input_desc->getLayout(),
+                   input_desc->getDtype(), input_desc->getDim(),
+                   input_desc->getDims(), input_desc->getStrides()));
+  CHECK_RETURN(make_plan_api,
+               mluOpSetTensorDescriptorOnchipDataType(
+                   fft_input_desc, input_desc->getOnchipDtype()));
+  CHECK_RETURN(make_plan_api,
+               mluOpSetTensorDescriptorEx_v2(
+                   fft_output_desc, output_desc->getLayout(),
+                   output_desc->getDtype(), output_desc->getDim(),
+                   output_desc->getDims(), output_desc->getStrides()));
   fft_plan->input_desc = fft_input_desc;
   fft_plan->output_desc = fft_output_desc;
 
@@ -2696,6 +2694,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       fft_plan->prime ||
       ((n[0] <= 2 || n[0] == 400 || n[0] == 512 || n[0] == 48000) && rank == 1);
 
+  VLOG(5) << "fft_plan->prime " << fft_plan->prime;
   /*
    * decision part
    */

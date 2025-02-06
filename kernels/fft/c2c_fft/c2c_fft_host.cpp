@@ -61,12 +61,17 @@ mluOpStatus_t makeFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
   size_t in_r_dtype_size = mluOpDataTypeBytes(in_r_dtype);
   int batch = fft_plan->batch;
   int n = fft_plan->n[0];
+  int FFT_L_LIMIT_MATMUL = FFT_L_LIMIT_MATMUL_300;
+  if (handle->arch > MLUOP_MLU370) {
+      FFT_L_LIMIT_MATMUL = FFT_L_LIMIT_MATMUL_500;
+  }
 
   switch (fft_plan->fft_strategy) {
     case CNFFT_FUNC_MATMUL: {
-      if (n > FFT_L_LIMIT) {
-        LOG(ERROR) << "[mluOpMakeFFTPlanMany]: FFT1d CNFFT_FUNC_MATMUL "
-                   << "length > 4096 is not supported currently.";
+      if (n > FFT_L_LIMIT_MATMUL) {
+        LOG(ERROR)
+            << "[mluOpMakeFFTPlanMany]: FFT1d CNFFT_FUNC_MATMUL length > "
+            << FFT_L_LIMIT_MATMUL << " is not supported currently.";
         return MLUOP_STATUS_NOT_SUPPORTED;
       }
 
