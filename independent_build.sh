@@ -154,7 +154,7 @@ prepare_cntoolkit () {
 
   n=${#arr_vers[@]}
 
-  sub_pkg_to_extract=(cncc cnas cnperf cngdb cndrv cnrt cnbin cnpapi cndev cntoolkit-cloud)
+  sub_pkg_to_extract=(cncc cnas cnperf cngdb cndrv cnrt cnbin cnpapi cndev cntoolkit-cloud cnsanitizer)
 
   if [ -d ${PACKAGE_EXTRACT_DIR} ]; then
     rm -rf ${PACKAGE_EXTRACT_DIR}
