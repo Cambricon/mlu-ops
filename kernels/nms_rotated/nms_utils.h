@@ -627,6 +627,9 @@ __mlu_func__ void convexHullGraham(
     T *dist_ram, T *valid_box, T *valid_pts, T *nums_in_ram, T *temp1_ram,
     T *temp2_ram, T *temp3_ram, T *temp_long_1, T *temp_long_2, T *temp_long_3,
     const uint32_t &actual_box_num, const uint32_t &actual_compute_box_num) {
+    if (__is_mpu()) {
+      return;
+    }
   // Step1. Find the point with minimum y, if more than 1 points have the same
   // minimum y, pick the one with the minimum x. set p[i].y to max_y_value if
   // not valid_pts, to avoid invalid result 24 means all possible intersection
