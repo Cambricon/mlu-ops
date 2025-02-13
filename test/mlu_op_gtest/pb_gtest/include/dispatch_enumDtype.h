@@ -62,25 +62,25 @@ typeMapEnum(std::complex<half>, MLUOP_DTYPE_COMPLEX_HALF);
 typeMapEnum(std::complex<float>, MLUOP_DTYPE_COMPLEX_FLOAT);
 
 /*
- * Parameter Explanation: T1 must be provided as the default type,
- *  and ...Types represents the other supported types.
+ * Variadic templates, using fold expressions.
  *
- * Key Technology: Variadic templates, using fold expressions.
- *
- * Notes: 
- *  A default type must be provided as the initial variable;
- *  otherwise, if multiple types do not have a common initial value to assign,
- *  an error will occur. If an empty type is used as a placeholder, there will
- *  also be an empty type in the function dispatch, which could result in an
- *  error due to the missing corresponding instantiation.
+ * Parameter Explanation:  ...Types represents all supported types.
  */
-template <typename T1, typename... Types>
+template <typename... Types>
 struct VariantHelper {
-  using Type = std::variant<T1, Types...>;
+  using Type = std::variant<Types...>;
 
-  static Type create(mluOpDataType_t runEnumDataType) {
-    Type var = T1{};
-    ((runEnumDataType == TypeToEnum<Types>::value ? var = Types{} : T1{}), ...);
+  static Type create(mluOpDataType_t enumDType) {
+    Type var;
+    bool f = false;
+    // The expression (: false) has no practical significance, it's just for
+    // correct compilation.
+    ((enumDType == TypeToEnum<Types>::value ? var = Types{}, f = true : false),
+     ...);
+
+    if (!f) {
+      throw std::invalid_argument("unsupported type");
+    }
     return var;
   }
 };
@@ -92,29 +92,31 @@ struct VariantHelper {
  *
  * Parameter Explanation: var is the variable name of the variant type,
  *  runEnumDataType is the enum type obtained during runtime,
- *  T1 is the supported default type,
- *  and ... represents the other supported types.
+ *  ... represents all supported types.
  *
  * Example: VARIANT_INIT(var, run_dtype, float, half, bfloat16).
  */
-#define VARIANT_INIT(var, runEnumDataType, dtype, ...) \
-  auto var = VariantHelper<dtype, __VA_ARGS__>::create(runEnumDataType);
+#define VARIANT_INIT(var, runEnumDataType, ...) \
+  auto var = VariantHelper<__VA_ARGS__>::create(runEnumDataType);
 
 /*
  * Macro Explanation:
- *  Traverses the variant type and dispatches a template
- *  function with a variants... during the traversal. It
+ *  Traverses the variants type and dispatches a template
+ *  function with T_VAR(id) during the traversal. It
  *  should be used in conjunction with the VARIANT_INIT macro.
  *
  * Parameter Explanation:
- *  The T_VAR macro will be used in func_call to specify the types,
+ *  The T_VAR(id) macro will be used in func_call to specify the types,
  *  ... are the variables constructed by the VARIANT_INIT macro.
  *
  * Key Technology: std::visit.
  *
- * Notes: 
- *   1.Do not declare variables named Types.
- *   2.When using a function with <>, the entire function call needs to be wrapped in ().
+ * Notes:
+ *  1.Do not declare a variable named Types.
+ *  2.When using a function with <>, the entire function call needs to be
+ *    wrapped in ().
+ *  3.Only full traversal can be done, and it will result in an error if
+ *    some combinations are not instantiated.
  */
 #define DISPATCH_VARIANTS(func_call, ...)                          \
   std::visit(                                                      \
@@ -124,5 +126,5 @@ struct VariantHelper {
       },                                                           \
       __VA_ARGS__);
 
-// The first variant type is varT(0), and so on.
+// The first variant type is T_VAR(0), and so on.
 #define T_VAR(id) std::tuple_element_t<id, Types>
