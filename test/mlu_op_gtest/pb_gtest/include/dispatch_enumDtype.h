@@ -31,6 +31,7 @@ struct half;
 struct bfloat16;
 }  // namespace Eigen
 
+namespace mluoptest {
 using Eigen::bfloat16;
 using Eigen::half;
 
@@ -84,6 +85,7 @@ struct VariantHelper {
     return var;
   }
 };
+}  // namespace mluoptest
 
 /*
  * Macro Explanation: Constructs a variant type variable that supports all the
