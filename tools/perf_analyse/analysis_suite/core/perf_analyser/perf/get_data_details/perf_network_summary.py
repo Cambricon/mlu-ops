@@ -116,8 +116,8 @@ def append_history_network_summary(df: pd.DataFrame, platform: str, engine):
 
 def get_network_summary_impl(df, perf_config, is_release):
     # do not handle cases not in benchmark
-    if not df.loc[0, ColDef.file_path].startswith('/SOFT_TRAIN/benchmark'):
-        logging.info("case {} not in /SOFT_TRAIN/benchmark".format(df.loc[0, ColDef.file_path]))
+    if not df.loc[0, ColDef.file_path].startswith('/MLU_OPS/SOFT_TRAIN/benchmark'):
+        logging.info("case {} not in /MLU_OPS/SOFT_TRAIN/benchmark".format(df.loc[0, ColDef.file_path]))
         return pd.DataFrame(), pd.DataFrame()
 
     # connect database: training_solution
