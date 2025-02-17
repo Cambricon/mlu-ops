@@ -139,7 +139,7 @@ class NetworkInfo:
     def NetworkConfigFieldValidatorMluopsVersion(self, key, json_config):
         try:
             mluops_version = json_config[key].lower()
-            assert mluops_version.startswith(self.mluops_version_config), "{} should be {}.".format(key,' or '.join([tmp+'x.y.z' for tmp in self.project_version_config]))
+            assert mluops_version.startswith(self.mluops_version_config), "{} should be {}.".format(key,' or '.join([tmp+'x.y.z' for tmp in self.mluops_version_config]))
         except KeyError:
             print("{} is necessary.".format(key))
         except AttributeError:
