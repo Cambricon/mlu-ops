@@ -811,18 +811,18 @@ mluOpStatus_t strsm_rectile(int batch, int stride, bool upper, bool trans,
   return MLUOP_STATUS_SUCCESS;
 }
 
-__mlu_global__ void batch_inverse_kernel(int batch, float* d_input,
+__mlu_global__ void batch_inverse_kernel(int batch, float* input,
                                          int ld_input, int stride_input,
-                                         float* d_output, int ld_output,
+                                         float* output, int ld_output,
                                          int stride_output, int m) {
   int id = taskId;
   int batch_id = id;
   if (batch_id >= batch) return;
 
-  float* orign_input = d_input;
-  float* orign_output = d_output;
-  d_input = orign_input + batch_id * stride_input;
-  d_output = orign_output + batch_id * stride_output;
+  float* orign_input = input;
+  float* orign_output = output;
+  input = orign_input + batch_id * stride_input;
+  output = orign_output + batch_id * stride_output;
 
   float* nram_offset = (float*)nram_buffer;
   float* nram_src0 = nram_offset;
@@ -835,7 +835,7 @@ __mlu_global__ void batch_inverse_kernel(int batch, float* d_input,
 
   __memset_nram(nram_offset, 4 * m * m, (float)ZERO);
 
-  __memcpy(nram_dst, d_input, m * sizeof(float), GDRAM2NRAM, m * sizeof(float),
+  __memcpy(nram_dst, input, m * sizeof(float), GDRAM2NRAM, m * sizeof(float),
            ld_input * sizeof(float), m - 1);
 
   float result = 0.0;
@@ -865,24 +865,24 @@ __mlu_global__ void batch_inverse_kernel(int batch, float* d_input,
     __sync();
   }
 
-  __memcpy(d_output, nram_dst, m * sizeof(float), NRAM2GDRAM,
+  __memcpy(output, nram_dst, m * sizeof(float), NRAM2GDRAM,
            ld_output * sizeof(float), m * sizeof(float), m - 1);
 }
 
-__mlu_global__ void inverse_kernel(int batch, float* d_input, int ld_input,
-                                   int stride_input, float* d_output,
+__mlu_global__ void inverse_kernel(int batch, float* input, int ld_input,
+                                   int stride_input, float* output,
                                    int ld_output, int stride_output, int m) {
   int id = taskId;
   int batch_id = id / 4;
   if (batch_id >= batch) return;
   id = taskId % 4;
-  float* orignInput = d_input;
-  float* orignOutput = d_output;
-  d_input = orignInput + batch_id * stride_input;
-  d_output = orignOutput + batch_id * stride_output;
+  float* orignInput = input;
+  float* orignOutput = output;
+  input = orignInput + batch_id * stride_input;
+  output = orignOutput + batch_id * stride_output;
 
   if (id == 0) {
-    __memcpy(sram_buffer, d_input, m * sizeof(float), GDRAM2SRAM,
+    __memcpy(sram_buffer, input, m * sizeof(float), GDRAM2SRAM,
              m * sizeof(float), ld_input * sizeof(float), m - 1);
   }
   __sync_cluster();
@@ -941,7 +941,7 @@ __mlu_global__ void inverse_kernel(int batch, float* d_input, int ld_input,
   __sync_cluster();
 
   if (id == 0) {
-    __memcpy(d_output, sram_buffer, m * sizeof(float), SRAM2GDRAM,
+    __memcpy(output, sram_buffer, m * sizeof(float), SRAM2GDRAM,
              ld_output * sizeof(float), m * sizeof(float), m - 1);
   }
 }
