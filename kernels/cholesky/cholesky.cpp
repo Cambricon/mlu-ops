@@ -25,6 +25,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <string>
+#include "kernels/unary_op/unary_op_host.h"
 
 // calculates the required workspace size for performing the Cholesky
 // decomposition on a given matrix or batch of matrices.
@@ -69,8 +70,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetCholeskyWorkspaceSize(
 // depending on the input parameters.
 mluOpStatus_t MLUOP_WIN_API
 calculate_body(mluOpHandle_t handle, int batch_size,
-               const mluOpTensorDescriptor_t input_desc, float* d_input,
-               const mluOpTensorDescriptor_t output_desc, float* d_output,
+               const mluOpTensorDescriptor_t input_desc, float* input,
+               const mluOpTensorDescriptor_t output_desc, float* output,
                bool upper, float* workspace) {
   mluOpDataType_t dtype = input_desc->dtype;
 
@@ -107,15 +108,15 @@ calculate_body(mluOpHandle_t handle, int batch_size,
   if (dtype == MLUOP_DTYPE_FLOAT) {
     if (upper == true) {
       CHECK_RETURN("mluOpCholesky",
-                   transpose(batch_size, size_a, size_a, d_input, d_output,
+                   transpose(batch_size, size_a, size_a, input, output,
                              handle, dtype, workspace));
     } else {
-      KernelMyCnrtMemcpy1D(d_input, d_output,
+      KernelMyCnrtMemcpy1D(input, output,
         size_a * lda * ((uint64_t)batch_size), queue, 0);
     }
   } else {
     CHECK_RETURN("mluOpCholesky",
-                 transpose(batch_size, size_a * size_a, 2, d_input, d_output,
+                 transpose(batch_size, size_a * size_a, 2, input, output,
                            handle, MLUOP_DTYPE_FLOAT, workspace));
   }
   cnrtQueueSync(queue);
@@ -124,26 +125,26 @@ calculate_body(mluOpHandle_t handle, int batch_size,
   if (dtype == MLUOP_DTYPE_FLOAT) {
     int row = is_row_major ? lda : size_a;
     int nb = NB;
-    set_half_zero(batch_size, stride, d_output, lda, lda, handle);
+    set_half_zero(batch_size, stride, output, lda, lda, handle);
     cnrtQueueSync(queue);
     for (int j = 0; j < row; j += nb) {
       jb = std::min(nb, row - j);
       CHECK_RETURN("mluOpCholesky",
                    ssyrk(batch_size, stride, false, is_row_major, jb, j,
-                         OFFSET_ROW(d_output, j, 0), lda,
-                         OFFSET_ROW(d_output, j, j), lda, handle, workspace));
+                         OFFSET_ROW(output, j, 0), lda,
+                         OFFSET_ROW(output, j, j), lda, handle, workspace));
       cnrtQueueSync(queue);
       CHECK_RETURN("mluOpCholesky",
                    spotrf_recursion(batch_size, stride, is_row_major, false,
-                                      jb, recnb, OFFSET_ROW(d_output, j, j),
+                                      jb, recnb, OFFSET_ROW(output, j, j),
                                       lda, j, handle, workspace));
       if (j + jb < row) {
         CHECK_RETURN(
             "mluOpCholesky",
             sgemm(batch_size, !is_row_major, is_row_major, row - j - jb, jb, j,
-                  -1.0f, 1.0f, OFFSET_ROW(d_output, j + jb, 0), lda, stride,
-                  OFFSET_ROW(d_output, j, 0), lda, stride,
-                  OFFSET_ROW(d_output, j + jb, j), lda, stride, handle,
+                  -1.0f, 1.0f, OFFSET_ROW(output, j + jb, 0), lda, stride,
+                  OFFSET_ROW(output, j, 0), lda, stride,
+                  OFFSET_ROW(output, j + jb, j), lda, stride, handle,
                   workspace));
         cnrtQueueSync(queue);
       }
@@ -151,8 +152,8 @@ calculate_body(mluOpHandle_t handle, int batch_size,
         CHECK_RETURN(
             "mluOpCholesky",
             strsm(batch_size, stride, false, is_row_major, jb, row - j - jb,
-                  OFFSET_ROW(d_output, j, j), lda,
-                  OFFSET_ROW(d_output, j + jb, j), lda, handle, workspace));
+                  OFFSET_ROW(output, j, j), lda,
+                  OFFSET_ROW(output, j + jb, j), lda, handle, workspace));
         cnrtQueueSync(queue);
       }
     }
@@ -160,18 +161,18 @@ calculate_body(mluOpHandle_t handle, int batch_size,
     if (upper) {
       cnrtQueueSync(queue);
       CHECK_RETURN("mluOpCholesky",
-                   transpose(batch_size, size_a, size_a, d_output, workspace,
+                   transpose(batch_size, size_a, size_a, output, workspace,
                              handle, dtype, workspace));
       cnrtQueueSync(queue);
-      KernelMyCnrtMemcpy1D(workspace, d_output,
+      KernelMyCnrtMemcpy1D(workspace, output,
         size_a * lda * ((uint64_t)batch_size), queue, 0);
     }
   } else {
     recnb = CRECNB;
     int nb = CNB;
     int row = lda;
-    float* r_start = d_output;
-    float* i_start = d_output + size_a * lda;
+    float* r_start = output;
+    float* i_start = output + size_a * lda;
     stride *= 2;
 
     set_half_zero(batch_size, stride, r_start, lda, lda, handle);
@@ -213,23 +214,23 @@ calculate_body(mluOpHandle_t handle, int batch_size,
     }
 
     CHECK_RETURN("mluOpCholesky",
-                 transpose(batch_size, 2, size_a * size_a, d_output, workspace,
+                 transpose(batch_size, 2, size_a * size_a, output, workspace,
                            handle, MLUOP_DTYPE_FLOAT, workspace));
     cnrtQueueSync(queue);
     if (upper) {
       cnrtQueueSync(queue);
       CHECK_RETURN("mluOpCholesky",
-                   transpose(batch_size, size_a, size_a, workspace, d_output,
+                   transpose(batch_size, size_a, size_a, workspace, output,
                              handle, dtype, workspace));
       cnrtQueueSync(queue);
       CHECK_RETURN("mluOpCholesky", conj_complex(batch_size, size_a, size_a,
-                                                 d_output, d_output, handle));
+                                                 output, output, handle));
       cnrtQueueSync(queue);
     } else {
         KernelMyCnrtMemcpy1D(workspace,
-          d_output, size_a * lda * 16 * 2, queue, 0);
+          output, size_a * lda * 16 * 2, queue, 0);
         KernelMyCnrtMemcpy1D(workspace + type_size / 4 * size_a * lda * 16,
-          d_output + type_size / 4 * size_a * lda * 16,
+          output + type_size / 4 * size_a * lda * 16,
           size_a * lda * ((uint64_t)batch_size - 16) * 2, queue, 0);
     }
   }
@@ -246,13 +247,13 @@ calculate_body(mluOpHandle_t handle, int batch_size,
 // based on the 'upper' boolean flag.
 mluOpStatus_t MLUOP_WIN_API
 mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
-              float* d_input, const mluOpTensorDescriptor_t output_desc,
-              float* d_output, bool upper, void* workspace) {
+              float* input, const mluOpTensorDescriptor_t output_desc,
+              float* output, bool upper, void* workspace) {
   PARAM_CHECK("mluOpCholesky", handle != NULL);
   PARAM_CHECK("mluOpCholesky", input_desc != NULL);
-  PARAM_CHECK("mluOpCholesky", d_input != NULL);
+  PARAM_CHECK("mluOpCholesky", input != NULL);
   PARAM_CHECK("mluOpCholesky", output_desc != NULL);
-  PARAM_CHECK("mluOpCholesky", d_output != NULL);
+  PARAM_CHECK("mluOpCholesky", output != NULL);
   PARAM_CHECK("mluOpCholesky", input_desc->layout == MLUOP_LAYOUT_ARRAY);
   PARAM_CHECK("mluOpCholesky", output_desc->layout == MLUOP_LAYOUT_ARRAY);
 
@@ -314,15 +315,15 @@ mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     size_c = output_desc->dims[1];
     ldc = output_desc->dims[2];
   }
-  calculate_body(handle, ((uint64_t)batch_size), input_desc, d_input,
-    output_desc, d_output, upper, (float*)workspace);
+  calculate_body(handle, ((uint64_t)batch_size), input_desc, input,
+    output_desc, output, upper, (float*)workspace);
   return MLUOP_STATUS_SUCCESS;
 }
 
 
 // m * n
-mluOpStatus_t transpose(int batch, int m, int n, float* d_input,
-                        float* d_output, mluOpHandle_t handle,
+mluOpStatus_t transpose(int batch, int m, int n, float* input,
+                        float* output, mluOpHandle_t handle,
                         mluOpDataType_t type, float* workspace) {
   if (m == 0) return MLUOP_STATUS_SUCCESS;
   cnrtQueue_t queue;
@@ -365,7 +366,7 @@ mluOpStatus_t transpose(int batch, int m, int n, float* d_input,
                                           cnnl_trans_desc, &size));
 
   CALL_CNNL(cnnlTranspose_v2(cnnl_handle, cnnl_trans_desc, cnnl_in_desc,
-                             d_input, cnnl_out_desc, d_output, workspace,
+                             input, cnnl_out_desc, output, workspace,
                              size));
   return MLUOP_STATUS_SUCCESS;
 }
@@ -455,8 +456,8 @@ mluOpStatus_t sgemm(int batch, bool trans_a, bool trans_b, int m, int n, int k,
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t conj_complex(int batch, int m, int n, float* d_input,
-                           float* d_output, mluOpHandle_t handle) {
+mluOpStatus_t conj_complex(int batch, int m, int n, float* input,
+                           float* output, mluOpHandle_t handle) {
   if (m == 0) return MLUOP_STATUS_SUCCESS;
   cnrtQueue_t queue;
   mluOpGetQueue(handle, &queue);
@@ -483,7 +484,7 @@ mluOpStatus_t conj_complex(int batch, int m, int n, float* d_input,
   DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(output_desc, cnnl_out_desc);
 
   CALL_CNNL(
-      cnnlConj(cnnl_handle, cnnl_in_desc, d_input, cnnl_out_desc, d_output));
+      cnnlConj(cnnl_handle, cnnl_in_desc, input, cnnl_out_desc, output));
 
   return MLUOP_STATUS_SUCCESS;
 }

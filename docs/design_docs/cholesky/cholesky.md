@@ -116,9 +116,9 @@ A=LL^T
 | :---------: | :------------: | :--: | :------------------: | :---------: | :---------------: |
 |   handle    |                | 句柄 |                      |      /      |        无         |
 | input_desc  |   矩阵描述符   | 输入 |float、complex float                      |             |                   |
-|   d_input   |    输入矩阵    | 输入 |  | [batch,N,N]/[N,N] | 所占空间不超过7GB |
+|   input   |    输入矩阵    | 输入 |  | [batch,N,N]/[N,N] | 所占空间不超过7GB |
 | output_desc | 输出矩阵描述符 | 输入 | float、complex float |             |                   |
-|  d_output   |    输出矩阵    | 输出 |                      | [batch,N,N]/[N,N]|     所占空间不超过7GB              |
+|  output   |    输出矩阵    | 输出 |                      | [batch,N,N]/[N,N]|     所占空间不超过7GB              |
 |    upper    | 上三角/下三角  | 输入 |         bool         |             |                   |
 |    workspace    | 用于矩阵分解的额外空间  | 输入 |         void*       |             |                   |
 
@@ -247,25 +247,25 @@ POTRF这个函数名取自LAPACK中Cholesky分解的函数，POTRF的目的是�
 
 
 ```
-function cholesky(row, nb, d_output):
+function cholesky(row, nb, output):
     for j from 0 to row, incrementing by nb:
         jb = min(nb, row - j)
 
         // Perform symmetric rank-k update
-        syrk(jb, j, OFFSET_ROW(d_output, j, 0), OFFSET_ROW(d_output, j, j))
+        syrk(jb, j, OFFSET_ROW(output, j, 0), OFFSET_ROW(output, j, j))
 
 
         // Perform recursive Cholesky factorization
-        potrf_rectile(jb, recnb, OFFSET_ROW(d_output, j, j))
+        potrf_rectile(jb, recnb, OFFSET_ROW(output, j, j))
 
         if j + jb < row:
             // Update matrix using matrix multiplication
-            gemm(row - j - jb, jb, j, OFFSET_ROW(d_output, j + jb, 0), OFFSET_ROW(d_output, j, 0), OFFSET_ROW(d_output, j + jb, j))
+            gemm(row - j - jb, jb, j, OFFSET_ROW(output, j + jb, 0), OFFSET_ROW(output, j, 0), OFFSET_ROW(output, j + jb, j))
 
 
         if j + jb < row:
             // Solve triangular system
-            trsm(jb, row - j - jb, OFFSET_ROW(d_output, j, j), OFFSET_ROW(d_output, j + jb, j))
+            trsm(jb, row - j - jb, OFFSET_ROW(output, j, j), OFFSET_ROW(output, j + jb, j))
 ```
 
 其中potrf_rectile伪代码如下：
@@ -338,10 +338,10 @@ function trsm(jb, row - j - jb, dA):
 trsm调用的inverse内会使用inverse_kernel来对输入矩阵进行求逆：
 
 ```
-function inverse_kernel(d_input, ld_input, stride_input, d_output, ld_output, stride_output, m):
+function inverse_kernel(input, ld_input, stride_input, output, ld_output, stride_output, m):
     id = taskId
     if id == 0:
-        copy_memory(sram_buffer, d_input, m)
+        copy_memory(sram_buffer, input, m)
 
     sync_cluster()
 
@@ -390,7 +390,7 @@ function inverse_kernel(d_input, ld_input, stride_input, d_output, ld_output, st
     sync_cluster()
 
     if id == 0:
-        copy_memory(d_output, sram_buffer, m, ld_output)
+        copy_memory(output, sram_buffer, m, ld_output)
 
 ```
 
@@ -518,8 +518,8 @@ upper为true：
 
 ```c++
 mluOpCholesky(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
-              float* d_input, const mluOpTensorDescriptor_t output_desc,
-              float* d_output, bool upper, void* workspace)
+              float* input, const mluOpTensorDescriptor_t output_desc,
+              float* output, bool upper, void* workspace)
 ```
 
 获取额外空间大小接口为：
