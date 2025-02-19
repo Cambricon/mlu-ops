@@ -9,3 +9,5 @@ pymysql==0.9.3
 xlwt
 xlrd
 xlutils
+h5py
+mrjob==0.7.4
