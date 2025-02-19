@@ -74,12 +74,13 @@ void NmsExecutor::workspaceMalloc() {
       input_layout, pad_to_max_output_size));
   VLOG(4) << "box_dim_: " << box_dim_;
   if (box_dim_ == 4) {
-    MLUOP_CHECK(mluOpGetNmsWorkspaceSize(handle_, nms_desc, tensor_boxes, tensor_confi,
-                                         &workspace_size_));
+    MLUOP_CHECK(
+        mluOpGetNmsWorkspaceSize(handle_, nms_desc, tensor_boxes, tensor_confi,
+                                 &workspace_size_));
   } else {
     // box_dim_ = 7
-    MLUOP_CHECK(mluOpGetNmsWorkspaceSize(handle_, nms_desc, tensor_boxes, nullptr,
-                                         &workspace_size_));
+    MLUOP_CHECK(mluOpGetNmsWorkspaceSize(
+        handle_, nms_desc, tensor_boxes, nullptr, &workspace_size_));
   }
   VLOG(4) << "Malloc workspace space.";
   if (workspace_size_ > 0) {

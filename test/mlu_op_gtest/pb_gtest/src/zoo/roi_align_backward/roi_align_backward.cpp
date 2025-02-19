@@ -52,65 +52,38 @@ void RoiAlignBackwardExecutor::compute() {
   bool aligned = parser_->getProtoNode()->roi_align_backward_param().aligned();
   int pool_mode =
       parser_->getProtoNode()->roi_align_backward_param().pool_mode();
-  int version = parser_->getProtoNode()->roi_align_backward_param().version();
-  VLOG(4) << "call mluOp mluOpRoiAlignBackward()";
   interface_timer_.start();
-  if (version == 0) {
-    VLOG(4) << "call mluOp mluOpRoiAlignBackward";
-    if (pool_mode == 1) {
-      auto grads_image_desc = parser_->getMetaTensor(2).tensor;
-      auto grads_image_ptr = parser_->getMetaTensor(2).dev_ptr;
-      MLUOP_CHECK(mluOpRoiAlignBackward(
-          handle_, spatial_scale, sampling_ratio, aligned, grads_desc,
-          grads_ptr, boxes_desc, boxes_ptr, grads_image_desc, grads_image_ptr));
-    } else if (pool_mode == 0) {
-      VLOG(4) << "call mluOp mluOpRoiAlignBackward_v2 with max mode";
-      auto argmax_x_desc = parser_->getMetaTensor(2).tensor;
-      auto argmax_y_desc = parser_->getMetaTensor(3).tensor;
-      auto grads_image_desc = parser_->getMetaTensor(4).tensor;
+  VLOG(4) << "call mluOp mluOpRoiAlignBackward_v2";
+  if (pool_mode == 1) {
+    VLOG(4) << "call mluOp mluOpRoiAlignBackward_v2 with average mode";
+    mluOpTensorDescriptor_t argmax_x_desc = nullptr;
+    mluOpTensorDescriptor_t argmax_y_desc = nullptr;
+    void *argmax_x_ptr = NULL;
+    void *argmax_y_ptr = NULL;
+    auto grads_image_desc = parser_->getMetaTensor(2).tensor;
+    auto grads_image_ptr = parser_->getMetaTensor(2).dev_ptr;
 
-      auto argmax_x_ptr = parser_->getMetaTensor(2).dev_ptr;
-      auto argmax_y_ptr = parser_->getMetaTensor(3).dev_ptr;
-      auto grads_image_ptr = parser_->getMetaTensor(4).dev_ptr;
-      MLUOP_CHECK(mluOpRoiAlignBackward_v2(
-          handle_, grads_desc, grads_ptr, boxes_desc, boxes_ptr, argmax_x_desc,
-          argmax_x_ptr, argmax_y_desc, argmax_y_ptr, spatial_scale,
-          sampling_ratio, aligned, pool_mode, grads_image_desc,
-          grads_image_ptr));
+    MLUOP_CHECK(mluOpRoiAlignBackward_v2(
+        handle_, grads_desc, grads_ptr, boxes_desc, boxes_ptr, argmax_x_desc,
+        argmax_x_ptr, argmax_y_desc, argmax_y_ptr, spatial_scale,
+        sampling_ratio, aligned, pool_mode, grads_image_desc,
+        grads_image_ptr));
+  } else {
+    VLOG(4) << "call mluOp mluOpRoiAlignBackward_v2 with max mode";
+    auto argmax_x_desc = parser_->getMetaTensor(2).tensor;
+    auto argmax_y_desc = parser_->getMetaTensor(3).tensor;
+    auto grads_image_desc = parser_->getMetaTensor(4).tensor;
+
+    auto argmax_x_ptr = parser_->getMetaTensor(2).dev_ptr;
+    auto argmax_y_ptr = parser_->getMetaTensor(3).dev_ptr;
+    auto grads_image_ptr = parser_->getMetaTensor(4).dev_ptr;
+
+    MLUOP_CHECK(mluOpRoiAlignBackward_v2(
+        handle_, grads_desc, grads_ptr, boxes_desc, boxes_ptr, argmax_x_desc,
+        argmax_x_ptr, argmax_y_desc, argmax_y_ptr, spatial_scale,
+        sampling_ratio, aligned, pool_mode, grads_image_desc,
+        grads_image_ptr));
     }
-  } else if (version == 1) {
-    VLOG(4) << "call mluOp mluOpRoiAlignBackward_v2";
-    if (pool_mode == 1) {
-      VLOG(4) << "call mluOp mluOpRoiAlignBackward_v2 with average mode";
-      mluOpTensorDescriptor_t argmax_x_desc = nullptr;
-      mluOpTensorDescriptor_t argmax_y_desc = nullptr;
-      void *argmax_x_ptr = NULL;
-      void *argmax_y_ptr = NULL;
-      auto grads_image_desc = parser_->getMetaTensor(2).tensor;
-      auto grads_image_ptr = parser_->getMetaTensor(2).dev_ptr;
-
-      MLUOP_CHECK(mluOpRoiAlignBackward_v2(
-          handle_, grads_desc, grads_ptr, boxes_desc, boxes_ptr, argmax_x_desc,
-          argmax_x_ptr, argmax_y_desc, argmax_y_ptr, spatial_scale,
-          sampling_ratio, aligned, pool_mode, grads_image_desc,
-          grads_image_ptr));
-    } else {
-      VLOG(4) << "call mluOp mluOpRoiAlignBackward_v2 with max mode";
-      auto argmax_x_desc = parser_->getMetaTensor(2).tensor;
-      auto argmax_y_desc = parser_->getMetaTensor(3).tensor;
-      auto grads_image_desc = parser_->getMetaTensor(4).tensor;
-
-      auto argmax_x_ptr = parser_->getMetaTensor(2).dev_ptr;
-      auto argmax_y_ptr = parser_->getMetaTensor(3).dev_ptr;
-      auto grads_image_ptr = parser_->getMetaTensor(4).dev_ptr;
-
-      MLUOP_CHECK(mluOpRoiAlignBackward_v2(
-          handle_, grads_desc, grads_ptr, boxes_desc, boxes_ptr, argmax_x_desc,
-          argmax_x_ptr, argmax_y_desc, argmax_y_ptr, spatial_scale,
-          sampling_ratio, aligned, pool_mode, grads_image_desc,
-          grads_image_ptr));
-    }
-  }
   interface_timer_.stop();
 }
 
@@ -157,7 +130,6 @@ void RoiAlignBackwardExecutor::cpuCompute() {
   bool aligned = parser_->getProtoNode()->roi_align_backward_param().aligned();
   int pool_mode =
       parser_->getProtoNode()->roi_align_backward_param().pool_mode();
-  int version = parser_->getProtoNode()->roi_align_backward_param().version();
 
   size_t input_n = input_desc->getDimIndex(0);
   size_t input_h = input_desc->getDimIndex(1);
@@ -337,7 +309,6 @@ int64_t RoiAlignBackwardExecutor::getTheoryOps() {
   bool aligned = parser_->getProtoNode()->roi_align_backward_param().aligned();
   int pool_mode =
       parser_->getProtoNode()->roi_align_backward_param().pool_mode();
-  int version = parser_->getProtoNode()->roi_align_backward_param().version();
 
   auto output_desc = parser_->getMetaTensor(2).tensor;
   if (pool_mode == 0) {

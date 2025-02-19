@@ -469,9 +469,10 @@ mluOpStatus_t launchReduceOp(mluOpHandle_t handle,
                                                  cnnl_input_desc);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(reduce_out_desc,
                                                  cnnl_output_desc);
-    CALL_CNNL(cnnlReduce_v2(cnnl_handle, reduce_desc, cnnl_input_desc, reduce_input_addr,
-                            alpha, beta, reduce_workspace_ptr, reduce_op_ws,
-                            cnnl_output_desc, reduce_output_addr, nullptr, indices));
+    CALL_CNNL(cnnlReduce_v2(
+        cnnl_handle, reduce_desc, cnnl_input_desc, reduce_input_addr,
+        alpha, beta, reduce_workspace_ptr, reduce_op_ws,
+        cnnl_output_desc, reduce_output_addr, nullptr, indices));
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
@@ -732,9 +733,10 @@ mluOpStatus_t launchGatherNdOp(mluOpHandle_t handle,
                                                  cnnl_indices_desc);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(gather_output_desc,
                                                  cnnl_output_desc);
-    CALL_CNNL(cnnlGatherNd_v2(cnnl_handle, 0, cnnl_params_desc, gather_input_addr,
-                              cnnl_indices_desc, gather_indice_addr,
-                              cnnl_output_desc, gather_output_addr));
+    CALL_CNNL(cnnlGatherNd_v2(
+        cnnl_handle, 0, cnnl_params_desc, gather_input_addr,
+        cnnl_indices_desc, gather_indice_addr,
+        cnnl_output_desc, gather_output_addr));
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_params_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);

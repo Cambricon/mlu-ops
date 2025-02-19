@@ -67,12 +67,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetNmsDescriptor(
       &box_mode, sizeof(cnnlNmsBoxPointMode_t)));
   CALL_CNNL(cnnlSetNmsDescAttr(nms_desc,
       (cnnlNmsDescAttribute_t)CNNL_NMS_DESC_PAD_TO_MAX_OUTPUT_SIZE,
-      &pad_to_max_output_size,sizeof(bool)));
+      &pad_to_max_output_size, sizeof(bool)));
   return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpGetNmsWorkspaceSize(
-    mluOpHandle_t handle, mluOpNmsDescriptor_t nms_desc, const mluOpTensorDescriptor_t boxes_desc,
+    mluOpHandle_t handle, mluOpNmsDescriptor_t nms_desc,
+    const mluOpTensorDescriptor_t boxes_desc,
     const mluOpTensorDescriptor_t confidence_desc, size_t *workspace_size) {
   PARAM_CHECK("mluOpGetNmsWorkspaceSize", handle != NULL);
   PARAM_CHECK("mluOpGetNmsWorkspaceSize", boxes_desc != NULL);
