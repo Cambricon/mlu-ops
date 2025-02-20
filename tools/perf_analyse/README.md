@@ -74,11 +74,11 @@ trusted-host = mirrors.cambricon.com
 
 ```bash
 python3 analysis_suite.py -h # 查看帮助文档，可使用positional arguments中的选项选择子模块
-python3 analysis_suite.py compile_time -h # 同 `python3 analyse_compile_time.pye -h` （暂未支持）
-python3 analysis_suite.py gteste -h # 同 `python3 gtest_analyser.pye -h`
-python3 analysis_suite.py h5e -h # 同 `python3 h5_creator.pye -h`
-python3 analysis_suite.py pt2excele -h # 同 `python3 prototxt_to_excel.pye -h` （暂未支持）
-python3 analysis_suite.py soe -h # 同 `python3 so_analyser.pye -h`
+python3 analysis_suite.py compile_time -h # 同 `python3 analyse_compile_time.py -h` （暂未支持）
+python3 analysis_suite.py gteste -h # 同 `python3 gtest_analyser.py -h`
+python3 analysis_suite.py h5e -h # 同 `python3 h5_creator.py -h`
+python3 analysis_suite.py pt2excele -h # 同 `python3 prototxt_to_excel.py -h` （暂未支持）
+python3 analysis_suite.py soe -h # 同 `python3 so_analyser.py -h`
 ```
 
 ### analyse_compile_time.py
@@ -185,7 +185,7 @@ python3 gtest_analyser.py --log_path new.xml --compare_path baseline.xml --gener
 ##### TPI模式下，分析gtest生成的xml文件
 
 ```bash
-python3 gtest_analyser.py  --log_path output.xml --tpi
+python3 gtest_analyser.py  --log_path output.xml --tpi 1
 ```
 
 ##### TPI模式下，对比gtest生成的两个文件

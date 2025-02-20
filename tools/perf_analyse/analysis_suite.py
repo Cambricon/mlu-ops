@@ -37,10 +37,10 @@ Example:
     python3 analysis_suite.py --log_path=xml_folder_path --compare_path=baseline_folder_path
 
     # (g) tpi: compare two xml. when no comparison is needed, --compare_path can be ignored
-    python3 analysis_suite.py --log_path=output.xml --compare_path=baseline.xml --tpi
+    python3 analysis_suite.py --log_path=output.xml --compare_path=baseline.xml --tpi 1
 
     # (h) simple_tpi : compare two xml. when no comparison is needed, --compare_path can be ignored
-    python3 analysis_suite.py --log_path=output.xml --compare_path=baseline.xml --tpi --simple_tpi --frameworks pt1.13
+    python3 analysis_suite.py --log_path=output.xml --compare_path=baseline.xml --tpi 1 --simple_tpi 1 --frameworks pt1.13
 
     # (i) simple_tpi : do not parse pt/pb files(no `input`, `output`, `params` field in `cases` Table)
     python3 analysis_suite.py --log_path=new.xml --compare_path=baseline.xml --need_case_info False

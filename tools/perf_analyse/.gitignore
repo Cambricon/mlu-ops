@@ -15,5 +15,5 @@ misc/
 test_cases/
 .nfs*
 
-!requirement.txt
+!requirements.txt
 !perf.json
