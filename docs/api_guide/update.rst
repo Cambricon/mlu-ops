@@ -3,23 +3,22 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V1.5.1
+
+  **Date:** February 17, 2025
+
+  **Changes:**
+
+  - None.
+
+
 * V1.5.0
 
   **Date:** February 5, 2025
 
   **Changes:**
 
-  - Support mtp_613 compilation.
-  - Introduce a new way of API implement that discards redundant encapsulation shell.
-  - Update cntoolkit version to v4.0.0.
-  - Bug fixes
-
-      - Solve protobuf version compatibility.
-      - Fix memset compiling warning in mluOpRotatedFeatureAlignForward.
-      - Fix core dump problem, memory leak and some other bugs for mluOpExecFFT.
-      - Fix memory-race error for mluOpRoiAlignRotatedForward and mluOpNmsRotated.
-      - Remove deprecated instruction for cntoolkit 4.0.0.
-      - Auto-merge extend proto if new proto file is cloned for lite APIs.
+  - None.
 
 * V1.4.2
 
@@ -45,8 +44,8 @@ This section lists contents that were made for each product release.
 
   - Added the following new operations:
 
-      - mluOpLogspace
-      - mluOpLgamma
+    - mluOpLogspace
+    - mluOpLgamma
 
 * V1.3.2
 
@@ -56,7 +55,7 @@ This section lists contents that were made for each product release.
 
   - ``exec_fft``
 
-    - optimize performance.
+    - Optimized performance.
 
 
 * V1.3.1
@@ -67,7 +66,7 @@ This section lists contents that were made for each product release.
 
   - ``exec_fft``
 
-    - adjust memory-free strategy to avoid duplicated memory-free operation.
+    - Adjusted the memory-free strategy to avoid duplicated memory-free operation.
 
 
 * V1.3.0
@@ -78,23 +77,23 @@ This section lists contents that were made for each product release.
 
   - ``exec_fft``
 
-    - support 2D mode for FFT computation.
-    - support tensor stride for 1D FFT computation.
-    - optimize performance.
-    - update called CNNL APIs version.
+    - Supported 2D mode for FFT computation.
+    - Supported tensor stride for 1D FFT computation.
+    - Optimized performance.
+    - Updated called CNNL API version.
 
   - ``adam_w``
 
-    - add fool-proofing for MLU300 series.
+    - Added fool-proofing for compute_50.
 
   - Other operations.
 
-    - add fool-proofing if it does not support tensor stride.
-    - some bug fixes.
+    - Added fool-proofing if it does not support tensor stride.
+    - Fixed some bugs.
 
   - Kernel utils
 
-    - support philox random algorithm.
+    - Supported philox random algorithm.
 
 
 * V1.2.4
