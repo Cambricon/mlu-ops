@@ -138,7 +138,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
     int tf32_flag_int = 0;
     
     // 直接调用 CNNL api 对结构进行创建、设置
-    CALL_CNNL(cnnlMatMulDescCreate(&cnnl_matmul_desc));
+    CALL_CNNL(cnnlCreateMatMulDescriptor(&cnnl_matmul_desc));
     CALL_CNNL(cnnlSetMatMulDescAttr(cnnl_matmul_desc, CNNL_MATMUL_DESC_TRANSA,
                                     &(is_trans_a), sizeof(is_trans_a)));
     CALL_CNNL(cnnlSetMatMulDescAttr(cnnl_matmul_desc, CNNL_MATMUL_DESC_TRANSB,
@@ -169,7 +169,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
 
     // 直接调用 CNNL api 对结构进行创建、设置
     CALL_CNNL(cnnlCreateMatMulHeuristicResult(&cnnl_heuristic_result));
-    CALL_CNNL(cnnlMatMulAlgoCreate(&cnnl_matmul_algo));
+    CALL_CNNL(cnnlCreateMatMulAlgo(&cnnl_matmul_algo));
 
     // set matmul heuristic_result & algorithm
     int requested_algo_count = 1, return_algo_count = 0;
@@ -192,8 +192,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
     // destroy descriptors
     // 直接调用 CNNL api 对非宏生成的CNNL 变量销毁
     CALL_CNNL(cnnlDestroyMatMulHeuristicResult(cnnl_heuristic_result));
-    CALL_CNNL(cnnlMatMulDescDestroy(cnnl_matmul_desc));
-    CALL_CNNL(cnnlMatMulAlgoDestroy(cnnl_matmul_algo));
+    CALL_CNNL(cnnlDestroyMatMulDescriptor(cnnl_matmul_desc));
+    CALL_CNNL(cnnlDestroyMatMulAlgo(cnnl_matmul_algo));
 
     // 销毁由宏内部定义并创建的变量
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_grad_condence_desc);

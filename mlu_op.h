@@ -29,7 +29,7 @@
 
 #define MLUOP_MAJOR 1
 #define MLUOP_MINOR 5
-#define MLUOP_PATCHLEVEL 0
+#define MLUOP_PATCHLEVEL 1
 /*********************************************************************************
  * MLUOP_VERSION is deprecated and not recommended. To get the version of MLUOP, use
  * MLUOP_MAJOR, MLUOP_MINOR and MLUOP_PATCHLEVEL.
@@ -3685,19 +3685,17 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  * - The first dimension of \b voxel_num tensor is one.
  * - The shape of \b feats is [N, C]:
  *   - 2C * sizeof(datatype of \b feats) + (N + 3C + 1) * sizeof(int) + N
- *     must be less than or equal to 640KB on MLU300 series.
- *   - 2C * sizeof(datatype of \b feats) + (N + 3C + 1) * sizeof(int) + N
- *     must be less than or equal to 380KB on series higher than MLU300 series.
+ *     must be less than or equal to 380KB on MLU500 series and above.
  *
  * @par API Dependency
  * - Before calling this function, you need to get the size of workspace by
  *   ::mluOpGetDynamicPointToVoxelBackwardWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
- * - On MLU300 series and above, the inputs \b point2voxel_map, \b voxel_points_count, and \b voxel_num with NaN or
+ * - This function is only supported on MLU500 series and above platforms.
+ * - On MLU500 series and above, the inputs \b point2voxel_map, \b voxel_points_count, and \b voxel_num with NaN or
  *   infinity are not supported.
- * - On MLU300 series and above, the inputs \b grad_voxel_feats, \b feats and \b voxel_feats with NaN or infinity
+ * - On MLU500 series and above, the inputs \b grad_voxel_feats, \b feats and \b voxel_feats with NaN or infinity
  *   are supported.
  *
  * @par Example
@@ -3854,9 +3852,9 @@ mluOpGetDynamicPointToVoxelForwardWorkspaceSize(mluOpHandle_t handle,
  *   the size of workspace by ::mluOpGetDynamicPointToVoxelForwardWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
- * - On MLU300 series and above, the input \b coors with NaN or infinity is not supported.
- * - On MLU300 series and above, the input \b feats with NaN or infinity is supported.
+ * - This function is only supported on MLU500 series and above platforms.
+ * - On MLU500 series and above, the input \b coors with NaN or infinity is not supported.
+ * - On MLU500 series and above, the input \b feats with NaN or infinity is supported.
  *
  * @par Example
  * - None.
@@ -4107,7 +4105,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - The operator does not support adaptive NMS.
  * - The attribute `eta` should not be less than 1.
  * - ``nms_thresh`` should be more than 0.
- * - On MLU300 series and above:
+ * - On MLU500 series and above:
  *   - If \b pixel_offset is false, input \b scores with NaN/INF is not supported.
  *   - If \b pixel_offset is true, NaN/INF is not supported.
  *
@@ -4502,8 +4500,6 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  *   both of confidence_desc and confidence should be provided as null pointer.
  *   - In Nms3D mode, when finding the point with minimum y and minimum x in convex-hull-graham,
  *     it performs min-pooling operation. If the input data of pooling contains NaN:
- * - On MLU300 series, if the last value in the kernel of the pooling is NaN, the \b output value is NaN.
- *   Otherwise, the \b output value is the minimum value after the last NaN.
  *
  * @par Requirements
  * - None.
@@ -4535,6 +4531,8 @@ mluOpNms(mluOpHandle_t handle,
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the Nms operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] nms_desc
+ * The descriptor of the Nms function. For detailed information, see ::mluOpNmsDescriptor_t.
  * @param[in] boxes_desc
  * The descriptor of the tensor \b boxes, which contains dimension, data type, and
  * data layout of input \b boxes. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -4579,6 +4577,7 @@ mluOpNms(mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
+                         mluOpNmsDescriptor_t nms_desc,
                          const mluOpTensorDescriptor_t boxes_desc,
                          const mluOpTensorDescriptor_t confidence_desc,
                          size_t *size);
@@ -4687,7 +4686,6 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  * - The shape of \b output should be the same with \b var.
  * - The shape[0] of the \b output should be equal to the input height.
  * - The shape[1] of the \b output should be equal to the input width.
- * - The shape[2] of the \b output and \b var must be less than 2900 on MLU300 series.
  * - The shape[2] of \b output and \b var should be equal to
  *   the product of shape[0] of \b min_sizes and \b aspect_ratios
  *   plus shape[0] of \b max_sizes.
@@ -4700,8 +4698,7 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The shape[2] of the \b output and \b var must be
- *   less than 2900 on MLU300 series.
+ * - None.
  *
  * @par Example
  * - None.
@@ -5162,8 +5159,7 @@ mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc);
  * - This function should be called with ::mluOpSetRoiAlignForwardDescriptor_v2.
  *
  * @par Note
- * - When \b input contains NaN, if  \b pool_mode is maximum pooling_mode, \b output gets more NaN than
- *   IEEE 754 on MLU300 series.
+ * - None.
  *
  * @par Example
  * - The example of ::mluOpRoiAlignForward_v2 is as follows:
@@ -5478,8 +5474,7 @@ mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - On MLU300, the input \b grid with NaN or infinity is not supported.
- * - On series higher than MLU300 series, the inputs \b grid and \b input with NaN or infinity are supported.
+ * - On MLU500 series and above, the inputs \b grid and \b input with NaN or infinity are supported.
  *
  * @par Example
  * - None.
@@ -5560,8 +5555,7 @@ mluOpRoiCropForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - On MLU300, the input \b grid with NaN or infinity is not supported.
- * - On series higher than MLU300 series, the inputs \b grid and \b grad_output with NaN or infinity are supported.
+ * - On MLU500 series and above, the inputs \b grid and \b grad_output with NaN or infinity are supported.
  *
  * @par Example
  * - None.
@@ -6154,7 +6148,7 @@ mluOpVoxelization(mluOpHandle_t handle,
  * - The third dimension of scores tensor must be equal to \b class_num.
  * - The fourth dimension of boxes tensor and scores tensor must be equal to the
  *   multiplication result of the third dimension and the fourth dimension of input x tensor.
- * - The \b class_num should be larger than 0. On MLU300 series, the value cannot be greater than 2558.
+ * - The \b class_num should be larger than 0.
  *
  * @par API Dependency
  * - None.
@@ -6358,12 +6352,7 @@ mluOpVoxelPoolingForward(mluOpHandle_t handle,
  *
  * @par Note
  * - When finding the point with minimum y and minimum x in convex-hull-graham,
- *   BoxIouRotated performs min-pooling operation. If the input data of pooling
- *   contains NaN:
- *   - On MLU300 series:
- *     - If the last value in the kernel of the pooling is NaN, the \b output
- *       value is NaN. Otherwise, the \b output value is the minimum value after
- *       the last NaN.
+ *   BoxIouRotated performs min-pooling operation.
  *
  * @par Example
  * - None.
@@ -7064,12 +7053,9 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 16339] when
- *   \b weight is NULL on MLU300 series. The length of C should be in the range of [0, 14848] when
- *   \b weight is not NULL on MLU300 series.
  * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 9785] when
- *   \b weight is NULL on series higher than MLU300 series. The length of C should be in the range of [0, 8864] when
- *   \b weight is not NULL on series higher than MLU300 series.
+ *   \b weight is NULL on MLU500 series and above. The length of C should be in the range of [0, 8864] when
+ *   \b weight is not NULL on MLU500 series and above.
  * - \b weight does not support positive infinity and negative infinity currently.
  * - \b gamma should be in the range of [0, 10000].
  *
@@ -7345,7 +7331,7 @@ mluOpMaskedIm2colForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on MLU500 series and above platforms.
  * - The parameter \b samples, \b capacity , \b hidden , and \b num_experts should not be negative.
  *
  * @par Example
@@ -7461,7 +7447,7 @@ mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
  * @par Note
  * - The input \b sampling_loc that contains NaN or infinity is not supported.
  * - The \b value, \b sampling_loc, \b with attn_weight and \b grad_output contain NaN or infinity are not
- *   supported on series higher than MLU300 series currently.
+ *   supported on MLU500 series and above currently.
  *
  * @par Example
  * - None.
@@ -7640,7 +7626,7 @@ mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
  *   the size of the workspace by ::mluOpGetMutualInformationBackwardWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on MLU500 series and above platforms.
  * - If \b overwrite_ans_grad is true, \b ans_grad will be overwritten.
  *   If the computation worked correctly, the overwritten value should be the same as the original ans_grad.
  * - If B is zero, or S and T are both zero, ::MLUOP_STATUS_SUCCESS is returned without
@@ -7801,7 +7787,7 @@ mluOpGetMutualInformationForwardWorkspaceSize(mluOpHandle_t handle,
  *   the size of the workspace by ::mluOpGetMutualInformationForwardWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on MLU500 series and above platforms.
  * - If B is zero, ::MLUOP_STATUS_SUCCESS is returned without any changes to tensor \b p and tensor \b ans.
  *
  * @par Example
@@ -8033,8 +8019,7 @@ mluOpGetRoiAwarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The inputs \b rois and \b pts with NaN or infinity are not supported on MLU300 series.
- * - The input \b pts_feature with NaN are not supported on MLU300 series.
+ * - None
  *
  * @par Example
  * - None.
@@ -8163,8 +8148,7 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The inputs \b rois and \b pts with NaN or infinity are not supported on MLU300 series.
- * - The input \b pts_feature with NaN are not supported on MLU300 series.
+ * - None
  *
  * @par Example
  * - None.
@@ -8433,11 +8417,6 @@ mluOpRoiAwarePool3dBackward(mluOpHandle_t handle,
  * - If the shape of \b x is set to [N, H, W, C], the size of C dimension should be \b h_mask * \b
  *   w_mask.
  * - If the shape of \b y is set to [N, H, W, C], the size of C dimension should be H * W.
- *   - On MLU300 series:
- *     - When psa_type is COLLECT, the size of \b x channels ci and \b y channels co should be
- *       satisfied: ci + co <= 10240.
- *     - When psa_type is DISTRIBUTE, the size of \b x channels ci and \b y channels co should be
- *       satisfied: ci + 2 * co <= 10240.
  *
  * @par API Dependency
  * - None.
@@ -8507,11 +8486,6 @@ mluOpPsamaskForward(mluOpHandle_t handle,
  * - If the shape of \b dx is set to [N, H, W, C], the size of C dimension should be \b h_mask * \b
  *   w_mask .
  * - If the shape of \b dy is set to [N, H, W, C], the size of C dimension should be H * W.
- *   - On MLU300 series:
- *     - When psa_type is COLLECT, the size of \b dx channels ci and \b dy channels co should be
- *       satisfied: ci + co <= 10240.
- *     - When psa_type is DISTRIBUTE, the size of \b dx channels ci and \b dy channels co should be
- *       satisfied: ci + 2 * co <= 10240.
  *
  * @par API Dependency
  * - None.
@@ -8605,7 +8579,7 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  *   all the parameters passed to this function. See each parameter description for details.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on MLU500 series and above platforms.
  * - The parameter num_act_out will be obtained from ::mluOpSparseConvolutionDescriptor_t.
  *
  * @par Example
@@ -9939,7 +9913,7 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  *   all the parameters passed to this function. See each parameter description for details.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on MLU500 series and above platforms.
  * - This function does not support setting tensor onchip data type with fixed-point type.
  *
  * @par Example
@@ -10436,7 +10410,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  *   called before this function to get extra space size.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on MLU500 series and above platforms.
  * - This function does not support tensor onchip data type with fixed-point type.
  * - The input indices in \b indice_pairs tensor should be no larger than dims[0]
  *   of \b features. Such value is illegal and not checked, the output result is
@@ -10544,7 +10518,7 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on MLU500 series and above platforms.
  * - The parameters \b samples, \b capacity , \b hidden , and \b num_experts should not be negative.
  *
  * @par Example
@@ -10704,7 +10678,7 @@ mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
  *   the size of workspace by ::mluOpGetMoeDispatchBackwardGateWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on MLU500 series and above platforms.
  * - The parameters \b samples, \b capacity , \b hidden , and \b num_experts should not be negative.
  *
  * @par Example
@@ -10779,8 +10753,7 @@ mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
  * - The supported layout of input and output tensors must be \p MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
- * - On MLU370, the number of boxes cannot exceed 23404;
- *   On series higher than MLU300 series, the number of boxes cannot exceed 14042.
+ *   On series MLU500 series and above, the number of boxes cannot exceed 14042.
  *
  * @par API Dependency
  * - None.
@@ -11527,19 +11500,14 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
  * - \b Spatial_scale should be in the range of (0, 1].
  * - \b Output consists of [rois_num, pooled_h, pooled_w, channels]. In the dimensions of the h and w of the input
  *   and the output, (\b x2 - \b x1) * (\b y2 - \b y1) * \b spatial_scale * \b spatial_scale / (\b pooled_h * \b
- *   pooled_w) < (nram_limitation / 32). Nram_limitation means the limitation of the nram. On MLU300 series,
- *   the nram_limitation is (163804 - 4 * \b channels) / 2. \b pooled_h means height of output.
+ *   pooled_w) < (nram_limitation / 32). Nram_limitation means the limitation of the nram.
  *   \b pooled_w means width of output.
  *
  * @par API Dependency
  * - None
  *
  * @par Note
- * - When the input data or parameter contains NaN or infinity:
- *   - On MLU300 series, if the last value in the kernel of the pooling is NaN, \b argmax is
- *     the index of the last value, \b output is the last value, as shown in example 2 below.
- *     Otherwise, \b argmax is the index of the maximum value after the last NaN,
- *     \b output is the maximum value after the last NaN, as shown in example 3 below.
+ * - None
  *
  * @par Example
  * - The example 1 of the roipoolingforward operation is as follows:
@@ -12021,9 +11989,9 @@ mluOpSyncBatchNormStats(mluOpHandle_t handle,
  * @par API Dependency
  * - None.
  *
- * @par note
+ * @par Note
  * - The input \b mean_all and the input \b invstd_all cannot be positive infinity or negative infinity
- *   at the same time on MLU300 series or above.
+ *   at the same time on MLU500 series or above.
  *
  * @par Example
  * - The example of ::mluOpSyncBatchNormGatherStatsWithCounts operation is as follows:
@@ -13559,7 +13527,7 @@ mluOpGetDCNForwardWorkspaceSize(mluOpHandle_t handle,
  *   - input, offset, mask, filter, bias, output: half, float.
  * - \p input offchip data type can be combined with any supported onchip data types.
  * - \p filter offchip data type can be combined with any supported onchip data types.
- * - This function also supports floating-point computation on MLU300 series or above.
+ * - This function also supports floating-point computation on MLU500 series or above.
  *   To perform floating-point computation, the onchip data type of \p input and \p filter
  *   should be \p MLUOP_DTYPE_INVALID or the same as the corresponding offchip data type.
  *
@@ -13803,7 +13771,7 @@ mluOpGetDCNBackwardWeightWorkspaceSize(mluOpHandle_t handle,
  *   - input, offset, mask, grad_output, grad_filter, grad_bias, grad_mask: half, float.
  * - \p grad_output off-chip data type can be combined with any supported on-chip data types.
  * - \p input off-chip data type can be combined with any supported on-chip data types.
- * - This function also supports floating-point computation on MLU300 series or above. To perform
+ * - This function also supports floating-point computation on MLU500 series or above. To perform
  *   floating-point computation, the on-chip data type of \p input and \p grad_output should be
  *   \p MLUOP_DTYPE_INVALID or the same as the corresponding off-chip data type.
  *
@@ -14045,7 +14013,7 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  * - This function supports any combinations of the following onchip data types for input tensor
  * - \p grad_output offchip data type can be combined with any supported onchip data types.
  * - \p filter offchip data type can be combined with any supported onchip data types.
- * - This function also supports floating-point computation on MLU300 series or above. To perform
+ * - This function also supports floating-point computation on MLU500 series or above. To perform
  *   floating-point computation, the onchip data type of \p grad_output and \p filter must be
  *   \p MLUOP_DTYPE_INVALID or the same as the corresponding offchip data type.
  *
@@ -14086,7 +14054,6 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  * @par Note
  * - \p input, \p mask, \p filter, and \p grad_output must be smaller enough to prevent the result
  *   from data overflow especially when the data type is \p MLUOP_DTYPE_HALF.
- * - \p offset with NaN is not supported on MLU300 series and lower platforms.
  *
  * @par Requirements
  * - None.

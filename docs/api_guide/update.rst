@@ -3,6 +3,14 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V1.5.1
+
+  **Date:** February 17, 2025
+
+  **Changes:**
+
+  - Update CNNL to v2.0.0 and removed deprecated APIs from CNNL.
+
 * V1.5.0
 
   **Date:** February 5, 2025

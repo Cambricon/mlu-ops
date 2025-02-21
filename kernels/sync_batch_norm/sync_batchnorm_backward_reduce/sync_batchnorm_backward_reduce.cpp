@@ -52,56 +52,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetSyncBatchnormBackwardReduceWorkspaceSize(
                                                           workspace_size);
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormBackwardReduce(
-    mluOpHandle_t handle, const mluOpTensorDescriptor_t desc_dz, const void *dz,
-    const mluOpTensorDescriptor_t desc_x, const void *x,
-    const mluOpTensorDescriptor_t desc_mean, const void *mean,
-    const mluOpTensorDescriptor_t desc_invstd, const void *invstd,
-    const mluOpTensorDescriptor_t desc_dfilter, void *dfilter,
-    const mluOpTensorDescriptor_t desc_dbias, void *dbias,
-    const mluOpTensorDescriptor_t desc_sum_dy, void *sum_dy,
-    const mluOpTensorDescriptor_t desc_sum_dy_xmu, void *sum_dy_xmu,
-    const bool needs_input_grad0, const bool needs_input_grad1,
-    const bool needs_input_grad2) {
-  PARAM_CHECK("[mluOpSyncBatchNormBackwardReduce]", handle != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormBackwardReduce]", desc_dz != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormBackwardReduce]", desc_x != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormBackwardReduce]", desc_mean != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormBackwardReduce]", desc_invstd != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormBackwardReduce]", dz != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormBackwardReduce]", x != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormBackwardReduce]", mean != NULL);
-  PARAM_CHECK("[mluOpSyncBatchNormBackwardReduce]", invstd != NULL);
-
-  DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_dz, cnnl_desc_dz);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_x, cnnl_desc_x);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_mean, cnnl_desc_mean);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_invstd, cnnl_desc_invstd);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_dfilter, cnnl_desc_dfilter);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_dbias, cnnl_desc_dbias);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_sum_dy, cnnl_desc_sum_dy);
-  DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(desc_sum_dy_xmu,
-                                               cnnl_desc_sum_dy_xmu);
-
-  CALL_CNNL(cnnlSyncBatchnormBackwardReduce(
-      cnnl_handle, cnnl_desc_dz, dz, cnnl_desc_x, x, cnnl_desc_mean, mean,
-      cnnl_desc_invstd, invstd, cnnl_desc_dfilter, dfilter, cnnl_desc_dbias,
-      dbias, cnnl_desc_sum_dy, sum_dy, cnnl_desc_sum_dy_xmu, sum_dy_xmu,
-      needs_input_grad0, needs_input_grad1, needs_input_grad2));
-
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_dz);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_x);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_mean);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_invstd);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_dfilter);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_dbias);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_sum_dy);
-  DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_desc_sum_dy_xmu);
-  DESTROY_CNNL_HANDLE(cnnl_handle);
-  return MLUOP_STATUS_SUCCESS;
-}
-
 mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchnormBackwardReduce(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t desc_dz, const void *dz,
     const mluOpTensorDescriptor_t desc_x, const void *x,
@@ -113,15 +63,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchnormBackwardReduce(
     const mluOpTensorDescriptor_t desc_sum_dy_xmu, void *sum_dy_xmu,
     const bool needs_input_grad0, const bool needs_input_grad1,
     const bool needs_input_grad2) {
-  LOG_FIRST_N(WARNING, 1)
+  LOG(ERROR)
       << "[mluOpSyncBatchnormBackwardReduce] is deprecated and"
       << " will be removed in the future release, please use "
       << "[mluOpSyncBatchNormBackwardReduce] instead.";
-  return mluOpSyncBatchNormBackwardReduce(
-      handle, desc_dz, dz, desc_x, x, desc_mean, mean, desc_invstd, invstd,
-      desc_dfilter, dfilter, desc_dbias, dbias, desc_sum_dy, sum_dy,
-      desc_sum_dy_xmu, sum_dy_xmu, needs_input_grad0, needs_input_grad1,
-      needs_input_grad2);
+  return MLUOP_STATUS_NOT_SUPPORTED;
 }
 
 mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormBackwardReduce_v2(
