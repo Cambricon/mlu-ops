@@ -1,25 +1,3 @@
-# Copyright (C) [2024] by Cambricon, Inc.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the
-# "Software"), to deal in the Software without restriction, including
-# without limitation the rights to use, copy, modify, merge, publish,
-# distribute, sublicense, and/or sell copies of the Software, and to
-# permit persons to whom the Software is furnished to do so, subject to
-# the following conditions:
-#
-# The above copyright notice and this permission notice shall self.tcp included
-# in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS self.tcp LIABLE FOR ANY
-# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-# pylint: disable=invalid-name, missing-class-docstring, missing-function-docstring
-# pylint: disable=attribute-defined-outside-init
 #!/usr/bin/env python3
 #coding:utf-8
 
@@ -43,22 +21,22 @@ import collections
 
 proto_files = []
 
-def check_mluop_proto(parser):
+def check_mluops_proto(parser):
     # if mlu_op_test_pb2.py do not exist, generate it
-    if not os.path.exists("mlu_op_test_pb2.py"):
+    if not os.path.exists("./analysis_suite/cfg/mlu_op_test_pb2.py"):
         proto_dir = os.path.abspath(
             os.path.realpath(__file__) +
-            "/../../../bangc-ops/test/mlu_op_gtest/pb_gtest/mlu_op_test_proto")
-        if not os.path.exists(proto_dir + "/mluop_test.proto"):
+            "/../../../test/mlu_op_gtest/cntest_proto")
+        if not os.path.exists(proto_dir + "/mlu_op_test.proto"):
             print('{} do not exist, please check!'.format(proto_dir +
-                                                          "/mluop_test.proto"))
+                                                          "/mlu_op_test.proto"))
             parser.print_help()
             exit()
 
-        cwd = os.path.abspath(os.path.realpath(__file__) + "/../")
+        cwd = os.path.abspath(os.path.realpath(__file__) + "/../analysis_suite/cfg")
         cmd_args = [
             "protoc", "--python_out", cwd, "--proto_path", proto_dir,
-            proto_dir + "/mluop_test.proto"
+            proto_dir + "/mlu_op_test.proto"
         ]
         try:
             cmd_ret = subprocess.run(cmd_args)
@@ -108,12 +86,9 @@ def get_node_info(node):
             input_dtype.append(mlu_op_test_pb2.DataType.Name(one_input.dtype))
             # onchip_dtype and params should be carefully
             if one_input.HasField('onchip_dtype'):
-                onchip_dtype.append(
-                    mlu_op_test_pb2.DataType.Name(one_input.onchip_dtype))
-        result["inputs"] = ';'.join(
-            [','.join(shape) for shape in inputs_shape])
-        result["input_stride"] = ';'.join(
-            [','.join(strid) for strid in input_stride])
+                onchip_dtype.append(mlu_op_test_pb2.DataType.Name(one_input.onchip_dtype))
+        result["inputs"] = ';'.join([','.join(shape) for shape in inputs_shape])
+        result["input_stride"] = ';'.join([','.join(strid) for strid in input_stride])
         result["input_datatype"] = ';'.join(input_dtype)
         result["input_layout"] = ';'.join(input_layout)
         output_stride = []
@@ -123,18 +98,13 @@ def get_node_info(node):
         for one_output in node.output:
             # do not need HasField
             outputs_shape.append([str(i) for i in list(one_output.shape.dims)])
-            output_stride.append(
-                [str(i) for i in list(one_output.shape.dim_stride)])
-            output_layout.append(
-                mlu_op_test_pb2.TensorLayout.Name(one_output.layout))
+            output_stride.append([str(i) for i in list(one_output.shape.dim_stride)])
+            output_layout.append(mlu_op_test_pb2.TensorLayout.Name(one_output.layout))
             output_dtype.append(mlu_op_test_pb2.DataType.Name(one_output.dtype))
             if one_output.HasField('onchip_dtype'):
-                onchip_dtype.append(
-                    mlu_op_test_pb2.DataType.Name(one_output.onchip_dtype))
-        result["outputs"] = ';'.join(
-            [','.join(shape) for shape in outputs_shape])
-        result["output_stride"] = ';'.join(
-            [','.join(stride) for stride in output_stride])
+                onchip_dtype.append(mlu_op_test_pb2.DataType.Name(one_output.onchip_dtype))
+        result["outputs"] = ';'.join([','.join(shape) for shape in outputs_shape])
+        result["output_stride"] = ';'.join([','.join(stride) for stride in output_stride])
         result["output_datatype"] = ';'.join(output_dtype)
         result["output_layout"] = ';'.join(output_layout)
         params = ""
@@ -143,8 +113,7 @@ def get_node_info(node):
         if hasattr(node, op_name + "_param"):
             if node.HasField(op_name + "_param"):
                 # TO DO: handle activation_param
-                params += str(getattr(node,
-                                      op_name + "_param")).replace('\n', ';')
+                params += str(getattr(node, op_name + "_param")).replace('\n', ';')
         result["params"] = params
     except:
         pass
@@ -268,15 +237,14 @@ if __name__ == '__main__':
                         type=str,
                         help='path of the input file, can be prototxt or pb ',
                         required=True)
-    parser.add_argument(
-        '--xlsx_path',
-        type=str,
-        help=
-        'path of the output excel, the default file name is case_path.xlsx, i.e. op_tensor.xlsx',
-        required=False)
+    parser.add_argument('--xlsx_path',
+                        type=str,
+                        help=
+                        'path of the output excel, the default file name is case_path.xlsx, i.e. op_tensor.xlsx',
+                        required=False)
     opt, unknown = parser.parse_known_args()
-    check_mluop_proto(parser)
-    import mlu_op_test_pb2
+    check_mluops_proto(parser)
+    from analysis_suite.cfg import mlu_op_test_pb2
     logpath = os.path.abspath(opt.case_path)
     proto_files = gci(logpath)
     if len(proto_files) == 0:
@@ -349,4 +317,4 @@ if __name__ == '__main__':
     for i, width in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = width + 2
     wb.save(xlsx_path)
-    print("parse succeed,saved!")
+    print("parse succeed, saved!")
