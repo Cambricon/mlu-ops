@@ -110,22 +110,26 @@ $$
 
 ##### 1.2.1.1 DFT二次项分解
 标准DFT表达式：
+
 $$
 X[k] = \sum_{n=0}^{N-1} x[n] \cdot e^{-j\frac{2\pi}{N}kn}
 $$
 
 通过引入二次项展开：
+
 $$
 kn = \frac{1}{2}[k^2 + n^2 - (k-n)^2]
 $$
 
 得到等效表达式：
+
 $$
 e^{-j\frac{2\pi}{N}kn} = e^{-j\frac{\pi}{N}k^2} \cdot e^{j\frac{\pi}{N}(k-n)^2} \cdot e^{-j\frac{\pi}{N}n^2}
 $$
 
 ##### 1.2.1.2 卷积形式重构
 令：
+
 $$
 \begin{aligned}
 w[n] &= e^{-j\frac{\pi}{N}n^2} (chrizp 信号) \\
@@ -134,6 +138,7 @@ h[n] &= e^{j\frac{\pi}{N}n^2} (辅助信号)
 $$
 
 则DFT可表示为：
+
 $$
 X[k] = w[k] \cdot \sum_{n=0}^{N-1} (x[n]w[n]) \cdot h[k-n]
 $$
@@ -142,11 +147,13 @@ $$
 
 ###### 1.2.1.3.1 预处理
 1. **输入信号调制**：
+
 $$
 a[n] = x[n] \cdot w[n], \quad 0 \leq n < N
 $$
 
 2. **构造卷积核**：
+
 $$
 h[n] = 
 \begin{aligned} 
@@ -156,6 +163,7 @@ $$
 
 ###### 1.2.1.3.2 快速卷积
 1. **补零扩展**：
+
 $$
 \begin{aligned}
 a_{pad} &= [a[0],...,a[N-1], \underbrace{0,...,0}_{M-N}] \\
@@ -164,6 +172,7 @@ a_{pad} &= [h[0],...,hj[N-1], \underbrace{0,...,0}_{M-N}] \\
 $$
 
 2. **FFT加速计算**：
+
 $$
 X[k] = w[k] \cdot \text{IFFT}\left( \text{FFT}(a_{pad}) \odot \text{FFT}(h_{pad}) \right)[k]
 $$
@@ -485,7 +494,7 @@ fft2d可以理解为先做一个bacth=n0, n=[n1]的行主序fft1d, 再做一个b
 #### 3.1.2 任意长度bluestein fft实现
 #### 3.1.2.1 1d bluestein fft
 根据算法计算步骤 1.2.1.3 可知， 核心逻辑为对输入数据乘系数后得到a[n],进行pad后再进行fft，结果与另一个系数的fft 结果相乘再逆fft，结果再乘系数。
-其中关键步骤fft 及ifft 可直接调用前述fft 及ifft kernel 进行计算。需要实现的是1. x[n]*w[n], 复数矩阵每列乘以相应复数系数；2. fft(apad) * fft(hpad), fft(hpad)结果为1位复数向量, 其实质为也是一个复数矩每列阵乘以相应的复数系数;3. w[k]*ifft()也是计算复数矩阵每列乘以复数相应系数。这个三个计算步骤实质是相同的，所以实现完整的bluestein fft 算法除调用上述接口外还需要实现此功能, 命名接complex_coeff_matmul(),以及系数生成generate()
+其中关键步骤fft 及ifft 可直接调用前述fft 及ifft kernel 进行计算。需要实现的是1. x[n]*w[n], 复数矩阵每列乘以相应复数系数；2. fft(a_pad) * fft(h_pad), fft(h_pad)结果为1位复数向量, 其实质为也是一个复数矩每列阵乘以相应的复数系数;3. w[k]*ifft()也是计算复数矩阵每列乘以复数相应系数。这个三个计算步骤实质是相同的，所以实现完整的bluestein fft 算法除调用上述接口外还需要实现此功能, 命名接complex_coeff_matmul(),以及系数生成generate()
 方案如下：
 ![bluesteinfft](bluestein_fft_01.jpg)
 
@@ -509,7 +518,7 @@ memcpy(sram_buffer, nram_index, length, NRAM2SRAM);
 ```
 
 - complex_coeff_matmul() 核心计算步骤伪代码
-  - 对xn[b, length] 拆分b，当length 较长时，核内循环处理，核心计算步骤做3及流水
+  - 对x[b, length] 拆分b，当length 较长时，核内循环处理，核心计算步骤做3及流水
 ```C++
 // input_gdram 为输入x_n的地址，output_gdram 为输出地址
 // 流水开始前对ouput空间刷零完成pad zero
