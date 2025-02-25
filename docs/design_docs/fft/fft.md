@@ -166,8 +166,13 @@ $$
 
 $$
 \begin{aligned}
-a_{pad} &= [a[0],...,a[N-1], \underbrace{0,...,0}_{M-N}] \\
-a_{pad} &= [h[0],...,hj[N-1], \underbrace{0,...,0}_{M-N}] \\
+a_{pad} &= [a[0],...,a[N-1], \underbrace{0,...,0}_{M-N}]
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+h_{pad} &= [h[0],...,hj[N-1], \underbrace{0,...,0}_{M-N}]
 \end{aligned}
 $$
 
