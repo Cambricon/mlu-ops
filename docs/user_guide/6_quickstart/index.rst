@@ -32,8 +32,7 @@ CentOS系统
 
     sudo yum install mluops-<x.y.z>-1.el7.<arch>.rpm
 
-<x.y.z>为Cambricon MLU-OPS™ 版本号，<arch>为CPU架构（x86_64），例如Cambricon MLU-OPS™ v0.3.0版本在 CentOS7 系统下的包名为 ``mluops-0.3.0-1.el7.x86_64.rpm``。
-
+<x.y.z>为Cambricon MLU-OPS™ 版本号，<arch>为CPU架构（x86_64），例如Cambricon MLU-OPS™ v1.5.0版本在 CentOS7 系统下的包名为 ``mluops-1.5.0-1.el7.x86_64.rpm``。
 
 .. _卸载或升降级MLU-OPS版本:
 
