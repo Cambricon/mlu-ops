@@ -523,7 +523,8 @@ memcpy(sram_buffer, nram_index, length, NRAM2SRAM);
 ```
 
 - complex_coeff_matmul() 核心计算步骤伪代码
-  - 对x[b, length] 拆分b，当length 较长时，核内循环处理，核心计算步骤做3及流水
+  - 对x[b, length] 拆分b，当length 较长时，核内循环处理，核心计算步骤做3及流水 
+  - 设z1=a+bi，z2=c+di(a、b、c、d∈R)是任意两个复数，那么它们的积(a+bi)(c+di)=(ac-bd)+(bc+ad)i。
 ```C++
 // input_gdram 为输入x_n的地址，output_gdram 为输出地址
 // 流水开始前对ouput空间刷零完成pad zero
@@ -542,22 +543,22 @@ gdram_set(output_gdram, b*pad_length, 0);
 memcpy_async(chirpz, sram_buffer, SRAM2NRAM, 2*l);
 // z1_r, z2_r..., z1_i, z2_i....
 memcpy_async(input_x, input_gdram, GDRAM2NRAM, b*l);
-//3d transpoze
-// a b c d
-// e f g e
+//transpoze
+// a_r b_i c_r d_i
+// e_r f_i g_r e_i
 //复数实数虚数分开
-//  转换成 a,c,e,g 
-//        b,d,f,e
+//  转换成 a_r,c_r,e_r,g_r 
+//        b_i,d_i,f_i,e_i
 __bang_transpose(output_x, input_x, 2, b*l);
-// a*z1_r c*z2_r...e*z1_r,g*z2_r...
-// b*z1_i d*z2_i...
+// a_r*z1_r c_r*z2_r...e_r*z1_r,g_r*z2_r...
+// b_i*z1_i d_i*z2_i...
 __bang_cycle_mul(input_x, output_x, chirpz, b*l, l);
 __bang_cycle_mul(input_x + b*l, output_x + b*l, chirpz + l, b*l, l);
-// a*z1_r - b*z1_i ....
+// a_r*z1_r - b_i*z1_i ....
 __bang_sub(temp, input_x, input_x + b*l, b*l);
 
-// a*z1_i c*z2_i...e*z1_i,g*z2_i...
-// b*z1_r d*z2_r...
+// a_r*z1_i c_r*z2_i...e_r*z1_i,g_r*z2_i...
+// b_i*z1_r d_i*z2_r...
 __bang_cycle_mul(input_x, output_x + b*l, chirpz, b*l, l);
 __bang_cycle_mul(input_x + b*l, output_x, chirpz + l, b*l, l);
 __bang_add(temp+b*l, input_x, input_x + b*l, b*l);
