@@ -2971,7 +2971,7 @@ mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
  * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float, bfloat16, int32, complex_float
  *   - output tensor: half, float, bfloat16, int32
- * - The data type bfloat16 is only supported on MLU500 series.
+ * - The data type bfloat16 is only supported on compute_50.
  *
  * @par Data Layout
  * - None.
@@ -3692,10 +3692,10 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  *   ::mluOpGetDynamicPointToVoxelBackwardWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU500 series and above platforms.
- * - On MLU500 series and above, the inputs \b point2voxel_map, \b voxel_points_count, and \b voxel_num with NaN or
+ * - This function is only supported on compute_50 or above.
+ * - On compute_50 or above, the inputs \b point2voxel_map, \b voxel_points_count, and \b voxel_num with NaN or
  *   infinity are not supported.
- * - On MLU500 series and above, the inputs \b grad_voxel_feats, \b feats and \b voxel_feats with NaN or infinity
+ * - On compute_50 or above, the inputs \b grad_voxel_feats, \b feats and \b voxel_feats with NaN or infinity
  *   are supported.
  *
  * @par Example
@@ -3852,9 +3852,9 @@ mluOpGetDynamicPointToVoxelForwardWorkspaceSize(mluOpHandle_t handle,
  *   the size of workspace by ::mluOpGetDynamicPointToVoxelForwardWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU500 series and above platforms.
- * - On MLU500 series and above, the input \b coors with NaN or infinity is not supported.
- * - On MLU500 series and above, the input \b feats with NaN or infinity is supported.
+ * - This function is only supported on compute_50 or above.
+ * - On compute_50 or above, the input \b coors with NaN or infinity is not supported.
+ * - On compute_50 or above, the input \b feats with NaN or infinity is supported.
  *
  * @par Example
  * - None.
@@ -4105,7 +4105,7 @@ mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
  * - The operator does not support adaptive NMS.
  * - The attribute `eta` should not be less than 1.
  * - ``nms_thresh`` should be more than 0.
- * - On MLU500 series and above:
+ * - On compute_50 or above:
  *   - If \b pixel_offset is false, input \b scores with NaN/INF is not supported.
  *   - If \b pixel_offset is true, NaN/INF is not supported.
  *
@@ -5474,7 +5474,7 @@ mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - On MLU500 series and above, the inputs \b grid and \b input with NaN or infinity are supported.
+ * - On compute_50 or above, the inputs \b grid and \b input with NaN or infinity are supported.
  *
  * @par Example
  * - None.
@@ -5555,7 +5555,7 @@ mluOpRoiCropForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - On MLU500 series and above, the inputs \b grid and \b grad_output with NaN or infinity are supported.
+ * - On compute_50 or above, the inputs \b grid and \b grad_output with NaN or infinity are supported.
  *
  * @par Example
  * - None.
@@ -7054,8 +7054,8 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  *
  * @par Note
  * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 9785] when
- *   \b weight is NULL on MLU500 series and above. The length of C should be in the range of [0, 8864] when
- *   \b weight is not NULL on MLU500 series and above.
+ *   \b weight is NULL on compute_50 or above. The length of C should be in the range of [0, 8864] when
+ *   \b weight is not NULL on series higher than compute_50.
  * - \b weight does not support positive infinity and negative infinity currently.
  * - \b gamma should be in the range of [0, 10000].
  *
@@ -7331,7 +7331,7 @@ mluOpMaskedIm2colForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - This function is only supported on MLU500 series and above platforms.
+ * - This function is only supported on compute_50 or above.
  * - The parameter \b samples, \b capacity , \b hidden , and \b num_experts should not be negative.
  *
  * @par Example
@@ -7447,7 +7447,7 @@ mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
  * @par Note
  * - The input \b sampling_loc that contains NaN or infinity is not supported.
  * - The \b value, \b sampling_loc, \b with attn_weight and \b grad_output contain NaN or infinity are not
- *   supported on MLU500 series and above currently.
+ *   supported on compute_50 and above currently.
  *
  * @par Example
  * - None.
@@ -7626,7 +7626,7 @@ mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
  *   the size of the workspace by ::mluOpGetMutualInformationBackwardWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU500 series and above platforms.
+ * - This function is only supported on compute_50 or above.
  * - If \b overwrite_ans_grad is true, \b ans_grad will be overwritten.
  *   If the computation worked correctly, the overwritten value should be the same as the original ans_grad.
  * - If B is zero, or S and T are both zero, ::MLUOP_STATUS_SUCCESS is returned without
@@ -7787,7 +7787,7 @@ mluOpGetMutualInformationForwardWorkspaceSize(mluOpHandle_t handle,
  *   the size of the workspace by ::mluOpGetMutualInformationForwardWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU500 series and above platforms.
+ * - This function is only supported on compute_50 or above.
  * - If B is zero, ::MLUOP_STATUS_SUCCESS is returned without any changes to tensor \b p and tensor \b ans.
  *
  * @par Example
@@ -8019,7 +8019,7 @@ mluOpGetRoiAwarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - None
+ * - None.
  *
  * @par Example
  * - None.
@@ -8148,7 +8148,7 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - None
+ * - None.
  *
  * @par Example
  * - None.
@@ -8579,7 +8579,7 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  *   all the parameters passed to this function. See each parameter description for details.
  *
  * @par Note
- * - This function is only supported on MLU500 series and above platforms.
+ * - This function is only supported on compute_50 or above.
  * - The parameter num_act_out will be obtained from ::mluOpSparseConvolutionDescriptor_t.
  *
  * @par Example
@@ -9913,7 +9913,7 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  *   all the parameters passed to this function. See each parameter description for details.
  *
  * @par Note
- * - This function is only supported on MLU500 series and above platforms.
+ * - This function is only supported on compute_50 or above.
  * - This function does not support setting tensor onchip data type with fixed-point type.
  *
  * @par Example
@@ -10410,7 +10410,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  *   called before this function to get extra space size.
  *
  * @par Note
- * - This function is only supported on MLU500 series and above platforms.
+ * - This function is only supported on compute_50 or above.
  * - This function does not support tensor onchip data type with fixed-point type.
  * - The input indices in \b indice_pairs tensor should be no larger than dims[0]
  *   of \b features. Such value is illegal and not checked, the output result is
@@ -10518,7 +10518,7 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - This function is only supported on MLU500 series and above platforms.
+ * - This function is only supported on compute_50 or above.
  * - The parameters \b samples, \b capacity , \b hidden , and \b num_experts should not be negative.
  *
  * @par Example
@@ -10678,7 +10678,7 @@ mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
  *   the size of workspace by ::mluOpGetMoeDispatchBackwardGateWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU500 series and above platforms.
+ * - This function is only supported on compute_50 or above.
  * - The parameters \b samples, \b capacity , \b hidden , and \b num_experts should not be negative.
  *
  * @par Example
@@ -10753,7 +10753,7 @@ mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
  * - The supported layout of input and output tensors must be \p MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
- *   On series MLU500 series and above, the number of boxes cannot exceed 14042.
+ *   On compute_50 or above, the number of boxes cannot exceed 14042.
  *
  * @par API Dependency
  * - None.
@@ -11507,7 +11507,7 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
  * - None
  *
  * @par Note
- * - None
+ * - None.
  *
  * @par Example
  * - The example 1 of the roipoolingforward operation is as follows:
@@ -11991,7 +11991,7 @@ mluOpSyncBatchNormStats(mluOpHandle_t handle,
  *
  * @par Note
  * - The input \b mean_all and the input \b invstd_all cannot be positive infinity or negative infinity
- *   at the same time on MLU500 series or above.
+ *   at the same time on compute_50 or above.
  *
  * @par Example
  * - The example of ::mluOpSyncBatchNormGatherStatsWithCounts operation is as follows:
@@ -13527,7 +13527,7 @@ mluOpGetDCNForwardWorkspaceSize(mluOpHandle_t handle,
  *   - input, offset, mask, filter, bias, output: half, float.
  * - \p input offchip data type can be combined with any supported onchip data types.
  * - \p filter offchip data type can be combined with any supported onchip data types.
- * - This function also supports floating-point computation on MLU500 series or above.
+ * - This function also supports floating-point computation on compute_50 or above.
  *   To perform floating-point computation, the onchip data type of \p input and \p filter
  *   should be \p MLUOP_DTYPE_INVALID or the same as the corresponding offchip data type.
  *
@@ -13771,7 +13771,7 @@ mluOpGetDCNBackwardWeightWorkspaceSize(mluOpHandle_t handle,
  *   - input, offset, mask, grad_output, grad_filter, grad_bias, grad_mask: half, float.
  * - \p grad_output off-chip data type can be combined with any supported on-chip data types.
  * - \p input off-chip data type can be combined with any supported on-chip data types.
- * - This function also supports floating-point computation on MLU500 series or above. To perform
+ * - This function also supports floating-point computation on compute_50 or above. To perform
  *   floating-point computation, the on-chip data type of \p input and \p grad_output should be
  *   \p MLUOP_DTYPE_INVALID or the same as the corresponding off-chip data type.
  *
@@ -14013,7 +14013,7 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  * - This function supports any combinations of the following onchip data types for input tensor
  * - \p grad_output offchip data type can be combined with any supported onchip data types.
  * - \p filter offchip data type can be combined with any supported onchip data types.
- * - This function also supports floating-point computation on MLU500 series or above. To perform
+ * - This function also supports floating-point computation on compute_50 or above. To perform
  *   floating-point computation, the onchip data type of \p grad_output and \p filter must be
  *   \p MLUOP_DTYPE_INVALID or the same as the corresponding offchip data type.
  *
