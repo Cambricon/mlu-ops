@@ -139,10 +139,6 @@ struct cnfftMatmulAddrs {
   void *ifft_dft_matrix_addr;
   void *ifft_dft_re_matrix_addr;
   void *ifft_dft_im_matrix_addr;
-  void *dft_pos_addr;
-  void *dft_scale_addr;
-  size_t dft_quantize_workspace_size;
-  void *dft_quantize_workspace_addr;
   /* addrs set in the runtime stage */
   void *input_contiguous_addr;
   void *input_pad_addr;
@@ -151,8 +147,6 @@ struct cnfftMatmulAddrs {
   void *input_merged_addr;
   void *input_re_addr;
   void *input_im_addr;
-  void *input_pos_addr;
-  void *input_scale_addr;
   void *matmul_re_mul_re_addr;
   void *matmul_re_mul_im_addr;
   void *matmul_im_mul_re_addr;

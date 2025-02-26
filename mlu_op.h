@@ -29,7 +29,7 @@
 
 #define MLUOP_MAJOR 1
 #define MLUOP_MINOR 5
-#define MLUOP_PATCHLEVEL 0
+#define MLUOP_PATCHLEVEL 1
 /*********************************************************************************
  * MLUOP_VERSION is deprecated and not recommended. To get the version of MLUOP, use
  * MLUOP_MAJOR, MLUOP_MINOR and MLUOP_PATCHLEVEL.
@@ -3685,9 +3685,7 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  * - The first dimension of \b voxel_num tensor is one.
  * - The shape of \b feats is [N, C]:
  *   - 2C * sizeof(datatype of \b feats) + (N + 3C + 1) * sizeof(int) + N
- *     must be less than or equal to 640KB on compute_50.
- *   - 2C * sizeof(datatype of \b feats) + (N + 3C + 1) * sizeof(int) + N
- *     must be less than or equal to 380KB on compute_50.
+ *     must be less than or equal to 380KB on MLU500 series and above.
  *
  * @par API Dependency
  * - Before calling this function, you need to get the size of workspace by
@@ -4502,8 +4500,6 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  *   both of confidence_desc and confidence should be provided as null pointer.
  *   - In Nms3D mode, when finding the point with minimum y and minimum x in convex-hull-graham,
  *     it performs min-pooling operation. If the input data of pooling contains NaN:
- * - On compute_50 or above, if the last value in the kernel of the pooling is NaN, the \b output value is NaN.
- *   Otherwise, the \b output value is the minimum value after the last NaN.
  *
  * @par Requirements
  * - None.
@@ -4535,6 +4531,8 @@ mluOpNms(mluOpHandle_t handle,
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the Nms operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] nms_desc
+ * The descriptor of the Nms function. For detailed information, see ::mluOpNmsDescriptor_t.
  * @param[in] boxes_desc
  * The descriptor of the tensor \b boxes, which contains dimension, data type, and
  * data layout of input \b boxes. For detailed information, see ::mluOpTensorDescriptor_t.
@@ -4579,6 +4577,7 @@ mluOpNms(mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
+                         mluOpNmsDescriptor_t nms_desc,
                          const mluOpTensorDescriptor_t boxes_desc,
                          const mluOpTensorDescriptor_t confidence_desc,
                          size_t *size);
@@ -4687,7 +4686,6 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  * - The shape of \b output should be the same with \b var.
  * - The shape[0] of the \b output should be equal to the input height.
  * - The shape[1] of the \b output should be equal to the input width.
- * - The shape[2] of the \b output and \b var must be less than 2900 on compute_50.
  * - The shape[2] of \b output and \b var should be equal to
  *   the product of shape[0] of \b min_sizes and \b aspect_ratios
  *   plus shape[0] of \b max_sizes.
@@ -4700,8 +4698,7 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The shape[2] of the \b output and \b var must be
- *   less than 2900 on compute_50.
+ * - None.
  *
  * @par Example
  * - None.
@@ -5162,8 +5159,7 @@ mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc);
  * - This function should be called with ::mluOpSetRoiAlignForwardDescriptor_v2.
  *
  * @par Note
- * - When \b input contains NaN, if  \b pool_mode is maximum pooling_mode, \b output gets more NaN than
- *   IEEE 754 on compute_50.
+ * - None.
  *
  * @par Example
  * - The example of ::mluOpRoiAlignForward_v2 is as follows:
@@ -5478,7 +5474,6 @@ mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - On compute_50, the input \b grid with NaN or infinity is not supported.
  * - On compute_50 or above, the inputs \b grid and \b input with NaN or infinity are supported.
  *
  * @par Example
@@ -5560,7 +5555,6 @@ mluOpRoiCropForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - On compute_50, the input \b grid with NaN or infinity is not supported.
  * - On compute_50 or above, the inputs \b grid and \b grad_output with NaN or infinity are supported.
  *
  * @par Example
@@ -6154,7 +6148,7 @@ mluOpVoxelization(mluOpHandle_t handle,
  * - The third dimension of scores tensor must be equal to \b class_num.
  * - The fourth dimension of boxes tensor and scores tensor must be equal to the
  *   multiplication result of the third dimension and the fourth dimension of input x tensor.
- * - The \b class_num should be larger than 0. On compute_50 or above, the value cannot be greater than 2558.
+ * - The \b class_num should be larger than 0.
  *
  * @par API Dependency
  * - None.
@@ -6358,12 +6352,7 @@ mluOpVoxelPoolingForward(mluOpHandle_t handle,
  *
  * @par Note
  * - When finding the point with minimum y and minimum x in convex-hull-graham,
- *   BoxIouRotated performs min-pooling operation. If the input data of pooling
- *   contains NaN:
- *   - On compute_50:
- *     - If the last value in the kernel of the pooling is NaN, the \b output
- *       value is NaN. Otherwise, the \b output value is the minimum value after
- *       the last NaN.
+ *   BoxIouRotated performs min-pooling operation.
  *
  * @par Example
  * - None.
@@ -7064,9 +7053,6 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 16339] when
- *   \b weight is NULL on compute_50. The length of C should be in the range of [0, 14848] when
- *   \b weight is not NULL on compute_50.
  * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 9785] when
  *   \b weight is NULL on compute_50 or above. The length of C should be in the range of [0, 8864] when
  *   \b weight is not NULL on series higher than compute_50.
@@ -7461,7 +7447,7 @@ mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
  * @par Note
  * - The input \b sampling_loc that contains NaN or infinity is not supported.
  * - The \b value, \b sampling_loc, \b with attn_weight and \b grad_output contain NaN or infinity are not
- *   supported on compute_50 currently.
+ *   supported on compute_50 and above currently.
  *
  * @par Example
  * - None.
@@ -8033,8 +8019,7 @@ mluOpGetRoiAwarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The inputs \b rois and \b pts with NaN or infinity are not supported on compute_50.
- * - The input \b pts_feature with NaN are not supported on compute_50.
+ * - None.
  *
  * @par Example
  * - None.
@@ -8163,8 +8148,7 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The inputs \b rois and \b pts with NaN or infinity are not supported on compute_50.
- * - The input \b pts_feature with NaN are not supported on compute_50.
+ * - None.
  *
  * @par Example
  * - None.
@@ -8433,11 +8417,6 @@ mluOpRoiAwarePool3dBackward(mluOpHandle_t handle,
  * - If the shape of \b x is set to [N, H, W, C], the size of C dimension should be \b h_mask * \b
  *   w_mask.
  * - If the shape of \b y is set to [N, H, W, C], the size of C dimension should be H * W.
- *   - On compute_50:
- *     - When psa_type is COLLECT, the size of \b x channels ci and \b y channels co should be
- *       satisfied: ci + co <= 10240.
- *     - When psa_type is DISTRIBUTE, the size of \b x channels ci and \b y channels co should be
- *       satisfied: ci + 2 * co <= 10240.
  *
  * @par API Dependency
  * - None.
@@ -8507,11 +8486,6 @@ mluOpPsamaskForward(mluOpHandle_t handle,
  * - If the shape of \b dx is set to [N, H, W, C], the size of C dimension should be \b h_mask * \b
  *   w_mask .
  * - If the shape of \b dy is set to [N, H, W, C], the size of C dimension should be H * W.
- *   - On compute_50:
- *     - When psa_type is COLLECT, the size of \b dx channels ci and \b dy channels co should be
- *       satisfied: ci + co <= 10240.
- *     - When psa_type is DISTRIBUTE, the size of \b dx channels ci and \b dy channels co should be
- *       satisfied: ci + 2 * co <= 10240.
  *
  * @par API Dependency
  * - None.
@@ -10779,7 +10753,6 @@ mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
  * - The supported layout of input and output tensors must be \p MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
- * - On compute_50, the number of boxes cannot exceed 23404;
  *   On compute_50 or above, the number of boxes cannot exceed 14042.
  *
  * @par API Dependency
@@ -11527,19 +11500,14 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
  * - \b Spatial_scale should be in the range of (0, 1].
  * - \b Output consists of [rois_num, pooled_h, pooled_w, channels]. In the dimensions of the h and w of the input
  *   and the output, (\b x2 - \b x1) * (\b y2 - \b y1) * \b spatial_scale * \b spatial_scale / (\b pooled_h * \b
- *   pooled_w) < (nram_limitation / 32). Nram_limitation means the limitation of the nram. On compute_50 or above,
- *   the nram_limitation is (163804 - 4 * \b channels) / 2. \b pooled_h means height of output.
+ *   pooled_w) < (nram_limitation / 32). Nram_limitation means the limitation of the nram.
  *   \b pooled_w means width of output.
  *
  * @par API Dependency
  * - None
  *
  * @par Note
- * - When the input data or parameter contains NaN or infinity:
- *   - On compute_50 or above, if the last value in the kernel of the pooling is NaN, \b argmax is
- *     the index of the last value, \b output is the last value, as shown in example 2 below.
- *     Otherwise, \b argmax is the index of the maximum value after the last NaN,
- *     \b output is the maximum value after the last NaN, as shown in example 3 below.
+ * - None.
  *
  * @par Example
  * - The example 1 of the roipoolingforward operation is as follows:
@@ -12021,7 +11989,7 @@ mluOpSyncBatchNormStats(mluOpHandle_t handle,
  * @par API Dependency
  * - None.
  *
- * @par note
+ * @par Note
  * - The input \b mean_all and the input \b invstd_all cannot be positive infinity or negative infinity
  *   at the same time on compute_50 or above.
  *
@@ -14194,6 +14162,8 @@ mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
  * The descriptor of output signals. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] rank
+ 
+ 
  * The dimensionality of the FFT operation. It can be 1D, 2D or 3D.
  * @param[in] n
  * An array of size \p rank describing the FFT size of each dimension. n[0]
@@ -14369,7 +14339,6 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  *   the data representation range.
  * - Half data type of \p input is not recommended due to low precision. The first element of the
  *   FFT result is the sum of all input elements, and it is likely to overflow.
- * - This operation is not supported on the 1V platforms.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR

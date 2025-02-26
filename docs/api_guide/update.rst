@@ -11,7 +11,6 @@ This section lists contents that were made for each product release.
 
   - None.
 
-
 * V1.5.0
 
   **Date:** February 5, 2025
