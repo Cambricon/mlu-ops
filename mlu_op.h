@@ -14162,8 +14162,6 @@ mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan);
  * The descriptor of output signals. For detailed information,
  * see ::mluOpTensorDescriptor_t.
  * @param[in] rank
- 
- 
  * The dimensionality of the FFT operation. It can be 1D, 2D or 3D.
  * @param[in] n
  * An array of size \p rank describing the FFT size of each dimension. n[0]
