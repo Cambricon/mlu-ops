@@ -14370,7 +14370,6 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  *   the data representation range.
  * - Half data type of \p input is not recommended due to low precision. The first element of the
  *   FFT result is the sum of all input elements, and it is likely to overflow.
- * - This operation is not supported on the 1V platforms.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
