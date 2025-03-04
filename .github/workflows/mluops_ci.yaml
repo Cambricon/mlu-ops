@@ -36,10 +36,6 @@ on:
 
 jobs:
   test:
-    strategy:
-      matrix:
-        runner: [mlu370-m8]
-        mlu_ops_version : [v1.5.2]
     runs-on: [yellow]
     steps:
       - uses: actions/checkout@v3
