@@ -13221,6 +13221,67 @@ mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
 void MLUOP_WIN_API
 mluOpSetGenCaseMode(int mode);
 
+// Group:Common Interface
+// Subgroup:Debugging
+/*!
+ * @brief Sets the gen case directory name through the \p path parameter. For more
+ * information, see "Cambricon MLU-OPS User Guide".
+ *
+ * @param[in] path
+ * Input. A NULL-terminated character string used to specify the directory name.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - The settings of this API are valid for all threads.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetGenCaseDirectory(const char *path);
+
+// Group:Common Interface
+// Subgroup:Debugging
+/*!
+ * @brief Gets the gen case directory name. For more information, see "Cambricon MLU-OPS User Guide".
+ *
+ * @param[in] buffer
+ * Input. This is a buffer used to store the directory name. If \p buffer is NULL,
+ *        the directory name is placed in a region of memory allocated with malloc.
+ *
+ * @param[in] bufferSize
+ * Input. The size of the buffer.
+ *
+ * @param[out] pathLen
+ * Output. If \p pathLen is not NULL, the length of directory name is placed in *pathLen.
+ *
+ * @param[out] status
+ * Output. If \p status is not NULL, the execution status of this API is placed in *status.
+ *         It includes ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ALLOC_FAILED,
+ *         ::MLUOP_STATUS_INTERNAL_ERROR.
+ *
+ * @par Return
+ * - A pointer to the start of the NULL-terminated directory name, or NULL if get
+ *   directory name failed. The API caller is responsible for deallocating this memory by using
+ *   the free() function.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+const char MLUOP_WIN_API *
+mluOpGetGenCaseDirectory(char *buffer, size_t bufferSize, size_t *pathLen, mluOpStatus_t *status);
+
 // Group: DeformConv
 /*!
  * @brief Creates a descriptor pointed by \p dcn_desc for a deformable convolution forward

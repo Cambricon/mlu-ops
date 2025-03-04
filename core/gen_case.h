@@ -521,6 +521,19 @@ class PbNode {
   void debugTensorAddress();
 };
 
+class genCaseConfig {
+ public:
+  static void setDirectory(const char *name);
+  static std::string getDirectory();
+  static std::string replacePlaceholder(std::string pathStr);
+  template <typename T>
+  static inline void setValue(T *pointer, T value) {
+    if (pointer != nullptr) {
+      *pointer = value;
+    }
+  }
+};
+
 template <>
 inline void PbNode::appendOpParam<std::string>(std::string param_name,
                                                std::string param_value,
