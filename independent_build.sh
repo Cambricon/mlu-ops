@@ -53,8 +53,7 @@ long_args=(
   filter:
   jobs:
   help
-  mlu370 # mlu arch
-  mlu590
+  mlu590 # mlu arch
   mtp613
   no_prepare
   perf
@@ -67,9 +66,6 @@ add_mlu_arch_support () {
   local target_mlu=$1
   local bang_arch=
   case "$target_mlu" in
-    --mlu370)
-      bang_arch="mtp_372;"
-      ;;
     --mlu590)
       bang_arch="mtp_592;"
       ;;
@@ -121,11 +117,6 @@ usage () {
     echo "    --disable-gtest             Build mlu-ops without gtest"
     echo "    --enable-bang-memcheck      (Deprecated, use CNSanitizer instead) Build with cncc '-mllvm -enable-mlisa-sanitizer -Xbang-cnas -O0 -g' arg to enable memcheck"
     echo "    --enable-static             Build mlu-ops static library"
-    echo "    --mlu370                    Build for target product MLU370: __BANG_ARCH__ = 372"
-    echo "                                                                 __MLU_NRAM_SIZE__ = 768KB"
-    echo "                                                                 __MLU_WRAM_SIZE__ = 1024KB"
-    echo "                                                                 __MLU_SRAM_SIZE__ = 4096KB"
-    echo "                                                                 cncc --bang-mlu-arch=mtp_372, cnas --mlu-arch mtp_372"
     echo "    --mlu590                    Build for target product MLU590: __BANG_ARCH__ = 592"
     echo "                                                                 __MLU_NRAM_SIZE__ = 512KB"
     echo "                                                                 __MLU_WRAM_SIZE__ = 512KB"

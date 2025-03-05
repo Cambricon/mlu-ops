@@ -43,7 +43,6 @@ For static threshold standard details, see: [MLU-OPS™ Accuracy Acceptance Stan
 #### 3.1.2 Operator Scheme checklist
 
 - Supported hardware
-  - [ ] MLU370
   - [ ] MLU590
 - Job types
   - [ ] BLOCK
@@ -89,7 +88,7 @@ Test results...
 
 See [MLU-OPS™ Performance Acceptance Standard](https://github.com/Cambricon/mlu-ops/blob/master/docs/MLU-OPS-Performance-Acceptance-Standard.md) for details.
 
-Platform：MLU370
+Platform：MLU590
 
 ```bash
 # The test results should contain Op name, Shape, Data type,  
@@ -109,13 +108,6 @@ Platform：MLU370
 # [MLU Compute Efficiency ]: 0.5
 # [Mlu Workspace Size     ]: -1 (Bytes)
 # 
-# ----------- case1 -----------
-# ...
-```
-
-Platform：MLU590
-```bash
-# ----------- case0 -----------
 # ----------- case1 -----------
 # ...
 ```
