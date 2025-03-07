@@ -168,6 +168,41 @@ void genCaseModeSet(int mode) {
   LOG(INFO) << "[gen_case] Set GEN_CASE mode to " << mode << ".";
 }
 
+std::string genCaseConfig::replacePlaceholder(std::string pathStr) {
+  size_t pos = pathStr.find("{pid}");
+  if (pos != std::string::npos) {
+    pathStr.replace(pos, 5, "pid" + std::to_string(syscall(SYS_getpid)));
+  }
+  pos = pathStr.find("{deviceid}");
+  if (pos != std::string::npos) {
+    int dev_index = -1;
+    cnrtRet_t ret = cnrtGetDevice(&dev_index);
+    if (ret != cnrtSuccess || dev_index < 0) {
+      LOG(ERROR) << "get device ID failed.";
+    }
+    pathStr.replace(pos, 10, "deviceid" + std::to_string(dev_index));
+  }
+  return pathStr;
+}
+
+void genCaseConfig::setDirectory(const char *path) {
+  std::string pathStr = std::string(path);
+  gen_case_dir_ = pathStr;
+}
+
+std::string genCaseConfig::getDirectory() {
+  if (gen_case_dir_ != "") {
+    std::string pathStr = genCaseConfig::replacePlaceholder(gen_case_dir_);
+    return pathStr;
+  } else {
+    char current_dir[PATH_MAX];
+    if (getcwd(current_dir, sizeof(current_dir)) == NULL) {
+      return "";
+    }
+    return std::string(current_dir);
+  }
+}
+
 // TO DO: can use regex and global variable for efficiency
 inline int getOpNameMask(const std::string op_name_,
                          const std::string op_name) {
@@ -454,6 +489,7 @@ std::string PbNode::getFolderName() {
     folder_name = current_dir;
   }
 
+  folder_name = genCaseConfig::replacePlaceholder(folder_name);
   folder_name = folder_name + "/gen_case/" + op_name;
   return folder_name;
 }
@@ -786,4 +822,52 @@ std::string descToString(mluOpTensorDescriptor_t desc, char delimiter) {
 }  // namespace mluop
 void MLUOP_WIN_API mluOpSetGenCaseMode(int mode) {
   mluop::gen_case::genCaseModeSet(mode);
+}
+
+mluOpStatus_t MLUOP_WIN_API mluOpSetGenCaseDirectory(const char *path) {
+  PARAM_CHECK("[mluOpSetGenCaseDirectory]", path != NULL);
+  mluop::gen_case::genCaseConfig::setDirectory(path);
+  return MLUOP_STATUS_SUCCESS;
+}
+
+const char MLUOP_WIN_API *mluOpGetGenCaseDirectory(char *buffer,
+                                                   size_t bufferSize,
+                                                   size_t *pathLen,
+                                                   mluOpStatus_t *status) {
+  std::string ret = mluop::gen_case::genCaseConfig::getDirectory();
+  if (ret == "") {
+    LOG(ERROR) << "[mluOpGetGenCaseDirectory] getting directory failed!";
+    mluop::gen_case::genCaseConfig::setValue(pathLen, (size_t)0);
+    mluop::gen_case::genCaseConfig::setValue(status,
+                                             MLUOP_STATUS_INTERNAL_ERROR);
+    return nullptr;
+  }
+  if (ret.size() >= bufferSize && buffer != nullptr) {
+    LOG(ERROR) << "[mluOpGetGenCaseDirectory] buffer size is too small to "
+                  "store the gen case directory.";
+    mluop::gen_case::genCaseConfig::setValue(pathLen, (size_t)0);
+    mluop::gen_case::genCaseConfig::setValue(status, MLUOP_STATUS_BAD_PARAM);
+    return buffer;
+  }
+  if (buffer == nullptr) {
+    char *newBuffer = (char *)malloc(ret.size() + 1);
+    if (newBuffer == nullptr) {
+      LOG(ERROR) << "[mluOpGetGenCaseDirectory] malloc failed.";
+      mluop::gen_case::genCaseConfig::setValue(pathLen, (size_t)0);
+      mluop::gen_case::genCaseConfig::setValue(status,
+                                               MLUOP_STATUS_ALLOC_FAILED);
+      return nullptr;
+    }
+    strncpy(newBuffer, ret.c_str(), ret.size());
+    newBuffer[ret.size()] = '\0';
+    mluop::gen_case::genCaseConfig::setValue(pathLen, ret.size());
+    mluop::gen_case::genCaseConfig::setValue(status, MLUOP_STATUS_SUCCESS);
+    return newBuffer;
+  } else {
+    strncpy(buffer, ret.c_str(), ret.size());
+    buffer[ret.size()] = '\0';
+    mluop::gen_case::genCaseConfig::setValue(pathLen, ret.size());
+    mluop::gen_case::genCaseConfig::setValue(status, MLUOP_STATUS_SUCCESS);
+    return buffer;
+  }
 }

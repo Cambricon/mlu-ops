@@ -54,6 +54,21 @@ MLUOP_GEN_CASE
 
 更详细请参见 `MLU-OPS™ GEN_CASE 使用指南 <https://github.com/Cambricon/mlu-ops/blob/master/docs/Gencase-User-Guide-zh.md>`_ 。
 
+.. _MLUOP_GEN_CASE_DIR:
+
+MLUOP_GEN_CASE_DIR
+######################
+
+**功能描述**
+
+用于指定 :ref:`MLUOP_GEN_CASE` 功能生成的目录所在的根目录。默认在当前目录下生成。
+
+**使用方法**
+
+- export MLUOP_GEN_CASE_DIR={path}: 通过环境变量设置，只在初始化阶段生效。
+
+- 在程序运行过程中也可以调用 ``mluOpSetGenCaseDirectory()`` 和 ``mluOpGetGenCaseDirectory()`` 来动态设置和获取此环境变量的值。更多内容，参见《Cambricon MLU-OPS Developer Guide》。
+
 .. _MLUOP_MIN_VLOG_LEVEL:
  
 MLUOP_MIN_VLOG_LEVEL
