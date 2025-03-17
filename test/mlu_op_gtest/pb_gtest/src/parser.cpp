@@ -72,7 +72,7 @@ namespace mluoptest {
 
 // env for test negative_scale
 __attribute__((__unused__)) bool negative_scale_ =
-    getEnv("MLUOP_GTEST_NEGATIVE_SCALE", false);
+getEnv("MLUOP_GTEST_NEGATIVE_SCALE", false);
 
 Parser::~Parser() {
   if (proto_node_ != nullptr) {
@@ -844,7 +844,7 @@ void Parser::getTensorValueByFile(Tensor *pt, void *data, size_t count) {
 // random data(for cpu compute) value is fp32 definitely
 // valueh valuef valuei dtype is according dtype in proto
 void Parser::getTensorValue(Tensor *pt, void *data, ValueType value_type,
-                            size_t count) {
+size_t count) {
   switch (value_type) {
     case VALUE_H:
       getTensorValueH(pt, data, count);
@@ -933,10 +933,9 @@ bool Parser::common_threshold() {
   return res;
 }
 
-std::set<Evaluator::Criterion> Parser::criterions(
-    int index, const std::set<Evaluator::Formula> &criterions_use) {
+std::set<Evaluator::Criterion> Parser::criterions(int index,
+const std::set<Evaluator::Formula> &criterions_use) {
   std::set<Evaluator::Criterion> res;
-
   // check if there exists complex output tensor
   bool has_complex_output = false;
   for (auto i = 0; i < proto_node_->output_size(); ++i) {
@@ -1040,7 +1039,7 @@ std::set<Evaluator::Criterion> Parser::criterions(
 }
 
 static inline bool strEndsWith(const std::string &self,
-                               const std::string &pattern) {
+const std::string &pattern) {
   if (self.size() < pattern.size()) return false;
   return (self.compare(self.size() - pattern.size(), pattern.size(), pattern) ==
           0);
@@ -1100,9 +1099,17 @@ bool Parser::readMessageFromFile(const std::string &filename, Node *proto) {
 
 void Parser::getTestInfo() {
   std::unordered_map<std::string, std::vector<std::string>> test_info;
+  std::unordered_map<std::string, std::vector<std::string>> internal_test_info;
   test_info =
       readFileByLine("../../test/mlu_op_gtest/pb_gtest/gtest_config/test_list");
+  internal_test_info = readFileByLine(
+      "../../test/mlu_op_gtest/pb_gtest/gtest_config/internal_test_list");
+
   list_rely_real_data_ = test_info["rely_real_data"];
+  std::vector<std::string> temp_list = internal_test_info["rely_real_data"];
+  for (auto &internal_op_name : temp_list) {
+    list_rely_real_data_.push_back(internal_op_name);
+  }
 }
 
 Evaluator::Formula Parser::cvtProtoEvaluationCriterion(int f) {
