@@ -82,7 +82,7 @@ mluOpDeformAttnBackwardKernelPolicy_t msDeformAttnBackwardPolicyFunc(
   int32_t nlp = num_levels * num_points;
   int32_t nlpc = num_levels * num_points * channels;
 
-  if ((handle->arch == MLUOP_MLU590) && (nlp <= FAST_KERNEL_MAX_NLP) &&
+  if ((handle->arch >= MLUOP_MLU590) && (nlp <= FAST_KERNEL_MAX_NLP) &&
       (nlpc <= FAST_KERNEL_MAX_NLPC)) {
     return MLUOP_MS_DEFORM_ATTN_BACKWARD_FAST;
   } else if (num_per_time_theory >= 1) {
