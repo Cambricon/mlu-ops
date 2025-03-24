@@ -69,6 +69,11 @@
 
 #ifdef __BANG_ARCH__
 #define MAX_NRAM_SIZE (__MLU_NRAM_SIZE__ * 1024 - REM_FOR_STACK)
+#if __BANG_ARCH__ > 592
+#define MAX_UNIFIED_NRAM_SIZE (MAX_NRAM_SIZE + MAX_WRAM_SIZE)
+#else
+#define MAX_UNIFIED_NRAM_SIZE MAX_NRAM_SIZE
+#endif
 #if __MLU_SRAM_SIZE__ == 0
 #define MAX_SRAM_SIZE 0
 #else
@@ -76,6 +81,7 @@
 #endif
 #else                                // __BANG_ARCH__
 #define MAX_NRAM_SIZE (384 * 1024)   // 384KB, initialization value
+#define MAX_UNIFIED_NRAM_SIZE MAX_NRAM_SIZE   // 384KB, initialization value
 #define MAX_SRAM_SIZE (1920 * 1024)  // 1920KB,initialization value
 #endif                               // __BANG_ARCH__
 
