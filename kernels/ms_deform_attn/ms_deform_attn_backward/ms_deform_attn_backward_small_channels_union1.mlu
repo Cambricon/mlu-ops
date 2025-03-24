@@ -477,73 +477,6 @@ void __mlu_func__ computeGradValue(
   __bang_add((int32_t *)nram_offset4, (int32_t *)nram_offset4,
              (int32_t *)nram_grid_offset1, num_deal_grid);
 
-#if __BANG_ARCH__ >= 592
-  // make sure offset not great than (batch * spatial_size * num_heads *
-  // channels)
-  __bang_lt_scalar((int32_t *)grad_temp1, (int32_t *)nram_offset1,
-                   batch * spatial_size * num_heads * deal_num_real,
-                   num_deal_grid);
-  __bang_mul((int32_t *)nram_offset1, (int32_t *)nram_offset1,
-             (int32_t *)grad_temp1, num_deal_grid);
-  __bang_lt_scalar((int32_t *)grad_temp1, (int32_t *)nram_offset2,
-                   batch * spatial_size * num_heads * deal_num_real,
-                   num_deal_grid);
-  __bang_mul((int32_t *)nram_offset2, (int32_t *)nram_offset2,
-             (int32_t *)grad_temp1, num_deal_grid);
-  __bang_lt_scalar((int32_t *)grad_temp1, (int32_t *)nram_offset3,
-                   batch * spatial_size * num_heads * deal_num_real,
-                   num_deal_grid);
-  __bang_mul((int32_t *)nram_offset3, (int32_t *)nram_offset3,
-             (int32_t *)grad_temp1, num_deal_grid);
-  __bang_lt_scalar((int32_t *)grad_temp1, (int32_t *)nram_offset4,
-                   batch * spatial_size * num_heads * deal_num_real,
-                   num_deal_grid);
-  __bang_mul((int32_t *)nram_offset4, (int32_t *)nram_offset4,
-             (int32_t *)grad_temp1, num_deal_grid);
-  __bang_mul(grad_temp3, nram_w1, mask2, num_deal_grid);
-  __bang_cycle_mul(grad_temp1, grad_temp4, grad_temp3,
-                   num_deal_grid * deal_num_real, num_deal_grid);
-  __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
-
-  for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
-    __bang_atomic_reduce_add(
-        (float *)(grad_value + ((int32_t *)nram_offset1)[loop]),
-        (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);
-  }
-
-  __bang_mul(grad_temp3, nram_w2, mask1, num_deal_grid);
-  __bang_cycle_mul(grad_temp1, grad_temp4, grad_temp3,
-                   num_deal_grid * deal_num_real, num_deal_grid);
-  __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
-
-  for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
-    __bang_atomic_reduce_add(
-        (float *)(grad_value + +((int32_t *)nram_offset2)[loop]),
-        (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);
-  }
-
-  __bang_mul(grad_temp3, nram_w3, mask4, num_deal_grid);
-  __bang_cycle_mul(grad_temp1, grad_temp4, grad_temp3,
-                   num_deal_grid * deal_num_real, num_deal_grid);
-
-  __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
-
-  for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
-    __bang_atomic_reduce_add(
-        (float *)(grad_value + ((int32_t *)nram_offset3)[loop]),
-        (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);
-  }
-  __bang_mul(grad_temp3, nram_w4, mask3, num_deal_grid);
-  __bang_cycle_mul(grad_temp1, grad_temp4, grad_temp3,
-                   num_deal_grid * deal_num_real, num_deal_grid);
-  __bang_transpose(grad_temp3, grad_temp1, deal_num_real, num_deal_grid);
-
-  for (int32_t loop = 0; loop < num_deal_grid; ++loop) {
-    __bang_atomic_reduce_add(
-        (float *)(grad_value + ((int32_t *)nram_offset4)[loop]),
-        (float *)(grad_temp3 + loop * deal_num_real), deal_num_real);
-  }
-#else
   __bang_cycle_mul(grad_temp1, grad_temp4, nram_w1,
                    num_deal_grid * deal_num_real, num_deal_grid);
   __bang_transpose(nram_grad_output_br, grad_temp1, deal_num_real,
@@ -579,14 +512,12 @@ void __mlu_func__ computeGradValue(
           (float *)(grad_value + ((int32_t *)nram_offset3)[loop]),
           (float *)(nram_grad_output_tr + loop * deal_num_real), deal_num_real);
     }
-
     if (mask3[loop]) {
       __bang_atomic_reduce_add(
           (float *)(grad_value + ((int32_t *)nram_offset4)[loop]),
           (float *)(nram_grad_output_bl + loop * deal_num_real), deal_num_real);
     }
   }
-#endif
 }
 
 void __mlu_func__ computeGradAttnWeight(
