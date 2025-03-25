@@ -1,0 +1,228 @@
+/*************************************************************************
+ * Copyright (C) [2025] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "kernels/kernel.h"
+#include "kernels/debug.h"
+#include "core/logging.h"
+#include "kernels/adamom/adamom.h"
+#include "kernels/utils/common.h"
+#include "mlu.h"
+
+// #define ADAMOM_NRAM_SIZE (512000)
+#define ADAMOM_NRAM_SIZE (__MLU_NRAM_SIZE__ * 1024 - 8 * 1024)
+__nram__ int8_t nram_buffer[ADAMOM_NRAM_SIZE];
+
+#if __BANG_ARCH__ > 500
+#include <bang_fusor.h>
+template <typename SrcT>
+using bang_fusor = bang::experimental::fusor<SrcT>;
+#endif
+
+__mlu_func__ void __mluOp_mask_move_fuse(float *dst,
+                                        float *src,
+                                        float *mask,
+                                        const unsigned int num) {
+#if __BANG_ARCH__ > 500
+  bang_fusor<int32_t>((int32_t *)dst, (int32_t *)mask, num).ne(0).mul((int32_t *)src);
+#endif
+}
+
+template <typename GradT, typename WeightT>
+__mlu_func__ void Compute(int8_t *grads,
+                          int8_t *ms,
+                          int8_t *vs,
+                          int8_t *v_bias_corrections,
+                          int8_t *weights,
+                          int8_t *aux1,
+                          int8_t *aux2,
+                          int8_t *aux3,
+                          int8_t *aux4,
+                          int8_t *aux5,
+                          int8_t *aux6,
+                          float weight_decay,
+                          float beta1,
+                          float beta2,
+                          float epsilon,
+                          float lr,
+                          int deal_num,
+                          int actual_num) {
+#if __BANG_ARCH__ >= 500
+  __bang_fusion(FUSION_FMA, (float *)aux1, (float *)weights, weight_decay, (float *)grads, deal_num,
+                deal_num);  // aux1: dx = weights * weight_decay + grads
+  __bang_fusion(FUSION_FMA, (float *)aux3, (float *)v_bias_corrections, beta2, (float)1.0,
+                deal_num);  // aux3: new_v_bias_correction
+  __bang_mul((float *)aux2, (float *)aux1, (float *)aux1, deal_num);  // aux2: dx * dx
+  __bang_mul_scalar((float *)aux4, (float *)ms, beta1, deal_num);  // aux4: ms * beta1
+  __bang_fusion(FUSION_FMA, (float *)grads, (float *)vs, beta2, (float *)aux2, deal_num,
+                deal_num);  // grads: new_vs
+
+  __bang_fusion(FUSION_FMA, (float *)aux4, (float *)aux1, 1 - beta1, (float *)aux4, deal_num,
+                deal_num);  // aux4: new_ms
+
+  __bang_div((float *)aux1, (float *)grads, (float *)aux3,
+             deal_num);  // aux1: v / v_bias_correction
+  __bang_add_scalar((float *)aux1, (float *)aux1, epsilon,
+                    deal_num);                           // aux1: v / v_bias_correction + epsilon
+  __bang_rsqrt((float *)aux1, (float *)aux1, deal_num);  // aux1: eta
+
+  __bang_mul_scalar((float *)aux1, (float *)aux1, lr * (-1), deal_num);  // aux1: -eta * m
+  __bang_fusion(FUSION_FMA, (float *)aux5, (float *)aux1, (float *)aux4, (float *)weights, deal_num, deal_num);
+
+  float inf = (float)INFINITY;
+  uint32_t FLT_INF = *((uint32_t *)(&inf));
+  __bang_band_scalar((float *)aux2, (float *)grads, reinterpret_cast<float &>(FLT_INF), deal_num);
+  __bang_band_scalar((float *)aux1, (float *)aux4, reinterpret_cast<float &>(FLT_INF), deal_num);
+  __bang_ne_scalar((float *)aux2, (float *)aux2, reinterpret_cast<float &>(FLT_INF), deal_num);
+  
+  __bang_ne_scalar((float *)aux1, (float *)aux1, reinterpret_cast<float &>(FLT_INF), deal_num);
+  __bang_and((float *)aux2, (float *)aux1, (float *)aux2, deal_num);
+
+  __bang_band_scalar((float *)aux1, (float *)aux5, reinterpret_cast<float &>(FLT_INF), deal_num);
+  __bang_ne_scalar((float *)aux1, (float *)aux1, reinterpret_cast<float &>(FLT_INF), deal_num);
+  __bang_and((float *)aux2, (float *)aux1, (float *)aux2, deal_num);
+
+  __bang_ge_scalar((float *)aux1, (float *)grads, 0.0, deal_num);
+  __bang_and((float *)aux2, (float *)aux1, (float *)aux2, deal_num);
+  __bang_not((float *)aux1, (float *)aux2, deal_num);
+  //  __mluOp_mask_move_fuse: src, mask cannot overlap with dst.
+  __mluOp_mask_move_fuse((float *)aux6, (float *)aux4, (float *)aux2, deal_num);
+  __mluOp_mask_move_fuse((float *)aux4, (float *)grads, (float *)aux2, deal_num);
+  __mluOp_mask_move_fuse((float *)grads, (float *)aux3, (float *)aux2, deal_num);
+  __mluOp_mask_move_fuse((float *)aux3, (float *)aux5, (float *)aux2, deal_num);
+
+  __mluOp_mask_move_fuse((float *)aux2, (float *)ms, (float *)aux1, deal_num);
+  __bang_add((float *)ms, (float *)aux2, (float *)aux6, deal_num);
+  __mluOp_mask_move_fuse((float *)aux2, (float *)vs, (float *)aux1, deal_num);
+  __bang_add((float *)vs, (float *)aux2, (float *)aux4, deal_num);
+  __mluOp_mask_move_fuse((float *)aux2, (float *)v_bias_corrections, (float *)aux1, deal_num);
+  __bang_add((float *)v_bias_corrections, (float *)aux2, (float *)grads, deal_num);
+  __mluOp_mask_move_fuse((float *)aux2, (float *)weights, (float *)aux1, deal_num);
+  __bang_add((float *)weights, (float *)aux2, (float *)aux3, deal_num);
+#endif
+}
+
+template <typename GradT, typename WeightT>
+__mlu_global__ void MLUUnion1AdamomKernel(int8_t *grads,
+                                          int8_t *ms,
+                                          int8_t *vs,
+                                          int8_t *v_bias_corrections,
+                                          int8_t *weights,
+                                          int8_t *weight_decay_,
+                                          int8_t *beta1_,
+                                          int8_t *beta2_,
+                                          int8_t *epsilon_,
+                                          int8_t *lr_,
+                                          size_t element_num) {
+  float weight_decay = *(float *)weight_decay_;
+  float beta1 = *(float *)beta1_;
+  float beta2 = *(float *)beta2_;
+  float epsilon = *(float *)epsilon_;
+  float lr = *(float *)lr_;
+  if (__is_mpu()) {
+    return;
+  }
+  // grads(4) - ms(4) - vs(4) - v_bias_corrections(4) - weights(4) -aux1 -aux2 -aux3 -aux4 -aux5 -aux6
+  size_t num_per_core = element_num / taskDim;
+  size_t num_rem = element_num % taskDim;
+  int8_t *grads_start = grads + taskId * num_per_core * sizeof(GradT);
+  int8_t *ms_start = ms + taskId * num_per_core * sizeof(WeightT);
+  int8_t *vs_start = vs + taskId * num_per_core * sizeof(WeightT);
+  int8_t *v_bias_corrections_start = v_bias_corrections + taskId * num_per_core * sizeof(WeightT);
+  int8_t *weights_start = weights + taskId * num_per_core * sizeof(WeightT);
+
+  if (num_rem > 0 && taskId == taskDim - 1) {
+    num_per_core = num_per_core + num_rem;
+  }
+
+  int align_num = 128;
+  int span_num_deal = PAD_DOWN(ADAMOM_NRAM_SIZE / (16 * sizeof(GradT)), align_num);
+  int repeat = DIV_UP(num_per_core , span_num_deal);
+  int8_t *ping_grads = nram_buffer;
+  int8_t *ping_ms = nram_buffer + span_num_deal * (sizeof(GradT));
+  int8_t *ping_vs = nram_buffer + span_num_deal * (sizeof(GradT) * 2);
+  int8_t *ping_v_bias_corrections = nram_buffer + span_num_deal * (sizeof(GradT) * 3);
+  int8_t *ping_weights = nram_buffer + span_num_deal * (sizeof(GradT) * 4);
+  int8_t *aux1 = nram_buffer + span_num_deal * (sizeof(GradT) * 10);
+  int8_t *aux2 = nram_buffer + span_num_deal * (sizeof(GradT) * 11);
+  int8_t *aux3 = nram_buffer + span_num_deal * (sizeof(GradT) * 12);
+  int8_t *aux4 = nram_buffer + span_num_deal * (sizeof(GradT) * 13);
+  int8_t *aux5 = nram_buffer + span_num_deal * (sizeof(GradT) * 14);
+  int8_t *aux6 = nram_buffer + span_num_deal * (sizeof(GradT) * 15);
+
+  int ping_pong_gap = span_num_deal * (sizeof(GradT) * 5);
+  size_t span_grad_size = span_num_deal * sizeof(GradT);
+  int last_rem_num = num_per_core - (repeat - 1) * span_num_deal;
+
+  for (int i = 0; i < repeat + 2; i++) {
+    if (i >= 2) {
+      int store_num = (i - 2) == (repeat - 1) ? last_rem_num : span_num_deal;
+      __memcpy_async(ms_start + (i - 2) * span_grad_size, ping_ms + (i % 2) * ping_pong_gap, store_num * sizeof(GradT), NRAM2GDRAM);
+      __memcpy_async(vs_start + (i - 2) * span_grad_size, ping_vs + (i % 2) * ping_pong_gap, store_num * sizeof(GradT), NRAM2GDRAM);
+      __memcpy_async(v_bias_corrections_start + (i - 2) * span_grad_size, ping_v_bias_corrections + (i % 2) * ping_pong_gap, store_num * sizeof(GradT), NRAM2GDRAM);
+      __memcpy_async(weights_start + (i - 2) * span_grad_size, ping_weights + (i % 2) * ping_pong_gap, store_num * sizeof(GradT), NRAM2GDRAM);
+    }
+    if (i >= 1 && i < repeat + 1) {
+      int compute_num = (i - 1) == (repeat - 1) ? last_rem_num : span_num_deal;  
+      Compute<GradT, WeightT>(
+          ping_grads + ((i - 1) % 2) * ping_pong_gap, ping_ms + ((i - 1) % 2) * ping_pong_gap,
+          ping_vs + ((i - 1) % 2) * ping_pong_gap, ping_v_bias_corrections + ((i - 1) % 2) * ping_pong_gap,
+          ping_weights + ((i - 1) % 2) * ping_pong_gap, aux1, aux2, aux3, aux4, aux5, aux6, weight_decay,
+          beta1, beta2, epsilon, lr, compute_num, compute_num);
+    }
+    if (i < repeat) {
+      int load_num = i == (repeat - 1) ? last_rem_num : span_num_deal;
+      __memcpy_async(ping_grads + (i % 2) * ping_pong_gap, grads_start + i * span_grad_size, load_num * sizeof(GradT), GDRAM2NRAM);
+      __memcpy_async(ping_ms + (i % 2) * ping_pong_gap, ms_start + i * span_grad_size, load_num * sizeof(GradT), GDRAM2NRAM);
+      __memcpy_async(ping_vs + (i % 2) * ping_pong_gap, vs_start + i * span_grad_size, load_num * sizeof(GradT), GDRAM2NRAM);
+      __memcpy_async(ping_v_bias_corrections + (i % 2) * ping_pong_gap, v_bias_corrections_start + i * span_grad_size, load_num * sizeof(GradT), GDRAM2NRAM);
+      __memcpy_async(ping_weights + (i % 2) * ping_pong_gap, weights_start + i * span_grad_size, load_num * sizeof(GradT), GDRAM2NRAM);
+    }
+    __sync();
+  }
+}
+
+mluOpStatus_t MLUOP_WIN_API
+KernelAdamom(cnrtDim3_t k_dim,
+             cnrtFunctionType_t k_type,
+             cnrtQueue_t queue,
+             mluOpDataType_t d_type,
+             const void *grads,
+             void *ms,
+             void *vs,
+             void *v_bias_corrections,
+             void *weights,
+             void *nan_inf_found,
+             void *lr,
+             void *beta1,
+             void *beta2,
+             void *weight_decay,
+             void *epsilon,
+             size_t element_num) {
+  if (d_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
+    KERNEL_CHECK(MLUUnion1AdamomKernel<float, float><<<k_dim, k_type, queue>>>
+                    ((int8_t *)grads, (int8_t *)ms, (int8_t *)vs,
+                     (int8_t *)v_bias_corrections, (int8_t *)weights,
+                     (int8_t *)weight_decay, (int8_t *)beta1, (int8_t *)beta2,
+                     (int8_t *)epsilon, (int8_t *)lr, element_num));
+  }
+  return MLUOP_STATUS_SUCCESS;
+}

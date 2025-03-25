@@ -14549,6 +14549,101 @@ mluOpLgamma(mluOpHandle_t handle,
             const mluOpTensorDescriptor_t y_desc,
             void *y);
 
+// Group: Adamom
+/*!
+ * @brief Updates each attribute by using Adamom.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
+ * and queues in the Adamom operation. For detailed information,
+ * see ::mluOpHandle_t.
+ * @param[in] grads_desc
+ * The descriptor of the \p grads tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] grads
+ * Pointer to the MLU memory that stores the \p grads tensor.
+ * @param[in] ms_desc
+ * The descriptor of the \p ms tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in,out] ms
+ * Pointer to the MLU memory that stores the \p ms tensor.
+ * @param[in] vs_desc
+ * The descriptor of the \p vs tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in,out] vs
+ * Pointer to the MLU memory that stores the \p vs tensor.
+ * @param[in] v_bias_corrections_desc
+ * The descriptor of the \p v_bias_corrections tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in,out] v_bias_corrections
+ * Pointer to the MLU memory that stores the \p v_bias_corrections tensor.
+ * @param[in] weights_desc
+ * The descriptor of the \p weights tensor. For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in,out] weights
+ * Pointer to the MLU memory that stores the \p weights tensor.
+ * @param[in] nan_inf_found
+ * A pointer to the \b nan_inf_found factor that stores whether the calculation result contain inf or nan.
+ * This parameter is reserved.
+ * @param[in] lr
+ * A pointer to the \b lr factor that stores the learning rate.
+ * @param[in] beta1
+ * A pointer to the \b beta1 factor that controls the exponential decay rate of the first-moment
+ * estimates for smoothing gradient updates.
+ * @param[in] beta2
+ * A pointer to the \b beta2 factor that controls the exponential decay rate of the second-moment
+ * estimates for adaptive learning rate scaling.
+ * @param[in] weight_decay
+ * A pointer to the \b weight_decay factor that stores the weights decay rate.
+ * @param[in] epsilon
+ * A pointer to the \b epsilon factor that stores a small positive number to avoid division by 0.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Data Type
+ * - The supported data types of input and output tensors are as follows:
+ *   - grads tensor: float
+ *   - ms tensor: float
+ *   - vs tensor: float
+ *   - v_bias_corrections tensor: float
+ *   - weights tensor: float
+ *
+ * @par Data Layout
+ * - The supported data layouts of \b grads tensor, \b ms tensor, \b vs tensor, \b v_bias_corrections tensor,
+ * and \b weights tensor are as follows:
+ *   - grads tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - ms tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - vs tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - v_bias_corrections tensor: \p MLUOP_LAYOUT_ARRAY
+ *   - weights tensor: \p MLUOP_LAYOUT_ARRAY
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpAdamom(mluOpHandle_t handle,
+            mluOpTensorDescriptor_t grads_desc,
+            const void *grads,
+            mluOpTensorDescriptor_t ms_desc,
+            void *ms,
+            mluOpTensorDescriptor_t vs_desc,
+            void *vs,
+            mluOpTensorDescriptor_t v_bias_corrections_desc,
+            void *v_bias_corrections,
+            mluOpTensorDescriptor_t weights_desc,
+            void *weights,
+            const void *nan_inf_found,
+            const void *lr,
+            const void *beta1,
+            const void *beta2,
+            const void *weight_decay,
+            const void *epsilon);
+
 #if defined(__cplusplus)
 }
 #endif
