@@ -202,7 +202,7 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
 
   // generate adam prototxt start!
   if (MLUOP_GEN_CASE_ON_NEW) {
-    GEN_CASE_START("adamw", "ADAMW");
+    GEN_CASE_START("adam_w", "ADAMW");
     GEN_CASE_HANDLE(handle);
     if (param != nullptr && param_h != nullptr) {
       GEN_CASE_DATA(true, "param", param, param_desc, 1, 0);
@@ -231,7 +231,7 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
     GEN_CASE_OP_PARAM_SINGLE(2, "adamw", "epsilon", epsilon, MLUOP_DTYPE_FLOAT);
     GEN_CASE_OP_PARAM_SINGLE(2, "adamw", "weight_decay",
                              adamw_desc->weight_decay, MLUOP_DTYPE_FLOAT);
-    GEN_CASE_OP_PARAM_SINGLE(2, "adamw", "grad_scale", adamw_desc->grad_scale,
+    GEN_CASE_OP_PARAM_SINGLE(2, "adamw", "scale", adamw_desc->grad_scale,
                              MLUOP_DTYPE_FLOAT);
     GEN_CASE_OP_PARAM_SINGLE(2, "adamw", "use_nesterov",
                              adamw_desc->use_nesterov, MLUOP_DTYPE_BOOL);
