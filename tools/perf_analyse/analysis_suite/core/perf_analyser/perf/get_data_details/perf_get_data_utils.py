@@ -110,11 +110,11 @@ def reserve_column_values(
     ):
     column_values = {
         ColDef.mlu_platform: df.loc[0, ColDef.mlu_platform],
-        ColDef.mluops_version: df.loc[0, ColDef.mluops_version],
+        ColDef.mluop_version: df.loc[0, ColDef.mluop_version],
         #ColDef.date: df.loc[0, ColDef.date],
         ColDef.test_time: df.loc[0, ColDef.test_time],
         ColDef.commit_id: df.loc[0, ColDef.commit_id],
-        ColDef.mluops_branch: df.loc[0, ColDef.mluops_branch],
+        ColDef.mluop_branch: df.loc[0, ColDef.mluop_branch],
         ColDef.is_release: is_release,
     }
     return column_values

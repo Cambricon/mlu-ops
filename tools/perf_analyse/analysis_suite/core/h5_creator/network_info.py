@@ -22,7 +22,7 @@ class NetworkInfo:
             "precision_mode": self.NetworkConfigFieldValidatorPrecisionMode,
             "card_num": self.NetworkConfigFieldValidatorCardNum,
             "project_version": self.NetworkConfigFieldValidatorProjectVersion,
-            "mluops_version": self.NetworkConfigFieldValidatorMluopsVersion,
+            "mluop_version": self.NetworkConfigFieldValidatorMluopsVersion,
             "mlu_platform": self.NetworkConfigFieldValidatorMluPlatform,
             "additional_info": self.NetworkConfigFieldValidatorAdditionalInfo,
             "network_property": self.NetworkConfigFieldValidatorNetworkProperty,
@@ -34,7 +34,7 @@ class NetworkInfo:
         self.default_network_name = "mluopsbenchmark-all-cloud-operator"
         self.precision_mode_config = ("amp","tf32","bf16","fp16","fp32","qint8_mixed_float16","qint8_mixed_float32","qint8","force_float16","force_float32")
         self.project_version_config = ("CTR_V","INFERENCE_V")
-        self.mluops_version_config = ("mluops_v")
+        self.mluop_version_config = ("mluops_v")
         self.default_mlu_platform = ["MLU370", "MLU590", "MLU580B"]
 
     def analyse_json_config(self, json_file):
@@ -138,14 +138,14 @@ class NetworkInfo:
 
     def NetworkConfigFieldValidatorMluopsVersion(self, key, json_config):
         try:
-            mluops_version = json_config[key].lower()
-            assert mluops_version.startswith(self.mluops_version_config), "{} should be {}.".format(key,' or '.join([tmp+'x.y.z' for tmp in self.mluops_version_config]))
+            mluop_version = json_config[key].lower()
+            assert mluop_version.startswith(self.mluop_version_config), "{} should be {}.".format(key,' or '.join([tmp+'x.y.z' for tmp in self.mluop_version_config]))
         except KeyError:
             print("{} is necessary.".format(key))
         except AttributeError:
             print("{} should be str type.".format(key))
         else:
-            self.network_config[key] = mluops_version
+            self.network_config[key] = mluop_version
 
     def NetworkConfigFieldValidatorMluPlatform(self, key, json_config):
         try:
