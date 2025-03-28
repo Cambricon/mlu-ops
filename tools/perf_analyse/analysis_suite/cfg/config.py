@@ -31,11 +31,11 @@ class Config:
     # for database: performance database
     environment_keys = [
         'commit_id',                # 代码commit id
-        'mluops_version',            # mluops版本
+        'mluop_version',            # mluops版本
         'driver_version',           # 驱动版本
         'cnrt_version',             # cnrt版本
         'time_stamp',               # 测试时间
-        'mluops_branch',             # mluops分支
+        'mluop_branch',             # mluops分支
         'mlu_platform',             # mlu型号
         'sn',                       # mlu序列号
         'liner_memory',             # 线性内存
@@ -151,7 +151,7 @@ class PerfConfig:
 
 class ColDef:
     mlu_platform                                                        = 'mlu_platform'                                       # mlu 型号； str
-    mluops_version                                                      = 'mluops_version'                                     # mluops 版本号； str
+    mluop_version                                                      = 'mluop_version'                                     # mluops 版本号； str
     date                                                                = 'date'                                               # 测试日期； str
     time_stamp                                                          = 'time_stamp'
     test_time                                                           = 'test_time'                                          # 测试时间，是timestamp的别名； str
@@ -201,7 +201,7 @@ class ColDef:
     is_io_bound_new                                                     = 'is_io_bound_new'
     is_io_bound_baseline                                                = 'is_io_bound_baseline'
     commit_id                                                           = 'commit_id'
-    mluops_branch                                                       = 'mluops_branch'
+    mluop_branch                                                       = 'mluop_branch'
     protoName                                                           = 'protoName'                                          # case文件名，和file_path有关联
     status                                                              = 'status'                                             # 良好，合格，不合格
     md5                                                                 = 'md5'
