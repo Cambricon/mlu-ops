@@ -43,7 +43,7 @@ class DBCache:
                     'mluops_network_list_test',
                     self.engine)
                 # dont need date columns
-                self.network_list.drop(columns=[ColDef.date, ColDef.gen_date, ColDef.mluops_version], inplace=True)
+                self.network_list.drop(columns=[ColDef.date, ColDef.gen_date, ColDef.mluop_version], inplace=True)
 
             if 'case_list' in db_table:
                 # only read necessary columns

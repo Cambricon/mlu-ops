@@ -37,7 +37,7 @@ def log_yield(filename: str):
                         result[k] = float(result[k])
                     # TODO(log_yield): use default now
                     result[ColDef.mlu_platform] = "MLU370-S4"
-                    result[ColDef.mluops_version] = "unknown"
+                    result[ColDef.mluop_version] = "unknown"
                     yield result
                     result = {}
 
