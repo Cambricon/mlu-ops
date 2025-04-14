@@ -52,7 +52,7 @@ static void policyFunc(mluOpHandle_t &handle,
         *k_type = CNRT_FUNC_TYPE_UNION1;
     }
 
-    k_dim->x = mluop::runtime::getCoreNumOfEachUnionCapability(handle);
+    k_dim->x = clusters_num * 4;
     k_dim->y = 1;
     k_dim->z = 1;
 }
