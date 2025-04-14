@@ -57,6 +57,7 @@ static void policyFunc(mluOpHandle_t &handle,
     k_dim->z = 1;
 }
 
+
 mluOpStatus_t MLUOP_WIN_API
 mluOpLogcumsumexp(mluOpHandle_t handle,
                   const int32_t dim,
