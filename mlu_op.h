@@ -20,17 +20,16 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef MLUOP_EXAMPLE_H_
-#define MLUOP_EXAMPLE_H_
+#ifndef MLUOP_H_
+#define MLUOP_H_
 
 /******************************************************************************
  * MLU-OPS: Cambricon Open Source operator library for Network
  ******************************************************************************/
 
 #define MLUOP_MAJOR 1
-#define MLUOP_MINOR 1
-#define MLUOP_PATCHLEVEL 1
-
+#define MLUOP_MINOR 6
+#define MLUOP_PATCHLEVEL 0
 /*********************************************************************************
  * MLUOP_VERSION is deprecated and not recommended. To get the version of MLUOP, use
  * MLUOP_MAJOR, MLUOP_MINOR and MLUOP_PATCHLEVEL.
@@ -362,7 +361,7 @@ typedef enum {
 typedef enum {
   MLUOP_REDUCE_DSUM  = 0, /*!< Computes the sum value. */
   MLUOP_REDUCE_DMEAN = 1, /*!< Computes the mean value. */
-  MLUOP_REDUCE_DMAX  = 2, /*!< Computes the maximun value. */
+  MLUOP_REDUCE_DMAX  = 2, /*!< Computes the maximum value. */
 } mluOpReduceMode_t;
 
 /*!
@@ -750,9 +749,7 @@ mluOpGetLibVersion(int *major, int *minor, int *patch);
  * @par API Dependency
  * - None.
  * @par Note
- * - On MLU200 series:
- *   You cannot set MLUOP_ROUND_HALF_TO_EVEN for the rounding mode because the hardware does
- *   not support it.
+ * - None.
  *
  * @par Example
  * - None.
@@ -804,7 +801,7 @@ mluOpGetQuantizeRoundMode(mluOpHandle_t handle, mluOpQuantizeRoundMode_t *round_
 /*!
  * @brief Updates the specific atomics mode of MLU-OPS context information that is held by the
  * \b handle. This function should be called if you want to change the atomics mode that is
- * used to cumulate the results.For detailed information, see "Cambricon CNDrv Developer Guide".
+ * used to cumulate the results. For detailed information, see "Cambricon CNDrv Developer Guide".
  *
  * @param[in] handle
  * Pointer to a Cambricon MLU-OPS context that is used to manage MLU devices and queues. For detailed
@@ -1417,7 +1414,7 @@ mluOpSetTensorDescriptor(
  *   The descriptor of the tensor. For detailed information,
  *   see ::mluOpTensorDescriptor_t.
  * @param[in] pointer_mode
- *   The pointer mode of the input tensor. For detailed information, seee ::mluOpPointerMode_t.
+ *   The pointer mode of the input tensor. For detailed information, see ::mluOpPointerMode_t.
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  *
@@ -1571,13 +1568,13 @@ mluOpSetTensorDescriptor_v2(mluOpTensorDescriptor_t desc,
  * convolution operation. If \b dimNb is set to 4, the output_space should be set in height and width
  * dimension. If \b dimNb is set to 5, the output_space should be set in depth, height and width dimension.
  * @param[in] sub_m
- * An value that determine the algorithms for sparse convolution. If \b sub_m is set to 0, the
+ * A value that determine the algorithms for sparse convolution. If \b sub_m is set to 0, the
  * algorithms will be the default sparse convolution. If \b sub_m is set to 0, the algorithms will be the
  * submanifold sparse convolution.
  * @param[in] transpose
- * An value that determines transpose.
+ * A value that determines transpose.
  * @param[in] inverse
- * An value that determines inverse.
+ * A value that determines inverse.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_EXECUTION_FAILED
@@ -1979,7 +1976,7 @@ mluOpSetTensorDescriptorDim_v2(mluOpTensorDescriptor_t desc, int dimNb, const in
  * @param[in] desc
  * The descriptor of the tensor desc. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] onchip_dtype
- * The on-chip data type of the tensor is used in the functon that supports fixed-point
+ * The on-chip data type of the tensor is used in the function that supports fixed-point
  * computing.
  *
  * @par Return
@@ -2831,9 +2828,9 @@ mluOpInitTensorSetMemberDescriptor(mluOpTensorSetDescriptor_t tensorSetDesc,
  * - None.
  *
  * @par Note
- * - If the member tensor is in floating-point data type, and  you need to call
+ * - If the member tensor is in floating-point data type, and you need to call
  *   this function.
- * - If the member tensor is in fixed-point data type, and  you need to call
+ * - If the member tensor is in fixed-point data type, and you need to call
  *   this function.
  * - Before calling this function,
  *   You need to call ::mluOpCreateTensorSetDescriptor to create
@@ -2972,8 +2969,9 @@ mluOpGetTensorAndDataFromTensorSet(mluOpTensorSetDescriptor_t tensorSetDesc,
  * @par Data Type
  * - The date types of input tensor and output tensor should be the same.
  * - The supported data types of input and output tensors are as follows:
- *   - input tensor: half, float
- *   - output tensor: half, float
+ *   - input tensor: half, float, bfloat16, int32, complex_float
+ *   - output tensor: half, float, bfloat16, int32
+ * - The data type bfloat16 is only supported on compute_50.
  *
  * @par Data Layout
  * - None.
@@ -3073,10 +3071,68 @@ mluOpLog(mluOpHandle_t handle,
          const mluOpTensorDescriptor_t y_desc,
          void *y);
 
+// Group: Log
+/*!
+ * @brief Returns a one-dimensional tensor of \b steps points logarithmically
+ * spaced with base \b base between \b base^start and \b base^end.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
+ * queues in the log operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] start
+ * The starting value for the set of points.
+ * @param[in] end
+ * The ending value for the set of points.
+ * @param[in] steps
+ * Number of points to sample between \b start and \b end.
+ * @param[in] base
+ * Base of the logarithm function.
+ * @param[in] res_desc
+ * The descriptor of the tensor \b res. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[out] res
+ * Pointer to the MLU memory that stores the output tensor \b res.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - The supported data types of output tensor are as follows:
+ *   - output tensor: half, float, int32
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - \b base cannot be NAN or infinity.
+ * - \b steps should be greater than or equal to 0.
+ * - \b steps should be less than or equal to the length of the output tensor \b res.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://github.com/pytorch/pytorch/blob/v2.1.0/aten/src/ATen/native/cuda/RangeFactories.cu#L123
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpLogspace(mluOpHandle_t handle,
+              const float start,
+              const float end,
+              const int64_t steps,
+              const float base,
+              const mluOpTensorDescriptor_t res_desc,
+              void *res);
+
 // Group: Carafe
 /*!
  * @brief Creates a descriptor pointed by \b carafe_desc for CARAFE upsampling forward and backward operations,
- * and allocates memory holding the configuration parameters.The information is defined in ::mluOpCarafeDescriptor_t.
+ * and allocates memory holding the configuration parameters. The information is defined in ::mluOpCarafeDescriptor_t.
  * For more information about descriptor, see "Cambricon MLU-OPS User Guide".
  *
  * @param[in] carafe_desc
@@ -3362,8 +3418,6 @@ mluOpCarafeForward(mluOpHandle_t handle,
  * @par Data Type
  * - The data types of \b input tensor, \b mask tensor, \b grad_output tensor, \b grad_input tensor, and \b grad_mask
  *   tensor must be the same.
- * - For MLU200 series, it is not recommended to use half data type for tensors due to the
- *   low precision.
  * - The supported data types of input and output tensors are as follows:
  *   - input tensor: half, float
  *   - mask tensor: half, float
@@ -3631,19 +3685,17 @@ mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(const mluOpHandle_t handle,
  * - The first dimension of \b voxel_num tensor is one.
  * - The shape of \b feats is [N, C]:
  *   - 2C * sizeof(datatype of \b feats) + (N + 3C + 1) * sizeof(int) + N
- *     must be less than or equal to 640KB on MLU300 series.
- *   - 2C * sizeof(datatype of \b feats) + (N + 3C + 1) * sizeof(int) + N
- *     must be less than or equal to 380KB on series higher than MLU300 series.
+ *     must be less than or equal to 380KB on compute_50 and above.
  *
  * @par API Dependency
  * - Before calling this function, you need to get the size of workspace by
  *   ::mluOpGetDynamicPointToVoxelBackwardWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
- * - On MLU300 series and above, the inputs \b point2voxel_map, \b voxel_points_count, and \b voxel_num with NaN or
+ * - This function is only supported on compute_50 or above.
+ * - On compute_50 or above, the inputs \b point2voxel_map, \b voxel_points_count, and \b voxel_num with NaN or
  *   infinity are not supported.
- * - On MLU300 series and above, the inputs \b grad_voxel_feats, \b feats and \b voxel_feats with NaN or infinity
+ * - On compute_50 or above, the inputs \b grad_voxel_feats, \b feats and \b voxel_feats with NaN or infinity
  *   are supported.
  *
  * @par Example
@@ -3796,13 +3848,13 @@ mluOpGetDynamicPointToVoxelForwardWorkspaceSize(mluOpHandle_t handle,
  * - The first dimension of \b voxel_num tensor must be equal to \b voxel_feats_desc[0].
  *
  * @par API Dependency
- * - Before calling this function to perform unique operater, you need to get
+ * - Before calling this function to perform unique operator, you need to get
  *   the size of workspace by ::mluOpGetDynamicPointToVoxelForwardWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
- * - On MLU300 series and above, the input \b coors with NaN or infinity is not supported.
- * - On MLU300 series and above, the input \b feats with NaN or infinity is supported.
+ * - This function is only supported on compute_50 or above.
+ * - On compute_50 or above, the input \b coors with NaN or infinity is not supported.
+ * - On compute_50 or above, the input \b feats with NaN or infinity is supported.
  *
  * @par Example
  * - None.
@@ -3833,6 +3885,10 @@ mluOpDynamicPointToVoxelForward(const mluOpHandle_t handle,
 // Group: GenerateProposalsV2
 /*!
  * @brief Gets extra space size that is needed in the GenerateProposalsV2 operation.
+ *
+ * @par Deprecated
+ * - ::mluOpGetGenerateProposalsV2WorkspaceSize is deprecated and will be removed in the future
+ *   release. It is recommended to use ::mluOpGetGenerateProposalsV2WorkspaceSize_v2 instead.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
@@ -3865,10 +3921,58 @@ mluOpDynamicPointToVoxelForward(const mluOpHandle_t handle,
  * - None.
  *
  * @par Reference
- *
+ * - None.
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t scores_desc, size_t *size);
+
+// Group: GenerateProposalsV2
+/*!
+ * @brief Gets extra space size that is needed in the GenerateProposalsV2 operation.
+ *
+ * Compared with ::mluOpGetGenerateProposalsV2WorkspaceSize, this function supports
+ * parameter \p pre_nms_top_n.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices
+ * and queues in the GenerateProposalsV2 operation.
+ * @param[in] scores_desc
+ * The descriptor of the tensor \b scores. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ * @param[in] pre_nms_top_n
+ * The number of top scoring RPN proposals to keep before applying NMS.
+ * @param[out] size
+ * A host pointer to the returned size of extra space in bytes.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_NOT_SUPPORTED
+ *
+ * @par Data Type
+ * - None.
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - None.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetGenerateProposalsV2WorkspaceSize_v2(mluOpHandle_t handle,
+                                            const mluOpTensorDescriptor_t scores_desc,
+                                            const int32_t pre_nms_top_n,
+                                            size_t *size);
 
 // Group: GenerateProposalsV2
 /*!
@@ -3998,10 +4102,10 @@ mluOpGetGenerateProposalsV2WorkspaceSize(mluOpHandle_t handle, const mluOpTensor
  * - None.
  *
  * @par Note
- * - The operater does not support adaptive NMS.
+ * - The operator does not support adaptive NMS.
  * - The attribute `eta` should not be less than 1.
  * - ``nms_thresh`` should be more than 0.
- * - On MLU300 series and above:
+ * - On compute_50 or above:
  *   - If \b pixel_offset is false, input \b scores with NaN/INF is not supported.
  *   - If \b pixel_offset is true, NaN/INF is not supported.
  *
@@ -4328,7 +4432,7 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * @param[in] nms_desc
  * The descriptor of the Nms function. For detailed information, see ::mluOpNmsDescriptor_t.
  * @param[in] boxes_desc
- * The descriptor of the tensor \b boxes , including the information of dimension, data type, and
+ * The descriptor of the tensor \b boxes, including the information of dimension, data type, and
  * layout of input boxes. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] boxes
  * Pointer to the MLU memory that stores the input boxes tensor.
@@ -4394,12 +4498,8 @@ mluOpSetNmsDescriptor(mluOpNmsDescriptor_t nms_desc,
  * @par Note
  * - When the input boxes is in Nms3D format ([boxes_num, 7] or [7, boxes_num]),
  *   both of confidence_desc and confidence should be provided as null pointer.
- *   - In Nms3D mode, ::mluOpNms will get low precision on MLU200 platform.
  *   - In Nms3D mode, when finding the point with minimum y and minimum x in convex-hull-graham,
  *     it performs min-pooling operation. If the input data of pooling contains NaN:
- * - On MLU200 series, the \b output value is the NaN.
- * - On MLU300 series, if the last value in the kernel of the pooling is NaN, the \b output value is NaN.
- *   Otherwise, the \b output value is the minimum value after the last NaN.
  *
  * @par Requirements
  * - None.
@@ -4431,8 +4531,10 @@ mluOpNms(mluOpHandle_t handle,
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
  * queues in the Nms operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in] nms_desc
+ * The descriptor of the Nms function. For detailed information, see ::mluOpNmsDescriptor_t.
  * @param[in] boxes_desc
- * The descriptor of the tensor \b boxes , which contains dimension, data type, and
+ * The descriptor of the tensor \b boxes, which contains dimension, data type, and
  * data layout of input \b boxes. For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] confidence_desc
  * The descriptor of the tensor \b confidence , which contains dimension, data type, and
@@ -4475,6 +4577,7 @@ mluOpNms(mluOpHandle_t handle,
  */
 mluOpStatus_t MLUOP_WIN_API
 mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
+                         mluOpNmsDescriptor_t nms_desc,
                          const mluOpTensorDescriptor_t boxes_desc,
                          const mluOpTensorDescriptor_t confidence_desc,
                          size_t *size);
@@ -4521,7 +4624,7 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  * @param[in] offset
  * The prior box center offset.
  * @param[in] clip
- * A bool value whether to clip out-of-boundary boxes.
+ * A Boolean value whether to clip out-of-boundary boxes.
  * @param[in] min_max_aspect_ratios_order
  * If the value is set as True, the \b output prior box is in
  * the order of [min, max, aspect_ratios]; otherwise the order is
@@ -4583,8 +4686,6 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  * - The shape of \b output should be the same with \b var.
  * - The shape[0] of the \b output should be equal to the input height.
  * - The shape[1] of the \b output should be equal to the input width.
- * - The shape[2] of the \b output and \b var must be less than 2100
- *   in MLU200 series, and less than 2900 in MLU300 series.
  * - The shape[2] of \b output and \b var should be equal to
  *   the product of shape[0] of \b min_sizes and \b aspect_ratios
  *   plus shape[0] of \b max_sizes.
@@ -4597,8 +4698,7 @@ mluOpGetNmsWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The shape[2] of the \b output and \b var must be
- *   less than 2100 in MLU200 series, while less than 2900 in MLU300 series.
+ * - None.
  *
  * @par Example
  * - None.
@@ -4741,7 +4841,7 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
 // Group: PsRoiPool
 /*!
  * @brief Computes the gradients of feature map \b bottom_grad based on the
- * inputs \b top_grad , \b rois , and \b mapping_channel to perform the backpropagation
+ * inputs \b top_grad, \b rois, and \b mapping_channel to perform the backpropagation
  * of ::mluOpPsRoiPoolForward.
  *
  * @param[in] handle
@@ -4899,7 +4999,7 @@ mluOpCreateRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t *desc);
  * If \b pool_mode is 1, the average pooling mode is used.
  * If \b pool_mode is 0, the maximum pooling mode is used.
  * @param[in] aligned
- * A boolean value which determines whether to shift the boxes by 0.5 pixel. If \b aligned
+ * A Boolean value which determines whether to shift the boxes by 0.5 pixel. If \b aligned
  * is true, the boxes is shifted by 0.5. If \b aligned is false, the boxes is not shifted.
  *
  * @par Return
@@ -5059,8 +5159,7 @@ mluOpDestroyRoiAlignForwardDescriptor(mluOpRoiAlignForwardDescriptor_t desc);
  * - This function should be called with ::mluOpSetRoiAlignForwardDescriptor_v2.
  *
  * @par Note
- * - When \b input contains NaN. If \b pool_mode is maximum pooling_mode, \b output is positive
- *   saturation value on MLU200 series, and \b output gets more NaN than ieee754 on MLU300 series.
+ * - None.
  *
  * @par Example
  * - The example of ::mluOpRoiAlignForward_v2 is as follows:
@@ -5128,11 +5227,11 @@ mluOpRoiAlignForward_v2(mluOpHandle_t handle,
  * @param[in] spatial_scale
  * The spatial scale of each ROI in the output.
  * @param[in] aligned
- * A boolean value which determines whether to shift the ROI by 0.5 pixel. If the
+ * A Boolean value which determines whether to shift the ROI by 0.5 pixel. If the
  * value of \b aligned is set to true, the ROI is shifted by 0.5. If the value of \b aligned
  * is set to false, the ROI is not shifted.
  * @param[in] clockwise
- * A boolean value which determines whether the rotation of ROI is clockwise.
+ * A Boolean value which determines whether the rotation of ROI is clockwise.
  * @param[out] output_desc
  * The descriptor of output, which contains dimension and the layout of output.
  * @param[out] output
@@ -5238,11 +5337,11 @@ mluOpRoiAlignRotatedForward(mluOpHandle_t handle,
  * @param[in] spatial_scale
  * The spatial scale of each ROI in the output.
  * @param[in] aligned
- * A boolean value which determines whether to shift the ROI by 0.5 pixel.
+ * A Boolean value which determines whether to shift the ROI by 0.5 pixel.
  * If the value of \b aligned is set to true, the ROI is shifted by 0.5. If the value
  * of \b aligned is set to false, the ROI is not shifted.
  * @param[in] clockwise
- * A boolean value which determines whether the rotation of ROI is clockwise.
+ * A Boolean value which determines whether the rotation of ROI is clockwise.
  * @param[in] bottom_grad_desc
  * The descriptor of the tensor \b bottom_grad.
  * @param[out] bottom_grad
@@ -5375,8 +5474,7 @@ mluOpRoiAlignRotatedBackward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - On MLU300, the input \b grid with NaN or infinity is not supported.
- * - On series higher than MLU300 series, the inputs \b grid and \b input with NaN or infinity are supported.
+ * - On compute_50 or above, the inputs \b grid and \b input with NaN or infinity are supported.
  *
  * @par Example
  * - None.
@@ -5457,8 +5555,7 @@ mluOpRoiCropForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - On MLU300, the input \b grid with NaN or infinity is not supported.
- * - On series higher than MLU300 series, the inputs \b grid and \b grad_output with NaN or infinity are supported.
+ * - On compute_50 or above, the inputs \b grid and \b grad_output with NaN or infinity are supported.
  *
  * @par Example
  * - None.
@@ -5797,7 +5894,7 @@ mluOpSqrtBackward(mluOpHandle_t handle,
  * @param[in] NDim
  * An integer value which is the second dimension of coors.
  * @param[in] deterministic
- * A bool value whether to invoke the non-deterministic
+ * A Boolean value whether to invoke the non-deterministic
  * version of hard-voxelization implementations. Currently,
  * non-deterministic mode is not supported.
  * @param[in] voxels_desc
@@ -5887,11 +5984,11 @@ mluOpGetVoxelizationWorkspaceSize(mluOpHandle_t handle,
  * in a voxel.
  * @param[in] max_voxels
  * An integer value which is the maximum number of voxels this
- * function create.
+ * function creates.
  * @param[in] NDim
  * An integer value which is the second dimension of coors.
  * @param[in] deterministic
- * A bool value whether to invoke the non-deterministic
+ * A Boolean value whether to invoke the non-deterministic
  * version of hard-voxelization implementations. Currently,
  * non-deterministic mode is not supported.
  * @param[in] workspace
@@ -6040,7 +6137,7 @@ mluOpVoxelization(mluOpHandle_t handle,
  * @par Scale Limitation
  * - The first dimension of x tensor, img_size tensor, boxes tensor and scores
  *   tensor must be the same size.
- * - The second dimension (the channel dimension) of x tensor , C should be equal to S * (5 +
+ * - The second dimension (the channel dimension) of x tensor, C should be equal to S * (5 +
  *   class_num) if \b iou_aware is false, otherwise C should be equal to S * (6 + class_num),
  *   the value S is equal to the anchors tensor size divided by 2.
  * - The first dimension of anchors tensor should be larger than 0.
@@ -6051,8 +6148,7 @@ mluOpVoxelization(mluOpHandle_t handle,
  * - The third dimension of scores tensor must be equal to \b class_num.
  * - The fourth dimension of boxes tensor and scores tensor must be equal to the
  *   multiplication result of the third dimension and the fourth dimension of input x tensor.
- * - The \b class_num should be larger than 0. On MLU200, the value cannot be
- *   greater than 1534. On MLU300, the value cannot be greater than 2558.
+ * - The \b class_num should be larger than 0.
  *
  * @par API Dependency
  * - None.
@@ -6160,7 +6256,6 @@ mluOpYoloBox(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The function does not support MLU200 series.
  * - You need to set the initial value for the output \b pos_memo before calling the funtion, and initialize it to a
  *   negative number.
  *
@@ -6202,7 +6297,7 @@ mluOpVoxelPoolingForward(mluOpHandle_t handle,
  * IOU (Intersection Over Union) or IOF (Intersection Over Foreground).
  * The integer 0 represents IOU and 1 represents IOF.
  * @param[in] aligned
- * A boolean value. If it is false, then calculate the IOU[i][j]
+ * A Boolean value. If it is false, then calculate the IOU[i][j]
  * or IOF[i][j] between the row i of \b bbox1 and the row j of \b bbox2,
  * otherwise calculate the IOU[i] or IOFs[i] between the row i of \b bbox1
  * and the row i of \b bbox2. Significantly, the numbers of rows of \b bbox1
@@ -6257,14 +6352,7 @@ mluOpVoxelPoolingForward(mluOpHandle_t handle,
  *
  * @par Note
  * - When finding the point with minimum y and minimum x in convex-hull-graham,
- *   BoxIouRotated performs min-pooling operation. If the input data of pooling
- *   contains NaN:
- *   - On MLU200 series:
- *     - The \b output value is the NaN.
- *   - On MLU300 series:
- *     - If the last value in the kernel of the pooling is NaN, the \b output
- *       value is NaN. Otherwise, the \b output value is the minimum value after
- *       the last NaN.
+ *   BoxIouRotated performs min-pooling operation.
  *
  * @par Example
  * - None.
@@ -6356,7 +6444,7 @@ mluOpGetNmsRotatedWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescripto
  *
  * @par Data Type
  * - By the order of \b boxes - \b scores - \b output, the supported data types of
- *   \b boxes , \b scores , and \b output tensors are as follows:
+ *   \b boxes, \b scores, and \b output tensors are as follows:
  *   - float - float - int32
  *
  * @par Scale Limitation
@@ -6406,9 +6494,9 @@ mluOpNmsRotated(mluOpHandle_t handle,
  * An integer value which decides to return a result IOU or IOF.
  * The integer 0 represents IOU and 1 represents IOF.
  * @param[in] aligned
- * A boolean value. If it is false, this operation calculates the IOUs[i][j] or IOFs[i][j] between
+ * A Boolean value. If it is false, this operation calculates the IOUs[i][j] or IOFs[i][j] between
  * the row i of \b bbox1 and the row j of \b bbox2, otherwise the IOU[i] or IOF[i] between
- * the row i of \b bbox1 and the row i of \b bbox2 are calculated. The number of row of \b bbox1
+ * the row i of \b bbox1 and the row i of \b bbox2 are calculated. The number of rows of \b bbox1
  * and \b bbox2 must be equal if \b aligned is true.
  * @param[in] offset
  * An integer value determines whether to increase the length and the width of the bounding-box by 0 or 1
@@ -6564,12 +6652,12 @@ mluOpBboxOverlaps(mluOpHandle_t handle,
  *   - output tensor: \p MLUOP_LAYOUT_ARRAY
  *
  * @par Scale Limitation
- * - The dimension of \b features , \b indices , \b weights , and \b output
+ * - The dimension of \b features, \b indices, \b weights, and \b output
  *   should be equal to 3.
- * - The shape[0] of \b features , \b indices , \b weights , and \b output
+ * - The shape[0] of \b features, \b indices, \b weights, and \b output
  *   should be the same.
  * - The shape[1] of \b features and \b output should be the same.
- * - The shape[1] of \b indices , \b weights , and the shape[2] of \b output
+ * - The shape[1] of \b indices, \b weights, and the shape[2] of \b output
  *   should be the same.
  * - The shape[2] of \b indices and \b weights should be equal to 3.
  *
@@ -6579,8 +6667,6 @@ mluOpBboxOverlaps(mluOpHandle_t handle,
  * @par Note
  * - The value of \b indices must be in the range of [0, M-1], otherwise the output result
  *   is meaningless and the corresponding output will be set to 0.
- * - In MLU200 series, the maximum value in the \b indices should be less than
- *   2^23, otherwise the output result is not guaranteed to be correct.
  *
  * @par Example
  * - None.
@@ -6602,7 +6688,7 @@ mluOpThreeInterpolateForward(mluOpHandle_t handle,
 // Group: ThreeInterpolate
 /*!
  * @brief Computes the gradients of feature map \b grad_features based on the
- * inputs \b grad_output , \b indices , and \b weights to perform the backpropagation
+ * inputs \b grad_output, \b indices, and \b weights to perform the backpropagation
  * of ::mluOpThreeInterpolateForward.
  *
  * @param[in] handle
@@ -6668,8 +6754,6 @@ mluOpThreeInterpolateForward(mluOpHandle_t handle,
  * @par Note
  * - The value of \b indices must be in the range of [0, M-1], otherwise the output result
  *   is meaningless and the corresponding output will be set to 0.
- * - In MLU270 and MLU290, the maximum value in the \b indices should be less than
- *   2^23, otherwise the output result is not guaranteed to be correct.
  *
  * @par Example
  * - None.
@@ -6827,7 +6911,7 @@ mluOpBallQuery(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_EXECUTION_FAILED
  *
  * @par Data Type
- * - The supported data types of input tensors \b input, \b target, \b weight , and output
+ * - The supported data types of input tensors \b input, \b target, \b weight, and output
  *   tensor \b output are as follows:
  *   - input: half, float
  *   - target: int32
@@ -6941,7 +7025,7 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_EXECUTION_FAILED
  *
  * @par Data Type
- * - The supported data types of input tensor \b input, \b target, \b weight , and output
+ * - The supported data types of input tensor \b input, \b target, \b weight, and output
  *   tensor \b output are as follows:
  *   - input: float, half
  *   - target: int32
@@ -6969,12 +7053,9 @@ mluOpFocalLossSigmoidForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 16339] when
- *   \b weight is NULL on MLU300 series. The length of C should be in the range of [0, 14848] when
- *   \b weight is not NULL on MLU300 series.
  * - If the shape of \b input is set to [N, C], the length of C should be in the range of [0, 9785] when
- *   \b weight is NULL on series higher than MLU300 series. The length of C should be in the range of [0, 8864] when
- *   \b weight is not NULL on series higher than MLU300 series.
+ *   \b weight is NULL on compute_50 or above. The length of C should be in the range of [0, 8864] when
+ *   \b weight is not NULL on series higher than compute_50.
  * - \b weight does not support positive infinity and negative infinity currently.
  * - \b gamma should be in the range of [0, 10000].
  *
@@ -7117,7 +7198,7 @@ mluOpGetMaskedIm2colForwardWorkspaceSize(mluOpHandle_t handle,
  *   - data_col tensor: half, float.
  *
  * @par Data Layout
- * - The supported data layouts of \b feature , \b mask_h_idx , \b mask_w_idx , and \b data_col are as follows:
+ * - The supported data layouts of \b feature, \b mask_h_idx, \b mask_w_idx, and \b data_col are as follows:
  *   - feature tensor: \p MLUOP_LAYOUT_NCHW.
  *   - mask_h_idx tensor: \p MLUOP_LAYOUT_ARRAY.
  *   - mask_w_idx tensor: \p MLUOP_LAYOUT_ARRAY.
@@ -7238,8 +7319,8 @@ mluOpMaskedIm2colForward(mluOpHandle_t handle,
  *   tensor must be the same size and equal to \b samples .
  * - The second dimension of \b grad_input tensor and \b dispatch tensor must be equal to \b hidden .
  * - The first dimension of \b dispatch tensor must be equal to the multiplication result of
- *   the \b capacity and \b num_experts .
- * - The value of the input parameters \b samples , \b capacity , \b hidden , and \b num_experts
+ *   the \b capacity and \b num_experts.
+ * - The value of the input parameters \b samples, \b capacity , \b hidden , and \b num_experts
  *   must be greater than or equal to 0.
  * - The value range of the input parameter \b indices tensor must be greater than or equal to 0 and less than
  *   \b num_experts.
@@ -7250,8 +7331,8 @@ mluOpMaskedIm2colForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
- * - The parameter \b samples , \b capacity , \b hidden , and \b num_experts should not be negative.
+ * - This function is only supported on compute_50 or above.
+ * - The parameter \b samples, \b capacity , \b hidden , and \b num_experts should not be negative.
  *
  * @par Example
  * - The example of the function is as follows:
@@ -7366,8 +7447,7 @@ mluOpMoeDispatchBackwardData(mluOpHandle_t handle,
  * @par Note
  * - The input \b sampling_loc that contains NaN or infinity is not supported.
  * - The \b value, \b sampling_loc, \b with attn_weight and \b grad_output contain NaN or infinity are not
- *   supported on series higher than MLU300 series currently.
- * - The function does not support MLU200 series.
+ *   supported on compute_50 and above currently.
  *
  * @par Example
  * - None.
@@ -7422,7 +7502,7 @@ mluOpMsDeformAttnBackward(mluOpHandle_t handle,
  * The descriptor of the tensor \b ans_grad containing dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[in] overwrite_ans_grad
- * A boolean value indicating whether to overwrite \b ans_grad.
+ * A Boolean value indicating whether to overwrite \b ans_grad.
  * @param[out] workspace_size
  * Pointer to the MLU memory that stores the returned size of the extra workspace in bytes.
  *
@@ -7493,7 +7573,7 @@ mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
  * @param[in] ans_grad
  * Pointer to the MLU memory that stores the tensor \b ans_grad.
  * @param[in] overwrite_ans_grad
- * A boolean value indicating whether to overwrite \b ans_grad.
+ * A Boolean value indicating whether to overwrite \b ans_grad.
  * @param[in] workspace
  * Pointer to the MLU memory as an extra workspace for the mutual_information_backward operation.
  * For more information about the workspace, see "Cambricon MLU-OPS User Guide".
@@ -7546,7 +7626,7 @@ mluOpGetMutualInformationBackwardWorkspaceSize(mluOpHandle_t handle,
  *   the size of the workspace by ::mluOpGetMutualInformationBackwardWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on compute_50 or above.
  * - If \b overwrite_ans_grad is true, \b ans_grad will be overwritten.
  *   If the computation worked correctly, the overwritten value should be the same as the original ans_grad.
  * - If B is zero, or S and T are both zero, ::MLUOP_STATUS_SUCCESS is returned without
@@ -7707,7 +7787,7 @@ mluOpGetMutualInformationForwardWorkspaceSize(mluOpHandle_t handle,
  *   the size of the workspace by ::mluOpGetMutualInformationForwardWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on compute_50 or above.
  * - If B is zero, ::MLUOP_STATUS_SUCCESS is returned without any changes to tensor \b p and tensor \b ans.
  *
  * @par Example
@@ -7844,7 +7924,7 @@ mluOpGetRoiAwarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * @brief Returns \b argmax, \b pts_idx_of_voxels and \b pooled_features calculated by
  * this operator.
  *
- * The operator determine the points in each box based on input coordinates. The collection
+ * The operator determines the points in each box based on input coordinates. The collection
  * of points in boxes are named as voxels and recorded as \b pts_idx_of_voxels. The operator
  * also performs max pooling or average pooling on the voxels and results in \b argmax
  * and \b pooled_features.
@@ -7939,9 +8019,7 @@ mluOpGetRoiAwarePool3dForwardWorkspaceSize(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The inputs \b rois and \b pts with NaN or infinity are not supported on MLU300 series.
- * - The input \b pts_feature with NaN are not supported on MLU300 series.
- * - The function does not support MLU200 series.
+ * - None.
  *
  * @par Example
  * - None.
@@ -7979,7 +8057,7 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  * @brief Returns \b argmax, \b pts_idx_of_voxels and \b pooled_features calculated by
  * this operator.
  *
- * The operator determine the points in each box based on input coordinates. The collection
+ * The operator determines the points in each box based on input coordinates. The collection
  * of points in boxes are named as voxels and recorded as \b pts_idx_of_voxels. The operator
  * also performs max pooling or average pooling on the voxels and results in \b argmax
  * and \b pooled_features.
@@ -8070,9 +8148,7 @@ mluOpRoiawarePool3dForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The inputs \b rois and \b pts with NaN or infinity are not supported on MLU300 series.
- * - The input \b pts_feature with NaN are not supported on MLU300 series.
- * - The function does not support MLU200 series.
+ * - None.
  *
  * @par Example
  * - None.
@@ -8176,7 +8252,7 @@ mluOpRoiAwarePool3dForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The function does not support MLU200 series.
+ * - None.
  *
  * @par Example
  * - None.
@@ -8269,7 +8345,7 @@ mluOpRoiawarePool3dBackward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - The function does not support MLU200 series.
+ * - None.
  *
  * @par Example
  * - None.
@@ -8297,7 +8373,7 @@ mluOpRoiAwarePool3dBackward(mluOpHandle_t handle,
 
 // Group: Psamask
 /*!
- * @brief Moves the \b x tensor to \b y tensor according to \b h_mask , \b w_mask , and \b psa_type.
+ * @brief Moves the \b x tensor to \b y tensor according to \b h_mask, \b w_mask, and \b psa_type.
  *
  *
  * @param[in] handle
@@ -8341,16 +8417,6 @@ mluOpRoiAwarePool3dBackward(mluOpHandle_t handle,
  * - If the shape of \b x is set to [N, H, W, C], the size of C dimension should be \b h_mask * \b
  *   w_mask.
  * - If the shape of \b y is set to [N, H, W, C], the size of C dimension should be H * W.
- *   - On MLU200 series:
- *     - When psa_type is COLLECT, the size of \b x channels ci and \b y channels co should be
- *       satisfied: ci + co <= 6144.
- *     - When psa_type is DISTRIBUTE, the size of \b x channels ci and \b y channels co should be
- *       satisfied: ci + 2 * co <= 6144.
- *   - On MLU300 series:
- *     - When psa_type is COLLECT, the size of \b x channels ci and \b y channels co should be
- *       satisfied: ci + co <= 10240.
- *     - When psa_type is DISTRIBUTE, the size of \b x channels ci and \b y channels co should be
- *       satisfied: ci + 2 * co <= 10240.
  *
  * @par API Dependency
  * - None.
@@ -8377,7 +8443,7 @@ mluOpPsamaskForward(mluOpHandle_t handle,
 // Group: Psamask
 /*!
  * @brief Computes the gradients of input tensor \b dx with the gradients of output tensor \b dy
- * according to \b h_mask , \b w_mask , and \b psa_type.
+ * according to \b h_mask, \b w_mask, and \b psa_type.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
@@ -8420,16 +8486,6 @@ mluOpPsamaskForward(mluOpHandle_t handle,
  * - If the shape of \b dx is set to [N, H, W, C], the size of C dimension should be \b h_mask * \b
  *   w_mask .
  * - If the shape of \b dy is set to [N, H, W, C], the size of C dimension should be H * W.
- *   - On MLU200 series:
- *     - When psa_type is COLLECT, the size of \b dx channels ci and \b dy channels co should be
- *       satisfied: ci + co <= 6144.
- *     - When psa_type is DISTRIBUTE, the size of \b dx channels ci and \b dy channels co should be
- *       satisfied: ci + 2 * co <= 6144.
- *   - On MLU300 series:
- *     - When psa_type is COLLECT, the size of \b dx channels ci and \b dy channels co should be
- *       satisfied: ci + co <= 10240.
- *     - When psa_type is DISTRIBUTE, the size of \b dx channels ci and \b dy channels co should be
- *       satisfied: ci + 2 * co <= 10240.
  *
  * @par API Dependency
  * - None.
@@ -8456,7 +8512,7 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
 // Group: SparseConv
 /*!
  * @brief Computes the get_indice_paris operation, then returns the results in the output
- * tensor \b out_indices , \b indice_pairs and \b ind, ice_num.
+ * tensor \b out_indices, \b indice_pairs and \b ind, ice_num.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
@@ -8500,7 +8556,7 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  * @par Data Type
  * - This function supports the combinations of the following data types for
  *   input tensor \b indices and output tensor \b out_indices, \b indice_pairs and \b indice_num.
- * - \b indices , \b out_indices , \b indice_pairs , and \b indice_num data type: int32, int32, int32, int32
+ * - \b indices, \b out_indices, \b indice_pairs, and \b indice_num data type: int32, int32, int32, int32
  *
  * @par Data Layout
  * - None.
@@ -8523,7 +8579,7 @@ mluOpPsamaskBackward(mluOpHandle_t handle,
  *   all the parameters passed to this function. See each parameter description for details.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on compute_50 or above.
  * - The parameter num_act_out will be obtained from ::mluOpSparseConvolutionDescriptor_t.
  *
  * @par Example
@@ -8558,8 +8614,8 @@ mluOpGetIndicePairs(mluOpHandle_t handle,
  * to optimize the get_indice_pairs operation.
  *
  * The size of extra workspace is based on the given information of the get_indice_pairs
- * operation, including the input tensor descriptor \b sparse_conv_desc , and \b indices_desc, output
- * tensor descriptor \b out_indices_desc , \b indice_pairs_desc , and \b indice_num_desc.
+ * operation, including the input tensor descriptor \b sparse_conv_desc, and \b indices_desc, output
+ * tensor descriptor \b out_indices_desc, \b indice_pairs_desc, and \b indice_num_desc.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
@@ -8597,7 +8653,7 @@ mluOpGetIndicePairs(mluOpHandle_t handle,
  *
  * @par API Dependency
  * - You need to call ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor to create and set
- *   tensor descriptors \b indices_desc , \b out_indices_desc , \b indice_pairs_desc , and \b indice_num_desc before
+ *   tensor descriptors \b indices_desc, \b out_indices_desc, \b indice_pairs_desc, and \b indice_num_desc before
  *   calling this function.
  * - You need to call ::mluOpCreateSparseConvolutionDescriptor to create a descriptor,
  *   and call ::mluOpSetSparseConvolutionDescriptor to set the tensor information for
@@ -8910,7 +8966,7 @@ mluOpCreateAdamWDescriptor(mluOpAdamWDescriptor_t *adamw_desc);
 /*!
  * @brief Initializes the descriptor \b adamw_desc that was previously created with
  * ::mluOpCreateAdamWDescriptor function, and sets AdamW information
- * to the descriptor \b adamw_desc. The information includes \b weight_decay , \b grad_scale
+ * to the descriptor \b adamw_desc. The information includes \b weight_decay, \b grad_scale
  * and \b use_nesterov for AdamW operation.
  *
  * @param[in] adamw_desc
@@ -9094,7 +9150,7 @@ mluOpDeformRoiPoolForward(const mluOpHandle_t handle,
 // Group: DeformRoiPool
 /*!
  * @brief Computes the gradient of input \b grad_input and the gradient of offset \b grad_offset
- * based on the gradient of output \b grad_output , input \b input , ROI \b rois , and offset \b offset.
+ * based on the gradient of output \b grad_output, input \b input, ROI \b rois, and offset \b offset.
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in
@@ -9261,11 +9317,11 @@ mluOpDeformRoiPoolBackward(const mluOpHandle_t handle,
  *   - boxes tensor: half, float
  *   - output tensor: half, float
  *   - argmax_idx tensor: int32_t
- *   Note that the data type of \b input , \b boxes , and \b output
+ *   Note that the data type of \b input, \b boxes, and \b output
  *   must be the same.
  *
  * @par Data Layout
- * - The supported data layout of \b input , \b boxes , \b output , and
+ * - The supported data layout of \b input, \b boxes, \b output, and
  *   \b argmax_idx are as follows:
  *   - input tensor: \p MLUOP_LAYOUT_NHWC
  *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY
@@ -9361,7 +9417,7 @@ mluOpBorderAlignForward(mluOpHandle_t handle,
 // Group: BorderAlign
 /*!
  * @brief Computes the gradient of the input tensor of ::mluOpBorderAlignForward
- * according to the output gradient \b grad_output , the maximum pooling index \b
+ * according to the output gradient \b grad_output, the maximum pooling index \b
  * argmax_idx and bounding boxes \b boxes .
  *
  * @param[in] handle
@@ -9382,14 +9438,14 @@ mluOpBorderAlignForward(mluOpHandle_t handle,
  * Pointer to the MLU memory that stores \b boxes tensors. The shape of \b boxes is
  * [N, H * W, 4].
  * @param[in] argmax_idx_desc
- * Descriptor of \b argmax_idx , containing dimension and the layout of \b argmax_idx .
+ * Descriptor of \b argmax_idx, containing dimension and the layout of \b argmax_idx .
  * @param[in] argmax_idx
  * Pointer to the MLU memory that stores the \b argmax_idx tensor, which is the result
  * of max pooling index. The shape of argmax_idx is [N, K, 4, C].
  * @param[in] pool_size
  * Number of positions sampled over the boxes borders.
  * @param[in] grad_input_desc
- * Descriptor of \b grad_input , containing dimension and the layout of output.
+ * Descriptor of \b grad_input, containing dimension and the layout of output.
  * @param[out] grad_input
  * Pointer to the MLU memory that stores the gradient of the input
  * tensor of ::mluOpBorderAlignForward. The shape of \b grad_input is [N, H, W, 4C],
@@ -9406,11 +9462,11 @@ mluOpBorderAlignForward(mluOpHandle_t handle,
  *   - boxes tensor: half, float
  *   - argmax_idx tensor: int32_t
  *   - grad_input tensor: half, float
- *   Note that the data type of \b grad_output , \b boxes , and \b grad_input
+ *   Note that the data type of \b grad_output, \b boxes, and \b grad_input
  *   must be the same.
  *
  * @par Data Layout
- * - The supported data layout of \b grad_output , \b boxes , \b argmax_idx and,
+ * - The supported data layout of \b grad_output, \b boxes, \b argmax_idx and,
  *   \b grad_input are as follows:
  *   - grad_output tensor: \p MLUOP_LAYOUT_NHWC
  *   - boxes tensor: \p MLUOP_LAYOUT_ARRAY
@@ -9418,7 +9474,7 @@ mluOpBorderAlignForward(mluOpHandle_t handle,
  *   - grad_input tensor: \p MLUOP_LAYOUT_NHWC
  *
  * @par Scale Limitation
- * - The \b grad_output , \b argmax_idx and \b grad_input are 4D tensor.
+ * - The \b grad_output, \b argmax_idx and \b grad_input are 4D tensor.
  * - The \b boxes is 3D tensor.
  * - The dims[3] of \b boxes should be equal to 4.
  * - The shape of \b grad_output and \b argmax_idx must be the same.
@@ -9508,9 +9564,9 @@ mluOpBorderAlignBackward(mluOpHandle_t handle,
  *
  * The size of extra workspace is based on the given information of the indice
  * convolution backward data operation, including the input descriptor
- * \b input_grad_desc, the filter descriptor \b filter_desc , the indice pairs
- * descriptor \b indice_pairs_desc , the output descriptor \b indice_pairs_desc ,
- * the array \b indice_num , and the scaler \b inverse. For more information
+ * \b input_grad_desc, the filter descriptor \b filter_desc, the indice pairs
+ * descriptor \b indice_pairs_desc, the output descriptor \b indice_pairs_desc,
+ * the array \b indice_num, and the scaler \b inverse. For more information
  * about the workspace, see "Cambricon MLU-OPS User Guide".
  *
  * @param[in] handle
@@ -9552,7 +9608,7 @@ mluOpBorderAlignBackward(mluOpHandle_t handle,
  * @par API Dependency
  * - This function must be called before ::mluOpIndiceConvolutionBackwardData.
  * - ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor
- *   create and set the tensor descriptor \b output_grad_desc , \b filters_desc ,
+ *   create and set the tensor descriptor \b output_grad_desc, \b filters_desc,
  *   \b indice_pairs_desc and \b input_grad_desc before this function is called.
  *
  * @par Note
@@ -9578,7 +9634,7 @@ mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(mluOpHandle_t handle,
 /*!
  * @brief Performs the back propagation of an indice convolution operation to
  * compute the gradient of input \b input_grad based on the gradient of response
- * \b output_grad , the filter tensor \b filter , the indice tensor \b indice_pairs ,
+ * \b output_grad, the filter tensor \b filter, the indice tensor \b indice_pairs,
  * and helper parameters: array \b indice_num, scaler \b inverse and \b sub_m.
  *
  * The tensors \b input_grad and \b output_grad are reordered from origin input
@@ -9720,8 +9776,8 @@ mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
  * to optimize the indice_convolution_backward_filter operation.
  *
  * The size of extra workspace is based on the given information of the indice_convolution_backward_filter
- * operation, including the input tensor descriptor \b features_desc , \b output_grad_desc , and \b indice_pairs_desc ,
- * output tensor descriptor \b filters_grad_desc , and the array \b indice_num[].
+ * operation, including the input tensor descriptor \b features_desc, \b output_grad_desc, and \b indice_pairs_desc,
+ * output tensor descriptor \b filters_grad_desc, and the array \b indice_num[].
  *
  * @param[in] handle
  * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and queues in the
@@ -9762,7 +9818,7 @@ mluOpIndiceConvolutionBackwardData(mluOpHandle_t handle,
  *
  * @par API Dependency
  * - You need to call ::mluOpCreateTensorDescriptor and ::mluOpSetTensorDescriptor to create and set
- *   tensor descriptors \b features_desc , \b output_grad_desc , \b indice_pairs_desc , and \b filters_grad_desc before
+ *   tensor descriptors \b features_desc, \b output_grad_desc, \b indice_pairs_desc, and \b filters_grad_desc before
  *   calling this function.
  * - The allocated extra workspace should be passed to ::mluOpIndiceConvolutionBackwardFilter to
  *   perform the indice_convolution_backward_filter operation.
@@ -9834,9 +9890,9 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Data Type
  * - This function supports the combinations of the following data types for
- *   input tensor \b features , \b output_grad , \b indice_pairs_num , and output tensor \b filters_grad.
- *   - \b features , \b output_grad , \b indice_pairs , \b filters_grad data type: half, half, int32, half
- *   - \b features , \b output_grad , \b indice_pairs , \b filters_grad data type: float, float, int32, float
+ *   input tensor \b features, \b output_grad, \b indice_pairs_num, and output tensor \b filters_grad.
+ *   - \b features, \b output_grad, \b indice_pairs, \b filters_grad data type: half, half, int32, half
+ *   - \b features, \b output_grad, \b indice_pairs, \b filters_grad data type: float, float, int32, float
  *
  * @par Data Layout
  * - None.
@@ -9857,7 +9913,7 @@ mluOpGetIndiceConvolutionBackwardFilterWorkspaceSize(mluOpHandle_t handle,
  *   all the parameters passed to this function. See each parameter description for details.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on compute_50 or above.
  * - This function does not support setting tensor onchip data type with fixed-point type.
  *
  * @par Example
@@ -10024,7 +10080,7 @@ mluOpGetRoiPointPool3dWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Data Type
  * - The supported data types for input and output are as follows:
- *   Note that the data type of \b points , \b point_features , \b boxes3d , and
+ *   Note that the data type of \b points, \b point_features, \b boxes3d , and
  *   \b pooled_features must be the same.
  *   - points: half, float
  *   - point_features: half, float
@@ -10165,9 +10221,9 @@ mluOpGetThreeNNForwardWorkspaceSize(const mluOpHandle_t handle,
  * @par Scale Limitation
  * - The shape of \b unknown, \b dist2 and \b idx should be [b, n, 3].
  * - The shape of \b known should be [b, m, 3].
- * - The shape of \b unknown , \b dist2 , \b idx , and \b known dims[0](b) should be equal.
- * - The shape of \b unknown , \b dist2 , \b idx , and \b known dims[2](3) should be equal to 3.
- * - The shape of \b unknown , \b dist2 , \b idx , and \b known dims[1](n) should be equal and larger
+ * - The shape of \b unknown , \b dist2 , \b idx, and \b known dims[0](b) should be equal.
+ * - The shape of \b unknown , \b dist2 , \b idx, and \b known dims[2](3) should be equal to 3.
+ * - The shape of \b unknown , \b dist2 , \b idx, and \b known dims[1](n) should be equal and larger
  *   than 0.
  *
  * @par API Dependency
@@ -10321,9 +10377,9 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  *
  * @par Data Type
  * - This function supports the combination of the following data types:
- *   - input tensor \b features , \b filters , \b indice_pairs , and output tensor \b features_out: half, half, int32,
+ *   - input tensor \b features, \b filters, \b indice_pairs, and output tensor \b features_out: half, half, int32,
  * half
- *   - input tensor \b features , \b filters , \b indice_pairs , and output tensor \b features_out: float, float, int32,
+ *   - input tensor \b features, \b filters, \b indice_pairs, and output tensor \b features_out: float, float, int32,
  * float
  * - The supported data type of array \b indice_num , scalar \b inverse , and \b sub_m is int64.
  *
@@ -10354,7 +10410,7 @@ mluOpGetIndiceConvolutionForwardWorkspaceSize(mluOpHandle_t handle,
  *   called before this function to get extra space size.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
+ * - This function is only supported on compute_50 or above.
  * - This function does not support tensor onchip data type with fixed-point type.
  * - The input indices in \b indice_pairs tensor should be no larger than dims[0]
  *   of \b features. Such value is illegal and not checked, the output result is
@@ -10436,8 +10492,8 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  *   ::MLUOP_STATUS_NOT_SUPPORTED, ::MLUOP_STATUS_EXECUTION_FAILED
  *
  * @par Data Type
- * - This function supports the following data types for input tensors \b gates , \b indices ,
- *   \b locations , \b input , and \b dispatch.
+ * - This function supports the following data types for input tensors \b gates, \b indices,
+ *   \b locations, \b input , and \b dispatch.
  *   - gates tensor: float
  *   - indices tensor: int32
  *   - locations tensor: int32
@@ -10452,7 +10508,7 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  *   tensor must be the same size and equal to \b samples.
  * - The second dimension of \b input tensor and \b dispatch tensor must be equal to \b hidden .
  * - The first dimension of \b dispatch tensor must be equal to the multiplication result of
- *   the \b capacity and \b num_experts .
+ *   the \b capacity and \b num_experts.
  * - The samples must be less than or equal to the multiplication result of the \b capacity and \b
  *   num_experts.
  * - The values of indices must be between 0 and (num_experts-1) .
@@ -10462,8 +10518,8 @@ mluOpIndiceConvolutionForward(mluOpHandle_t handle,
  * - None.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
- * - The parameters \b samples , \b capacity , \b hidden , and \b num_experts should not be negative.
+ * - This function is only supported on compute_50 or above.
+ * - The parameters \b samples, \b capacity , \b hidden , and \b num_experts should not be negative.
  *
  * @par Example
  * - The example of the function is as follows:
@@ -10584,7 +10640,7 @@ mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
  * @param[in] workspace_size
  * The size of the extra workspace in bytes.
  * @param[in] grad_gates_desc
- * The descriptor of the tensor \b grad_gates , which contains dimension, data type, and data layout.
+ * The descriptor of the tensor \b grad_gates, which contains dimension, data type, and data layout.
  * For detailed information, see ::mluOpTensorDescriptor_t.
  * @param[out] grad_gates
  * Pointer to the MLU memory that stores the \b grad_gates tensor.
@@ -10610,7 +10666,7 @@ mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
  * - The second dimension of \b input tensor and \b dispatch tensor must be equal to \b hidden.
  * - The first dimension of \b dispatch tensor must be equal to the multiplication result of
  *   the \b capacity and \b num_experts.
- * - The value of the input parameters \b samples , \b capacity , \b hidden , and \b num_experts
+ * - The value of the input parameters \b samples, \b capacity , \b hidden , and \b num_experts
  *   must be greater than or equal to 0.
  * - The value range of the input parameter \b indices tensor must be greater than or equal to 0 and less than
  *   \b num_experts.
@@ -10622,8 +10678,8 @@ mluOpGetMoeDispatchBackwardGateWorkspaceSize(mluOpHandle_t handle,
  *   the size of workspace by ::mluOpGetMoeDispatchBackwardGateWorkspaceSize.
  *
  * @par Note
- * - This function is only supported on MLU300 series or above platforms.
- * - The parameters \b samples , \b capacity , \b hidden , and \b num_experts should not be negative.
+ * - This function is only supported on compute_50 or above.
+ * - The parameters \b samples, \b capacity , \b hidden , and \b num_experts should not be negative.
  *
  * @par Example
  * - The example of the operation is as follows:
@@ -10697,8 +10753,7 @@ mluOpMoeDispatchBackwardGate(mluOpHandle_t handle,
  * - The supported layout of input and output tensors must be \p MLUOP_LAYOUT_ARRAY.
  *
  * @par Scale Limitation
- * - On MLU370, the number of boxes cannot exceed 23404;
- *   On series higher than MLU300 series, the number of boxes cannot exceed 14042.
+ *   On compute_50 or above, the number of boxes cannot exceed 14042.
  *
  * @par API Dependency
  * - None.
@@ -10747,7 +10802,7 @@ mluOpPointsInBoxes(mluOpHandle_t handle,
  * @param[in] sampling_ratio
  * The number of sampling points in the grid used to compute the output.
  * @param[in] aligned
- * A boolean value which determines whether to shift the boxes by 0.5 pixel.
+ * A Boolean value which determines whether to shift the boxes by 0.5 pixel.
  * @param[in] grads_image_desc
  * The descriptor of the tensor \b grads_image of the original images.
  * @param[out] grads_image
@@ -10859,7 +10914,7 @@ mluOpRoiAlignBackward(mluOpHandle_t handle,
  * @param[in] sampling_ratio
  * The number of sampling points in the grid used to compute the output.
  * @param[in] aligned
- * A boolean value which determines whether to shift the boxes by 0.5 pixel. If the value
+ * A Boolean value which determines whether to shift the boxes by 0.5 pixel. If the value
  * of \b aligned is set to true, the boxes are shifted by 0.5. If the value of \b aligned is set
  * to false, the boxes are not shifted.
  * @param[in] pool_mode
@@ -11445,24 +11500,14 @@ mluOpDiffIouRotatedSortVerticesForward(mluOpHandle_t handle,
  * - \b Spatial_scale should be in the range of (0, 1].
  * - \b Output consists of [rois_num, pooled_h, pooled_w, channels]. In the dimensions of the h and w of the input
  *   and the output, (\b x2 - \b x1) * (\b y2 - \b y1) * \b spatial_scale * \b spatial_scale / (\b pooled_h * \b
- *   pooled_w) < (nram_limitation / 32). Nram_limitation means the limitation of the nram. When the supported MLU
- *   platform is 200, the nram_limitation is (98304 - 4 * \b channels) / 2. When the supported MLU platform is 300,
- *   the nram_limitation is (163804 - 4 * \b channels) / 2. \b pooled_h means height of output. \b pooled_w means width
- *   of output.
+ *   pooled_w) < (nram_limitation / 32). Nram_limitation means the limitation of the nram.
+ *   \b pooled_w means width of output.
  *
  * @par API Dependency
  * - None
  *
  * @par Note
- * - It is not recommended to set the data type of input tensor, ROIS tensor and output tensors
- *   that may cause the low accuracy on MLU200 series.
- * - When the input data or parameter contains NaN or infinity:
- *   - On MLU200 series, the \b output is the positive saturation value.
- *     The \b argmax is the index of the last NaN in the kernel of the pooling.
- *   - On MLU300 series, if the last value in the kernel of the pooling is NaN, \b argmax is
- *     the index of the last value, \b output is the last value, as shown in example 2 below.
- *     Otherwise, \b argmax is the index of the maximum value after the last NaN,
- *     \b output is the maximum value after the last NaN, as shown in example 3 below.
+ * - None.
  *
  * @par Example
  * - The example 1 of the roipoolingforward operation is as follows:
@@ -11944,9 +11989,9 @@ mluOpSyncBatchNormStats(mluOpHandle_t handle,
  * @par API Dependency
  * - None.
  *
- * @par note
+ * @par Note
  * - The input \b mean_all and the input \b invstd_all cannot be positive infinity or negative infinity
- *   at the same time on MLU300 series or above.
+ *   at the same time on compute_50 or above.
  *
  * @par Example
  * - The example of ::mluOpSyncBatchNormGatherStatsWithCounts operation is as follows:
@@ -13176,6 +13221,67 @@ mluOpSyncBatchNormBackwardElemtV2(mluOpHandle_t handle,
 void MLUOP_WIN_API
 mluOpSetGenCaseMode(int mode);
 
+// Group:Common Interface
+// Subgroup:Debugging
+/*!
+ * @brief Sets the gen case directory name through the \p path parameter. For more
+ * information, see "Cambricon MLU-OPS User Guide".
+ *
+ * @param[in] path
+ * Input. A NULL-terminated character string used to specify the directory name.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @note
+ * - The settings of this API are valid for all threads.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetGenCaseDirectory(const char *path);
+
+// Group:Common Interface
+// Subgroup:Debugging
+/*!
+ * @brief Gets the gen case directory name. For more information, see "Cambricon MLU-OPS User Guide".
+ *
+ * @param[in] buffer
+ * Input. This is a buffer used to store the directory name. If \p buffer is NULL,
+ *        the directory name is placed in a region of memory allocated with malloc.
+ *
+ * @param[in] bufferSize
+ * Input. The size of the buffer.
+ *
+ * @param[out] pathLen
+ * Output. If \p pathLen is not NULL, the length of directory name is placed in *pathLen.
+ *
+ * @param[out] status
+ * Output. If \p status is not NULL, the execution status of this API is placed in *status.
+ *         It includes ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ALLOC_FAILED,
+ *         ::MLUOP_STATUS_INTERNAL_ERROR.
+ *
+ * @par Return
+ * - A pointer to the start of the NULL-terminated directory name, or NULL if get
+ *   directory name failed. The API caller is responsible for deallocating this memory by using
+ *   the free() function.
+ *
+ * @note
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Example
+ * - None.
+ */
+const char MLUOP_WIN_API *
+mluOpGetGenCaseDirectory(char *buffer, size_t bufferSize, size_t *pathLen, mluOpStatus_t *status);
+
 // Group: DeformConv
 /*!
  * @brief Creates a descriptor pointed by \p dcn_desc for a deformable convolution forward
@@ -13480,13 +13586,9 @@ mluOpGetDCNForwardWorkspaceSize(mluOpHandle_t handle,
  * - The off-chip data type of \p input, \p offset, \p mask, \p filter, \p bias, and \p output must be the same.
  * - The supported off-chip data types of the input tensor and output tensor are as follows:
  *   - input, offset, mask, filter, bias, output: half, float.
- * - This function supports any combinations of the following on-chip data types for input tensor
- *   \p input and \p filter on MLU200 series.
- *   - \p input onchip data type: int16, int31.
- *   - \p filter onchip data type: int16, int31.
  * - \p input offchip data type can be combined with any supported onchip data types.
  * - \p filter offchip data type can be combined with any supported onchip data types.
- * - This function also supports floating-point computation on MLU300 series or above.
+ * - This function also supports floating-point computation on compute_50 or above.
  *   To perform floating-point computation, the onchip data type of \p input and \p filter
  *   should be \p MLUOP_DTYPE_INVALID or the same as the corresponding offchip data type.
  *
@@ -13728,13 +13830,9 @@ mluOpGetDCNBackwardWeightWorkspaceSize(mluOpHandle_t handle,
  *   and \p grad_bias must be the same.
  * - The supported off-chip data types of the input tensor and output tensor are as follows:
  *   - input, offset, mask, grad_output, grad_filter, grad_bias, grad_mask: half, float.
- * - This function supports any combinations of the following on-chip data types for input tensor
- *   \p grad_output and \p input on MLU200 series.
- *   - \p grad_output on-chip data type: int16, int31.
- *   - \p filter on-chip data type: int16, int31.
  * - \p grad_output off-chip data type can be combined with any supported on-chip data types.
  * - \p input off-chip data type can be combined with any supported on-chip data types.
- * - This function also supports floating-point computation on MLU300 series or above. To perform
+ * - This function also supports floating-point computation on compute_50 or above. To perform
  *   floating-point computation, the on-chip data type of \p input and \p grad_output should be
  *   \p MLUOP_DTYPE_INVALID or the same as the corresponding off-chip data type.
  *
@@ -13974,12 +14072,9 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  * - The supported offchip data types of the input tensor and output tensor are as follows:
  *   - input, offset, mask, filter, grad_output, grad_input, grad_offset, grad_mask: half, float.
  * - This function supports any combinations of the following onchip data types for input tensor
- *   \p grad_output and \p filter on MLU200 series.
- *   - \p grad_output onchip data type: int16, int31.
- *   - \p filter onchip data type: int16, int31.
  * - \p grad_output offchip data type can be combined with any supported onchip data types.
  * - \p filter offchip data type can be combined with any supported onchip data types.
- * - This function also supports floating-point computation on MLU300 series or above. To perform
+ * - This function also supports floating-point computation on compute_50 or above. To perform
  *   floating-point computation, the onchip data type of \p grad_output and \p filter must be
  *   \p MLUOP_DTYPE_INVALID or the same as the corresponding offchip data type.
  *
@@ -14020,7 +14115,6 @@ mluOpGetDCNBakcwardDataWorkspaceSize(mluOpHandle_t handle,
  * @par Note
  * - \p input, \p mask, \p filter, and \p grad_output must be smaller enough to prevent the result
  *   from data overflow especially when the data type is \p MLUOP_DTYPE_HALF.
- * - \p offset with NaN is not supported on MLU300 series and lower platforms.
  *
  * @par Requirements
  * - None.
@@ -14095,12 +14189,8 @@ typedef struct mluOpFFTStruct *mluOpFFTPlan_t;
  *   Otherwise, the memory leak may occur.
  *
  * @par Note
- * - This function only supports 1D FFT currently. 2D FFT and 3D FFT
+ * - This function only supports 1D and 2D FFT currently. 3D FFT
  *   will be supported in the future.
- * - When the data type of input is float or complex_float, the 1D FFT length should be equal to:
- *   length = \f$base * 2^ {m}\f$, and the base should be less than or equal to 4096.
- * - When the data type of input is half or complex_half, the 1D FFT length should be equal to:
- *   length = \f$2^{m}\f$.
  *
  * @par Example.
  * - None.
@@ -14258,27 +14348,45 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  *
  * @param[in] handle
  * Handle to a Cambricon MLUOP context that is used to manage MLU devices and queues
- * in the FFT execution. For detailed information, see ::mluOpHandle_t.
- * @param[in] fft_plan
- * The plan for FFT execution. For detailed information, see ::mluOpFFTPlan_t.
- * @param[in] input
- * Pointer to the MLU memory that stores the input tensor.
- * @param[in] scale_factor
- * Input. A float-point scalar used to multiply the FFT output.
- * @param[in, out] workspace
- * Pointer to the MLU memory that is used as an extra workspace for the
- * ::mluOpExecFFT.
- * @param[out] output
- * Pointer to the MLU memory that stores the output tensor.
- * @param[in] direction
- * The transform direction: 0 means FFT forward and 1 means FFT inverse.
- * Direction is ignored for real-to-complex and complex-to-real transforms.
- *
+ * in the FFT operation. For detailed information, see ::mluOpHandle_t.
+ * @param[in,out] fft_plan
+ * Plan for the FFT operation. This parameter is used to store the configuration of the FFT operation.
+ * @param[in,out] input
+ * Input tensor for the FFT operation. This parameter is used to provide the data to be transformed.
+ * @param[in,out] scale_factor
+ * Scale factor applied to the FFT operation. This parameter is used to normalize the result.
+ * @param[in,out] workspace
+ * Workspace buffer used during the FFT operation. This parameter is used to store intermediate
+ * results and other temporary data.
+ * @param[in,out] output
+ * Output tensor for the FFT operation. This parameter is used to store the result of the
+ * FFT transformation.
+ * @param[in,out] direction
+ * Direction of the FFT operation. This parameter specifies whether to perform a
+ * forward or inverse FFT transformation.
  * @par Note
  * - For in-place 1D real-to-complex FFTs, the input is a batch of n real numbers, and the
  *   output is n/2 + 1 non-redundant complex numbers. This requires a padding of input array.
  * - For in-place N-D real-to-complex FFTs, extra padding of the real-data array on the innermost
  *   dimension is necessary to accommodate the size of the complex-data output.
+ * - For 2D FFTs, cases with strides that meet the following conditions have
+ *   better performance:
+ *     - real-to-complex:
+ *       - n[0] < 200, n[0] == inembed[0], onembed[0] == n[0]
+ *       - n[1] < 200, n[1] == inembed[1], onembed[1] == n[1]/2+1
+ *       - input: dims[batch, n0, n1], strides[1, batch*n1, batch]
+ *       - output: dims[batch, n0, n1/2+1], strides[1, batch*(n1/2+1), batch]
+ *     - complex-to-complex:
+ *       - n[0] < 200, n[0] == inembed[0], onembed[0] == n[0]
+ *       - n[1] < 200, n[1] == inembed[1], onembed[1] == n[1]
+ *       - input: dims[batch, n0, n1], strides[1, batch*n1, batch]
+ *       - output: dims[batch, n0, n1], strides[1, batch*n1, batch]
+ *     - complex-to-real:
+ *       - n[0] < 200, n[0] == inembed[0], onembed[0] == n[0]
+ *       - n[1] < 200, n[1]/2+1 == inembed[1], onembed[1] == n[1]
+ *       - input: dims[batch, n0, n1/2+1], strides[1, batch*(n1/2+1), batch]
+ *       - output: dims[batch, n0, n1], strides[1, batch*n1, batch]
+ *
  * - When \p input contains NaN or infinity and the input onchip data type of FFT is not quantized
  *   data type, the output is computed through the FFT formula with computation rules of NaN or
  *   infinity based on IEEE 754.
@@ -14290,19 +14398,40 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  *   the data representation range.
  * - Half data type of \p input is not recommended due to low precision. The first element of the
  *   FFT result is the sum of all input elements, and it is likely to overflow.
- * - This operation is not supported on the 1V platforms.
  *
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_INTERNAL_ERROR
  *
  * @par Data Type
- * - None.
+ * - The supported data types of \p input and \p output tensors are as follows:
+ * - real-to-complex FFT:
+ *     - half(input offchip)-complex_half(output offchip)-half(input onchip)
+ *     - float(input offchip)-complex_float(output offchip)-float(input onchip)
+ * - complex-to-real FFT:
+ *     - complex_half(input offchip)-half(output offchip)-half(input onchip)
+ *     - complex_float(input offchip)-float(output offchip)-float(input onchip)
+ * - complex-to-complex FFT:
+ *     - complex_half(input offchip)-complex_half(output offchip)-half(input onchip)
+ *     - complex_float(input offchip)-complex_float(output offchip)-float(input onchip)
  *
  * @par Data Layout
  * - None.
  *
  * @par Scale Limitation
- * - None.
+ * - For float data types, FFT supports any combination of powers of i (i from 2 to 64), as well as \f$2^mL\f$.
+ *   This means that for float data types, FFT can handle a wide range of sizes, allowing flexibility in choosing the
+ *   dimensions of the input data. The values of i can be any integer from 2 to 64, enabling combinations such as 4, 8,
+ * 16, etc., as well as sizes that are a product of a power of 2 and an additional integer L.
+ *
+ * - For half data types, FFT support is more limited. It only supports sizes of 2^m, where m is an integer. This
+ * constraint means that the input size for half data types must be a power of 2. This restriction is important to note
+ * when planning to use FFT with half-precision floating-point data, as it limits the flexibility compared to float data
+ * types.
+ *
+ * - For FFT 2D:
+ *     - real-to-complex FFT: Output numbers / 2 + 1 should not be less than input numbers.
+ *     - complex-to-complex FFT: Output numbers should not be less than input numbers.
+ *     - complex-to-real FFT: Output numbers should not be less than input numbers / 2 + 1.
  *
  * @par API Dependency
  * - Before calling this function, you need to call the ::mluOpCreateFFTPlan
@@ -14365,6 +14494,56 @@ mluOpExecFFT(mluOpHandle_t handle,
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyFFTPlan(mluOpFFTPlan_t fft_plan);
 
+// Group:Lgamma
+/*!
+ * @brief Computes the lgamma value for every element of the input tensor \b x
+ * and returns results in \b y.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
+ * queues in the lgamma operation. For detailed information, see
+ * ::mluOpHandle_t.
+ * @param[in] x_desc
+ * The descriptor of the tensor \b x. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] x
+ * Pointer to the MLU memory that stores the input tensor.
+ * @param[in] y_desc
+ * The descriptor of the tensor \b y. For detailed information, see
+ * ::mluOpTensorDescriptor_t.
+ * @param[in] y
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM, ::MLUOP_STATUS_ARCH_MISMATCH
+ *
+ * @par Data Type
+ * - The data type of input tensor and output tensor must be the same.
+ * - The supported data types of input and output tensors are as follows:
+ *   - input tensor: half, float
+ *   - output tensor: half, float
+ *
+ * @par Data Layout
+ * - None.
+ *
+ * @par Scale Limitation
+ * - The input tensor and output tensor must have the same shape.
+ * @par Note
+ * - Node.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - https://pytorch.org/docs/stable/generated/torch.lgamma.html#torch-lgamma
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpLgamma(mluOpHandle_t handle,
+            const mluOpTensorDescriptor_t x_desc,
+            const void *x,
+            const mluOpTensorDescriptor_t y_desc,
+            void *y);
+
 // Group: Logcumsumexp
 /*!
  * @brief Compute the logarithm of the cumulative sum of the given
@@ -14422,4 +14601,4 @@ mluOpLogcumsumexp(mluOpHandle_t handle,
 }
 #endif
 
-#endif  // MLUOP_EXAMPLE_H_
+#endif  // MLUOP_H_
