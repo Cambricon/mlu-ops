@@ -225,6 +225,8 @@ mluOpStatus_t mluOpPriorBox(
     GEN_CASE_OP_PARAM_SINGLE(5, "prior_box", "step_w", step_w);
     GEN_CASE_OP_PARAM_SINGLE(6, "prior_box", "offset", offset);
     /*
+    The community's prior_box reference link: paddle/phi/kernels/gpu/prior_box_kernel.cu
+
     The prior_box community logic includes a flip parameter that modifies the aspect_ratios.
 
     In mluOpPriorBox, the aspect_ratios are already the result after modification
@@ -238,6 +240,10 @@ mluOpStatus_t mluOpPriorBox(
 
     A temporary workaround is to uniformly set flip to false during case generation,
     meaning the generated results do not require further modification.
+
+    For the true cases dumped by the framework, if the case is regenerated through the generator,
+    the generator code can handle it correctly (aspect_ratios have been processed,
+    and the generator will not reprocess them).
     */
     GEN_CASE_OP_PARAM_SINGLE(7, "prior_box", "flip", false);
     GEN_CASE_OP_PARAM_SINGLE(8, "prior_box", "clip", clip);
