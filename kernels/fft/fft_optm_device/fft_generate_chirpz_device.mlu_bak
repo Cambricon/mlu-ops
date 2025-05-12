@@ -1,0 +1,158 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell coM_PIes of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all coM_PIes or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
+#include "mlu.h"
+#include "kernels/fft/fft.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
+
+// Kernel generate chirpz
+//
+__mlu_global__ void MLUKernelGenerateChripZ(float *output, int base_idx, int length, int n, int PAD_N, bool chirpz, int direction)
+{
+  int type = 0;
+  if(!direction) {
+      type = 1;
+  } else {
+      type = -1;
+  }
+
+  //nram_index
+  int deal_n = MAX_NRAM_SIZE / sizeof(float) / 4;
+
+  float *nram_index = (float *)nram_buffer;
+  float *nram_temp = nram_index + deal_n;
+  float *nram_temp2 = nram_temp + deal_n;
+
+  int num_per_core = length / taskDim;
+  const int core_offset = num_per_core;
+
+  float *output_gdram = output + taskId * core_offset;
+  const int rem = length % taskDim;
+  if (taskId == taskDim - 1) {
+    num_per_core += rem;
+  }
+
+  int repeat = num_per_core / deal_n;
+  // __bang_printf("num_per_core, repeat, taskId: %d %d %d\n", num_per_core, repeat, taskId);
+  if (taskId == 0) {
+      __gdramset(output_gdram, 2 * PAD_N, (float)0);
+  }
+
+  for (int i = 0; i < repeat+1; i++) {
+    int start = taskId * num_per_core + repeat*deal_n;
+    // __bang_printf("start: %d\n", start);
+    __bang_write_value(nram_index, deal_n, (float)0);
+    __mluop_get_indices(nram_index, start, length);
+    __bang_add_scalar(nram_index, nram_index, (float)base_idx, deal_n);
+
+    if(!chirpz){
+      __bang_write_value(nram_temp, deal_n, (float)n);
+      __bang_sub(nram_index, nram_index, nram_temp, deal_n);
+    }
+    __bang_square(nram_index, nram_index, deal_n);
+    __bang_write_value(nram_temp, deal_n, (float)n);
+    __bang_div(nram_index, nram_index, nram_temp, deal_n);
+    __bang_move(nram_temp, nram_index, deal_n*sizeof(float));
+    __bang_mul_scalar(nram_index, nram_index, M_PI, 2*deal_n);
+    __bang_cos(nram_index, nram_index, deal_n);
+    __bang_sin(nram_temp, nram_temp, deal_n);
+    // __bang_printf("start: %d\n", start);
+    if(chirpz){
+      __bang_mul_scalar(nram_temp, nram_temp, (float)type, deal_n);
+    } else {
+      __bang_mul_scalar(nram_temp, nram_temp, (float)-type, deal_n);
+    }
+
+    // for(int j = 0; j < length;j++)
+    // {
+    //     __bang_printf("%f ", nram_index[j]);
+    // }
+    // __bang_printf("\n");
+    // for(int j = 0; j < length;j++)
+    // {
+    //     __bang_printf("%f ", nram_temp[j]);
+    // }
+    // __bang_printf("\n");
+    // __bang_printf("repeat deal_n length PAD_N %d %d\n", repeat, deal_n, length, PAD_N);
+    if (chirpz) {
+      __memcpy(output_gdram + repeat * deal_n, nram_index, length*sizeof(float), NRAM2GDRAM, sizeof(float)*PAD_N, sizeof(float)*deal_n, 2);
+    } else {
+      __bang_transpose(nram_temp2, nram_index, 2, deal_n);
+      __memcpy(output_gdram + repeat * deal_n, nram_temp2, 2*length*sizeof(float), NRAM2GDRAM);
+    }
+
+    // __bang_printf("output_gdram result\n");
+
+    if(chirpz) {
+      for(int j = 0; j < PAD_N;j++)
+      {
+          __bang_printf("%f %f ", output_gdram[j], output_gdram[j+PAD_N]);
+      }
+      __bang_printf("\n");
+    } else {
+      __bang_printf("PAD_N: %d \n", PAD_N);
+      for(int j = 0; j < 2*PAD_N;j=j+2)
+      {
+          __bang_printf("%f %f ", output_gdram[j], output_gdram[j+1]);
+      }
+      __bang_printf("\n");
+    }
+
+
+
+    // for(int j = 0; j < 2*PAD_N;j++)
+    // {
+    //     __bang_printf("%f ", output_gdram[j]);
+    // }
+    // __bang_printf("\n");
+
+    // for(int j = 1; j < 2*PAD_N;j=j+2)
+    // {
+    //     __bang_printf("%f ", output_gdram[j+PAD_N]);
+    // }
+    // __bang_printf("\n");
+  }
+}
+
+
+mluOpStatus_t MLUOP_WIN_API KernelGenerateChripZ(cnrtDim3_t k_dim,
+                                                    cnrtFunctionType_t k_type,
+                                                    cnrtQueue_t queue,
+                                                    void *chirpz,
+                                                    int basic_idx,
+                                                    int length,
+                                                    int n,
+                                                    int PAD_N,
+                                                    bool chiprz_flag,
+                                                    int direction) {
+  VLOG(5) << "Launch Kernel KernelGenerateChripZ <<Union" << k_type / CORE_DIM
+          << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+  KERNEL_CHECK((MLUKernelGenerateChripZ<<<k_dim, k_type, queue>>>(
+      (float*)chirpz, basic_idx, length, n, PAD_N, chiprz_flag, direction)));
+  return MLUOP_STATUS_SUCCESS;
+}
+

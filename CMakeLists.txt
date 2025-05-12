@@ -133,7 +133,7 @@ if(${_CMAKE_BUILD_TYPE_LOWER} MATCHES "debug")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
 elseif(${_CMAKE_BUILD_TYPE_LOWER} MATCHES "release")
   message(STATUS "build release version")
-  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -O3 -DNDEBUG")
+  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -O3 -DNDEBUG -gline-directives-only")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
 endif()
 

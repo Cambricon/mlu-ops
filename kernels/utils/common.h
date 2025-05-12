@@ -178,7 +178,6 @@ __mlu_func__ void __mluop_recip(T *nram_dst, T *nram_src, void *nram_addition,
  * param 'nram_addition' is the nram addition address. Pass NULL if the data
  * type of nram_src is float, otherwise the space size is at least twice as
  * much as nram_src.
- * param 'is_high_precision' is the precision flag.
  * param 'deal_num' is the num of input data. remarks: nram_dst and nram_src can
  * be homologous operand.
  ******************************************************************************/

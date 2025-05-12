@@ -3129,6 +3129,22 @@ mluOpLogspace(mluOpHandle_t handle,
               const mluOpTensorDescriptor_t res_desc,
               void *res);
 
+mluOpStatus_t MLUOP_WIN_API
+mluOpChirpz(mluOpHandle_t handle,
+              const int length,
+              const int n,
+              const int pad_n,
+              const int type,
+              const bool chirpz,
+              const mluOpTensorDescriptor_t output_desc,
+              void *output);
+
+mluOpStatus_t MLUOP_WIN_API mluOpComplexMatrixDotVector(
+    mluOpHandle_t handle, const mluOpTensorDescriptor_t vector_desc,
+    void *vector_input, const mluOpTensorDescriptor_t matrix_desc,
+    void *matrix_input, const int pad_num, bool row_major, const int output_type,
+    const mluOpTensorDescriptor_t output_desc, void *output);
+
 // Group: Carafe
 /*!
  * @brief Creates a descriptor pointed by \b carafe_desc for CARAFE upsampling forward and backward operations,

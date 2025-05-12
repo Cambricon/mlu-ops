@@ -416,4 +416,12 @@ __mlu_func__ void computeMutiStageOnchipColumn(
       }
     }
   }
+
+  if(taskId == 0) {
+    __bang_printf("\n\noutput\n");
+    for (int k = 0; k < 2*256; k++) {
+        __bang_printf("%f ", ((float*)output)[k]);
+    }
+    __bang_printf("\n\n");
+  }
 }
