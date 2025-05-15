@@ -3134,7 +3134,6 @@ mluOpChirpz(mluOpHandle_t handle,
               const int length,
               const int n,
               const int pad_n,
-              const int type,
               const bool chirpz,
               const mluOpTensorDescriptor_t output_desc,
               void *output);

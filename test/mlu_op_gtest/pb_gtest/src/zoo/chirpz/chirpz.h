@@ -43,7 +43,6 @@ class ChirpzExecutor : public Executor {
   int n_;
   int pad_n_;
   bool chirpz_;
-  int type_;
 };
 
 }  // namespace mluoptest

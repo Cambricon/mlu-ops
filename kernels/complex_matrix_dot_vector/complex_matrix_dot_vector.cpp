@@ -51,12 +51,12 @@ static void policyFunc(const mluOpHandle_t &handle,
   }
   VLOG(5) << "if large col: " << *large_col << " col_num: " << col_num
           << "num_deal: " << num_deal;
-  // *k_type = cnrtFuncTypeUnion1;
   *k_type = cnrtFuncTypeBlock;
-  // k_dim->x = 4;
   k_dim->x = 1;
   k_dim->y = 1;
   k_dim->z = 1;
+
+
   // *k_type = cnrtFuncTypeUnion1;
   // k_dim->x = handle->core_num_per_cluster;
   // k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
@@ -145,6 +145,6 @@ mluOpComplexMatrixDotVector(mluOpHandle_t handle, const mluOpTensorDescriptor_t 
   VLOG(5) << "[policyFunc] launch kernel policyFUnc[" << k_dim.x << ", "
           << k_dim.y << ", " << k_dim.z << "]";
   CHECK_RETURN("[KernelComplexMatrixDotVector] ", KernelComplexMatrixDotVector(k_dim, k_type, handle->queue,
-    vector_input, matrix_input, output, batch, row_num, col_num, pad_num, row_major, real_input, large_col, output_type));
+    vector_input, matrix_input, output, batch, row_num, col_num, pad_num, row_major, large_col, output_type));
   return MLUOP_STATUS_SUCCESS;
 }

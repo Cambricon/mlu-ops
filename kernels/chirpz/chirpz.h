@@ -26,5 +26,10 @@
 mluOpStatus_t MLUOP_WIN_API KernelChirpz(const cnrtDim3_t k_dim,
                                          const cnrtFunctionType_t k_type,
                                          const cnrtQueue_t queue,
-                                         const int length, int n, int pad_n, int type,
+                                         const int length, int n, int pad_n,
                                          bool chirpz, void *output);
+// mluOpStatus_t MLUOP_WIN_API KernelChirpz(const cnrtDim3_t k_dim,
+//                                          const cnrtFunctionType_t k_type,
+//                                          const cnrtQueue_t queue,
+//                                          const int length, int n, int pad_n,
+//                                         void *output);

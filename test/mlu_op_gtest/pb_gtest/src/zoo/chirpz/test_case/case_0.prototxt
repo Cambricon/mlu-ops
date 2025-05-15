@@ -17,7 +17,7 @@ input {
 output {
   id: "output"
   shape: {
-    dims: 512
+    dims: 67
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_COMPLEX_FLOAT
@@ -30,7 +30,6 @@ test_param: {
 chirpz_param {
   length: 67
   n: 67
-  pad_n: 512
+  pad_n: 67
   chirpz: true
-  type: 1
 }

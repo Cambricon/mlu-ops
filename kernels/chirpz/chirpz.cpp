@@ -31,16 +31,16 @@
 
 static void ChirpzPolicyFunc(const mluOpHandle_t &handle,
                                cnrtDim3_t *k_dim, cnrtFunctionType_t *k_type) {
-  // *k_type = cnrtFuncTypeBlock;
-  // k_dim->x = 1;
-  // k_dim->y = 1;
-  // k_dim->z = 1;
-
-
-  *k_type = cnrtFuncTypeUnion1;
-  k_dim->x = 4;
+  *k_type = cnrtFuncTypeBlock;
+  k_dim->x = 1;
   k_dim->y = 1;
   k_dim->z = 1;
+
+
+  // *k_type = cnrtFuncTypeUnion1;
+  // k_dim->x = 4;
+  // k_dim->y = 1;
+  // k_dim->z = 1;
 
   // *k_type = cnrtFuncTypeUnion1;
   // k_dim->x = handle->core_num_per_cluster;
@@ -49,7 +49,7 @@ static void ChirpzPolicyFunc(const mluOpHandle_t &handle,
 }
 
 mluOpStatus_t MLUOP_WIN_API
-mluOpChirpz(mluOpHandle_t handle, const int length, const int n, int pad_n, int type, bool chirpz,
+mluOpChirpz(mluOpHandle_t handle, const int length, const int n, int pad_n, bool chirpz,
               const mluOpTensorDescriptor_t output_desc, void *output) {
 
   // policy select
@@ -61,6 +61,6 @@ mluOpChirpz(mluOpHandle_t handle, const int length, const int n, int pad_n, int 
 
   VLOG(5) << "kernel ChirpzPolicyFunc.";
   CHECK_RETURN("[ChirpzPolicyFunc] ", KernelChirpz(k_dim, k_type, handle->queue,
-                                                  length, n, pad_n, type, chirpz, output));
+                                                  length, n, pad_n, chirpz, output));
   return MLUOP_STATUS_SUCCESS;
 }

@@ -287,7 +287,7 @@ input {
 output {
   id: "output"
   shape: {
-    dims: 67
+    dims: 256
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_COMPLEX_FLOAT
@@ -298,7 +298,7 @@ test_param: {
   baseline_device: CPU
 }
 complex_matrix_dot_vector_param {
-  pad_num: 512
+  pad_num: 256
   row_major: true
-  output_type: 1
+  output_type: 0
 }

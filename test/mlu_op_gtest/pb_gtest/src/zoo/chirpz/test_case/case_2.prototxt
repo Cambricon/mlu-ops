@@ -31,6 +31,5 @@ chirpz_param {
   length: 67
   n: 67
   pad_n: 512
-  type: 1
   chirpz: false
 }

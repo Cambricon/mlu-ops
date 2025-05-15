@@ -131,8 +131,10 @@ void ComplexMatrixDotVectorExecutor::cpuCompute() {
   VLOG(5) << "row_num: " << row_num;
   VLOG(5) << "col_num: " << col_num;
   VLOG(5) << "row_major: " << row_major_;
+  VLOG(5) << "output_type: " << output_type_;
 
   auto total_output = parser_->getOutputDataCount(0);
+  VLOG(5) << "total_output " << total_output;
   for(int k = 0; k < total_output; k++)
   {
       cpu_fp32_output_[0][2 * k] = 0;
@@ -148,34 +150,26 @@ void ComplexMatrixDotVectorExecutor::cpuCompute() {
           // printf(" %d ", index);
           if(row_major_) {
             if(output_type_ == 0) {
-              int in_idx = k + j * col_num + i * col_num * row_num;
-              int ou_idx = k + j * pad_num_ + i * col_num * pad_num_;
-              if(!real_input) {
-                cpu_fp32_output_[0][2 * ou_idx] = real_part(
-                    cpu_fp32_input_[0][2 * k], cpu_fp32_input_[0][2 * k + 1],
-                    cpu_fp32_input_[1][2 * in_idx], cpu_fp32_input_[1][2 * in_idx + 1]);
-                // cpu_fp32_input_[1][2k]*cpu_fp32_input_[0][2 * index] -
-                // cpu_fp32_input_[1][2k+1]*cpu_fp32_input_[0][2 * index+1];
-                cpu_fp32_output_[0][2 * ou_idx + 1] = imag_part(
+              int in_idx = k + j * col_num + i * row_num * col_num;
+              int ou_idx = k + j * pad_num_ + i * row_num * pad_num_;
+              // printf("%d %f %f ", in_idx, cpu_fp32_input_[0][2 * in_idx],
+              //        cpu_fp32_input_[0][2 * in_idx + 1]);
+              cpu_fp32_output_[0][2 * ou_idx] = real_part(
                   cpu_fp32_input_[0][2 * k], cpu_fp32_input_[0][2 * k + 1],
-                  cpu_fp32_input_[1][2 * in_idx], cpu_fp32_input_[1][2 * in_idx + 1]);
-              } else {
-                cpu_fp32_output_[0][2 * ou_idx] = real_part(
-                  cpu_fp32_input_[0][2 * k], cpu_fp32_input_[0][2 * k + 1],
-                  cpu_fp32_input_[1][in_idx], 0);
+                  cpu_fp32_input_[1][2 * in_idx],
+                  cpu_fp32_input_[1][2 * in_idx + 1]);
               // cpu_fp32_input_[1][2k]*cpu_fp32_input_[0][2 * index] -
               // cpu_fp32_input_[1][2k+1]*cpu_fp32_input_[0][2 * index+1];
-                cpu_fp32_output_[0][2 * ou_idx + 1] = imag_part(
+              cpu_fp32_output_[0][2 * ou_idx + 1] = imag_part(
                   cpu_fp32_input_[0][2 * k], cpu_fp32_input_[0][2 * k + 1],
-                  cpu_fp32_input_[1][in_idx], 0);
-              }
+                  cpu_fp32_input_[1][2 * in_idx], cpu_fp32_input_[1][2 * in_idx + 1]);
             } else if(output_type_ == 1) {
-              int in_idx = k + j * pad_num_ + i * col_num * pad_num_;
-              int ou_idx = k + j *col_num + i * col_num * row_num;
+              int in_idx = k + j * pad_num_ + i * row_num * pad_num_;
+              int ou_idx = k + j *col_num + i * row_num * col_num;
               // printf("%f %f ", cpu_fp32_input_[0][2 * k],
               //   cpu_fp32_input_[0][2 * k + 1]);
-              printf("%f %f ", cpu_fp32_input_[1][2 * in_idx],
-                     cpu_fp32_input_[1][2 * in_idx + 1]);
+              // printf("%f %f ", cpu_fp32_input_[1][2 * in_idx],
+              //        cpu_fp32_input_[1][2 * in_idx + 1]);
               // if(k >= col_num && k < ) {
               cpu_fp32_output_[0][2 * ou_idx] = real_part(
                   cpu_fp32_input_[0][2 * k], cpu_fp32_input_[0][2 * k + 1],
@@ -189,27 +183,8 @@ void ComplexMatrixDotVectorExecutor::cpuCompute() {
                   cpu_fp32_input_[1][2 * in_idx + 1]);
               // }
             }
-          } else{
-            printf("test\n");
-          //   if(!real_input) {
-          //     cpu_fp32_output_[0][2 * index] = real_part(
-          //         cpu_fp32_input_[0][2 * j], cpu_fp32_input_[0][2 * j + 1],
-          //         cpu_fp32_input_[1][2 * index], cpu_fp32_input_[1][2 * index + 1]);
-          //     cpu_fp32_output_[0][2 * index + 1] = imag_part(
-          //       cpu_fp32_input_[0][2 * j], cpu_fp32_input_[0][2 * j + 1],
-          //       cpu_fp32_input_[1][2 * index], cpu_fp32_input_[1][2 * index + 1]);
-          //     // printf("%f %f ", cpu_fp32_output_[0][2 * index], cpu_fp32_output_[0][2 * index + 1]);
-          //   } else {
-          //     cpu_fp32_output_[0][2 * index] = real_part(
-          //       cpu_fp32_input_[0][2 * j], cpu_fp32_input_[0][2 * j + 1],
-          //       cpu_fp32_input_[1][index], 0);
-          //     cpu_fp32_output_[0][2 * index + 1] = imag_part(
-          //       cpu_fp32_input_[0][2 * j], cpu_fp32_input_[0][2 * j + 1],
-          //       cpu_fp32_input_[1][index], 0);
-          //   }
           }
         }
-        // printf("\n");
       }
     }
   // printf("\ncpu_result\n");
@@ -219,7 +194,7 @@ void ComplexMatrixDotVectorExecutor::cpuCompute() {
   //   }
   // printf("\n");
 
-  // for (int i = 0; i < length_; i++) {
+  // for (int i = 0; i < total_output; i++) {
   //   printf("%f %f ", cpu_fp32_output_[0][2*i], cpu_fp32_output_[0][2*i+1]);
   // }
 }

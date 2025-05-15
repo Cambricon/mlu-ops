@@ -28,4 +28,4 @@
 mluOpStatus_t MLUOP_WIN_API KernelComplexMatrixDotVector(const cnrtDim3_t k_dim,
                                          const cnrtFunctionType_t k_type,
                                          const cnrtQueue_t queue,
-                                         const void *input_vector, const void *input_matrix, void *output, int batch, int row_num, int col_num, int pad_num, bool row_major, bool real_input, bool large_col, int output_type);
+                                         const void *input_vector, const void *input_matrix, void *output, int batch, int row_num, int col_num, int pad_num, bool row_major, bool large_col, int inout_type);

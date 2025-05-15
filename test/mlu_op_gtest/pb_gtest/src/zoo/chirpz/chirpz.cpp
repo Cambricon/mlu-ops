@@ -28,9 +28,8 @@ void ChirpzExecutor::initData() {
   length_ = parser_->getProtoNode()->chirpz_param().length();
   n_ = parser_->getProtoNode()->chirpz_param().n();
   pad_n_ = parser_->getProtoNode()->chirpz_param().pad_n();
-  type_ = parser_->getProtoNode()->chirpz_param().type();
   chirpz_ = parser_->getProtoNode()->chirpz_param().chirpz();
-  VLOG(4) << length_ << " " << n_ << " " << chirpz_ << " " << type_;
+  VLOG(4) << length_ << " " << n_ << " " << chirpz_;
 }
 
 void ChirpzExecutor::paramCheck() {
@@ -47,7 +46,7 @@ void ChirpzExecutor::compute() {
 
   VLOG(4) << "call mluOpchirpz()";
   interface_timer_.start();
-  MLUOP_CHECK(mluOpChirpz(handle_, length_, n_, pad_n_,type_, chirpz_, tensor_y, dev_y));
+  MLUOP_CHECK(mluOpChirpz(handle_, length_, n_, pad_n_, chirpz_, tensor_y, dev_y));
   interface_timer_.stop();
 }
 
@@ -62,17 +61,17 @@ void ChirpzExecutor::cpuCompute() {
         // cpu_fp32_output_[0][2 * i] = M_PI * i * i / n_;
         // cpu_fp32_output_[0][2 * i + 1] = M_PI * i * i / n_;
         cpu_fp32_output_[0][2 * i] = cos(float(M_PI) * i * i / n_);
-        cpu_fp32_output_[0][2 * i + 1] = -type_ * sin(float(M_PI) * i * i / n_);
+        cpu_fp32_output_[0][2 * i + 1] = -1 * sin(float(M_PI) * i * i / n_);
       } else {
           cpu_fp32_output_[0][2 * i] = cos(float(M_PI) * i * i / n_);
-          cpu_fp32_output_[0][2 * i + 1] = type_ * sin(float(M_PI) * i * i / n_);
+          cpu_fp32_output_[0][2 * i + 1] = 1 * sin(float(M_PI) * i * i / n_);
       }
     }
     if(!chirpz_ && i >= pad_n_ - n_ + 1) {
         // printf("%d ", pad_n_ - i);
         cpu_fp32_output_[0][2 * i] =
             cos(float(M_PI) * (pad_n_ - i) * (pad_n_ - i) / n_);
-        cpu_fp32_output_[0][2 * i + 1] = type_ * sin(float(M_PI) * (pad_n_  - i) * (pad_n_ - i) / n_);
+        cpu_fp32_output_[0][2 * i + 1] = sin(float(M_PI) * (pad_n_  - i) * (pad_n_ - i) / n_);
     }
   }
 

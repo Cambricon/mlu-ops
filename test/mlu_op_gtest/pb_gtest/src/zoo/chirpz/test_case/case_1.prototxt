@@ -32,5 +32,4 @@ chirpz_param {
   n: 4093
   pad_n: 8192
   chirpz: false
-  type: 1
 }
