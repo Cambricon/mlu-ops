@@ -191,6 +191,11 @@ struct mluOpFFTStruct {
   mluOpDataType_t input_dtype;
   mluOpDataType_t output_dtype;
   mluOpDataType_t execution_dtype;
+  int PAD_N0;
+  int PAD_N1;
+  bool bluestein_column;
+  bool bluestein_row;
+  bool bluestein_fft;
   int idim;                  // the dimension size of input tensor
   int inembed[FFT_DIM_MAX];  // Pointer of size rank that indicates the storage
                              // dimensions of the input data in memory.
@@ -243,6 +248,10 @@ struct mluOpFFTStruct {
   void *idft_matrix;
   void *idft_matrix_2d;
   cnfftButterflyAddrs mlu_addrs;
+  void *bluestein_input;
+  void *bluestein_output;
+  void *bluestein_chirpz;
+  struct mluOpFFTStruct *bluestein_plan;
 };
 
 struct ParamNode {
@@ -368,6 +377,18 @@ mluOpStatus_t MLUOP_WIN_API kernelFFT1dButterflyR2C(cnrtDim3_t k_dim,
                                                     cnrtQueue_t queue,
                                                     mluOpFFTPlan_t fft_plan,
                                                     FFTFlag flag);
+
+mluOpStatus_t MLUOP_WIN_API KernelChirpz(const cnrtDim3_t k_dim,
+                                         const cnrtFunctionType_t k_type,
+                                         const cnrtQueue_t queue,
+                                         const int length, int n, int pad_n,
+                                         int type, bool chirpz, void *output);
+
+mluOpStatus_t MLUOP_WIN_API KernelComplexMatrixDotVector(
+    const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+    const cnrtQueue_t queue, const void *vector_input, const void *matrix_input,
+    void *output, int batch, int row_num, int col_num, int pad_num,
+    bool row_major, bool real_input, bool large_col, int type, int output_type);
 
 // Executes the 2D Butterfly FFT kernel for real input, inverse operation,
 // column-wise, with the specified dimensions, function type, queue, FFT plan,
