@@ -3,7 +3,7 @@ op_name: "complex_matrix_dot_vector"
 input {
   id: "vector_input"
   shape {
-    dims: 67
+    dims: 12885
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_COMPLEX_FLOAT
@@ -17,8 +17,7 @@ input {
 input {
   id: "matrix_input"
   shape {
-    dims: 2000
-    dims: 67
+    dims: 12885
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_COMPLEX_FLOAT
@@ -32,8 +31,7 @@ input {
 output {
   id: "output"
   shape: {
-    dims: 2000
-    dims: 256
+    dims: 14556
   }
   layout: LAYOUT_ARRAY
   dtype: DTYPE_COMPLEX_FLOAT
@@ -44,7 +42,7 @@ test_param: {
   baseline_device: CPU
 }
 complex_matrix_dot_vector_param {
-  pad_num: 256
+  pad_num: 14556
   row_major: true
   output_type: 0
 }

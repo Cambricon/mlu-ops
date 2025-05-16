@@ -234,12 +234,22 @@ __mlu_global__ void MLUKernelComplexMatrixDotVectorLargeColNumRowMajor(
     if(taskId == taskDim - 1) {
       num_per_core += rem;
     }
+    if(num_per_core == 0) {
+      return;
+    }
+
+    if(inout_type == 0) {
+      __gdramset(output_gdram, 2*num_per_core * pad_num, (float)0);
+    }
+
     int32_t repeat = num_per_core;
 
   // if line is too long
   int col_repeat = col_num / num_deal;
   int col_rem = col_num % num_deal;
   int actual_num_deal = 0;
+
+  int64_t in_gdram_offset = 0, out_gdram_offset = 0;
 
   for (int i = 0; i < col_repeat + 1; i++) {
     if(i == col_repeat) {
@@ -258,10 +268,26 @@ __mlu_global__ void MLUKernelComplexMatrixDotVectorLargeColNumRowMajor(
     __bang_transpose(nram_chirpz, nram_temp, actual_num_deal, 2);
 
     for (int k = 0; k < repeat; k++) {
-        int64_t in_gdram_offset =  i * num_deal + k * col_num;
-        __memcpy(nram_temp, matrix_input_gdram + 2 * in_gdram_offset,
-                 2 * actual_num_deal * sizeof(float),
-                 GDRAM2NRAM);
+      if(inout_type == 0) {
+        in_gdram_offset =  i * num_deal + k * col_num;
+      } else {
+        in_gdram_offset = i * num_deal + k * pad_num;
+      }
+      __memcpy(nram_temp,
+                 matrix_input_gdram  + 2 * in_gdram_offset,
+                 2 * actual_num_deal * sizeof(float), GDRAM2NRAM);
+        // } else {
+          
+        //   __memcpy(nram_temp, matrix_input_gdram + 2* in_gdram_offset,
+        //               2*num_deal * sizeof(float), GDRAM2NRAM,
+        //               2*num_deal * sizeof(float), 2*pad_num * sizeof(float),
+        //               actual_block_num-1);
+        // }
+
+        // int64_t in_gdram_offset =  i * num_deal + k * col_num;
+        // __memcpy(nram_temp, matrix_input_gdram + 2 * in_gdram_offset,
+        //          2 * actual_num_deal * sizeof(float),
+        //          GDRAM2NRAM);
         __bang_transpose(nram_input, nram_temp, actual_num_deal, 2);
 
         int64_t imag_offset = actual_num_deal;
@@ -271,7 +297,14 @@ __mlu_global__ void MLUKernelComplexMatrixDotVectorLargeColNumRowMajor(
           nram_output + imag_offset, 1, actual_num_deal);
         
         __bang_transpose(nram_output, nram_temp, 2, actual_num_deal);
-        __memcpy(output_gdram + 2 * in_gdram_offset, nram_output,
+
+        if(inout_type == 0) {
+          out_gdram_offset =  i * num_deal + k * pad_num;
+        } else {
+          out_gdram_offset = i * num_deal + k * col_num;
+        }
+
+        __memcpy(output_gdram + 2 * out_gdram_offset, nram_output,
                  2 * actual_num_deal * sizeof(float), NRAM2GDRAM);
     }
   }
@@ -380,11 +413,11 @@ mluOpStatus_t MLUOP_WIN_API KernelComplexMatrixDotVector(const cnrtDim3_t k_dim,
   const void *vector_input, const void *matrix_input, void *output, int batch, int row_num,  int col_num, int pad_num, bool row_major, bool large_col, int inout_type) {
   if(row_major) {
     if(large_col) {
-      VLOG(5) << "large col branch";
+      VLOG(5) << "large col branch row major";
       KERNEL_CHECK(MLUKernelComplexMatrixDotVectorLargeColNumRowMajor<<<k_dim, k_type, queue>>>(
         (float *)vector_input, (float *)matrix_input, (float *)output, batch, row_num, col_num, pad_num, row_major, inout_type));
     } else {
-      VLOG(5) << "small col branch";
+      VLOG(5) << "small col branch row major";
       KERNEL_CHECK(MLUKernelComplexMatrixDotVectorSmallColNumRowMajor<<<k_dim, k_type, queue>>>(
         (float *)vector_input, (float *)matrix_input, (float *)output, batch, row_num, col_num, pad_num, row_major, inout_type));
     }
