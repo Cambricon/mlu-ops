@@ -60,18 +60,18 @@ void ChirpzExecutor::cpuCompute() {
         // printf("%f ", M_PI * i * i / n_);
         // cpu_fp32_output_[0][2 * i] = M_PI * i * i / n_;
         // cpu_fp32_output_[0][2 * i + 1] = M_PI * i * i / n_;
-        cpu_fp32_output_[0][2 * i] = cos(float(M_PI) * i * i / n_);
-        cpu_fp32_output_[0][2 * i + 1] = -1 * sin(float(M_PI) * i * i / n_);
+        cpu_fp32_output_[0][2 * i] = cos(double(M_PI) * i * i / n_);
+        cpu_fp32_output_[0][2 * i + 1] = -1 * sin(double(M_PI) * i * i / n_);
       } else {
-          cpu_fp32_output_[0][2 * i] = cos(float(M_PI) * i * i / n_);
-          cpu_fp32_output_[0][2 * i + 1] = 1 * sin(float(M_PI) * i * i / n_);
+          cpu_fp32_output_[0][2 * i] = cos(double(M_PI) * i * i / n_);
+          cpu_fp32_output_[0][2 * i + 1] = 1 * sin(double(M_PI) * i * i / n_);
       }
     }
     if(!chirpz_ && i >= pad_n_ - n_ + 1) {
         // printf("%d ", pad_n_ - i);
         cpu_fp32_output_[0][2 * i] =
-            cos(float(M_PI) * (pad_n_ - i) * (pad_n_ - i) / n_);
-        cpu_fp32_output_[0][2 * i + 1] = sin(float(M_PI) * (pad_n_  - i) * (pad_n_ - i) / n_);
+            cos(double(M_PI) * (pad_n_ - i) * (pad_n_ - i) / n_);
+        cpu_fp32_output_[0][2 * i + 1] = sin(double(M_PI) * (pad_n_  - i) * (pad_n_ - i) / n_);
     }
   }
 
