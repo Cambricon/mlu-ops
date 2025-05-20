@@ -26,7 +26,6 @@
 #include "kernels/binary_op/binary_op_3pipeline.h"
 #include "kernels/debug.h"
 #include "kernels/unary_op/unary_op_3pipeline.h"
-#include "kernels/unary_op/unary_op_5pipeline.h"
 
 #define SQRT_HIGH_BOUND 1e4
 #define SQRT_SCALE 1e-6
@@ -82,7 +81,7 @@ __mlu_func__ void funcSqrtFast(float *nram_output, int *nram_input,
 __mlu_func__ void funcSqrtFast(bfloat16_t *nram_output, bfloat16_t *nram_input,
                                bfloat16_t *auxiliary_a, bfloat16_t *auxiliary_b,
                                size_t actual_num, size_t deal_num) {
-#if __BANG_ARCH__ >= 500
+#if __BANG_ARCH__ >= 592
   __bang_sqrt((bfloat16_t *)nram_output, (bfloat16_t *)nram_input, actual_num);
 #endif
 }
@@ -201,10 +200,8 @@ __mlu_func__ void computeSqrtBackwardHighAcc(
   // bit-up
   __bang_half2float(nram_fp_y, (DType_in1 *)nram_input1, deal_num);
   __bang_half2float(nram_fp_dy, (DType_in1 *)nram_input2, deal_num);
-#if __BANG_ARCH__ >= 300
+#if __BANG_ARCH__ >= 592
   __bang_recip(nram_fp_y, nram_fp_y, actual_num);
-#else
-  __bang_active_reciphp(nram_fp_y, nram_fp_y, deal_num);
 #endif
   __bang_mul_scalar(nram_fp_dy, nram_fp_dy, (float)0.5, deal_num);
   __bang_mul(nram_fp_y, nram_fp_y, nram_fp_dy, deal_num);
@@ -222,17 +219,10 @@ __mlu_func__ void computeSqrtBackwardFast(
     int8_t *auxiliary_a, int8_t *auxiliary_b, int8_t *auxiliary_c,
     size_t deal_num, size_t actual_num) {
 #if __BANG_ARCH__ != 520  // TODO(sram): tp_520
-#if __BANG_ARCH__ >= 300
+#if __BANG_ARCH__ >= 592
   __bang_mul_scalar((DType_in1 *)nram_input2, (DType_in1 *)nram_input2,
                     (DType_in1)0.5, deal_num);
   __bang_recip((DType_in1 *)nram_input1, (DType_in1 *)nram_input1, actual_num);
-  __bang_mul((DType_in1 *)nram_output, (DType_in1 *)nram_input2,
-             (DType_in1 *)nram_input1, deal_num);
-#else
-  __bang_mul_scalar((DType_in1 *)nram_input2, (DType_in1 *)nram_input2,
-                    (DType_in1)0.5, deal_num);
-  __bang_active_reciphp((DType_in1 *)nram_input1, (DType_in1 *)nram_input1,
-                        deal_num);
   __bang_mul((DType_in1 *)nram_output, (DType_in1 *)nram_input2,
              (DType_in1 *)nram_input1, deal_num);
 #endif
