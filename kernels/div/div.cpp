@@ -74,17 +74,10 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
   binaryOpPolicyFunc(handle, ALIGN_SIZE, &k_dim, &k_type, x_desc);
   size_t element_num = mluOpGetTensorElementNum(x_desc);
   VLOG(5) << "kernel Kernel5StagePipelineDiv.";
-  if (handle->arch == MLUOP_MLU370) {
-    CHECK_RETURN("mluOpDiv",
-                 Kernel3StagePipelineDiv(k_dim, k_type, handle->queue,
-                                         x_desc->getDtype(), prefer, (void *)x,
-                                         (void *)y, (void *)z, element_num));
-  } else {
-    CHECK_RETURN("mluOpDiv",
-                 Kernel5StagePipelineDiv(k_dim, k_type, handle->queue,
-                                         x_desc->getDtype(), prefer, (void *)x,
-                                         (void *)y, (void *)z, element_num));
-  }
+  CHECK_RETURN("mluOpDiv",
+                Kernel5StagePipelineDiv(k_dim, k_type, handle->queue,
+                                        x_desc->getDtype(), prefer, (void *)x,
+                                        (void *)y, (void *)z, element_num));
   GEN_CASE_END();
   return MLUOP_STATUS_SUCCESS;
 }

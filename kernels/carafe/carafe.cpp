@@ -34,7 +34,6 @@
 #include "core/type.h"
 #include "kernels/kernel.h"
 #include "kernels/tensor_stride_process/tensor_stride_process_host.h"
-#include "kernels/tensor_stride_process/tensor_stride_process_mlu.h"
 
 // 1.creat set destroy
 mluOpStatus_t MLUOP_WIN_API

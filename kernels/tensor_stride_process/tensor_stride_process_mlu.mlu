@@ -25,14 +25,6 @@
 
 #include "core/logging.h"
 
-template <typename T>
-__mlu_global__ void MLUUnionKernelTensorStrideIn(const void *input,
-                                                 mluop::TensorShape input_shape,
-                                                 void *output);
-
-template <typename T>
-__mlu_global__ void MLUUnionKernelTensorStrideOut(
-    const void *input, void *output, mluop::TensorShape output_shape);
 
 mluOpStatus_t MLUOP_WIN_API KernelTensorStrideIn(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,

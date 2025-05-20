@@ -23,31 +23,16 @@
 #ifndef KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_MLU_H_
 #define KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_MLU_H_
 
-#include "kernels/tensor_stride_process/tensor_stride_process_host.h"
+#include "tensor_stride_process_host.h"
+#include "mlu.h"
 
-#include <stdint.h>
-
-#include "mlu_op.h"
-#include "kernels/debug.h"
-#include "kernels/kernel.h"
-
-// template <typename T>
-// __mlu_global__ void MLUUnionKernelTensorStrideIn(const void *input,
-//                                                  mluop::TensorShape
-//                                                  input_shape, void *output);
-// template <typename T>
-// __mlu_global__ void MLUUnionKernelTensorStrideOut(const void *input,
-//                                                   void *output,
-//   mluop::TensorShape output_shape);
-
-mluOpStatus_t MLUOP_WIN_API KernelTensorStrideIn(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    const void *input, mluop::TensorShape input_shape, void *output,
-    mluOpDataType_t dtype);
-
-mluOpStatus_t MLUOP_WIN_API
-KernelTensorStrideOut(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
-                      cnrtQueue_t queue, const void *input, void *output,
-                      mluop::TensorShape output_shape, mluOpDataType_t dtype);
+template <typename T>
+__mlu_global__ void MLUUnionKernelTensorStrideIn(const void *input,
+                                                 mluop::TensorShape
+                                                 input_shape, void *output);
+template <typename T>
+__mlu_global__ void MLUUnionKernelTensorStrideOut(const void *input,
+                                                  void *output,
+  mluop::TensorShape output_shape);
 
 #endif  // KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_MLU_H_

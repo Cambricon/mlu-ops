@@ -24,11 +24,10 @@
 #ifndef KERNELS_UNARY_OP_UNARY_OP_STRIDE_3PIPELINE_H_
 #define KERNELS_UNARY_OP_UNARY_OP_STRIDE_3PIPELINE_H_
 
-#include "kernels/kernel.h"
+#include "kernels/debug.h"
 #include "kernels/utils/common.h"
 #include "kernels/tensor_stride_process/tensor_stride_process_common.h"
 #include "kernels/tensor_stride_process/tensor_stride_process_host.h"
-#include "kernels/tensor_stride_process/tensor_stride_process_mlu.h"
 
 #define ALIGN_NUM 64
 #define UNARY_NRAM_SIZE (MAX_NRAM_SIZE + REM_FOR_STACK - 148 * 1024)

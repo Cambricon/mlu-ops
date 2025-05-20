@@ -26,7 +26,6 @@
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 #include "kernels/unary_op/unary_op_3pipeline.h"
-#include "kernels/unary_op/unary_op_5pipeline.h"
 
 #define LOG_LOW_BOUND 1e-8
 #define LOG_SCALE 1e12
@@ -91,43 +90,11 @@ __mlu_func__ void computeLogHalf(int8_t *nram_output, int8_t *nram_input,
   __mluop_float2half((half *)nram_output, (float *)nram_output, deal_num);
 }
 
-template <typename DType_in, typename DType_out>
-__mlu_func__ void auxFunc5LogFloat(size_t &output_input_gap,
-                                   size_t &auxiliary_a_gap,
-                                   size_t &auxiliary_b_gap, size_t &num_deal,
-                                   size_t &align_num, float coef) {
-#if __BANG_ARCH__ != 520  // TODO(sram): tp_520
-  int sram_limit = (UNARY_SRAM_SIZE / sizeof(DType_in)) / 8;
-  num_deal = (UNARY_NRAM_SIZE / sizeof(DType_in)) / 2;
-  num_deal = num_deal < sram_limit ? num_deal : sram_limit;
-  num_deal = PAD_DOWN(num_deal, align_num);
-  output_input_gap = 0;
-#endif
-}
-
-template <typename DType_in, typename DType_out>
-__mlu_func__ void auxFunc5LogHalf(size_t &output_input_gap,
-                                  size_t &auxiliary_a_gap,
-                                  size_t &auxiliary_b_gap, size_t &num_deal,
-                                  size_t &align_num, float coef) {
-#if __BANG_ARCH__ != 520  // TODO(sram): tp_520
-  int sram_limit = (UNARY_SRAM_SIZE / sizeof(DType_in)) / 16;
-  num_deal = (UNARY_NRAM_SIZE / sizeof(DType_in)) / 4;
-  num_deal = num_deal < sram_limit ? num_deal : sram_limit;
-  num_deal = PAD_DOWN(num_deal, align_num);
-  // x - hf_x
-  output_input_gap = num_deal * sizeof(DType_in);
-  auxiliary_a_gap = 0;
-  auxiliary_b_gap = 0;
-#endif
-}
 
 // function tion implementation
 UNARY_OP_KERNEL_3PIPELINE_IMPLE(Log, Float);
 UNARY_OP_KERNEL_3PIPELINE_IMPLE(Log, Half);
 
-UNARY_OP_KERNEL_5PIPELINE_IMPLE(Log, Float);
-UNARY_OP_KERNEL_5PIPELINE_IMPLE(Log, Half);
 
 mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineLog(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
@@ -142,23 +109,6 @@ mluOpStatus_t MLUOP_WIN_API Kernel3StagePipelineLog(
     // half
     KERNEL_CHECK(
         MLUBlockKernel3StagePipelineLogHalf<half, half>
-        <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y, num, coef));
-  }
-  return MLUOP_STATUS_SUCCESS;
-}
-
-mluOpStatus_t MLUOP_WIN_API Kernel5StagePipelineLog(
-    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
-    mluOpDataType_t d_type, const mluOpComputationPreference_t prefer,
-    const void *x, void *y, size_t num, float coef) {
-  // launch kernel
-  if (d_type == mluOpDataType_t::MLUOP_DTYPE_FLOAT) {
-    KERNEL_CHECK(
-        MLUBlockKernel5StagePipelineLogFloat<float, float>
-        <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y, num, coef));
-  } else {
-    KERNEL_CHECK(
-        MLUBlockKernel5StagePipelineLogHalf<half, half>
         <<<k_dim, k_type, queue>>>((int8_t *)x, (int8_t *)y, num, coef));
   }
   return MLUOP_STATUS_SUCCESS;

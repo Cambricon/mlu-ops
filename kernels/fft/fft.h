@@ -32,7 +32,6 @@
 #include "core/type.h"
 #include "core/tool.h"
 #include "kernels/tensor_stride_process/tensor_stride_process_host.h"
-#include "kernels/tensor_stride_process/tensor_stride_process_mlu.h"
 #include "kernels/fft/common/fft_basic_ops.h"
 #include "kernels/fft/common/fft_common_kernels.h"
 #include "kernels/debug.h"
