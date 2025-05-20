@@ -71,4 +71,14 @@ mluOpStatus_t MLUOP_WIN_API
 mluOpContiguous(mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
                 const void *input, void *output);
 
+mluOpStatus_t MLUOP_WIN_API KernelTensorStrideIn(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    const void *input, mluop::TensorShape input_shape, void *output,
+    mluOpDataType_t dtype);
+
+mluOpStatus_t MLUOP_WIN_API
+KernelTensorStrideOut(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
+                      cnrtQueue_t queue, const void *input, void *output,
+                      mluop::TensorShape output_shape, mluOpDataType_t dtype);
+
 #endif  // KERNELS_TENSOR_STRIDE_PROCESS_TENSOR_STRIDE_PROCESS_HOST_H_

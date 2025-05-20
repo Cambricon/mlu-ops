@@ -26,7 +26,6 @@
 #include "kernels/binary_op/binary_op_3pipeline.h"
 #include "kernels/debug.h"
 #include "kernels/unary_op/unary_op_3pipeline.h"
-#include "kernels/unary_op/unary_op_5pipeline.h"
 
 #define SQRT_HIGH_BOUND 1e4
 #define SQRT_SCALE 1e-6
