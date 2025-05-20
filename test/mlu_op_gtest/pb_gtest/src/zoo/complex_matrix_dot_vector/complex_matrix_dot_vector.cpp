@@ -183,6 +183,17 @@ void ComplexMatrixDotVectorExecutor::cpuCompute() {
                   cpu_fp32_input_[1][2 * in_idx + 1]);
               // }
             }
+          } else {
+            int in_idx = k + j * col_num + i * row_num * col_num;
+            int ou_idx = k + j * col_num + i * row_num * col_num;
+
+            cpu_fp32_output_[0][2 * ou_idx] = real_part(
+              cpu_fp32_input_[0][2 * j], cpu_fp32_input_[0][2 * j + 1],
+              cpu_fp32_input_[1][2 * in_idx],
+              cpu_fp32_input_[1][2 * in_idx + 1]);
+            cpu_fp32_output_[0][2 * ou_idx + 1] = imag_part(
+                cpu_fp32_input_[0][2 * j], cpu_fp32_input_[0][2 * j + 1],
+                cpu_fp32_input_[1][2 * in_idx], cpu_fp32_input_[1][2 * in_idx + 1]);
           }
         }
       }

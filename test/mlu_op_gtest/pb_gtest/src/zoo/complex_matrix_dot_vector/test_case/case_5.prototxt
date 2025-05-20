@@ -46,7 +46,7 @@ test_param: {
   baseline_device: CPU
 }
 complex_matrix_dot_vector_param {
-  pad_num: 112228
-  row_major: true
+  pad_num: 30
+  row_major: false
   output_type: 0
 }

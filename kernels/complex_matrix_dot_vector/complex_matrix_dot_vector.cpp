@@ -48,19 +48,20 @@ static void policyFunc(const mluOpHandle_t &handle,
     } else {
       *large_col = true;
     }
+    // *large_col = true;
   }
   VLOG(5) << "if large col: " << *large_col << " col_num: " << col_num
           << "num_deal: " << num_deal;
-  *k_type = cnrtFuncTypeBlock;
-  k_dim->x = 1;
-  k_dim->y = 1;
-  k_dim->z = 1;
-
-
-  // *k_type = cnrtFuncTypeUnion1;
-  // k_dim->x = handle->core_num_per_cluster;
-  // k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
+  // *k_type = cnrtFuncTypeBlock;
+  // k_dim->x = 1;
+  // k_dim->y = 1;
   // k_dim->z = 1;
+
+
+  *k_type = cnrtFuncTypeUnion1;
+  k_dim->x = handle->core_num_per_cluster;
+  k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
+  k_dim->z = 1;
 }
 
 mluOpStatus_t MLUOP_WIN_API

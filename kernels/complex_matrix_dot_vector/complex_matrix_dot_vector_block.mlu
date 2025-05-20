@@ -66,12 +66,15 @@ __mlu_global__ void MLUKernelComplexMatrixDotVectorLargeColNumColMajor(
   float *vector_input, float *matrix_input, float *output, int batch, 
   int row_num, int col_num, int pad_num, bool row_major, int inout_type) {
 
+    if(taskId == 0 && row_num != pad_num) { //pad row_num
+      __gdramset(output, 2 * batch * pad_num * col_num, (float)0);
+    }
+    __sync_all();
+
     // |-----temp no pipeline first-|
     // |input_x|output_x|temp|chirpZ|
 
-    const int32_t num_deal = PAD_DOWN(MAX_NRAM_SIZE/sizeof(float)/6, ALIGN_DEAL_NUM);
-
-    // const int32_t num_deal = 10;
+    const int32_t num_deal = MAX_NRAM_SIZE / (6 * sizeof(float));
 
     float *nram_input = (float *)nram_buffer;
     float *nram_output = nram_input + 2*num_deal;
@@ -136,6 +139,12 @@ __mlu_global__ void MLUKernelComplexMatrixDotVectorLargeColNumColMajor(
 __mlu_global__ void MLUKernelComplexMatrixDotVectorSmallColNumColMajor(
   float *vector_input, float *matrix_input, float *output, int batch, int row_num, 
   int col_num, int pad_num, bool row_major, int inout_type)  {
+
+    if(taskId == 0 && row_num != pad_num) { //pad row_num
+      __gdramset(output, batch * pad_num * col_num * 2, (float)0);
+    }
+    __sync_all();
+
     // |-----ping-------|-------pong-----|-----------|
     // |input_x|output_x|input_x|output_x|temp|chirpZ|
 
