@@ -943,6 +943,8 @@ static void configureFFT1dWorkspaceAddrs(mluOpHandle_t handle,
   int batch = fft_plan->batch;
   int nfft = fft_plan->n[0];
 
+  VLOG(5) << "batch " << batch << "nfft " << nfft;
+
   size_t buffer_size = batch * in_c_dtype_size * nfft;
 
   size_t offset = 0;
@@ -1812,6 +1814,9 @@ mluOpStatus_t execFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
                         void *workspace, void *output, const int direction) {
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
   std::string api = "[mluOpExecFFT]";
+
+  VLOG(5) << "direction " << direction;
+  VLOG(5) << "execFFT1d fft_plan->prime " << fft_plan->prime;
 
   if (fft_plan->prime) {
     configureFFT1dMatmulWorkspaceAddrs(handle, fft_plan, (void *)input,

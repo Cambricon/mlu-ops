@@ -82,6 +82,11 @@ __mlu_func__ void computeLargeButterflyFirststageBatchPingpong(
 
   input += t_start * (nfft << 1);
   output += t_start * (nfft << 1);
+  // __bang_printf("\ninput nfft<<1 %d t_start: %d large_radix: %d section_num: %d\n", (nfft << 1),
+  //               t_start, large_radix, section_num);
+  // for(int k = 0; k < 2*large_radix; k++) {
+  //     __bang_printf("%f ", ((float*)input)[k]);
+  // }
 
   for (int sec_id = 0; sec_id < section_num; sec_id += max_para_ldst_num) {
     DT *output_batch = output;
@@ -303,6 +308,11 @@ __mlu_func__ void computeLargeButterflyFirststageBatchPingpong(
       FFT_SWAP_PTR(nram_para_store_ping, nram_para_store_pong)
     }
   }
+  __bang_printf("\n\noutput\n");
+  for (int k = 0; k < 2*large_radix; k++) {
+      __bang_printf("%f ", ((float*)output)[k]);
+  }
+  __bang_printf("\n\n");
 }
 
 // Compute the large butterfly for the last stage of the FFT

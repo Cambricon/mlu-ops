@@ -1,0 +1,248 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "complex_matrix_dot_vector.h"
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+
+#define ALIGN_NUM 64
+// #include "kernels/unary_op/unary_op_3pipeline.h"
+// #include "kernels/unary_op/unary_op_5pipeline.h"
+
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
+
+__mlu_global__ void MLUKernelComplexMatrixDotVector(
+  float *vector_input, float *matrix_input, float *output, int batch, int row_num, int col_num, int pad_num, bool row_major, bool real_input) {
+
+    // __bang_printf("test---------\n");
+
+    // |-----ping-------|-------pong-----|-----------|
+    // |input_x|output_x|input_x|output_x|temp|chirpZ|
+
+    // |input_x|output_x|temp|chirpZ|
+
+    // complex data 4: no ping pong first
+    // const int32_t num_deal =
+    //     PAD_DOWN(MAX_NRAM_SIZE / 4 / 2 * sizeof(float), ALIGN_NUM);
+    // const int32_t num_deal = 512;
+
+    const int32_t num_deal = 10;
+    float *nram_input = (float *)nram_buffer;
+    float *nram_output = nram_input + 2*num_deal;
+    float *nram_temp = nram_output + 2*num_deal;
+    float *nram_chirpz = nram_temp + 2*num_deal;
+
+    int64_t num_per_core = batch * row_num / taskDim;
+    const int64_t core_offset = taskId * num_per_core * col_num;
+
+    float *matrix_input_gdram = nullptr;
+    if (real_input) {
+        matrix_input_gdram = matrix_input + core_offset;
+    } else {
+      matrix_input_gdram = matrix_input + core_offset * 2;
+    }
+  float *vector_input_gdram = vector_input;
+  float *output_gdram = output + core_offset * 2;
+  const int64_t rem = (batch * row_num) % taskDim;
+  __bang_printf("test------------\n");
+  __bang_printf("num_per_core, rem: %d %d\n", num_per_core, rem);
+  // if (taskId == taskDim - 1) {
+  //     if(num_per_core + rem > 0) {
+  //       __gdramset(output_gdram, (num_per_core + rem) * 2 * pad_num, (float)0);
+  //     } else {
+  //         return;
+  //     }
+  // } else {
+  //     if(num_per_core > 0) {
+  //         __gdramset(output_gdram, num_per_core * 2 * pad_num, (float)0);
+  //     } else {
+  //         return;
+  //     }
+  // }
+  __bang_printf("test2------------\n");
+  int repeat = 0;
+  // if line is too long
+  int col_repeat = 0;
+  int block_num = 0;
+  if (col_num < num_deal) {
+      col_repeat = 0;
+      block_num = num_deal / col_num;
+  } else {
+      col_repeat = col_num / num_deal;
+      block_num = 1;
+  }
+  __bang_printf("taskId, col_repeat, block_num, col_num, num_deal:%d %d %d %d %d\n", taskId,
+                col_repeat, block_num, col_num, num_deal);
+  if (col_repeat >= 1) {
+      repeat = num_per_core - 1;
+      // col_repeat*batch*row_num
+  }
+  else {
+      // n num_deal one time, num_per_core/n repeat
+      if(num_per_core <= block_num) {
+          repeat = 0;
+      } else {
+        repeat = num_per_core / block_num;
+      }
+  }
+
+  int actual_num_deal = 0;
+  int actual_block_num = 0;
+  for (int i = 0; i < col_repeat + 1; i++) {
+    if(i == col_repeat)
+    {
+      actual_num_deal = col_num - i * num_deal;
+    } else {
+      actual_num_deal = num_deal;
+    }
+
+    // __bang_printf("num_deal, actual_num_deal, i: %d %d %d\n", num_deal,
+    //               actual_num_deal, i);
+    __bang_write_value(nram_input, 8 * num_deal, (float)0);
+    __memcpy(nram_temp, vector_input_gdram + 2 * i * num_deal,
+             actual_num_deal * 2 * sizeof(float), GDRAM2NRAM);
+    __bang_transpose(nram_chirpz, nram_temp, actual_num_deal, 2);
+    // __bang_printf("vector chirpz\n");
+    // for (int j = 0; j < actual_num_deal; j++) {
+    //     __bang_printf("%f %f ", nram_chirpz[j],
+    //                   nram_chirpz[j + actual_num_deal]);
+    // }
+    // __bang_printf("\ntest---------repeat: %d\n", repeat);
+    for (int k = 0; k < repeat + 1; k++)
+    {
+      if(k == repeat) {
+        if (taskId == taskDim - 1) {
+          num_per_core += rem;
+        }  
+        actual_block_num = num_per_core - k * block_num;
+      } else {
+        actual_block_num = block_num;
+      }
+      __bang_printf("num_deal, actual_num_deal, i: %d %d %d\n", num_deal,
+        actual_num_deal, i);
+      __bang_printf("block_num, actual_block_num, k: %d %d %d\n", block_num,
+        actual_block_num, k);
+      __bang_write_value(nram_input, 2 * actual_block_num * actual_num_deal, (float)0);
+      int64_t gdram_offset = i * num_deal + k * block_num * actual_num_deal;
+      if (real_input) {
+          // i 拆col_num, k 
+          __memcpy(nram_input,
+                   matrix_input_gdram + gdram_offset,
+                   actual_block_num * actual_num_deal * sizeof(float),
+                   GDRAM2NRAM);
+          __bang_printf("offset: %d \n\n",
+            i * num_deal +
+            k * block_num * actual_num_deal + k*col_num);
+      } else {
+          __memcpy(nram_temp,
+                   matrix_input_gdram  + 2 * gdram_offset,
+                   2 * actual_block_num * actual_num_deal * sizeof(float), GDRAM2NRAM);
+          __bang_transpose(nram_input, nram_temp, actual_block_num * actual_num_deal,
+                           2);
+      }
+
+      // __bang_printf("vector matrix\n");
+      // for (int j = 0; j < actual_block_num * actual_num_deal;j++) {
+      //     __bang_printf("%f %f ", nram_input[j], nram_input[j + actual_block_num * actual_num_deal]);
+      // }
+      // __bang_printf("\n");
+      // __bang_printf("vector chirpz\n");
+      // for (int j = 0; j < actual_num_deal; j++) {
+      //   __bang_printf("%f %f ", nram_chirpz[j],
+      //                 nram_chirpz[j + actual_num_deal]);
+      // }
+      // __bang_printf("\n");
+
+      int64_t imag_offset = actual_num_deal;
+      int64_t block_imag_offset = actual_block_num * actual_num_deal;
+      // real_part ac - bd
+      // __bang_printf("imag_offset, block_imag_offset: %d %d\n", imag_offset,
+      //               block_imag_offset);
+      __bang_cycle_mul(nram_output, nram_input, nram_chirpz,
+                       actual_block_num * actual_num_deal, actual_num_deal);
+      // for (int j = 0; j < actual_block_num * actual_num_deal;j++) {
+      //     __bang_printf("%f %f %f %f\n", nram_input[j], nram_chirpz[j], nram_input[j]*nram_chirpz[j], nram_output[j]);
+      // }
+      // __bang_printf("\n");
+
+      __bang_cycle_mul(nram_output + block_imag_offset, nram_input + block_imag_offset, nram_chirpz + imag_offset,
+                       actual_block_num * actual_num_deal, actual_num_deal);
+      
+
+      __bang_sub(nram_output, nram_output, nram_output + block_imag_offset, actual_block_num * actual_num_deal);
+
+      // __bang_printf("\nreal part\n");
+      // for (int j = 0; j < actual_block_num * actual_num_deal; j++) {
+      //     __bang_printf("%f ", nram_output[j]);
+      // }
+      // __bang_printf("\n");
+    
+      // imag_part ad + bc
+      __bang_cycle_mul(nram_temp, nram_input, nram_chirpz + imag_offset,
+        actual_block_num * actual_num_deal, actual_num_deal);
+      // for (int j = 0; j < actual_block_num * actual_num_deal;j++) {
+      //     int idx_chirpz = j + actual_block_num * actual_num_deal;
+      //     __bang_printf("%f %f %f %f\n", nram_input[j], nram_chirpz[idx_chirpz],
+      //                   nram_input[j] * nram_chirpz[idx_chirpz], nram_temp[j]);
+      // }
+      // __bang_printf("\n");
+
+      __bang_cycle_mul(nram_temp + block_imag_offset, nram_input + block_imag_offset, nram_chirpz,
+              actual_block_num * actual_num_deal, actual_num_deal);
+
+      __bang_add(nram_temp, nram_temp, nram_temp + block_imag_offset, actual_block_num * actual_num_deal);
+      // __bang_printf("\nimag part\n");
+      // for (int j = 0; j < actual_block_num * actual_num_deal;j++) {
+      //   __bang_printf("%f ", nram_temp[j]);
+      // }
+      // __bang_printf("\n");
+      
+      __bang_transpose(nram_input, nram_output, 2, 2*num_deal);
+
+      // __bang_printf("output_nram num: %d \n", 2*actual_block_num * actual_num_deal);
+      // for (int j = 0; j < 2*actual_block_num * actual_num_deal;j++) {
+      //   __bang_printf("%f ", nram_input[j]);
+      // }
+
+      __memcpy(output_gdram + 2 * gdram_offset,
+            nram_input,
+        2 * actual_block_num * actual_num_deal * sizeof(float), NRAM2GDRAM);
+      // __bang_printf("output_gdram num: %d \n", 2*actual_block_num * actual_num_deal);
+      // for (int j = 0; j < 2*actual_block_num * actual_num_deal;j++) {
+      //   __bang_printf("%f ", (output_gdram + 2 * i * num_deal +
+      //     2 * k * block_num * actual_num_deal)[j]);
+      // }
+    }
+  }
+  // __bang_printf("test\n");
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelComplexMatrixDotVector(const cnrtDim3_t k_dim,
+  const cnrtFunctionType_t k_type,
+  const cnrtQueue_t queue,
+  const void *vector_input, const void *matrix_input, void *output, int batch, int row_num,  int col_num, int pad_num, bool row_major, bool real_input) {
+      KERNEL_CHECK(MLUKernelComplexMatrixDotVector<<<k_dim, k_type, queue>>>(
+          (float *)vector_input, (float *)matrix_input, (float *)output, batch, row_num, col_num, pad_num, row_major, real_input));
+    return MLUOP_STATUS_SUCCESS;
+}
