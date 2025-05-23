@@ -28,7 +28,7 @@
  ******************************************************************************/
 
 #define MLUOP_MAJOR 1
-#define MLUOP_MINOR 6
+#define MLUOP_MINOR 7
 #define MLUOP_PATCHLEVEL 0
 /*********************************************************************************
  * MLUOP_VERSION is deprecated and not recommended. To get the version of MLUOP, use
