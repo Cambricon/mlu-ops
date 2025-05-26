@@ -556,11 +556,10 @@ __mlu_func__ void backwardStageTwoLoopAlgo2(
         __memcpy_async(wram_buffer + wram_offset_0, buffer, buffer_size_pad,
                        NRAM2WRAM);
         __sync_move();
-        // inter_grad (qlpc) <= grad_out (qlpc) * weight_attn (qlp)
+        // inter_grad (qlpc) <= grad_out (buffer)(qlpc) * weight_attn (qlp)
         __bang_expand_channel_mul((T *)inter_grad, (T *)weight_attn_nram,
-                                  (T *)wram_buffer,
-            (T *)buffer,
-            nq_nl_np, channels);
+                                  (T *)wram_buffer, (T *)buffer, nq_nl_np,
+                                  channels);
         __sync_compute();
       }
 
@@ -577,12 +576,8 @@ __mlu_func__ void backwardStageTwoLoopAlgo2(
         // value_wp (qlpc) <= tmp_wp (1,qlp,1,1) x ones (c,1,1,1) *
         //                    value (v_pong) (qlpc) + value_wp (qlpc)
         __bang_expand_channel_mul_add(
-            (float *)value_wp,
-            (float *)tmp_wp,
-            (float *)wram_buffer,
-            (float *)v_pong,
-            (float *)value_wp,
-            nq_nl_np, channels);
+            (float *)value_wp, (float *)tmp_wp, (float *)wram_buffer,
+            (float *)v_pong, (float *)value_wp, nq_nl_np, channels);
         // tmp_c (qlpc) => WRAM, qlp should expand to 64(LT)-align
         /* NRAM2WRAM memcpy param:
             希望在WRAM摆下 filter (qlp,1,1,c)
@@ -683,9 +678,7 @@ __mlu_func__ void backwardStageTwoLoopAlgo2(
       __bang_expand_channel_mul(
           (float *)grad_value_buffer + k * buffer_data_num,
           (float *)weight_polation_nram + neighbor_idx * nq_nl_np,
-          (float *)wram_buffer,
-          (float *)inter_grad,
-          nq_nl_np, channels);
+          (float *)wram_buffer, (float *)inter_grad, nq_nl_np, channels);
     }
 
     // store all valid point
