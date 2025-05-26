@@ -1829,8 +1829,8 @@ mluOpStatus_t execFFTc2c1d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   if (!fft_plan->bluestein_fft) {
     policyFunc(handle, &k_dim, &k_type);
     if (!fft_plan->is_batch_contiguous) {
-      CHECK_RETURN(
-          api, (k_dim, k_type, handle->queue, fft_plan, direction, FFT_IFFT));
+      CHECK_RETURN(api, kernelFFT1dButterflyRow(k_dim, k_type, handle->queue,
+                                                fft_plan, direction, FFT_IFFT));
     } else {
       CHECK_RETURN(api,
                    kernelFFT1dButterflyColumn(k_dim, k_type, handle->queue,
