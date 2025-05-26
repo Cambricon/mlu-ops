@@ -218,14 +218,12 @@ __mlu_func__ void computeSqrtBackwardFast(
     int8_t *nram_output, int8_t *nram_input1, int8_t *nram_input2,
     int8_t *auxiliary_a, int8_t *auxiliary_b, int8_t *auxiliary_c,
     size_t deal_num, size_t actual_num) {
-#if __BANG_ARCH__ != 520  // TODO(sram): tp_520
 #if __BANG_ARCH__ >= 592
   __bang_mul_scalar((DType_in1 *)nram_input2, (DType_in1 *)nram_input2,
                     (DType_in1)0.5, deal_num);
   __bang_recip((DType_in1 *)nram_input1, (DType_in1 *)nram_input1, actual_num);
   __bang_mul((DType_in1 *)nram_output, (DType_in1 *)nram_input2,
              (DType_in1 *)nram_input1, deal_num);
-#endif
 #endif
 }
 
