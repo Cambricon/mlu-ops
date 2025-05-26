@@ -1016,15 +1016,19 @@ __mlu_func__ void forwardStageTwoLoop(
     const int32_t output_stride_2, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels,
     const int32_t num_points) {
+  __bang_write_value(value_ping_nram, 64, (T)0);
+  __bang_write_value(value_ping_nram, 1, (T)1);
+  __memcpy(wram_buffer, value_ping_nram, 64 * sizeof(T), NRAM2WRAM,
+           MAX_WRAM_SIZE / 64, 0, 63);
   int32_t loop_num = (total_deal_n + max_deal_n - 1) / max_deal_n;
   int32_t num_levels_points = num_levels * num_points;
   int32_t sram_src_stride = total_deal_n * num_levels_points * sizeof(T);
   T* value_nram[2] = {value_ping_nram, value_pong_nram};
   int32_t* offset_zero_nram_stg2 =
       offset_nram_stg2 + 4 * max_deal_n * num_levels_points;
-  for (int32_t i = 0; i < loop_num + 1; i++) {
+  for (int32_t i = 0; i < loop_num + 2; i++) {
     int32_t compute_idx = i - 1;
-    int32_t compute_offset = compute_idx * max_deal_n;
+    // int32_t compute_offset = compute_idx * max_deal_n;
     int32_t load_n = std::min(total_deal_n - i * max_deal_n, max_deal_n);
     int32_t compute_n =
         std::min(total_deal_n - compute_idx * max_deal_n, max_deal_n);
@@ -1038,7 +1042,7 @@ __mlu_func__ void forwardStageTwoLoop(
     T* v_load = value_nram[i % 2];
     int8_t* cond_nram_stg2_reverse = (int8_t*)cond_nram_stg2 + gather_mask_size;
 
-    if (i > 0) {
+    if (i > 0 && i < loop_num + 1) {
       int32_t copy_size_1 = compute_n * num_levels_points * sizeof(T);
       int32_t sram_src_offset = compute_idx * max_deal_n * num_levels_points;
       __memcpy_async(weight_polation_nram_stg2,
@@ -1067,16 +1071,46 @@ __mlu_func__ void forwardStageTwoLoop(
 
     __sync_io_move_compute();
 
+    if (i > 1) {
+      int32_t output_idx = i - 2;
+      int32_t output_offset = output_idx * max_deal_n;
+      int32_t output_n =
+          std::min(total_deal_n - output_idx * max_deal_n, max_deal_n);
+      __memcpy_async(output_gdram + output_offset * output_stride_2, v_load,
+          channels * sizeof(T), NRAM2GDRAM, output_stride_2 * sizeof(T),
+          channels * sizeof(T), output_n - 1);
+      asm volatile("sync.pio.cmv;\n\t");
+    }
+
     if (i < loop_num) {
       gatherAsync<T>(v_load, zeros_nram, (unsigned int*)offset_zero_nram_stg2,
                      cond_nram_stg2_reverse, channels * sizeof(T), NRAM2NRAM,
                      channels * sizeof(T), load_point_num);
+#if __BANG_ARCH__ <= 592
+      __bang_gather_async(
+          v_load, data_value_gdram, (unsigned int*)offset_nram_stg2,
+          cond_nram_stg2, channels * sizeof(T), channels * sizeof(T),
+          load_point_num);
+#else
       gatherAsync<T>(v_load, data_value_gdram, (unsigned int*)offset_nram_stg2,
                      cond_nram_stg2, channels * sizeof(T), GDRAM2NRAM,
                      channels * sizeof(T), load_point_num);
+#endif
     }
 
-    if (i > 0) {
+    if (i > 0 && i < loop_num + 1) {
+#if __BANG_ARCH__ <= 592
+      __bang_cycle_mul(weight_polation_nram_stg2, weight_polation_nram_stg2,
+                       weight_attn_nram_stg2, nq_nlp_4, nq_nlp);
+      __bang_expand_channel_mul(
+          (float*)v_compute, (float*)weight_polation_nram_stg2,
+          (float*)wram_buffer, (float*)v_compute,
+          compute_n * 4 * num_levels_points, channels);
+      __bang_sumpool(compute_buffer_nram, v_compute,
+          nq_nlp * channels, 1, 4, 1, 4, 1, 1);
+      __bang_sumpool(v_compute, compute_buffer_nram, channels, compute_n,
+                     num_levels_points, 1, num_levels_points, 1, 1);
+#else
       __bang_transpose(compute_buffer_nram, v_compute, nq_nlp_4, channels);
       __bang_cycle_mul(compute_buffer_nram, compute_buffer_nram,
                        weight_polation_nram_stg2, channels * nq_nlp_4,
@@ -1088,9 +1122,7 @@ __mlu_func__ void forwardStageTwoLoop(
       __bang_transpose(compute_buffer_nram, v_compute, channels, nq_nlp);
       __bang_sumpool(v_compute, compute_buffer_nram, channels, compute_n,
                      num_levels_points, 1, num_levels_points, 1, 1);
-      __memcpy(output_gdram + compute_offset * output_stride_2, v_compute,
-               channels * sizeof(T), NRAM2GDRAM, output_stride_2 * sizeof(T),
-               channels * sizeof(T), compute_n - 1);
+#endif
     }
     __sync_io_move_compute();
   }
