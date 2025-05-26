@@ -133,7 +133,7 @@ $$
 $$
 \begin{aligned}
 w[n] &= e^{-j\frac{\pi}{N}n^2} (chrizp 信号) \\
-h[n] &= e^{j\frac{\pi}{N}n^2} (辅助信号)
+h[n] &= e^{j\frac{\pi}{N}(k-n)^2} (辅助信号)
 \end{aligned}
 $$
 
@@ -157,7 +157,7 @@ $$
 $$
 h[n] = 
 \begin{aligned} 
-e^{j\frac{\pi}{N}n^2}, & 0 \leq n < N \\
+e^{j\frac{\pi}{N}(k-n)^2}, & 0 \leq n < N \\
 \end{aligned}
 $$
 
