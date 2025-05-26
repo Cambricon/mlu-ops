@@ -95,7 +95,7 @@ v1.7.0
 
    * ``fft``
 
-     + fft1d、ifft1d、fft2d、iff2d float数据类型限制规模解除。
+     + fft1d、ifft1d、fft2d、iff2d 部分场景解除规模限制。
 
 已修复问题
 ~~~~~~~~~~~~~~~~~~~~~
