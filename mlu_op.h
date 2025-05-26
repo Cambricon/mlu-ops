@@ -14418,11 +14418,11 @@ mluOpSetFFTReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan, void *rese
  * - None.
  *
  * @par Scale Limitation
- * - For float data types, real-to-complex FFT and complex-to-real FFT supports any combination of
- * powers of i (i from 2 to 64), as well as \f$2^mL\f$ while complex-to-complex FFT supports any size.
+ * - For float data types, real-to-complex FFT and complex-to-real FFT support any combination of
+ * powers of i (i from 2 to 64), as well as \f$2^mL\f$, while complex-to-complex FFT supports any size.
  * This means that for float data types, real-to-complex FFT and complex-to-real FFT can handle a wide
  * range of sizes, allowing flexibility in choosing the dimensions of the input data. The values of i
- * can be any integer from 2 to 64, enabling combinations such as 4, 8, 16, etc., as well as sizes that
+ * can be any integer from 2 to 64, enabling combinations such as 4, 8, 16, as well as sizes that
  * are a product of a power of 2 and an additional integer L.
  *
  * - For half data types, FFT support is more limited. It only supports sizes of 2^m, where m is an integer. This
