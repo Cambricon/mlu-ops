@@ -1,0 +1,107 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "chirpz.h"
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+
+#define ALIGN_NUM 64
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
+
+
+__mlu_global__ void MLUKernelChirpz(const int length, int n, int pad_n, int type, bool chirpz,
+                                 float *output) {
+
+  if(taskId == 0) {
+    __gdramset(output, 2 * pad_n, (float)0);
+  }
+  
+  const int32_t num_deal =
+      PAD_DOWN(MAX_NRAM_SIZE / 4 / sizeof(float), ALIGN_NUM);
+  float *nram_index = (float *)nram_buffer;
+  float *nram_temp = nram_index + num_deal;
+  float *nram_temp2 = nram_temp + num_deal;
+
+  int num_per_core = length / taskDim;
+  const int core_offset = taskId*num_per_core*2;
+
+  float *output_gdram = output + core_offset;
+  const int rem = length % taskDim;
+  int total_count = num_per_core;
+  if (taskId == taskDim - 1) {
+      total_count += rem;
+  }
+  if(total_count == 0) {
+    return;
+  }
+  int repeat = total_count / num_deal;
+  int repeat_rem = total_count % num_deal;
+
+  int real_length = 0;
+  for (int i = 0; i < repeat+1; i++) {
+    int start = taskId * num_per_core + i*num_deal;
+    if(i == repeat){
+      if (repeat_rem > 0) {
+          real_length = total_count - repeat *num_deal;
+      } else {
+          return;
+      }
+    } else {
+      real_length = num_deal;
+    }
+
+    __bang_write_value(nram_index, 4*num_deal, (float)0);
+    __mluop_get_indices(nram_index, start, real_length);
+
+    if(!chirpz){
+      __bang_write_value(nram_temp, real_length, (float)n);
+      __bang_sub(nram_index, nram_index, nram_temp, real_length);
+    }
+    __bang_square(nram_index, nram_index, real_length);
+    __bang_mul_scalar(nram_index, nram_index, M_PI, real_length);
+    __bang_write_value(nram_temp, real_length, (float)n);
+    __cn_vector_div_f32_rn(real_length, nram_temp, nram_index, nram_temp);
+    __bang_move(nram_index, nram_temp, real_length*sizeof(float));
+    __cn_vector_cos_f32(real_length, nram_index, nram_index);
+    __cn_vector_sin_f32(real_length, nram_temp, nram_temp);
+    if(!chirpz){
+      __bang_mul_scalar(nram_temp, nram_temp, (float)type, real_length);
+    } else {
+      __bang_mul_scalar(nram_temp, nram_temp, (float)-type, real_length);
+    }
+
+    __bang_transpose(nram_temp2, nram_index, 2, num_deal);
+
+    __memcpy(output_gdram + i* num_deal*2, nram_temp2, 2*real_length*sizeof(float), NRAM2GDRAM);
+  }
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelChirpz(
+    const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+    const cnrtQueue_t queue, const int length, int n, int pad_n,
+    int type,  bool chirpz, void *output) {
+      KERNEL_CHECK(MLUKernelChirpz<<<k_dim, k_type, queue>>>(
+          length, n, pad_n, type, chirpz, (float *)output));
+    return MLUOP_STATUS_SUCCESS;
+}

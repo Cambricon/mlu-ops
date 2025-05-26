@@ -56,10 +56,11 @@ __mlu_global__ void MLUKernelFFT1dButterflyColumn(
 mluOpStatus_t MLUOP_WIN_API kernelFFT2dButterflyColumn(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpFFTPlan_t fft_plan, const int direction, FFTFlag flag) {
-  VLOG(5) << "Launch Kernel kernelFFT1dButterflyRow <<Union"
+  VLOG(5) << "Launch Kernel kernelFFT2dButterflyColumn <<Union"
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
   if (direction == FFT_FORWARD) {
+    VLOG(5) << "fft_plan->n[1] " << fft_plan->n[1];
     KERNEL_CHECK((MLUKernelFFT1dButterflyColumn<<<k_dim, k_type, queue>>>(
         fft_plan->mlu_addrs.output, fft_plan->mlu_addrs.output,
         fft_plan->mlu_addrs.factors_2d, fft_plan->mlu_addrs.twiddles_2d,
@@ -88,6 +89,7 @@ mluOpStatus_t MLUOP_WIN_API kernelFFT1dButterflyColumn(
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
   if (direction == FFT_FORWARD) {
+    VLOG(5) << "kernelFFT1dButterflyColumn forward fft";
     KERNEL_CHECK((MLUKernelFFT1dButterflyColumn<<<k_dim, k_type, queue>>>(
         fft_plan->mlu_addrs.input, fft_plan->mlu_addrs.output,
         fft_plan->mlu_addrs.factors, fft_plan->mlu_addrs.twiddles,
@@ -96,6 +98,7 @@ mluOpStatus_t MLUOP_WIN_API kernelFFT1dButterflyColumn(
         direction,  // direction, -1 means invalid(only FFT_IFFT use).
         fft_plan->output_dtype, fft_plan->istride)));
   } else {
+    VLOG(5) << "COLUMN BACKWARD";
     KERNEL_CHECK((MLUKernelFFT1dButterflyColumn<<<k_dim, k_type, queue>>>(
         fft_plan->mlu_addrs.input, fft_plan->mlu_addrs.output,
         fft_plan->mlu_addrs.factors, fft_plan->mlu_addrs.twiddles_inv,
@@ -150,6 +153,7 @@ mluOpStatus_t MLUOP_WIN_API kernelFFT1dButterflyRow(
         direction,  // direction, -1 means invalid(only FFT_IFFT use).
         fft_plan->output_dtype)));
   } else {
+    VLOG(5) << "MLUKernelFFT1dButterflyRow BACKWARD";
     KERNEL_CHECK((MLUKernelFFT1dButterflyRow<<<k_dim, k_type, queue>>>(
         fft_plan->mlu_addrs.input, fft_plan->mlu_addrs.output,
         fft_plan->mlu_addrs.factors, fft_plan->mlu_addrs.twiddles_inv,

@@ -1,0 +1,267 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
+#include "mlu.h"
+// #include "kernels/fft/fft_optm_device/fft_bluestein_complexdot.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+#include "kernels/utils/common.h"
+#include "kernels/fft/fft.h"
+
+__nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
+
+// Kernel Complex Matrix Dot ChirpZ
+//
+__mlu_global__ void MLUKernelComplexMatrixDotChirpZ(float *input, float *chirpz, float *output, int batch, int h, int w, int PAD_N, bool chirpz_flag, bool real_input)
+{
+
+  // __bang_printf("batch h w PAD_N, REAL_INPUT %d %d %d %d %d\n", batch, h, w, PAD_N, real_input);
+  __bang_printf("chirpz input\n\n");
+  for (int i = 0; i < 2 * PAD_N; i=i+2)
+  {
+      __bang_printf("%f %f ", chirpz[i], chirpz[i+1]);
+  }
+  __bang_printf("\n\n");
+
+  if(real_input) {
+      __bang_printf("real_input\n\n");
+      for (int i = 0; i < 2 * PAD_N; i++) {
+          __bang_printf("%f ", input[i]);
+      }
+    __bang_printf("\n");
+  } else {
+      __bang_printf("complex input");
+      for (int i = 0; i < 2 * PAD_N; i = i + 2) {
+          __bang_printf("%f %f ", input[i], input[i + 1]);
+      }
+  }
+
+  int deal_n = 0;
+
+  deal_n = PAD_DOWN(MAX_NRAM_SIZE / sizeof(float) / (2 * 6 * sizeof(float)), PAD_N);
+
+  // |-----ping-------|-------pong-----|-----------|
+  // |input_x|output_x|input_x|output_x|temp|chirpZ|
+  // PAD_N 比较小
+  int block_num = 0;
+  // int line_cut = 0;
+  // if (PAD_N < deal_n) {
+      block_num = deal_n / PAD_N;
+      // line_cut = 1;
+  // } else {
+  //     // PAD_N 较大，需要循环处理
+  //     line_cut = PAD_N/deal_n;
+  //     block_num = 1;
+  // }
+  deal_n = 2048;
+
+  float *input_x = (float*)nram_buffer;
+  float *output_x = input_x +  2*deal_n;
+  uint32_t ping_pong_gap = 4 * deal_n;
+  float *temp = input_x + 2*ping_pong_gap;
+  float *nram_chirpz = temp + 2 * deal_n;
+
+  int num_per_core = batch * h / taskDim;
+  const int core_offset = num_per_core;
+
+  float *input_gdram = input + taskId * core_offset * w * 2;
+  float *output_gdram = output + taskId * core_offset * 2 * PAD_N;
+
+  const int rem = batch * h % taskDim;
+  if (taskId == taskDim - 1) {
+    num_per_core += rem;
+  }
+
+  int repeat = num_per_core / deal_n;
+
+  // __bang_printf("num_per_core, deal_n,line_cut, repeat, PAD_N: %d %d %d %d %d\n", num_per_core, deal_n, line_cut, repeat, PAD_N);
+  // int nums = 0;
+  // for (int i = 0; i < line_cut + 1; i++) {
+  //     // chirpz load
+  //     if(i == line_cut) {
+  //         nums = PAD_N - i * deal_n;
+  //     } else {
+  //         nums = deal_n;
+  //     }
+      if(!chirpz_flag) {
+        __bang_write_value(output_x, 2*PAD_N, (float)0);
+        __memcpy(output_x, chirpz,  2*PAD_N* sizeof(float), GDRAM2NRAM);
+        __bang_transpose(nram_chirpz, output_x, PAD_N, 2);
+      } else {
+        __bang_write_value(nram_chirpz, 2*PAD_N, (float)0);
+        __memcpy(nram_chirpz, chirpz,  2*PAD_N* sizeof(float), GDRAM2NRAM);
+      }
+      // __bang_printf("i < line_cut: %d, %d\n", i, line_cut);
+      __bang_printf("after load chirpz\n");
+      for (int k = 0; k < 2 * PAD_N; k = k + 2) {
+          __bang_printf("%f %f ", nram_chirpz[k], nram_chirpz[k+1]);
+      }
+      __bang_printf("\n");
+      // // int nums = 0;
+      int exec_nums = 0;
+      for (int j = 0; j < repeat + 1; j++) {
+        if(j == repeat) {
+            exec_nums = num_per_core - j * deal_n;
+        } else {
+            exec_nums = block_num;
+        }
+        __bang_printf("j  exec_nums num_per_core: %d, %d %d \n",repeat, exec_nums, num_per_core);
+        if (!real_input) {
+              __memcpy(output_x,
+                       input_gdram + j * block_num * PAD_N *2,
+                       2* exec_nums * PAD_N * sizeof(float), GDRAM2NRAM);
+              __bang_printf("after load output_x\n");
+              for (int k = 0; k < 2*PAD_N; k++) {
+                __bang_printf("%f ", output_x[k]);
+              }
+              __bang_printf("\n");
+              __bang_transpose(input_x, output_x, exec_nums*PAD_N, 2);
+
+        } else {
+            __bang_write_value(input_x, 2 * block_num * PAD_N, (float)0);
+            __memcpy(input_x,
+              input_gdram + j * block_num * PAD_N ,
+              exec_nums * w * sizeof(float), GDRAM2NRAM);
+              // __bang_write_value(input_x + deal_n, deal_n, (float)0);
+        }
+
+        // for (int k = 0; k < PAD_N; k++)
+        // {
+        //     __bang_printf("%f %f %f \n", nram_chirpz[k], input_x[k], nram_chirpz[k]*input_x[k]);
+        // }
+        // __bang_printf("\n");
+        __bang_printf("after load input\n");
+        for (int k = 0; k < 2*PAD_N; k++) {
+            __bang_printf("%f ", input_x[k]);
+        }
+          __bang_printf("\n");
+
+
+          // temp: r part: a, i part: b
+          // chirpz: r part: c, i part: d
+          // (a+bi)(c+di)=(ac-bd)+(bc+ad)i
+          // __bang_cycle_mul(output_x, input_x, nram_chirpz, PAD_N * block_num,
+          //                  PAD_N);
+          __bang_cycle_mul(output_x, input_x, nram_chirpz, PAD_N,
+                          PAD_N);
+
+          // for (int k = 0; k < PAD_N; k++)
+          // {
+          //   __bang_printf("%f ", output_x[k]);
+          // }
+          // __bang_printf("\n");
+          
+          // __bang_cycle_mul(
+          //   output_x + PAD_N * block_num, input_x + block_num * PAD_N,
+          //     nram_chirpz + PAD_N, PAD_N * block_num,
+          //     PAD_N);
+          __bang_cycle_mul(
+            output_x + PAD_N , input_x + PAD_N,
+              nram_chirpz + PAD_N, PAD_N,
+              PAD_N);
+
+          // ac - bd
+          __bang_sub(temp, output_x, output_x + PAD_N, PAD_N);
+          // __bang_sub(temp, output_x, output_x + PAD_N * block_num, PAD_N * block_num);
+
+
+          // for (int k = 0; k < PAD_N; k++)
+          // {
+          //   __bang_printf("%f %f %f %f %f\n", nram_chirpz[k], nram_chirpz[k+PAD_N], input_x[k], input_x[k+PAD_N], temp[k]);
+          // }
+          // __bang_printf("ac - bd\n");
+          // for (int k = 0; k < PAD_N; k++)
+          // {
+          //     __bang_printf("%f ", temp[k]);
+          // }
+          // __bang_printf("\n");
+          
+          // ad + bc
+          // __bang_cycle_mul(input_x, input_x, nram_chirpz + PAD_N, PAD_N * block_num, PAD_N);
+          // __bang_cycle_mul(input_x + PAD_N * block_num,
+          //                   input_x + PAD_N * block_num, nram_chirpz,
+          //                   PAD_N * block_num, PAD_N);
+          // __bang_add(temp + PAD_N * block_num, input_x,
+          //            input_x + PAD_N * block_num, PAD_N * block_num);
+
+          __bang_cycle_mul(output_x, input_x, nram_chirpz + PAD_N, PAD_N, PAD_N);
+          __bang_cycle_mul(output_x + PAD_N ,
+                            input_x + PAD_N, nram_chirpz,
+                            PAD_N, PAD_N);
+          __bang_add(temp + PAD_N, output_x, output_x + PAD_N, PAD_N);
+
+          for (int k = 0; k < PAD_N; k++)
+          {
+            __bang_printf("%f %f %f %f %f\n", nram_chirpz[k], nram_chirpz[k+PAD_N], input_x[k], input_x[k+PAD_N], temp[k+PAD_N]);
+          }
+
+          // for (int k = 0; k < PAD_N; k++)
+          // {
+          //   __bang_printf("%f %f \n", nram_chirpz[k+PAD_N], temp[k+PAD_N * block_num]);
+          // }
+          // __bang_printf("ad + bc\n");
+          // for (int k = 0; k < PAD_N; k++)
+          // {
+          //     __bang_printf("%f ", temp[k+PAD_N * block_num]);
+          // }
+          // __bang_printf("\n");
+
+          // __bang_printf("after transpose");
+          __bang_transpose(output_x, temp, 2, PAD_N * block_num);
+          // for (int k = 0; k < PAD_N; k=k+2)
+          // {
+          //   __bang_printf("%f %f \n", output_x[k], output_x[k+1]);
+          // }
+
+          __memcpy(output_gdram,
+                   output_x, 2* exec_nums * PAD_N * sizeof(float), NRAM2GDRAM);
+            
+          __bang_printf("after copy_out\n");
+          for (int k = 0; k < 2*PAD_N; k=k+2)
+          {
+            __bang_printf("%f %f ", output_gdram[k], output_gdram[k+1]);
+          }
+          __bang_printf("\n");
+          // }
+  }
+}
+
+
+mluOpStatus_t MLUOP_WIN_API KernelVectorDotMatrixComplex(cnrtDim3_t k_dim,
+  cnrtFunctionType_t k_type,
+  cnrtQueue_t queue,
+  const void *input,
+  const void *chirpz,
+  void *output,
+  int batch,
+  int h,
+  int w,
+  int PAD_N,
+  bool chirpz_flag,
+  bool real_input) {
+    VLOG(5) << "Launch Kernel KernelGeneratechirpz <<Union" << k_type / CORE_DIM
+    << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
+    KERNEL_CHECK((MLUKernelComplexMatrixDotChirpZ<<<k_dim, k_type, queue>>>(
+    (float*)input, (float*)chirpz, (float*)output, batch, h, w, PAD_N, chirpz_flag, real_input)));
+    return MLUOP_STATUS_SUCCESS;
+  }
