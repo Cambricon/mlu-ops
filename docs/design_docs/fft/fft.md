@@ -105,6 +105,83 @@ $$
 
 可以将二维FFT看作是在输入的两个维度分别做一维FFT，因此其计算方式与一维FFT本质相同，这里不再对FFT计算细节进行赘述。
 
+#### 1.2.1 bluestein 算法简述
+算法是一种用于计算任意长度离散傅里叶变换（DFT）的快速算法，通过将DFT转换为循环卷积实现计算优化。以下是其核心步骤及公式推导
+
+##### 1.2.1.1 DFT二次项分解
+标准DFT表达式：
+
+$$
+X[k] = \sum_{n=0}^{N-1} x[n] \cdot e^{-j\frac{2\pi}{N}kn}
+$$
+
+通过引入二次项展开：
+
+$$
+kn = \frac{1}{2}[k^2 + n^2 - (k-n)^2]
+$$
+
+得到等效表达式：
+
+$$
+e^{-j\frac{2\pi}{N}kn} = e^{-j\frac{\pi}{N}k^2} \cdot e^{j\frac{\pi}{N}(k-n)^2} \cdot e^{-j\frac{\pi}{N}n^2}
+$$
+
+##### 1.2.1.2 卷积形式重构
+令：
+
+$$
+\begin{aligned}
+w[n] &= e^{-j\frac{\pi}{N}n^2} (chrizp 信号) \\
+h[n] &= e^{j\frac{\pi}{N}n^2} (辅助信号)
+\end{aligned}
+$$
+
+则DFT可表示为：
+
+$$
+X[k] = w[k] \cdot \sum_{n=0}^{N-1} (x[n]w[n]) \cdot h[k-n]
+$$
+
+##### 1.2.1.3 计算步骤
+
+###### 1.2.1.3.1 预处理
+1. **输入信号调制**：
+
+$$
+a[n] = x[n] \cdot w[n], \quad 0 \leq n < N
+$$
+
+2. **构造卷积核**：
+
+$$
+h[n] = 
+\begin{aligned} 
+e^{j\frac{\pi}{N}n^2}, & 0 \leq n < N \\
+\end{aligned}
+$$
+
+###### 1.2.1.3.2 快速卷积
+1. **补零扩展**：
+
+$$
+\begin{aligned}
+a_{pad} &= [a[0],...,a[N-1], \underbrace{0,...,0}_{M-N}]
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+h_{pad} &= [h[0],...,hj[N-1], \underbrace{0,...,0}_{M-N}]
+\end{aligned}
+$$
+
+2. **FFT加速计算**：
+
+$$
+X[k] = w[k] \cdot \text{IFFT}\left( \text{FFT}(a_{pad}) \odot \text{FFT}(h_{pad}) \right)[k]
+$$
+
 备注：
 
 需要说明对nan/inf的特殊处理，输入存在nan/inf时，输出为按照IEEE754标准根据FFT计算公式得到，其中任何数乘nan为nan，0乘inf为nan，非0乘正负inf根据符号为正负inf，任何数加nan为nan，任何非nan数加正负inf根据符号为正负inf。
@@ -415,10 +492,105 @@ fft2d可以理解为先做一个bacth=n0, n=[n1]的行主序fft1d, 再做一个b
 
 当前测试表明，列主序这样的分解以及对应的访存模式，可以大大减小stride过大带来的影响。
 
-
 ##### 3.1.3.2 行主序batch循环软流水实现
 
 对于fft2d而言，其对行主序fft1d的调用往往会有较多batch。我们拟增加对于batch之间的软流水优化，从而提升性能。
+
+#### 3.1.2 任意长度bluestein fft实现
+#### 3.1.2.1 1d bluestein fft
+根据算法计算步骤 1.2.1.3 可知， 核心逻辑为对输入数据乘系数后得到a[n],进行pad后再进行fft，结果与另一个系数的fft 结果相乘再逆fft，结果再乘系数。
+其中关键步骤fft 及ifft 可直接调用前述fft 及ifft kernel 进行计算。需要实现的是1. x[n]*w[n], 复数矩阵每列乘以相应复数系数；2. fft(a_pad) * fft(h_pad), fft(h_pad)结果为1位复数向量, 其实质为也是一个复数矩每列阵乘以相应的复数系数;3. w[k]*ifft()也是计算复数矩阵每列乘以复数相应系数。这个三个计算步骤实质是相同的，所以实现完整的bluestein fft 算法除调用上述接口外还需要实现此功能, 命名接complex_coeff_matmul(),以及系数生成generate()
+方案如下：
+![bluesteinfft](bluestein_fft_01.jpg)
+
+- generate() 伪代码：
+```C++
+// |---------------nram size---------------------------|
+// |nram_index|nram_temp|           nram_temp2         |
+// nram_size 均分为4等份 结果存在gdram,供后续流程使用
+    __bang_write_value(nram_index, 4 * num_deal, (float)0);
+    __mluop_get_indices(nram_index, start, real_length);
+    __bang_square(nram_index, nram_index, num_deal);
+    __bang_mul_scalar(nram_index, nram_index, M_PI, num_deal);
+    __bang_write_value(nram_temp, num_deal, (float)n);
+    __cn_vector_div_f32_rn(num_deal, nram_temp, nram_index, nram_temp);
+    __bang_move(nram_index, nram_temp, num_deal * sizeof(float));
+    __cn_vector_cos_f32(num_deal, nram_index, nram_index);
+    __cn_vector_sin_f32(num_deal, nram_temp, nram_temp);
+    if (!direction) {
+      __bang_mul_scalar(nram_temp, nram_temp, -1, num_deal);
+    }
+    __bang_transpose(nram_temp2, nram_index, 2, num_deal);
+
+    __memcpy(output_gdram + i * num_deal * 2, nram_temp2,
+             2 * real_length * sizeof(float), NRAM2GDRAM);
+```
+```C++
+// |---------------nram size----------------------------------------|
+// |nram_index|nram_index_2|nram_temp|           nram_temp2         |
+// nram_size 均分为8等份 结果存在gdram,供后续流程使用
+    __bang_write_value(nram_index, 8 * num_deal, (float)0);
+    __mluop_get_indices(nram_index, start, real_length);
+    __bang_write_value(nram_temp, num_deal, (float)n);
+    __bang_sub(nram_index_2, nram_temp, nram_index, num_deal);
+    __bang_square(nram_index, nram_index, 2 * num_deal);
+    __bang_mul_scalar(nram_index, nram_index, M_PI, 2 * num_deal);
+    __bang_write_value(nram_temp, 2 * num_deal, (float)n);
+    __cn_vector_div_f32_rn(2 * num_deal, nram_temp, nram_index, nram_temp);
+    __bang_move(nram_index, nram_temp, 2 * num_deal * sizeof(float));
+    __cn_vector_cos_f32(2 * num_deal, nram_index, nram_index);
+    __cn_vector_sin_f32(2 * num_deal, nram_temp, nram_temp);
+    if (direction) {
+      __bang_mul_scalar(nram_temp, nram_temp, -1, 2 * num_deal);
+    }
+    __bang_transpose(nram_temp2, nram_index, 2, 2 * num_deal);
+
+    if (taskId == 0 && i == 0) {
+      __bang_write_value(nram_temp2 + 2 * num_deal, 2, (float)0);
+    }
+
+    uint32_t dst_stride = pad_n - n;
+    __memcpy(output_gdram + i * num_deal * 2, nram_temp2,
+             2 * real_length * sizeof(float), NRAM2GDRAM,
+             2 * dst_stride * sizeof(float), 2 * num_deal * sizeof(float), 1);
+```
+
+- complex_matrix_dot_vector() 核心计算步骤伪代码
+  - 对x[b, length] 拆分b，当length 较长时，核内循环处理，先暂时没做三级流水
+  - 设z1=a+bi，z2=c+di(a、b、c、d∈R)是任意两个复数，那么它们的积(a+bi)(c+di)=(ac-bd)+(bc+ad)i。
+```C++
+// input_gdram 为输入x_n的地址，output_gdram 为输出地址
+// 流水开始前对ouput空间刷零完成pad zero
+// pad_length 是bluestein fft 计算length 长度输入需要pad 到的长度 
+// pad_length >= 2* length - 1
+gdram_set(output_gdram, b*pad_length, 0);
+//
+// nram 内存划分：
+// |-----no pipeline first------|
+// |input_x|output_x|temp|chirpz|
+// 指定一次可以处理长度为 l = 输入信号长度;
+int32_t num_deal = col_num;
+int32_t block_num =
+      ((MAX_NRAM_SIZE / sizeof(float) - 2 * num_deal) / 6) / num_deal;
+_memcpy(chirpz, gdram_buffer, GDRAM2NRAM, 2*num_deal);
+// z1_r, z2_r..., z1_i, z2_i....
+_memcpy(input_x, input_gdram, GDRAM2NRAM, 2*num_deal*block_num);
+//transpoze
+// a_r b_i c_r d_i
+// e_r f_i g_r e_i
+// 复数实数虚数分开
+// 转换成 a_r,c_r,e_r,g_r 
+//        b_i,d_i,f_i,e_i
+__bang_transpose(output_x, input_x, num_deal*block_num, 2);
+// 向量化计算复数
+complexMatrixDotVectorFunc();
+// tranpose转换回复数
+__bang_transpose(output_x, temp, 2, num_deal*block_num);
+// 转回gdram 存储
+memcpy(output_gdram, output_x, NRAM2GDRAM);
+```
+#### 3.1.2.1 2d bluestein fft
+用1d bluestein fft 方法做行主序 fft， 然后再做列主序fft
 
 ### 3.2调用方案设计
 
