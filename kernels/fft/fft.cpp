@@ -27,16 +27,13 @@
 #include "kernels/fft/c2c_fft/c2c_fft.h"
 
 static inline int getPadN(int n) {
-  // VLOG(5) << "n: " << n;
   int pad_n = 0;
   int r = 0;
   int pad_temp = 2 * n - 1;
   int pad_temp2 = 0;
-  // VLOG(5) << "pad_temp: " << pad_temp;
   for (int i = 1; i < 64; i++) {
     pad_temp2 = pad_temp + i;
     pad_n = pad_temp2;
-    VLOG(5) << "pad_n, pad_temp:" << pad_n << " " << pad_temp2;
     while (pad_temp2 > 1) {
       for (r = 64; r > 1; r--) {
         if (pad_temp2 % r == 0) {
@@ -52,15 +49,10 @@ static inline int getPadN(int n) {
       break;
     }
   }
-  // VLOG(5) << "pad_n:" << pad_n;
   if (pad_n < 204) {
     pad_n = 256;
   }
   return pad_n;
-  // return 1024;
-  // return 16384;
-  // return 256;
-  // return 512;
 }
 
 // Calculate whether the optimization strategy can be
@@ -217,12 +209,10 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateTwiddles(mluOpFFTPlan_t fft_plan,
                                                 void *&_twiddles_end,
                                                 int *factors, const int _nfft,
                                                 const int dir) {
-  VLOG(5) << "finished two step start 0";
   DT *twiddles = NULL;
   CNRT_CHECK(
       cnrtHostMalloc((void **)&twiddles,
                      (_nfft * 2 * 2) * sizeof(DT)));  // complex *2(large+small)
-  VLOG(5) << "finished two step start 1";
   _twiddles = twiddles;
   int stage_count = factors[0];
   int cur_large_radix, cur_small_radix, section_num, butterfly_num,
@@ -230,7 +220,6 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateTwiddles(mluOpFFTPlan_t fft_plan,
   int tw_offset = 0;
   int small_stage_count, small_loop_stage, small_factors_offset;
 
-  VLOG(5) << "finished two step start 2";
   // for other stage, ignore first stage
   for (loop_stage = 2; loop_stage <= stage_count; loop_stage++) {
     cur_large_radix = factors[5 * loop_stage];
@@ -267,7 +256,6 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateTwiddles(mluOpFFTPlan_t fft_plan,
   }  // stage_count
 
   _twiddles_end = (void *)((DT *)_twiddles + tw_offset * 2);
-  VLOG(5) << "finished two step";
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -897,7 +885,6 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
                                              const int _n, int *facbuf,
                                              const int is_row_major,
                                              const int factor_type) {
-  VLOG(5) << "fftTwoStepFactor " << _n;
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
   int n = _n;
   int r, in_stride, section_num, stage_num = 0, out_stride = 1;
@@ -1718,64 +1705,36 @@ mluOpAllocateC2C1D(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
 
   size_t buffer_size = batch * in_c_dtype_size * nfft;
 
-  VLOG(5) << "nfft " << nfft;
-
   workspace_size = buffer_size * 2;
-  VLOG(5) << "workspace_size: 1 " << workspace_size;
-  VLOG(5) << "fft_plan->is_batch_contiguous && !fft_plan->bluestein_fft "
-          << (fft_plan->is_batch_contiguous && !fft_plan->bluestein_fft);
-
-  VLOG(5) << "fft_plan->is_input_contiguous " << fft_plan->is_input_contiguous;
-  VLOG(5) << "fft_plan->n[0] <= fft_plan->inembed[0] "
-          << (fft_plan->n[0] <= fft_plan->inembed[0]);
-  VLOG(5) << "fft_plan->is_batch_contiguous  " << fft_plan->is_batch_contiguous;
-  VLOG(5) << "fft_plan->bluestein_fft) " << fft_plan->bluestein_fft;
-  VLOG(5) << "buffer_size " << buffer_size;
   workspace_size +=
       ((fft_plan->is_input_contiguous &&
         fft_plan->n[0] <= fft_plan->inembed[0]) ||
        (fft_plan->is_batch_contiguous && !fft_plan->bluestein_fft))
           ? 0
           : buffer_size;
-  VLOG(5) << "workspace_size: 2 " << workspace_size;
   workspace_size +=
       ((fft_plan->is_output_contiguous &&
         fft_plan->n[0] <= fft_plan->onembed[0]) ||
        (fft_plan->is_batch_contiguous && !fft_plan->bluestein_fft))
           ? 0
           : buffer_size;
-
-  VLOG(5) << "workspace_size: 3 " << workspace_size;
   if (fft_plan->n[0] != fft_plan->inembed[0]) {
     workspace_size += buffer_size;
   }
-
-  VLOG(5) << "workspace_size: 4 " << workspace_size;
   size_t twiddles_size = in_c_dtype_size * nfft * 2;
   reservespace_size = sizeof(int) * (FFT_MAXFACTORS)            /* factors */
                       + twiddles_size * 2 + DFT_TABLE_SIZE * 2; /* twiddles */
 
   if (fft_plan->bluestein_fft) {
     size_t chirpz_size = in_c_dtype_size * nfft;
-    VLOG(5) << "chirpz_size " << chirpz_size;
     workspace_size += chirpz_size;
-
-    VLOG(5) << "workspace_size: 5 " << workspace_size;
-
     size_t aux_signal_size = chirpz_size;
     workspace_size += aux_signal_size;
-    VLOG(5) << "workspace_size: 6 " << workspace_size;
-
     size_t bs_input_size = batch * in_c_dtype_size * nfft;
     workspace_size += bs_input_size;
-
-    VLOG(5) << "workspace_size: 7 " << workspace_size;
     size_t bs_output_size = bs_input_size;
     workspace_size += bs_output_size;
-
-    VLOG(5) << "workspace_size: 8 " << workspace_size;
   }
-  VLOG(5) << "bluestein_fft allocate finished";
 
   fft_plan->workspace_size = workspace_size;
   fft_plan->reservespace_size = reservespace_size;
@@ -2056,7 +2015,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanC2C1D(
     case CNFFT_FLOAT2COMPLEX_FLOAT:
     case CNFFT_COMPLEX_FLOAT2FLOAT:
     case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT:
-      if (!fft_plan->is_batch_contiguous) {
+      if (!(fft_plan->is_batch_contiguous && !fft_plan->bluestein_fft)) {
         fftGenerateTwiddles<float>(fft_plan, fft_plan->twiddles,
                                    fft_plan->twiddles_end, fft_plan->factors,
                                    nfft, FFT_FORWARD);
