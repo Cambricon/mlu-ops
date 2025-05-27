@@ -2788,7 +2788,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       }
     }
   }
-  if (fft_plan->prime && rank == 1) {
+
+  if (fft_plan->prime > 0 && rank == 2 &&
+      fft_plan->fft_type != CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT) {
+    LOG(ERROR) << make_plan_api << ": Only supports FFT2d sizes with factors"
+               << " decomposed within the range of 2 to 64"
+               << ".";
+    return MLUOP_STATUS_NOT_SUPPORTED;
+  }
+
+  if (fft_plan->prime && rank == 1 &&
+      fft_plan->fft_type == CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT) {
     fft_plan->fft_strategy = CNFFT_FUNC_MATMUL;
     selectFFTStrategy(handle, fft_plan, make_plan_api);
     int FFT_L_LIMIT_MATMUL = FFT_L_LIMIT_MATMUL_300;

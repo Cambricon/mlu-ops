@@ -35,7 +35,6 @@ static void policyMatrixDotVectorFunc(const mluOpHandle_t &handle,
   int num_deal = 0;
   if (row_major) {
     num_deal = handle->nram_size / (8 * sizeof(float));
-    VLOG(5) << "nram_size: " << handle->nram_size;
     if (col_num > num_deal) {
       *large_col = true;
     } else {
@@ -49,12 +48,6 @@ static void policyMatrixDotVectorFunc(const mluOpHandle_t &handle,
       *large_col = true;
     }
   }
-  VLOG(5) << "if large col: " << *large_col << " col_num: " << col_num
-          << "num_deal: " << num_deal;
-  // *k_type = cnrtFuncTypeUnion1;
-  // k_dim->x = handle->core_num_per_cluster;
-  // k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
-  // k_dim->z = 1;
   *k_type = cnrtFuncTypeBlock;
   k_dim->x = 1;
   k_dim->y = 1;
@@ -1850,7 +1843,7 @@ mluOpStatus_t execFFTc2c1d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
                           fft_plan->bluestein_aux_signal_row));
 
     // step3
-    //  fft(aux_signal)
+    // fft(aux_signal)
     int orig_batch = fft_plan->batch;
     void *origin_input = fft_plan->mlu_addrs.input;
     void *origin_output = fft_plan->mlu_addrs.output;
@@ -2066,7 +2059,6 @@ mluOpStatus_t execFFTc2c2d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
       VLOG(5) << "fft_plan->bluestein_2d_column"
               << fft_plan->bluestein_2d_column;
       // step1 chirpz_column
-
       CHECK_RETURN(api, KernelChirpz(k_dim, k_type, handle->queue, orig_n0,
                                      orig_n0, orig_n0, true, direction,
                                      fft_plan->bluestein_chirpz_column));
@@ -2131,8 +2123,6 @@ mluOpStatus_t execFFTc2c2d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
 
         if (fft_plan->n[0] != 1) {
           if (!fft_plan->bluestein_2d_column) {
-            VLOG(5) << "!fft_plan->bluestein_2d_column) "
-                    << !fft_plan->bluestein_2d_column;
             CHECK_RETURN(
                 api, kernelFFT2dButterflyColumn(k_dim, k_type, handle->queue,
                                                 fft_plan, direction, FFT_IFFT));
@@ -2353,59 +2343,8 @@ mluOpStatus_t execFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
       DESTROY_CNNL_HANDLE(cnnl_handle);
     }
   }
-  /*
-  if (fft_plan->n[0] == 1 && fft_plan->n[1] != 1) {
-    for (int batch_id = 0; batch_id < fft_plan->batch; batch_id++) {
-      if (direction == FFT_FORWARD) {
-        status = kernelFFT2dButterflyRow(k_dim, k_type, handle->queue,
-                                         fft_plan, direction, FFT_IFFT);
-        CHECK_RETURN(api, status);
-      } else {
-        status = kernelFFT2dButterflyRow(k_dim, k_type, handle->queue,
-                                         fft_plan, direction, FFT_IFFT);
-        CHECK_RETURN(api, status);
-      }
 
-      fft_plan->mlu_addrs.input =
-          (void *)((uint64_t)(fft_plan->mlu_addrs.input) + idist);
-      fft_plan->mlu_addrs.output =
-          (void *)((uint64_t)(fft_plan->mlu_addrs.output) + odist);
-    }
-    fft_plan->mlu_addrs.input =
-        (void *)((uint64_t)(fft_plan->mlu_addrs.input) -
-                 fft_plan->batch * idist);
-    fft_plan->mlu_addrs.output =
-        (void *)((uint64_t)(fft_plan->mlu_addrs.output) -
-                 fft_plan->batch * odist);
-
-  } else if (fft_plan->n[0] != 1 && fft_plan->n[1] == 1) {
-    for (int batch_id = 0; batch_id < fft_plan->batch; batch_id++) {
-      if (direction == FFT_FORWARD) {
-        status = kernelFFT2dButterflyColumn(k_dim, k_type, handle->queue,
-                                            fft_plan, direction, FFT_IFFT);
-        CHECK_RETURN(api, status);
-      } else {
-        status = kernelFFT2dButterflyColumn(k_dim, k_type, handle->queue,
-                                            fft_plan, direction, FFT_IFFT);
-        CHECK_RETURN(api, status);
-      }
-
-      fft_plan->mlu_addrs.input =
-          (void *)((uint64_t)(fft_plan->mlu_addrs.input) + idist);
-      fft_plan->mlu_addrs.output =
-          (void *)((uint64_t)(fft_plan->mlu_addrs.output) + odist);
-    }
-    fft_plan->mlu_addrs.input =
-        (void *)((uint64_t)(fft_plan->mlu_addrs.input) -
-                 fft_plan->batch * idist);
-    fft_plan->mlu_addrs.output =
-        (void *)((uint64_t)(fft_plan->mlu_addrs.output) -
-                 fft_plan->batch * odist);
-  }
-} else {*/
   status = execFFTc2c2d(handle, fft_plan, scale_factor, direction);
-  //}
-
   CHECK_RETURN(api, status);
 
   if (scale_factor != 1.0) {
