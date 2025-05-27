@@ -1028,7 +1028,6 @@ __mlu_func__ void forwardStageTwoLoop(
       offset_nram_stg2 + 4 * max_deal_n * num_levels_points;
   for (int32_t i = 0; i < loop_num + 2; i++) {
     int32_t compute_idx = i - 1;
-    // int32_t compute_offset = compute_idx * max_deal_n;
     int32_t load_n = std::min(total_deal_n - i * max_deal_n, max_deal_n);
     int32_t compute_n =
         std::min(total_deal_n - compute_idx * max_deal_n, max_deal_n);
@@ -1079,14 +1078,14 @@ __mlu_func__ void forwardStageTwoLoop(
       __memcpy_async(output_gdram + output_offset * output_stride_2, v_load,
           channels * sizeof(T), NRAM2GDRAM, output_stride_2 * sizeof(T),
           channels * sizeof(T), output_n - 1);
-      asm volatile("sync.pio.cmv;\n\t");
+      __sync_io_move_compute(true, false, false, false, true, false);
     }
 
     if (i < loop_num) {
       gatherAsync<T>(v_load, zeros_nram, (unsigned int*)offset_zero_nram_stg2,
                      cond_nram_stg2_reverse, channels * sizeof(T), NRAM2NRAM,
                      channels * sizeof(T), load_point_num);
-#if __BANG_ARCH__ <= 592
+#if __BANG_ARCH__ == 592
       __bang_gather_async(
           v_load, data_value_gdram, (unsigned int*)offset_nram_stg2,
           cond_nram_stg2, channels * sizeof(T), channels * sizeof(T),
@@ -1099,15 +1098,15 @@ __mlu_func__ void forwardStageTwoLoop(
     }
 
     if (i > 0 && i < loop_num + 1) {
-#if __BANG_ARCH__ <= 592
+#if __BANG_ARCH__ == 592
       __bang_cycle_mul(weight_polation_nram_stg2, weight_polation_nram_stg2,
                        weight_attn_nram_stg2, nq_nlp_4, nq_nlp);
       __bang_expand_channel_mul(
-          (float*)v_compute, (float*)weight_polation_nram_stg2,
-          (float*)wram_buffer, (float*)v_compute,
+          (T*)v_compute, (T*)weight_polation_nram_stg2,
+          (T*)wram_buffer, (T*)v_compute,
           compute_n * 4 * num_levels_points, channels);
       __bang_sumpool(compute_buffer_nram, v_compute,
-          nq_nlp * channels, 1, 4, 1, 4, 1, 1);
+                     nq_nlp * channels, 1, 4, 1, 4, 1, 1);
       __bang_sumpool(v_compute, compute_buffer_nram, channels, compute_n,
                      num_levels_points, 1, num_levels_points, 1, 1);
 #else
