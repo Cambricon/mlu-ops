@@ -27,6 +27,33 @@
 
 #define DIRECTION 2  // FORWARD and BACKWARD
 
+static void policyMatrixDotVectorFuncCol(const mluOpHandle_t &handle,
+                                      cnrtDim3_t *k_dim,
+                                      cnrtFunctionType_t *k_type, int col_num,
+                                      int row_num, bool row_major,
+                                      bool *large_col) {
+  int num_deal = 0;
+  if (row_major) {
+    num_deal = handle->nram_size / (8 * sizeof(float));
+    if (col_num > num_deal) {
+      *large_col = true;
+    } else {
+      *large_col = false;
+    }
+  } else {
+    num_deal = handle->nram_size / (6 * sizeof(float));
+    if (col_num <= num_deal) {
+      *large_col = false;
+    } else {
+      *large_col = true;
+    }
+  }
+  *k_type = cnrtFuncTypeUnion1;
+  k_dim->x = handle->core_num_per_cluster;
+  k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
+  k_dim->z = 1;
+}
+
 static void policyMatrixDotVectorFunc(const mluOpHandle_t &handle,
                                       cnrtDim3_t *k_dim,
                                       cnrtFunctionType_t *k_type, int col_num,
@@ -48,9 +75,13 @@ static void policyMatrixDotVectorFunc(const mluOpHandle_t &handle,
       *large_col = true;
     }
   }
-  *k_type = cnrtFuncTypeBlock;
-  k_dim->x = 1;
-  k_dim->y = 1;
+  // *k_type = cnrtFuncTypeBlock;
+  // k_dim->x = 1;
+  // k_dim->y = 1;
+  // k_dim->z = 1;
+  *k_type = cnrtFuncTypeUnion1;
+  k_dim->x = handle->core_num_per_cluster;
+  k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
   k_dim->z = 1;
 }
 
@@ -1090,25 +1121,25 @@ static void configureFFT2dWorkspaceAddrs(mluOpHandle_t handle,
     if (fft_plan->bluestein_2d_column) {
       fft_plan->bluestein_chirpz_column = (uint8_t *)workspace + offset;
       size_t chirpz_column_buffer_size = in_c_dtype_size * fft_plan->PAD_N0;
-      offset += chirpz_column_buffer_size * 2;
+      offset += chirpz_column_buffer_size;
 
       fft_plan->bluestein_aux_signal_column = (uint8_t *)workspace + offset;
-      offset += chirpz_column_buffer_size * 2;
+      offset += chirpz_column_buffer_size;
     }
     if (fft_plan->bluestein_2d_row) {
       fft_plan->bluestein_chirpz_row = (uint8_t *)workspace + offset;
       size_t chirpz_row_buffer_size = in_c_dtype_size * fft_plan->PAD_N1;
-      offset += chirpz_row_buffer_size * 2;
+      offset += chirpz_row_buffer_size;
 
       fft_plan->bluestein_aux_signal_row = (uint8_t *)workspace + offset;
-      offset += chirpz_row_buffer_size * 2;
+      offset += chirpz_row_buffer_size;
     }
 
     fft_plan->bluestein_input = (uint8_t *)workspace + offset;
 
     size_t bs_buffer_size =
         in_c_dtype_size * fft_plan->PAD_N0 * fft_plan->PAD_N1;
-    offset += bs_buffer_size * 2;
+    offset += bs_buffer_size;
     fft_plan->bluestein_output = (uint8_t *)workspace + offset;
   }
 }
@@ -1830,7 +1861,10 @@ mluOpStatus_t execFFTc2c1d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
                                               fft_plan, direction, FFT_IFFT));
     }
   } else {
-    policyFunc(handle, &k_dim, &k_type);
+    k_dim.x = 4;
+    k_dim.y = 1;
+    k_dim.z = 1;
+    k_type = cnrtFuncTypeUnion1;
     // step1 chirpz
     CHECK_RETURN(api, KernelChirpz(k_dim, k_type, handle->queue, fft_plan->n[0],
                                    fft_plan->n[0], fft_plan->n[0], true,
@@ -1847,7 +1881,7 @@ mluOpStatus_t execFFTc2c1d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
     int orig_batch = fft_plan->batch;
     void *origin_input = fft_plan->mlu_addrs.input;
     void *origin_output = fft_plan->mlu_addrs.output;
-
+    policyFunc(handle, &k_dim, &k_type);
     fft_plan->batch = 1;
     fft_plan->mlu_addrs.input = fft_plan->bluestein_aux_signal_row;
     fft_plan->mlu_addrs.output = fft_plan->bluestein_aux_signal_row;
@@ -1894,6 +1928,8 @@ mluOpStatus_t execFFTc2c1d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
                                          FFT_BACKWARD, FFT_IFFT));
 
     // step8
+    policyMatrixDotVectorFunc(handle, &k_dim_2, &k_type_2, fft_plan->n[0], 1,
+                              row_major, &large_col);
     CHECK_RETURN(
         api,
         KernelComplexMatrixDotVector(
@@ -1955,6 +1991,8 @@ mluOpStatus_t kernelFFT2dBluesteinRow(mluOpHandle_t handle, cnrtDim3_t k_dim,
   CHECK_RETURN(api, kernelFFT2dButterflyRow(k_dim, k_type, handle->queue,
                                             fft_plan, FFT_BACKWARD, FFT_IFFT));
   // step8
+  policyMatrixDotVectorFunc(handle, &k_dim_2, &k_type_2, orig_n1, 1,
+                            row_major, &large_col);
   CHECK_RETURN(
       api, KernelComplexMatrixDotVector(
                k_dim_2, k_type_2, handle->queue, fft_plan->bluestein_chirpz_row,
@@ -2001,8 +2039,6 @@ mluOpStatus_t kernelFFT2dBluesteinColumn(mluOpHandle_t handle, cnrtDim3_t k_dim,
                                       FFT_FORWARD, FFT_IFFT));
 
   // step6 vector_dot_matrix(fft(aux), fft(chirpz.input))
-  policyMatrixDotVectorFunc(handle, &k_dim_2, &k_type_2, orig_n1, 1, row_major,
-                            &large_col);
   CHECK_RETURN(
       api, KernelComplexMatrixDotVector(
                k_dim_2, k_type_2, handle->queue,
@@ -2039,7 +2075,6 @@ mluOpStatus_t execFFTc2c2d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   if (fft_plan->fft_strategy == CNFFT_FUNC_TWO_LEVEL_STOCKHAM) {
     cnrtDim3_t k_dim;
     cnrtFunctionType_t k_type;
-    policyFunc(handle, &k_dim, &k_type);
     uint64_t idist = 0, odist = 0;  // bytes
     mluOpDataType_t in_c_dtype = fft_plan->input_dtype;
     size_t in_c_dtype_size = mluOpDataTypeBytes(in_c_dtype);
@@ -2058,6 +2093,11 @@ mluOpStatus_t execFFTc2c2d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
     if (fft_plan->bluestein_2d_column) {
       VLOG(5) << "fft_plan->bluestein_2d_column"
               << fft_plan->bluestein_2d_column;
+      k_dim.x = 4;
+      k_dim.y = 1;
+      k_dim.z = 1;
+      k_type = cnrtFuncTypeUnion1;
+
       // step1 chirpz_column
       CHECK_RETURN(api, KernelChirpz(k_dim, k_type, handle->queue, orig_n0,
                                      orig_n0, orig_n0, true, direction,
@@ -2068,7 +2108,7 @@ mluOpStatus_t execFFTc2c2d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
                    KernelChirpz(k_dim, k_type, handle->queue, orig_n0, orig_n0,
                                 fft_plan->PAD_N0, false, direction,
                                 fft_plan->bluestein_aux_signal_column));
-
+      policyFunc(handle, &k_dim, &k_type);
       fft_plan->batch = 1;
       fft_plan->mlu_addrs.input = fft_plan->bluestein_aux_signal_column;
       fft_plan->mlu_addrs.output = fft_plan->bluestein_aux_signal_column;
@@ -2081,6 +2121,10 @@ mluOpStatus_t execFFTc2c2d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
 
     if (fft_plan->bluestein_2d_row) {
       VLOG(5) << "fft_plan->bluestein_2d_row" << fft_plan->bluestein_2d_row;
+      k_dim.x = 4;
+      k_dim.y = 1;
+      k_dim.z = 1;
+      k_type = cnrtFuncTypeUnion1;
       // step1 chirpz_column
       CHECK_RETURN(api, KernelChirpz(k_dim, k_type, handle->queue, orig_n1,
                                      orig_n1, orig_n1, true, direction,
@@ -2091,7 +2135,7 @@ mluOpStatus_t execFFTc2c2d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
                    KernelChirpz(k_dim, k_type, handle->queue, orig_n1, orig_n1,
                                 fft_plan->PAD_N1, false, direction,
                                 fft_plan->bluestein_aux_signal_row));
-
+      policyFunc(handle, &k_dim, &k_type);
       fft_plan->batch = 1;
       fft_plan->mlu_addrs.input = fft_plan->bluestein_aux_signal_row;
       fft_plan->mlu_addrs.output = fft_plan->bluestein_aux_signal_row;

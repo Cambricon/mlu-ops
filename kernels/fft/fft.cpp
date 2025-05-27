@@ -1826,7 +1826,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpAllocateC2C2D(
     workspace_size += (fft_plan->is_output_contiguous) ? 0 : buffer_size;
   }
 
-  fft_plan->workspace_size = workspace_size;
   if (fft_plan->n[0] != fft_plan->inembed[0] ||
       fft_plan->n[1] != fft_plan->inembed[1]) {
     fft_plan->workspace_size = workspace_size + buffer_size;  // input_pad_addr
@@ -1845,7 +1844,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpAllocateC2C2D(
     size_t bs_output_size = bs_input_size;
     workspace_size += bs_output_size;
   }
-
+  fft_plan->workspace_size = workspace_size;
   fft_plan->reservespace_size = reservespace_size;
 
   return MLUOP_STATUS_SUCCESS;

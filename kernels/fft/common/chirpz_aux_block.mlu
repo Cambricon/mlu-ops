@@ -85,8 +85,6 @@ __mlu_global__ void MLUKernelChirpz(const int length, int n, int pad_n,
     __memcpy(output_gdram + i * num_deal * 2, nram_temp2,
              2 * real_length * sizeof(float), NRAM2GDRAM);
   }
-
-  __sync_all();
 }
 
 __mlu_global__ void MLUKernelSignal(const int length, int n, int pad_n,
@@ -94,7 +92,7 @@ __mlu_global__ void MLUKernelSignal(const int length, int n, int pad_n,
   if (taskId == 0) {
     __gdramset(output, 2 * pad_n, (float)0);
   }
-  __sync_all();
+  __sync_all_ipu();
 
   const int32_t num_deal =
       PAD_DOWN(MAX_NRAM_SIZE / 8 / sizeof(float), ALIGN_NUM);
