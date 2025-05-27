@@ -27,33 +27,6 @@
 
 #define DIRECTION 2  // FORWARD and BACKWARD
 
-static void policyMatrixDotVectorFuncCol(const mluOpHandle_t &handle,
-                                      cnrtDim3_t *k_dim,
-                                      cnrtFunctionType_t *k_type, int col_num,
-                                      int row_num, bool row_major,
-                                      bool *large_col) {
-  int num_deal = 0;
-  if (row_major) {
-    num_deal = handle->nram_size / (8 * sizeof(float));
-    if (col_num > num_deal) {
-      *large_col = true;
-    } else {
-      *large_col = false;
-    }
-  } else {
-    num_deal = handle->nram_size / (6 * sizeof(float));
-    if (col_num <= num_deal) {
-      *large_col = false;
-    } else {
-      *large_col = true;
-    }
-  }
-  *k_type = cnrtFuncTypeUnion1;
-  k_dim->x = handle->core_num_per_cluster;
-  k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
-  k_dim->z = 1;
-}
-
 static void policyMatrixDotVectorFunc(const mluOpHandle_t &handle,
                                       cnrtDim3_t *k_dim,
                                       cnrtFunctionType_t *k_type, int col_num,
@@ -75,10 +48,7 @@ static void policyMatrixDotVectorFunc(const mluOpHandle_t &handle,
       *large_col = true;
     }
   }
-  // *k_type = cnrtFuncTypeBlock;
-  // k_dim->x = 1;
-  // k_dim->y = 1;
-  // k_dim->z = 1;
+
   *k_type = cnrtFuncTypeUnion1;
   k_dim->x = handle->core_num_per_cluster;
   k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
