@@ -241,6 +241,19 @@ struct mluOpFFTStruct {
   void *idft_matrix;
   void *idft_matrix_2d;
   cnfftButterflyAddrs mlu_addrs;
+
+  // bluestein_fft
+  bool bluestein_fft;
+  bool bluestein_2d_column;
+  bool bluestein_2d_row;
+  int PAD_N0;
+  int PAD_N1;
+  void *bluestein_chirpz_row;
+  void *bluestein_chirpz_column;
+  void *bluestein_aux_signal_row;
+  void *bluestein_aux_signal_column;
+  void *bluestein_input;
+  void *bluestein_output;
 };
 
 struct ParamNode {
@@ -335,6 +348,12 @@ mluOpStatus_t MLUOP_WIN_API kernelFFT1dButterflyRowC2R(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpFFTPlan_t fft_plan, FFTFlag flag);
 
+mluOpStatus_t kernelFFT2dBluesteinColumn(cnrtDim3_t k_dim,
+                                         cnrtFunctionType_t k_type,
+                                         cnrtQueue_t queue,
+                                         mluOpFFTPlan_t fft_plan, int direction,
+                                         FFTFlag flag);
+
 // Executes the 1D Butterfly FFT kernel for columns with the specified
 // dimensions, function type, queue, FFT plan, direction, and flag.
 mluOpStatus_t MLUOP_WIN_API kernelFFT1dButterflyColumn(
@@ -352,6 +371,10 @@ mluOpStatus_t MLUOP_WIN_API kernelFFT2dButterflyColumn(
 mluOpStatus_t MLUOP_WIN_API kernelIRFFT2dButterflyColumn(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpFFTPlan_t fft_plan, FFTFlag flag);
+
+mluOpStatus_t MLUOP_WIN_API kernelFFT2dBluesteinRow(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpFFTPlan_t fft_plan, int direction, FFTFlag flag);
 
 // Executes the 2D Butterfly FFT kernel for rows with the specified dimensions,
 // function type, queue, FFT plan, direction, and flag.
@@ -477,4 +500,18 @@ mluOpStatus_t computeFFT2dMatMulColumnR2C(mluOpHandle_t handle,
 mluOpStatus_t computeFFT2dMatMulColumnC2R(mluOpHandle_t handle,
                                           mluOpFFTPlan_t fft_plan,
                                           const float scale_factor);
+
+mluOpStatus_t MLUOP_WIN_API KernelChirpz(const cnrtDim3_t k_dim,
+                                         const cnrtFunctionType_t k_type,
+                                         const cnrtQueue_t queue,
+                                         const int length, int n, int pad_n,
+                                         bool chirpz, int type, void *output);
+
+mluOpStatus_t MLUOP_WIN_API KernelComplexMatrixDotVector(
+    const cnrtDim3_t k_dim, const cnrtFunctionType_t k_type,
+    const cnrtQueue_t queue, const void *vector_input, const void *matrix_input,
+    void *output, int batch, int row_num, int col_num, int pad_num,
+    bool row_major, bool real_input, bool large_col, float scale,
+    int output_type);
+
 #endif  // KERNELS_FFT_FFT_H_

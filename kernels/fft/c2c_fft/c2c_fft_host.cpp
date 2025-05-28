@@ -27,6 +27,34 @@
 
 #define DIRECTION 2  // FORWARD and BACKWARD
 
+static void policyMatrixDotVectorFunc(const mluOpHandle_t &handle,
+                                      cnrtDim3_t *k_dim,
+                                      cnrtFunctionType_t *k_type, int col_num,
+                                      int row_num, bool row_major,
+                                      bool *large_col) {
+  int num_deal = 0;
+  if (row_major) {
+    num_deal = handle->nram_size / (8 * sizeof(float));
+    if (col_num > num_deal) {
+      *large_col = true;
+    } else {
+      *large_col = false;
+    }
+  } else {
+    num_deal = handle->nram_size / (6 * sizeof(float));
+    if (col_num <= num_deal) {
+      *large_col = false;
+    } else {
+      *large_col = true;
+    }
+  }
+
+  *k_type = cnrtFuncTypeUnion1;
+  k_dim->x = handle->core_num_per_cluster;
+  k_dim->y = mluop::runtime::getClusterLimitCapability(handle);
+  k_dim->z = 1;
+}
+
 static mluOpStatus_t selectFFT1dStrategy(mluOpHandle_t handle,
                                          mluOpFFTPlan_t fft_plan) {
   const std::string make_plan_api = "[selectFFT1dStrategy]";
@@ -510,7 +538,7 @@ static void configureFFT1dMatmulReserveAddrs(mluOpHandle_t handle,
 mluOpStatus_t setFFT1dReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
                                   const std::string api) {
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
-  if (fft_plan->prime) {
+  if (fft_plan->prime && !fft_plan->bluestein_fft) {
     configureFFT1dMatmulReserveAddrs(handle, fft_plan);
 
     mluOpDataType_t in_c_dtype = fft_plan->input_dtype;
@@ -572,6 +600,9 @@ mluOpStatus_t setFFT1dReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
     size_t in_c_dtype_size = mluOpDataTypeBytes(in_c_dtype);
 
     int nfft = fft_plan->n[0];
+    if (fft_plan->bluestein_fft) {
+      nfft = fft_plan->PAD_N0;
+    }
     size_t factors_size = FFT_MAXFACTORS * sizeof(int);  // bytes
     size_t twiddles_size = in_c_dtype_size * nfft * 2;
 
@@ -652,6 +683,14 @@ mluOpStatus_t setFFT2dReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   int n1_ori = fft_plan->n[1];
 
   if (fft_plan->fft_strategy == CNFFT_FUNC_TWO_LEVEL_STOCKHAM) {
+    VLOG(5) << "start CNFFT_FUNC_TWO_LEVEL_STOCKHAM";
+    if (fft_plan->bluestein_2d_column) {
+      n0_ori = fft_plan->PAD_N0;
+    }
+    if (fft_plan->bluestein_2d_row) {
+      n1_ori = fft_plan->PAD_N1;
+    }
+
     size_t factors_size = FFT_MAXFACTORS * sizeof(int);  // bytes
     size_t twiddles_size = CPX_TYPE_SIZE * n1_ori;
     size_t twiddles_size_2d = CPX_TYPE_SIZE * n0_ori;
@@ -1027,6 +1066,9 @@ static void configureFFT1dWorkspaceAddrs(mluOpHandle_t handle,
 
   int batch = fft_plan->batch;
   int nfft = fft_plan->n[0];
+  if (fft_plan->bluestein_fft) {
+    nfft = fft_plan->PAD_N0;
+  }
 
   size_t buffer_size = batch * in_c_dtype_size * nfft;
 
@@ -1036,14 +1078,15 @@ static void configureFFT1dWorkspaceAddrs(mluOpHandle_t handle,
 
   if ((fft_plan->is_input_contiguous &&
        fft_plan->inembed[0] <= fft_plan->n[0]) ||
-      fft_plan->is_batch_contiguous) {
+      (fft_plan->is_batch_contiguous && !fft_plan->bluestein_fft)) {
     fft_plan->mlu_addrs.input = input;
   } else {
     fft_plan->mlu_addrs.input = (uint8_t *)workspace + offset;
     offset += buffer_size;
   }
 
-  if (fft_plan->is_output_contiguous || fft_plan->is_batch_contiguous) {
+  if (fft_plan->is_output_contiguous ||
+      (fft_plan->is_batch_contiguous && !fft_plan->bluestein_fft)) {
     fft_plan->mlu_addrs.output = output;
   } else {
     fft_plan->mlu_addrs.output = (uint8_t *)workspace + offset;
@@ -1051,6 +1094,18 @@ static void configureFFT1dWorkspaceAddrs(mluOpHandle_t handle,
   }
   if (fft_plan->n[0] > fft_plan->inembed[0]) {
     fft_plan->mlu_addrs.input_pad_addr = (uint8_t *)workspace + offset;
+    offset += buffer_size;
+  }
+
+  if (fft_plan->bluestein_fft) {
+    fft_plan->bluestein_chirpz_row = (uint8_t *)workspace + offset;
+    size_t chirpz_buffer_size = in_c_dtype_size * nfft;
+    offset += chirpz_buffer_size;
+    fft_plan->bluestein_aux_signal_row = (uint8_t *)workspace + offset;
+    offset += chirpz_buffer_size;
+    fft_plan->bluestein_input = (uint8_t *)workspace + offset;
+    offset += buffer_size;
+    fft_plan->bluestein_output = (uint8_t *)workspace + offset;
   }
 }
 
@@ -1068,6 +1123,12 @@ static void configureFFT2dWorkspaceAddrs(mluOpHandle_t handle,
   int batch = fft_plan->batch;
   int n0_ori = fft_plan->n[0];
   int n1_ori = fft_plan->n[1];
+  if (fft_plan->bluestein_2d_column) {
+    n0_ori = fft_plan->PAD_N0;
+  }
+  if (fft_plan->bluestein_2d_row) {
+    n1_ori = fft_plan->PAD_N1;
+  }
 
   size_t offset = 0;
   if (fft_plan->fft_strategy == CNFFT_FUNC_MANY_DIST1_2D) {
@@ -1107,6 +1168,32 @@ static void configureFFT2dWorkspaceAddrs(mluOpHandle_t handle,
         (uint8_t *)workspace + offset;  // batch * in_c_dtype_size * n0_ori *
                                         // n1_ori * 2; // buffer_size;
   }
+
+  if (fft_plan->bluestein_fft) {
+    if (fft_plan->bluestein_2d_column) {
+      fft_plan->bluestein_chirpz_column = (uint8_t *)workspace + offset;
+      size_t chirpz_column_buffer_size = in_c_dtype_size * fft_plan->PAD_N0;
+      offset += chirpz_column_buffer_size;
+
+      fft_plan->bluestein_aux_signal_column = (uint8_t *)workspace + offset;
+      offset += chirpz_column_buffer_size;
+    }
+    if (fft_plan->bluestein_2d_row) {
+      fft_plan->bluestein_chirpz_row = (uint8_t *)workspace + offset;
+      size_t chirpz_row_buffer_size = in_c_dtype_size * fft_plan->PAD_N1;
+      offset += chirpz_row_buffer_size;
+
+      fft_plan->bluestein_aux_signal_row = (uint8_t *)workspace + offset;
+      offset += chirpz_row_buffer_size;
+    }
+
+    fft_plan->bluestein_input = (uint8_t *)workspace + offset;
+
+    size_t bs_buffer_size =
+        in_c_dtype_size * fft_plan->PAD_N0 * fft_plan->PAD_N1;
+    offset += bs_buffer_size;
+    fft_plan->bluestein_output = (uint8_t *)workspace + offset;
+  }
 }
 // input    : in input
 // output   : in input_contiguous_addr
@@ -1116,7 +1203,7 @@ static mluOpStatus_t makeFFT1dContiguousInput(mluOpHandle_t handle,
   std::string api = "[mluOpExecFFT]";
   VLOG(5) << "into makeFFT1dContiguousInput";
   auto status = MLUOP_STATUS_SUCCESS;
-  if (fft_plan->prime) {
+  if (fft_plan->prime && !fft_plan->bluestein_fft) {
     if (!fft_plan->is_input_contiguous) {
       VLOG(5) << "launch mluOpContiguous for fft1d input";
       mluOpTensorDescriptor_t input_desc;
@@ -1142,7 +1229,7 @@ static mluOpStatus_t makeFFT1dContiguousInput(mluOpHandle_t handle,
   } else {
     if (!(fft_plan->is_input_contiguous &&
           fft_plan->inembed[0] <= fft_plan->n[0]) &&
-        !fft_plan->is_batch_contiguous) {
+        !(fft_plan->is_batch_contiguous && !fft_plan->bluestein_fft)) {
       VLOG(5) << "launch mluOpContiguous for fft1d input";
       mluOpTensorDescriptor_t input_desc;
       status = mluOpCreateTensorDescriptor(&input_desc);
@@ -1755,7 +1842,8 @@ static mluOpStatus_t makeFFT1dContiguousOutput(mluOpHandle_t handle,
   VLOG(5) << "into makeFFT1dContiguousOutput";
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
   if (!fft_plan->is_output_contiguous &&
-      (fft_plan->prime || !fft_plan->is_batch_contiguous)) {
+      (fft_plan->prime ||
+       !(fft_plan->is_batch_contiguous && !fft_plan->bluestein_fft))) {
     VLOG(5) << "launch copy with stride";
     mluOpDataType_t out_c_dtype = fft_plan->output_dtype;
     // create tensor desc
@@ -1779,7 +1867,7 @@ static mluOpStatus_t makeFFT1dContiguousOutput(mluOpHandle_t handle,
                                       out_c_dtype, OUT_DIM_NUM, dims, strides);
     INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
-    void *copy_src_addr = (fft_plan->prime)
+    void *copy_src_addr = (fft_plan->prime && !fft_plan->bluestein_fft)
                               ? fft_plan->matmul_addrs.output_contiguous_addr
                               : fft_plan->mlu_addrs.output;
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle,
@@ -1859,16 +1947,220 @@ mluOpStatus_t execFFTc2c1d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
 
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
-  policyFunc(handle, &k_dim, &k_type);
-  if (!fft_plan->is_batch_contiguous) {
-    kernelFFT1dButterflyRow(k_dim, k_type, handle->queue, fft_plan, direction,
-                            FFT_IFFT);
+  if (!fft_plan->bluestein_fft) {
+    policyFunc(handle, &k_dim, &k_type);
+    if (!fft_plan->is_batch_contiguous) {
+      CHECK_RETURN(api, kernelFFT1dButterflyRow(k_dim, k_type, handle->queue,
+                                                fft_plan, direction, FFT_IFFT));
+    } else {
+      CHECK_RETURN(api,
+                   kernelFFT1dButterflyColumn(k_dim, k_type, handle->queue,
+                                              fft_plan, direction, FFT_IFFT));
+    }
   } else {
-    kernelFFT1dButterflyColumn(k_dim, k_type, handle->queue, fft_plan,
-                               direction, FFT_IFFT);
+    k_dim.x = 4;
+    k_dim.y = 1;
+    k_dim.z = 1;
+    k_type = cnrtFuncTypeUnion1;
+    // step1 chirpz
+    CHECK_RETURN(api, KernelChirpz(k_dim, k_type, handle->queue, fft_plan->n[0],
+                                   fft_plan->n[0], fft_plan->n[0], true,
+                                   direction, fft_plan->bluestein_chirpz_row));
+
+    // step2 aux_signal
+    CHECK_RETURN(
+        api, KernelChirpz(k_dim, k_type, handle->queue, fft_plan->n[0],
+                          fft_plan->n[0], fft_plan->PAD_N0, false, direction,
+                          fft_plan->bluestein_aux_signal_row));
+
+    // step3
+    // fft(aux_signal)
+    int orig_batch = fft_plan->batch;
+    void *origin_input = fft_plan->mlu_addrs.input;
+    void *origin_output = fft_plan->mlu_addrs.output;
+    policyFunc(handle, &k_dim, &k_type);
+    fft_plan->batch = 1;
+    fft_plan->mlu_addrs.input = fft_plan->bluestein_aux_signal_row;
+    fft_plan->mlu_addrs.output = fft_plan->bluestein_aux_signal_row;
+    CHECK_RETURN(api, kernelFFT1dButterflyRow(k_dim, k_type, handle->queue,
+                                              fft_plan, FFT_FORWARD, FFT_IFFT));
+    // step4
+    // vector_dot_matrix(chirpz, input)
+    fft_plan->batch = orig_batch;
+    bool row_major = true;
+    bool large_col = false;
+    cnrtDim3_t k_dim_2;
+    cnrtFunctionType_t k_type_2;
+    policyMatrixDotVectorFunc(handle, &k_dim_2, &k_type_2, fft_plan->n[0], 1,
+                              row_major, &large_col);
+    CHECK_RETURN(
+        api, KernelComplexMatrixDotVector(
+                 k_dim_2, k_type_2, handle->queue,
+                 fft_plan->bluestein_chirpz_row, origin_input,
+                 fft_plan->bluestein_input, fft_plan->batch, 1, fft_plan->n[0],
+                 fft_plan->PAD_N0, row_major, false, large_col, 1, 0));
+
+    // policyFunc(handle, &k_dim, &k_type);
+    // step5 fft(vector_dot_matrix(chirpz, input))
+    fft_plan->mlu_addrs.input = fft_plan->bluestein_input;
+    fft_plan->mlu_addrs.output = fft_plan->bluestein_input;
+    CHECK_RETURN(api, kernelFFT1dButterflyRow(k_dim, k_type, handle->queue,
+                                              fft_plan, FFT_FORWARD, FFT_IFFT));
+
+    // step6 vector_dot_matrix(fft(aux), fft(chirpz.input))
+    policyMatrixDotVectorFunc(handle, &k_dim_2, &k_type_2, fft_plan->PAD_N0, 1,
+                              row_major, &large_col);
+    CHECK_RETURN(api, KernelComplexMatrixDotVector(
+                          k_dim_2, k_type_2, handle->queue,
+                          fft_plan->bluestein_aux_signal_row,
+                          fft_plan->bluestein_input, fft_plan->bluestein_output,
+                          fft_plan->batch, 1, fft_plan->PAD_N0,
+                          fft_plan->PAD_N0, row_major, false, large_col, 1, 0));
+
+    // step7 fft_backward
+    fft_plan->mlu_addrs.input = fft_plan->bluestein_output;
+    fft_plan->mlu_addrs.output = fft_plan->bluestein_input;
+    CHECK_RETURN(api,
+                 kernelFFT1dButterflyRow(k_dim, k_type, handle->queue, fft_plan,
+                                         FFT_BACKWARD, FFT_IFFT));
+
+    // step8
+    policyMatrixDotVectorFunc(handle, &k_dim_2, &k_type_2, fft_plan->n[0], 1,
+                              row_major, &large_col);
+    CHECK_RETURN(
+        api,
+        KernelComplexMatrixDotVector(
+            k_dim_2, k_type_2, handle->queue, fft_plan->bluestein_chirpz_row,
+            fft_plan->bluestein_input, origin_output, fft_plan->batch, 1,
+            fft_plan->n[0], fft_plan->PAD_N0, row_major, false, large_col,
+            1.0 / fft_plan->PAD_N0, 1));
+
+    fft_plan->mlu_addrs.input = origin_input;
+    fft_plan->mlu_addrs.output = origin_output;
   }
 
   return status;
+}
+
+mluOpStatus_t kernelFFT2dBluesteinRow(mluOpHandle_t handle, cnrtDim3_t k_dim,
+                                      cnrtFunctionType_t k_type,
+                                      cnrtQueue_t queue,
+                                      mluOpFFTPlan_t fft_plan, int direction,
+                                      FFTFlag flag, void *origin_input,
+                                      void *origin_output) {
+  std::string api = "[kernelFFT2dBluesteinRow]";
+  int orig_n0 = fft_plan->n[0];
+  int orig_n1 = fft_plan->n[1];
+  fft_plan->n[1] = fft_plan->PAD_N1;
+
+  bool row_major = true;
+  bool large_col = false;
+  cnrtDim3_t k_dim_2;
+  cnrtFunctionType_t k_type_2;
+  policyMatrixDotVectorFunc(handle, &k_dim_2, &k_type_2, orig_n1, 1, row_major,
+                            &large_col);
+  // step4
+  // vector_dot_matrix(chirpz, input)
+  CHECK_RETURN(
+      api, KernelComplexMatrixDotVector(
+               k_dim_2, k_type_2, handle->queue, fft_plan->bluestein_chirpz_row,
+               origin_input, fft_plan->bluestein_input, 1, orig_n0, orig_n1,
+               fft_plan->PAD_N1, row_major, false, large_col, 1, 0));
+
+  // step5 fft(vector_dot_matrix(chirpz, input))
+  fft_plan->mlu_addrs.input = fft_plan->bluestein_input;
+  fft_plan->mlu_addrs.output = fft_plan->bluestein_input;
+  CHECK_RETURN(api, kernelFFT2dButterflyRow(k_dim, k_type, handle->queue,
+                                            fft_plan, FFT_FORWARD, FFT_IFFT));
+
+  // step6 vector_dot_matrix(fft(aux), fft(chirpz.input))
+  policyMatrixDotVectorFunc(handle, &k_dim_2, &k_type_2, fft_plan->PAD_N1, 1,
+                            row_major, &large_col);
+  CHECK_RETURN(
+      api, KernelComplexMatrixDotVector(
+               k_dim_2, k_type_2, handle->queue,
+               fft_plan->bluestein_aux_signal_row, fft_plan->bluestein_input,
+               fft_plan->bluestein_output, 1, orig_n0, fft_plan->PAD_N1,
+               fft_plan->PAD_N1, row_major, false, large_col, 1, 0));
+
+  // step7 fft_backward
+  fft_plan->mlu_addrs.output = fft_plan->bluestein_output;
+  CHECK_RETURN(api, kernelFFT2dButterflyRow(k_dim, k_type, handle->queue,
+                                            fft_plan, FFT_BACKWARD, FFT_IFFT));
+  // step8
+  policyMatrixDotVectorFunc(handle, &k_dim_2, &k_type_2, orig_n1, 1, row_major,
+                            &large_col);
+  CHECK_RETURN(
+      api, KernelComplexMatrixDotVector(
+               k_dim_2, k_type_2, handle->queue, fft_plan->bluestein_chirpz_row,
+               fft_plan->bluestein_output, origin_output, 1, orig_n0, orig_n1,
+               fft_plan->PAD_N1, row_major, false, large_col,
+               1.0 / fft_plan->PAD_N1, 1));
+  fft_plan->n[1] = orig_n1;
+  fft_plan->mlu_addrs.input = origin_input;
+  fft_plan->mlu_addrs.output = origin_output;
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t kernelFFT2dBluesteinColumn(mluOpHandle_t handle, cnrtDim3_t k_dim,
+                                         cnrtFunctionType_t k_type,
+                                         cnrtQueue_t queue,
+                                         mluOpFFTPlan_t fft_plan, int direction,
+                                         FFTFlag flag, void *origin_input,
+                                         void *origin_output) {
+  std::string api = "[kernelFFT2dBluesteinColumn]";
+  int orig_n0 = fft_plan->n[0];
+  int orig_n1 = fft_plan->n[1];
+  fft_plan->n[0] = fft_plan->PAD_N0;
+
+  bool row_major = false;
+  bool large_col = false;
+  cnrtDim3_t k_dim_2;
+  cnrtFunctionType_t k_type_2;
+
+  // step4
+  // vector_dot_matrix(chirpz, input)
+  policyMatrixDotVectorFunc(handle, &k_dim_2, &k_type_2, orig_n1, 1, row_major,
+                            &large_col);
+  CHECK_RETURN(api, KernelComplexMatrixDotVector(
+                        k_dim_2, k_type_2, handle->queue,
+                        fft_plan->bluestein_chirpz_column, origin_input,
+                        fft_plan->bluestein_input, 1, orig_n0, orig_n1,
+                        fft_plan->PAD_N0, row_major, false, large_col, 1, 0));
+
+  // step5 fft(vector_dot_matrix(chirpz, input))
+  // fft_plan->mlu_addrs.input = fft_plan->bluestein_input;
+  fft_plan->mlu_addrs.output = fft_plan->bluestein_input;
+  CHECK_RETURN(
+      api, kernelFFT2dButterflyColumn(k_dim, k_type, handle->queue, fft_plan,
+                                      FFT_FORWARD, FFT_IFFT));
+
+  // step6 vector_dot_matrix(fft(aux), fft(chirpz.input))
+  CHECK_RETURN(
+      api, KernelComplexMatrixDotVector(
+               k_dim_2, k_type_2, handle->queue,
+               fft_plan->bluestein_aux_signal_column, fft_plan->bluestein_input,
+               fft_plan->bluestein_output, 1, fft_plan->PAD_N0, orig_n1,
+               fft_plan->PAD_N0, row_major, false, large_col, 1, 0));
+
+  // step7 fft_backward
+  fft_plan->mlu_addrs.input = fft_plan->bluestein_output;
+  fft_plan->mlu_addrs.output = fft_plan->bluestein_output;
+  CHECK_RETURN(
+      api, kernelFFT2dButterflyColumn(k_dim, k_type, handle->queue, fft_plan,
+                                      FFT_BACKWARD, FFT_IFFT));
+  // step8
+  CHECK_RETURN(
+      api,
+      KernelComplexMatrixDotVector(
+          k_dim_2, k_type_2, handle->queue, fft_plan->bluestein_chirpz_column,
+          fft_plan->bluestein_output, origin_output, 1, orig_n0, orig_n1,
+          orig_n0, row_major, false, large_col, 1.0 / fft_plan->PAD_N0, 1));
+
+  fft_plan->n[0] = orig_n0;
+  fft_plan->mlu_addrs.input = origin_input;
+  fft_plan->mlu_addrs.output = origin_output;
+  return MLUOP_STATUS_SUCCESS;
 }
 
 mluOpStatus_t execFFTc2c2d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
@@ -1880,37 +2172,140 @@ mluOpStatus_t execFFTc2c2d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   if (fft_plan->fft_strategy == CNFFT_FUNC_TWO_LEVEL_STOCKHAM) {
     cnrtDim3_t k_dim;
     cnrtFunctionType_t k_type;
-    policyFunc(handle, &k_dim, &k_type);
     uint64_t idist = 0, odist = 0;  // bytes
     mluOpDataType_t in_c_dtype = fft_plan->input_dtype;
     size_t in_c_dtype_size = mluOpDataTypeBytes(in_c_dtype);
     idist = in_c_dtype_size * fft_plan->n[0] * fft_plan->n[1];
     odist = in_c_dtype_size * fft_plan->n[0] * fft_plan->n[1];
+    policyFunc(handle, &k_dim, &k_type);
+    int origin_batch = fft_plan->batch;
+
+    void *origin_input = fft_plan->mlu_addrs.input;
+    void *origin_output = fft_plan->mlu_addrs.output;
+
+    int orig_n0 = fft_plan->n[0];
+    int orig_n1 = fft_plan->n[1];
+
+    if (fft_plan->bluestein_2d_column) {
+      VLOG(5) << "fft_plan->bluestein_2d_column"
+              << fft_plan->bluestein_2d_column;
+      k_dim.x = 4;
+      k_dim.y = 1;
+      k_dim.z = 1;
+      k_type = cnrtFuncTypeUnion1;
+
+      // step1 chirpz_column
+      CHECK_RETURN(api, KernelChirpz(k_dim, k_type, handle->queue, orig_n0,
+                                     orig_n0, orig_n0, true, direction,
+                                     fft_plan->bluestein_chirpz_column));
+
+      // step2 aux_signal_column
+      CHECK_RETURN(api,
+                   KernelChirpz(k_dim, k_type, handle->queue, orig_n0, orig_n0,
+                                fft_plan->PAD_N0, false, direction,
+                                fft_plan->bluestein_aux_signal_column));
+      policyFunc(handle, &k_dim, &k_type);
+      fft_plan->batch = 1;
+      fft_plan->mlu_addrs.input = fft_plan->bluestein_aux_signal_column;
+      fft_plan->mlu_addrs.output = fft_plan->bluestein_aux_signal_column;
+      fft_plan->n[1] = 1;
+      CHECK_RETURN(api,
+                   kernelFFT2dButterflyColumn(k_dim, k_type, handle->queue,
+                                              fft_plan, FFT_FORWARD, FFT_IFFT));
+      fft_plan->n[1] = orig_n1;
+    }
+
+    if (fft_plan->bluestein_2d_row) {
+      VLOG(5) << "fft_plan->bluestein_2d_row" << fft_plan->bluestein_2d_row;
+      k_dim.x = 4;
+      k_dim.y = 1;
+      k_dim.z = 1;
+      k_type = cnrtFuncTypeUnion1;
+      // step1 chirpz_column
+      CHECK_RETURN(api, KernelChirpz(k_dim, k_type, handle->queue, orig_n1,
+                                     orig_n1, orig_n1, true, direction,
+                                     fft_plan->bluestein_chirpz_row));
+
+      // step2 aux_signal_column
+      CHECK_RETURN(api,
+                   KernelChirpz(k_dim, k_type, handle->queue, orig_n1, orig_n1,
+                                fft_plan->PAD_N1, false, direction,
+                                fft_plan->bluestein_aux_signal_row));
+      policyFunc(handle, &k_dim, &k_type);
+      fft_plan->batch = 1;
+      fft_plan->mlu_addrs.input = fft_plan->bluestein_aux_signal_row;
+      fft_plan->mlu_addrs.output = fft_plan->bluestein_aux_signal_row;
+      fft_plan->n[0] = 1;
+      CHECK_RETURN(
+          api, kernelFFT2dButterflyRow(k_dim, k_type, handle->queue, fft_plan,
+                                       FFT_FORWARD, FFT_IFFT));
+      fft_plan->n[0] = orig_n0;
+    }
+
+    fft_plan->mlu_addrs.input = origin_input;
+    fft_plan->mlu_addrs.output = origin_output;
+    fft_plan->batch = origin_batch;
 
     for (int batch_id = 0; batch_id < fft_plan->batch; batch_id++) {
       if (direction == FFT_FORWARD) {
-        status = kernelFFT2dButterflyRow(k_dim, k_type, handle->queue, fft_plan,
-                                         direction, FFT_IFFT);
-        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+        if (fft_plan->n[1] != 1) {
+          if (!fft_plan->bluestein_2d_row) {
+            CHECK_RETURN(
+                api, kernelFFT2dButterflyRow(k_dim, k_type, handle->queue,
+                                             fft_plan, direction, FFT_IFFT));
+          } else {
+            CHECK_RETURN(api,
+                         kernelFFT2dBluesteinRow(
+                             handle, k_dim, k_type, handle->queue, fft_plan,
+                             direction, FFT_IFFT, origin_input, origin_output));
+          }
+        }
 
-        status = kernelFFT2dButterflyColumn(k_dim, k_type, handle->queue,
-                                            fft_plan, direction, FFT_IFFT);
-        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+        if (fft_plan->n[0] != 1) {
+          if (!fft_plan->bluestein_2d_column) {
+            CHECK_RETURN(
+                api, kernelFFT2dButterflyColumn(k_dim, k_type, handle->queue,
+                                                fft_plan, direction, FFT_IFFT));
+          } else {
+            CHECK_RETURN(
+                api, kernelFFT2dBluesteinColumn(
+                         handle, k_dim, k_type, handle->queue, fft_plan,
+                         direction, FFT_IFFT, origin_output, origin_output));
+          }
+        }
+
       } else {
-        status = kernelFFT2dButterflyColumn(k_dim, k_type, handle->queue,
-                                            fft_plan, direction, FFT_IFFT);
+        if (fft_plan->n[0] != 1) {
+          if (!fft_plan->bluestein_2d_column) {
+            CHECK_RETURN(
+                api, kernelFFT2dButterflyColumn(k_dim, k_type, handle->queue,
+                                                fft_plan, direction, FFT_IFFT));
+          } else {
+            CHECK_RETURN(api,
+                         kernelFFT2dBluesteinColumn(
+                             handle, k_dim, k_type, handle->queue, fft_plan,
+                             direction, FFT_IFFT, origin_input, origin_output));
+          }
+        }
 
-        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-
-        status = kernelFFT2dButterflyRow(k_dim, k_type, handle->queue, fft_plan,
-                                         direction, FFT_IFFT);
-        INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
+        if (fft_plan->n[1] != 1) {
+          if (!fft_plan->bluestein_2d_row) {
+            CHECK_RETURN(
+                api, kernelFFT2dButterflyRow(k_dim, k_type, handle->queue,
+                                             fft_plan, direction, FFT_IFFT));
+          } else {
+            CHECK_RETURN(
+                api, kernelFFT2dBluesteinRow(
+                         handle, k_dim, k_type, handle->queue, fft_plan,
+                         direction, FFT_IFFT, origin_output, origin_output));
+          }
+        }
       }
 
-      fft_plan->mlu_addrs.input =
-          (void *)((uint64_t)(fft_plan->mlu_addrs.input) + idist);
-      fft_plan->mlu_addrs.output =
-          (void *)((uint64_t)(fft_plan->mlu_addrs.output) + odist);
+      origin_input = (void *)((uint64_t)(origin_input) + idist);
+      origin_output = (void *)((uint64_t)(origin_output) + odist);
+      fft_plan->mlu_addrs.input = origin_input;
+      fft_plan->mlu_addrs.output = origin_output;
     }
     fft_plan->mlu_addrs.input = (void *)((uint64_t)(fft_plan->mlu_addrs.input) -
                                          fft_plan->batch * idist);
@@ -1918,7 +2313,6 @@ mluOpStatus_t execFFTc2c2d(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
         (void *)((uint64_t)(fft_plan->mlu_addrs.output) -
                  fft_plan->batch * odist);
   }
-
   if (fft_plan->fft_strategy == CNFFT_FUNC_MANY_DIST1_2D) {
     if (direction == FFT_FORWARD) {
       status = computeFFT2dMatMulRow(handle, fft_plan, scale_factor, direction);
@@ -1945,7 +2339,7 @@ mluOpStatus_t execFFT1d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
   mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
   std::string api = "[mluOpExecFFT]";
 
-  if (fft_plan->prime) {
+  if (fft_plan->prime && !fft_plan->bluestein_fft) {
     configureFFT1dMatmulWorkspaceAddrs(handle, fft_plan, (void *)input,
                                        workspace, output);
 
@@ -2090,58 +2484,8 @@ mluOpStatus_t execFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
       DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
       DESTROY_CNNL_HANDLE(cnnl_handle);
     }
-
-    if (fft_plan->n[0] == 1 && fft_plan->n[1] != 1) {
-      for (int batch_id = 0; batch_id < fft_plan->batch; batch_id++) {
-        if (direction == FFT_FORWARD) {
-          status = kernelFFT2dButterflyRow(k_dim, k_type, handle->queue,
-                                           fft_plan, direction, FFT_IFFT);
-          INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-        } else {
-          status = kernelFFT2dButterflyRow(k_dim, k_type, handle->queue,
-                                           fft_plan, direction, FFT_IFFT);
-          INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-        }
-
-        fft_plan->mlu_addrs.input =
-            (void *)((uint64_t)(fft_plan->mlu_addrs.input) + idist);
-        fft_plan->mlu_addrs.output =
-            (void *)((uint64_t)(fft_plan->mlu_addrs.output) + odist);
-      }
-      fft_plan->mlu_addrs.input =
-          (void *)((uint64_t)(fft_plan->mlu_addrs.input) -
-                   fft_plan->batch * idist);
-      fft_plan->mlu_addrs.output =
-          (void *)((uint64_t)(fft_plan->mlu_addrs.output) -
-                   fft_plan->batch * odist);
-
-    } else if (fft_plan->n[0] != 1 && fft_plan->n[1] == 1) {
-      for (int batch_id = 0; batch_id < fft_plan->batch; batch_id++) {
-        if (direction == FFT_FORWARD) {
-          status = kernelFFT2dButterflyColumn(k_dim, k_type, handle->queue,
-                                              fft_plan, direction, FFT_IFFT);
-          INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-        } else {
-          status = kernelFFT2dButterflyColumn(k_dim, k_type, handle->queue,
-                                              fft_plan, direction, FFT_IFFT);
-          INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
-        }
-
-        fft_plan->mlu_addrs.input =
-            (void *)((uint64_t)(fft_plan->mlu_addrs.input) + idist);
-        fft_plan->mlu_addrs.output =
-            (void *)((uint64_t)(fft_plan->mlu_addrs.output) + odist);
-      }
-      fft_plan->mlu_addrs.input =
-          (void *)((uint64_t)(fft_plan->mlu_addrs.input) -
-                   fft_plan->batch * idist);
-      fft_plan->mlu_addrs.output =
-          (void *)((uint64_t)(fft_plan->mlu_addrs.output) -
-                   fft_plan->batch * odist);
-    }
-  } else {
-    status = execFFTc2c2d(handle, fft_plan, scale_factor, direction);
   }
+  status = execFFTc2c2d(handle, fft_plan, scale_factor, direction);
 
   INTERNAL_CHECK(api, status == MLUOP_STATUS_SUCCESS);
 
