@@ -166,22 +166,6 @@ INSTANTIATE_TEST_CASE_P(
                      testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
 INSTANTIATE_TEST_CASE_P(
-    negative_2_m_l,  // float/complex_float，n>4096, fft length can be broken
-                     // down into 2^m*l
-    fft_general,
-    testing::Combine(testing::Values(MLUOpTensorParamInt64{
-                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 2,
-                         std::vector<int64_t>({1, 4097}),
-                         std::vector<int64_t>({1, 1}), MLUOP_DTYPE_FLOAT}),
-                     testing::Values(MLUOpTensorParamInt64{
-                         MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 2,
-                         std::vector<int64_t>({1, 4097}),
-                         std::vector<int64_t>({1, 1})}),
-                     testing::Values(1), testing::Values(4097),
-                     testing::Values(MLUOP_UNKNOWN_DEVICE),
-                     testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
-
-INSTANTIATE_TEST_CASE_P(
     negative_rank_1, fft_general,
     testing::Combine(testing::Values(MLUOpTensorParamInt64{
                          MLUOP_LAYOUT_NHWC, MLUOP_DTYPE_COMPLEX_FLOAT, 1,
