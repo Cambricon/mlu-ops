@@ -55,34 +55,6 @@ static inline int getPadN(int n) {
   return pad_n;
 }
 
-// Calculate whether the optimization strategy can be
-// entered(CNFFT_FUNC_STOCKHAM and CNFFT_FUNC_COOLEY_TUKEY). If it can enter,
-// select the optimal strategy and calculate corresponding parameters.
-mluOpStatus_t isFFTStrategy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
-  mluOpStatus_t status = MLUOP_STATUS_SUCCESS;
-  // The basic conditions for entering the optimization.
-  if ((handle->arch > MLUOP_MLU370 && fft_plan->n[0] > 4098) ||
-      (handle->arch == MLUOP_MLU370 && fft_plan->n[0] > 4096)) {
-    bool find_stockham = 0;
-    // CNFFT_FUNC_STOCKHAM optimizaion currently has more retrictions as
-    // follows:
-    if (fft_plan->execution_dtype == MLUOP_DTYPE_HALF ||
-        fft_plan->execution_dtype == MLUOP_DTYPE_FLOAT) {
-      find_stockham = true;
-    }
-    // strategy_status: 0 means select MLUOP_FUNC_STOCKHAM, 1 means selelct
-    // COOLEY_TUKEY,
-    //                  -1 means still select CNFFT_FUNC_MATMUL.
-    int strategy_status = findFFTOptLimit(
-        handle, fft_plan->n[0], fft_plan->batch, fft_plan->m, fft_plan->L,
-        fft_plan->s, fft_plan->L_sub, find_stockham);
-    if (strategy_status == -1) {
-      status = MLUOP_STATUS_NOT_SUPPORTED;
-    }
-  }
-  return status;
-}
-
 // May be use a common function is a better choice?
 static inline bool supportFloatConv(mluOpHandle_t handle) {
   switch (handle->arch) {
