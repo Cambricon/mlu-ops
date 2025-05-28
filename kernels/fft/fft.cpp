@@ -26,6 +26,35 @@
 #include "kernels/fft/irfft/irfft.h"
 #include "kernels/fft/c2c_fft/c2c_fft.h"
 
+static inline int getPadN(int n) {
+  int pad_n = 0;
+  int r = 0;
+  int pad_temp = 2 * n - 1;
+  int pad_temp2 = 0;
+  for (int i = 1; i < 64; i++) {
+    pad_temp2 = pad_temp + i;
+    pad_n = pad_temp2;
+    while (pad_temp2 > 1) {
+      for (r = 64; r > 1; r--) {
+        if (pad_temp2 % r == 0) {
+          pad_temp2 /= r;
+          break;
+        }
+      }
+      if (r == 1) {
+        break;
+      }
+    }
+    if (pad_temp2 == 1) {
+      break;
+    }
+  }
+  if (pad_n < 204) {
+    pad_n = 256;
+  }
+  return pad_n;
+}
+
 // May be use a common function is a better choice?
 static inline bool supportFloatConv(mluOpHandle_t handle) {
   switch (handle->arch) {
@@ -156,7 +185,6 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateTwiddles(mluOpFFTPlan_t fft_plan,
   CNRT_CHECK(
       cnrtHostMalloc((void **)&twiddles,
                      (_nfft * 2 * 2) * sizeof(DT)));  // complex *2(large+small)
-
   _twiddles = twiddles;
   int stage_count = factors[0];
   int cur_large_radix, cur_small_radix, section_num, butterfly_num,
@@ -975,6 +1003,7 @@ mluOpStatus_t MLUOP_WIN_API fftTwoStepFactor(mluOpHandle_t handle,
             if (n <= 64) {
               r = n;
             } else {
+              VLOG(5) << "n " << n;
               int *cur_facbuf = &facbuf[small_factors_offset];
               searchLargeRadix(handle, fft_plan, r, cur_facbuf, stage_num + 1,
                                n, is_row_major);
@@ -1649,22 +1678,35 @@ mluOpAllocateC2C1D(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
   size_t buffer_size = batch * in_c_dtype_size * nfft;
 
   workspace_size = buffer_size * 2;
-  workspace_size += ((fft_plan->is_input_contiguous &&
-                      fft_plan->n[0] <= fft_plan->inembed[0]) ||
-                     fft_plan->is_batch_contiguous)
-                        ? 0
-                        : buffer_size;
-  workspace_size += ((fft_plan->is_output_contiguous &&
-                      fft_plan->n[0] <= fft_plan->onembed[0]) ||
-                     fft_plan->is_batch_contiguous)
-                        ? 0
-                        : buffer_size;
+  workspace_size +=
+      ((fft_plan->is_input_contiguous &&
+        fft_plan->n[0] <= fft_plan->inembed[0]) ||
+       (fft_plan->is_batch_contiguous && !fft_plan->bluestein_fft))
+          ? 0
+          : buffer_size;
+  workspace_size +=
+      ((fft_plan->is_output_contiguous &&
+        fft_plan->n[0] <= fft_plan->onembed[0]) ||
+       (fft_plan->is_batch_contiguous && !fft_plan->bluestein_fft))
+          ? 0
+          : buffer_size;
   if (fft_plan->n[0] != fft_plan->inembed[0]) {
     workspace_size += buffer_size;
   }
   size_t twiddles_size = in_c_dtype_size * nfft * 2;
   reservespace_size = sizeof(int) * (FFT_MAXFACTORS)            /* factors */
                       + twiddles_size * 2 + DFT_TABLE_SIZE * 2; /* twiddles */
+
+  if (fft_plan->bluestein_fft) {
+    size_t chirpz_size = in_c_dtype_size * nfft;
+    workspace_size += chirpz_size;
+    size_t aux_signal_size = chirpz_size;
+    workspace_size += aux_signal_size;
+    size_t bs_input_size = batch * in_c_dtype_size * nfft;
+    workspace_size += bs_input_size;
+    size_t bs_output_size = bs_input_size;
+    workspace_size += bs_output_size;
+  }
 
   fft_plan->workspace_size = workspace_size;
   fft_plan->reservespace_size = reservespace_size;
@@ -1723,8 +1765,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpAllocateC2C2D(
   size_t in_c_dtype_size = mluOpDataTypeBytes(in_c_dtype);
 
   int batch = fft_plan->batch;
-  const int n0_ori = fft_plan->n[0];
-  const int n1_ori = fft_plan->n[1];
+  int n0_ori = fft_plan->n[0];
+  int n1_ori = fft_plan->n[1];
+  if (fft_plan->bluestein_2d_column) {
+    n0_ori = fft_plan->PAD_N0;
+  }
+  if (fft_plan->bluestein_2d_row) {
+    n1_ori = fft_plan->PAD_N1;
+  }
 
   size_t buffer_size = batch * in_c_dtype_size * n0_ori * n1_ori;
 
@@ -1750,11 +1798,25 @@ mluOpStatus_t MLUOP_WIN_API mluOpAllocateC2C2D(
     workspace_size += (fft_plan->is_output_contiguous) ? 0 : buffer_size;
   }
 
-  fft_plan->workspace_size = workspace_size;
   if (fft_plan->n[0] != fft_plan->inembed[0] ||
       fft_plan->n[1] != fft_plan->inembed[1]) {
     fft_plan->workspace_size = workspace_size + buffer_size;  // input_pad_addr
+    workspace_size += buffer_size;
   }
+
+  if (fft_plan->bluestein_fft) {
+    size_t chirpz_size =
+        in_c_dtype_size * (fft_plan->PAD_N0 + fft_plan->PAD_N1);
+    workspace_size += chirpz_size;
+    size_t aux_signal_size = chirpz_size;
+    workspace_size += aux_signal_size;
+    size_t bs_input_size =
+        in_c_dtype_size * fft_plan->PAD_N0 * fft_plan->PAD_N1;
+    workspace_size += bs_input_size;
+    size_t bs_output_size = bs_input_size;
+    workspace_size += bs_output_size;
+  }
+  fft_plan->workspace_size = workspace_size;
   fft_plan->reservespace_size = reservespace_size;
 
   return MLUOP_STATUS_SUCCESS;
@@ -1909,35 +1971,41 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanC2C1D(
        fft_plan->istride == fft_plan->batch &&
        fft_plan->ostride == fft_plan->batch) &&
       (fft_plan->n[0] == fft_plan->inembed[0]);
-  mluOpAllocateC2C1D(handle, fft_plan, input_desc, output_desc, n[0]);
+
+  int nfft = n[0];
   int is_row_major = !fft_plan->is_batch_contiguous;
-  fftTwoStepFactor(handle, fft_plan, n[0], fft_plan->factors, is_row_major,
+  if (fft_plan->bluestein_fft) {
+    nfft = fft_plan->PAD_N0;
+    is_row_major = true;
+  }
+  mluOpAllocateC2C1D(handle, fft_plan, input_desc, output_desc, nfft);
+  fftTwoStepFactor(handle, fft_plan, nfft, fft_plan->factors, is_row_major,
                    fft_plan->fft_type);
 
   switch (fft_plan->fft_type) {
     case CNFFT_FLOAT2COMPLEX_FLOAT:
     case CNFFT_COMPLEX_FLOAT2FLOAT:
     case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT:
-      if (!fft_plan->is_batch_contiguous) {
+      if (!(fft_plan->is_batch_contiguous && !fft_plan->bluestein_fft)) {
         fftGenerateTwiddles<float>(fft_plan, fft_plan->twiddles,
                                    fft_plan->twiddles_end, fft_plan->factors,
-                                   n[0], FFT_FORWARD);
+                                   nfft, FFT_FORWARD);
         fftGenerateTwiddles<float>(fft_plan, fft_plan->twiddles_inv,
                                    fft_plan->twiddles_inv_end,
-                                   fft_plan->factors, n[0], FFT_BACKWARD);
+                                   fft_plan->factors, nfft, FFT_BACKWARD);
       } else {
         fftGenerateTwiddlesColumn<float>(fft_plan, fft_plan->twiddles,
                                          fft_plan->twiddles_end,
-                                         fft_plan->factors, n[0], FFT_FORWARD);
+                                         fft_plan->factors, nfft, FFT_FORWARD);
         fftGenerateTwiddlesColumn<float>(fft_plan, fft_plan->twiddles_inv,
                                          fft_plan->twiddles_inv_end,
-                                         fft_plan->factors, n[0], FFT_BACKWARD);
+                                         fft_plan->factors, nfft, FFT_BACKWARD);
       }
 
-      fftGenerateDftMatrix<float>(fft_plan->dft_matrix, fft_plan->factors, n[0],
+      fftGenerateDftMatrix<float>(fft_plan->dft_matrix, fft_plan->factors, nfft,
                                   FFT_FORWARD);
       fftGenerateDftMatrix<float>(fft_plan->idft_matrix, fft_plan->factors,
-                                  n[0], FFT_BACKWARD);
+                                  nfft, FFT_BACKWARD);
       break;
     case CNFFT_HALF2COMPLEX_HALF:
     case CNFFT_COMPLEX_HALF2HALF:
@@ -1946,23 +2014,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanC2C1D(
       if (!fft_plan->is_batch_contiguous) {
         fftGenerateTwiddles<float>(fft_plan, fft_plan->twiddles,
                                    fft_plan->twiddles_end, fft_plan->factors,
-                                   n[0], FFT_FORWARD);
+                                   nfft, FFT_FORWARD);
         fftGenerateTwiddles<float>(fft_plan, fft_plan->twiddles_inv,
                                    fft_plan->twiddles_inv_end,
-                                   fft_plan->factors, n[0], FFT_BACKWARD);
+                                   fft_plan->factors, nfft, FFT_BACKWARD);
       } else {
         fftGenerateTwiddlesColumn<float>(fft_plan, fft_plan->twiddles,
                                          fft_plan->twiddles_end,
-                                         fft_plan->factors, n[0], FFT_FORWARD);
+                                         fft_plan->factors, nfft, FFT_FORWARD);
         fftGenerateTwiddlesColumn<float>(fft_plan, fft_plan->twiddles_inv,
                                          fft_plan->twiddles_inv_end,
-                                         fft_plan->factors, n[0], FFT_BACKWARD);
+                                         fft_plan->factors, nfft, FFT_BACKWARD);
       }
 
-      fftGenerateDftMatrix<float>(fft_plan->dft_matrix, fft_plan->factors, n[0],
+      fftGenerateDftMatrix<float>(fft_plan->dft_matrix, fft_plan->factors, nfft,
                                   FFT_FORWARD);
       fftGenerateDftMatrix<float>(fft_plan->idft_matrix, fft_plan->factors,
-                                  n[0], FFT_BACKWARD);
+                                  nfft, FFT_BACKWARD);
       break;
     default:
       break;
@@ -2063,9 +2131,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanC2C2D(
   }
 
   if (fft_plan->fft_strategy == CNFFT_FUNC_TWO_LEVEL_STOCKHAM) {
-    fftTwoStepFactor(handle, fft_plan, n[1], fft_plan->factors, 1,
+    int fft_n0 = n[0];
+    int fft_n1 = n[1];
+    if (fft_plan->bluestein_2d_column) {
+      fft_n0 = fft_plan->PAD_N0;
+    }
+    if (fft_plan->bluestein_2d_row) {
+      fft_n1 = fft_plan->PAD_N1;
+    }
+
+    fftTwoStepFactor(handle, fft_plan, fft_n1, fft_plan->factors, 1,
                      fft_plan->fft_type);
-    fftTwoStepFactor(handle, fft_plan, n[0], fft_plan->factors_2d, 0,
+    fftTwoStepFactor(handle, fft_plan, fft_n0, fft_plan->factors_2d, 0,
                      fft_plan->fft_type);
 
     switch (fft_plan->fft_type) {
@@ -2075,25 +2152,25 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanC2C2D(
 
         fftGenerateTwiddles<float>(fft_plan, fft_plan->twiddles,
                                    fft_plan->twiddles_end, fft_plan->factors,
-                                   n[1], FFT_FORWARD);
+                                   fft_n1, FFT_FORWARD);
         fftGenerateDftMatrix<float>(fft_plan->dft_matrix, fft_plan->factors,
-                                    n[1], FFT_FORWARD);
+                                    fft_n1, FFT_FORWARD);
         fftGenerateTwiddlesColumn<float>(
             fft_plan, fft_plan->twiddles_2d, fft_plan->twiddles_2d_end,
-            fft_plan->factors_2d, n[0], FFT_FORWARD);
+            fft_plan->factors_2d, fft_n0, FFT_FORWARD);
         fftGenerateDftMatrix<float>(fft_plan->dft_matrix_2d,
-                                    fft_plan->factors_2d, n[0], FFT_FORWARD);
+                                    fft_plan->factors_2d, fft_n0, FFT_FORWARD);
 
         fftGenerateTwiddles<float>(fft_plan, fft_plan->twiddles_inv,
                                    fft_plan->twiddles_inv_end,
-                                   fft_plan->factors, n[1], FFT_BACKWARD);
+                                   fft_plan->factors, fft_n1, FFT_BACKWARD);
         fftGenerateDftMatrix<float>(fft_plan->idft_matrix, fft_plan->factors,
-                                    n[1], FFT_BACKWARD);
+                                    fft_n1, FFT_BACKWARD);
         fftGenerateTwiddlesColumn<float>(
             fft_plan, fft_plan->twiddles_inv_2d, fft_plan->twiddles_inv_2d_end,
-            fft_plan->factors_2d, n[0], FFT_BACKWARD);
+            fft_plan->factors_2d, fft_n0, FFT_BACKWARD);
         fftGenerateDftMatrix<float>(fft_plan->idft_matrix_2d,
-                                    fft_plan->factors_2d, n[0], FFT_BACKWARD);
+                                    fft_plan->factors_2d, fft_n0, FFT_BACKWARD);
 
         break;
       case CNFFT_HALF2COMPLEX_HALF:
@@ -2631,7 +2708,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
   fft_plan->input_desc = fft_input_desc;
   fft_plan->output_desc = fft_output_desc;
 
-  VLOG(5) << "into make FFT1d Policy";
+  // VLOG(5) << "into make FFT1d Policy";
   fft_plan->prime = 0;
 
   if (rank == 1) {
@@ -2654,6 +2731,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
     int n0 = n[0];
     int n1 = n[1];
     int r = 0;
+    VLOG(5) << "n0 " << n0 << "n1 " << n1;
     while (n0 > 1) {
       for (r = 64; r > 1; r--) {
         if (n0 % r == 0) {
@@ -2663,6 +2741,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       }
       if (r == 1) {
         fft_plan->prime = n0;
+        fft_plan->bluestein_2d_column = true;
         break;
       }
     }
@@ -2675,26 +2754,73 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       }
       if (r == 1) {
         fft_plan->prime = n1;
+        fft_plan->bluestein_2d_row = true;
         break;
       }
     }
   }
-  if (fft_plan->prime > 0 && rank == 2) {
+
+  if (fft_plan->prime > 0 && rank == 2 &&
+      fft_plan->fft_type != CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT) {
     LOG(ERROR) << make_plan_api << ": Only supports FFT2d sizes with factors"
                << " decomposed within the range of 2 to 64"
                << ".";
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
+
+  if (fft_plan->prime && rank == 1 &&
+      fft_plan->fft_type == CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT) {
+    fft_plan->fft_strategy = CNFFT_FUNC_MATMUL;
+    selectFFTStrategy(handle, fft_plan, make_plan_api);
+    int FFT_L_LIMIT_MATMUL = FFT_L_LIMIT_MATMUL_300;
+    if (handle->arch > MLUOP_MLU370) {
+      FFT_L_LIMIT_MATMUL = FFT_L_LIMIT_MATMUL_500;
+    }
+
+    if (fft_plan->fft_strategy == CNFFT_FUNC_MATMUL &&
+            fft_plan->n[0] > FFT_L_LIMIT_MATMUL ||
+        fft_plan->L > FFT_L_LIMIT) {
+      fft_plan->bluestein_fft = true;
+    }
+  }
+  if (fft_plan->prime && rank == 2 &&
+      (fft_plan->bluestein_2d_column || fft_plan->bluestein_2d_row)) {
+    fft_plan->bluestein_fft = true;
+  }
+
+  if (fft_plan->bluestein_fft) {
+    if (rank == 1) {
+      fft_plan->PAD_N0 = getPadN(fft_plan->n[0]);
+      fft_plan->PAD_N1 = 0;
+    }
+    if (rank == 2) {
+      if (fft_plan->bluestein_2d_column && !fft_plan->bluestein_2d_row) {
+        fft_plan->PAD_N0 = getPadN(fft_plan->n[0]);
+        fft_plan->PAD_N1 = fft_plan->n[1];
+        fft_plan->bluestein_fft = true;
+      }
+      if (!fft_plan->bluestein_2d_column && fft_plan->bluestein_2d_row) {
+        fft_plan->PAD_N0 = fft_plan->n[0];
+        fft_plan->PAD_N1 = getPadN(fft_plan->n[1]);
+        fft_plan->bluestein_fft = true;
+      }
+      if (fft_plan->bluestein_2d_column && fft_plan->bluestein_2d_row) {
+        fft_plan->PAD_N0 = getPadN(fft_plan->n[0]);
+        fft_plan->PAD_N1 = getPadN(fft_plan->n[1]);
+        fft_plan->bluestein_fft = true;
+      }
+    }
+  }
+
   if (fft_plan->fft_type == CNFFT_HALF2COMPLEX_HALF ||
       fft_plan->fft_type == CNFFT_COMPLEX_HALF2HALF ||
       fft_plan->fft_type == CNFFT_COMPLEX_HALF2COMPLEX_HALF || n[0] == 1) {
     fft_plan->prime = 1;
+    fft_plan->bluestein_fft == false;
   }
   fft_plan->prime =
       fft_plan->prime ||
       ((n[0] <= 2 || n[0] == 400 || n[0] == 512 || n[0] == 48000) && rank == 1);
-
-  VLOG(5) << "fft_plan->prime " << fft_plan->prime;
   /*
    * decision part
    */
@@ -2735,20 +2861,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
     }; break;
     case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
     case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
+      VLOG(5) << "rank " << rank;
       if (rank == 1) {
-        if (fft_plan->prime == 0) {
+        if (fft_plan->prime == 0 || fft_plan->bluestein_fft) {
           status = mluOpMakeFFTPlanC2C1D(handle, fft_plan, input_desc,
                                          output_desc, rank, n);
-
         } else {
           status = makeFFT1dPolicy(handle, fft_plan);
         }
-
-        // C2C 1D
-
       } else if (rank == 2) {
         VLOG(5) << "into make FFT2d Policy";
-        // C2C 1D
         status = mluOpMakeFFTPlanC2C2D(handle, fft_plan, input_desc,
                                        output_desc, rank, n);
       }
@@ -2761,6 +2883,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
 
   *reservespace_size = fft_plan->reservespace_size;
   *workspace_size = fft_plan->workspace_size;
+
+  VLOG(5) << "mluOpMakeFFTPlanMany finished";
 
   return MLUOP_STATUS_SUCCESS;
 }
