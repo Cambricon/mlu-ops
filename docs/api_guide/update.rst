@@ -3,6 +3,16 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V1.4.3
+
+  **Date:** May 30, 2025
+
+  **Changes:**
+
+  - ``exec_fft``
+
+    - Supported any size for 1D and 2D ComplexFloat-To-ComplexFloat FFT computation.
+
 * V1.4.2
 
   **Date:** December 11, 2024
