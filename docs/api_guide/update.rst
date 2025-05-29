@@ -11,7 +11,7 @@ This section lists contents that were made for each product release.
 
   - ``exec_fft``
 
-    - supported any size for 1D and 2D ComplexFloat-To-ComplexFloat FFT computation.
+    - Supported any size for 1D and 2D ComplexFloat-To-ComplexFloat FFT computation.
 
 * V1.4.2
 
