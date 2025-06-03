@@ -1016,10 +1016,15 @@ __mlu_func__ void forwardStageTwoLoop(
     const int32_t output_stride_2, const int32_t num_heads,
     const int32_t channels, const int32_t num_levels,
     const int32_t num_points) {
+  int32_t channel_align = (channels + 63) / 64 * 64;
   __bang_write_value(value_ping_nram, 64, (T)0);
   __bang_write_value(value_ping_nram, 1, (T)1);
   __memcpy(wram_buffer, value_ping_nram, 64 * sizeof(T), NRAM2WRAM,
-           MAX_WRAM_SIZE / 64, 0, 63);
+           64, channel_align / 64 - 1,
+           MAX_WRAM_SIZE / 64, 63,
+           0, channel_align / 64 - 1,
+           0, 63);
+
   int32_t loop_num = (total_deal_n + max_deal_n - 1) / max_deal_n;
   int32_t num_levels_points = num_levels * num_points;
   int32_t sram_src_stride = total_deal_n * num_levels_points * sizeof(T);
