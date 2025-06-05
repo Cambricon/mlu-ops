@@ -31,7 +31,7 @@ static inline int getPadN(int n) {
   int r = 0;
   int pad_temp = 2 * n - 1;
   int pad_temp2 = 0;
-  for (int i = 1; i < 64; i++) {
+  for (int i = 1; i < n; i++) {
     pad_temp2 = pad_temp + i;
     pad_n = pad_temp2;
     while (pad_temp2 > 1) {
