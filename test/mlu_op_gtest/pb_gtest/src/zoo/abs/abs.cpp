@@ -51,7 +51,7 @@ void AbsExecutor::cpuCompute() {
     if (count1 == 0 || count2 == 0) {
       return;
     }
-    for (int i = 0; i < count1; ++i) {
+    for (size_t i = 0; i < count1; ++i) {
       cpu_fp32_output_[0][i] =
           std::hypotf(cpu_fp32_input_[0][2 * i], cpu_fp32_input_[0][2 * i + 1]);
     }
