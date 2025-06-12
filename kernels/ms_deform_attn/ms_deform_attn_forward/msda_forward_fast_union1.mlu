@@ -1036,7 +1036,9 @@ __mlu_func__ void forwardStageTwoLoop(
     int32_t compute_n =
         std::min(total_deal_n - compute_idx * max_deal_n, max_deal_n);
     int32_t load_point_num = 4 * load_n * num_levels_points;
+#if __BANG_ARCH__ != 592
     int32_t nq_nlp_4 = compute_n * num_levels_points * 4;
+#endif
     int32_t nq_nlp = compute_n * num_levels_points;
 
     int32_t total_point_pad_8 = PAD_UP(load_point_num, BIT_COLLECT_PAD);
@@ -1103,14 +1105,16 @@ __mlu_func__ void forwardStageTwoLoop(
 
     if (i > 0 && i < loop_num + 1) {
 #if __BANG_ARCH__ == 592
-      __bang_cycle_mul(weight_polation_nram_stg2, weight_polation_nram_stg2,
-                       weight_attn_nram_stg2, nq_nlp_4, nq_nlp);
       __bang_expand_channel_mul(
           (T*)v_compute, (T*)weight_polation_nram_stg2,
           (T*)wram_buffer, (T*)v_compute,
           compute_n * 4 * num_levels_points, channels);
       __bang_sumpool(compute_buffer_nram, v_compute,
                      nq_nlp * channels, 1, 4, 1, 4, 1, 1);
+      __bang_expand_channel_mul(
+          (T*)compute_buffer_nram, (T*)weight_attn_nram_stg2,
+          (T*)wram_buffer, (T*)compute_buffer_nram,
+          compute_n * num_levels_points, channels);
       __bang_sumpool(v_compute, compute_buffer_nram, channels, compute_n,
                      num_levels_points, 1, num_levels_points, 1, 1);
 #else
