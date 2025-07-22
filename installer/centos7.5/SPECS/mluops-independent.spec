@@ -5,7 +5,7 @@
 
 Name: mluops
 Summary: The Machine Lerning Unit OPerators
-Version: 1.7.0
+Version: 1.8.0
 Release: 1%{?dist}
 License: Cambricon Release License
 Vendor: Cambricon Inc.
@@ -64,6 +64,8 @@ cp $RPM_SOURCE_DIR/neuware-env.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 %postun -p /sbin/ldconfig
 
 %changelog
+* Wed Jul 16 2025 Cambricon Software Team <service@cambricon.com>
+- release mluops v1.8.0
 * Fri May 30 2025 Cambricon Software Team <service@cambricon.com>
 - release mluops v1.7.0
 * Tue Apr 8 2025 Cambricon Software Team <service@cambricon.com>
