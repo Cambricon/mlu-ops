@@ -41,17 +41,29 @@ __mlu_func__ void load(const float *input_addr, float *nram_input,
 }
 
 __mlu_func__ void compute(float *nram_input, int *nram_points_count,
-                          const int deal_num, const int pi) {
+                          const int deal_num, const int pi,
+                          const int voxel_idx) {
+  // deal_num: Number of features to process in current iteration
+  //           - Can vary in the last iteration (rem_h instead of deal_h)
+  //           - Always <= deal_h (max features per iteration)
+  //
+  // pi: Pipeline iteration index for ping-pong buffer management
+  //     - Used to calculate buffer offset: (pi % 2) * 2 * deal_num
+  //     - When num_feats > max_deal_h: represents feature block iteration
+  //     (h_iter)
+  //     - When num_feats <= max_deal_h: represents voxel iteration (vi)
+  //
+  // voxel_idx: Index within nram_points_count array
+  //     - When num_feats <= max_deal_h: actual voxel index in current batch
+  //     (0~deal_v_num-1)
+  //       because multiple voxels processed simultaneously in NRAM
+  //     - When num_feats > max_deal_h: always 0
+  //       because only one voxel processed at a time (deal_v = 1)
   int offset = (pi % 2) * 2 * deal_num;
   float *nram_input_p = nram_input + offset;
   float *nram_output_p = nram_input + offset + deal_num;
-#if __BANG_ARCH__ != 372
-  __bang_div(nram_output_p, nram_input_p, (float)(nram_points_count[pi]),
+  __bang_div(nram_output_p, nram_input_p, (float)(nram_points_count[voxel_idx]),
              deal_num);
-#else
-  __bang_mul_scalar(nram_output_p, nram_input_p,
-                    1.0 / (float)nram_points_count[pi], deal_num);
-#endif
 }
 
 __mlu_func__ void store(float *output_addr, float *nram_output,
@@ -78,7 +90,7 @@ __mlu_func__ void lcsFunc(float *base_input_addr, int *base_points_count,
     input_addr = base_input_addr + deal_h;
     load(input_addr, nram_input, deal_h, 1);
     // C(vi=0)
-    compute(nram_input, base_points_count, deal_h, 0);
+    compute(nram_input, base_points_count, deal_h, 0, 0);
     __sync();
   }
 
@@ -87,7 +99,7 @@ __mlu_func__ void lcsFunc(float *base_input_addr, int *base_points_count,
     output_addr = base_input_addr + v_iter * deal_h;
     store(output_addr, nram_input, deal_h, v_iter);
     // C(vi+1)
-    compute(nram_input, base_points_count, deal_h, v_iter + 1);
+    compute(nram_input, base_points_count, deal_h, v_iter + 1, 0);
     // L(vi+2)
     input_addr = base_input_addr + (v_iter + 2) * deal_h;
     load(input_addr, nram_input, deal_h, v_iter + 2);
@@ -106,7 +118,7 @@ __mlu_func__ void lcsFunc(float *base_input_addr, int *base_points_count,
   }
   if (repeat_num > 0) {
     // C[repeat_num - 1]
-    compute(nram_input, base_points_count, deal_h, repeat_num - 1);
+    compute(nram_input, base_points_count, deal_h, repeat_num - 1, 0);
   }
   __sync();
   if (repeat_num > 0) {
@@ -116,11 +128,11 @@ __mlu_func__ void lcsFunc(float *base_input_addr, int *base_points_count,
   }
   if (rem_num > 0) {
     // C[repeat_num]
-    compute(nram_input, base_points_count, rem_num, repeat_num);
+    compute(nram_input, base_points_count, rem_num, repeat_num, 0);
     __sync();
     // S[repeat_num]
     output_addr = base_input_addr + repeat_num * deal_h;
-    store(output_addr, nram_input, deal_h, repeat_num);
+    store(output_addr, nram_input, rem_num, repeat_num);
   }
 }
 
@@ -136,7 +148,7 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
     reduce_map = true;
   }
   __sync_all_ipu();
-  if (voxel_coors[0] == -1) {
+  if (reduce_map) {
     if (taskId == 0) {
       int32_t num_voxel = voxel_num[0] - 1;
       __gdramset(voxel_num, 1, num_voxel);
@@ -188,6 +200,10 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
     int32_t *base_map_addr = base_map + deal_map_offset;
     // load map
     __memcpy(nram_map, base_map_addr, deal_p_num * sizeof(int32_t), GDRAM2NRAM);
+    if (num_feats > max_deal_h) {
+      __bang_add_scalar(nram_map, nram_map, -1, deal_p_num);
+    }
+    __sync();
     for (int32_t h_iter = 0; h_iter <= repeat_h; h_iter++) {
       int32_t deal_h_num = (h_iter < repeat_h) ? deal_h : rem_h;
       if (deal_h_num == 0) {
@@ -198,16 +214,22 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
       // load
       __memcpy_async(nram_feats, base_feats_addr,
                      deal_p_num * deal_h_num * sizeof(float), GDRAM2NRAM);
-      if (reduce_map) {
+      if (reduce_map && num_feats <= max_deal_h) {
         __bang_add_scalar(nram_map, nram_map, -1, deal_p_num);
       }
       __sync();
       // index and atomic
       for (int32_t i = 0; i < deal_p_num; i++) {
+        float *voxel_feats_offset = NULL;
         int reduce_to = nram_map[i];
         if (reduce_to == -1) continue;
-        float *voxel_feats_offset =
-            voxel_feats + reduce_to * num_feats + h_iter * deal_h;
+        if (num_feats > max_deal_h) {
+          voxel_feats_offset = voxel_feats + reduce_to * num_feats +
+                               h_iter * deal_h + num_feats * p_iter;
+        } else {
+          voxel_feats_offset =
+              voxel_feats + reduce_to * num_feats + h_iter * deal_h;
+        }
         if (reduce_mode == MLUOP_REDUCE_DMAX) {
           __bang_atomic_reduce_max(voxel_feats_offset, nram_feats + i * deal_h,
                                    deal_h_num);
@@ -280,7 +302,7 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
           float *input_addr = base_voxel_feats_addr + deal_h;
           load(input_addr, voxel_feats_ping, deal_h, 1);
           // C(vi=0)
-          compute(voxel_feats_ping, nram_points_count, deal_h, 0);
+          compute(voxel_feats_ping, nram_points_count, deal_h, 0, 0);
           __sync();
         }
 
@@ -289,7 +311,7 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
           float *output_addr = base_voxel_feats_addr + vi * deal_h;
           store(output_addr, voxel_feats_ping, deal_h, vi);
           // C(vi+1)
-          compute(voxel_feats_ping, nram_points_count, deal_h, vi + 1);
+          compute(voxel_feats_ping, nram_points_count, deal_h, vi + 1, vi + 1);
           // L(vi+2)
           float *input_addr = base_voxel_feats_addr + (vi + 2) * deal_h;
           load(input_addr, voxel_feats_ping, deal_h, vi + 2);
@@ -305,7 +327,8 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
         }
         if (deal_v_num > 0) {
           // C[deal_v_num - 1]
-          compute(voxel_feats_ping, nram_points_count, deal_h, deal_v_num - 1);
+          compute(voxel_feats_ping, nram_points_count, deal_h, deal_v_num - 1,
+                  deal_v_num - 1);
         }
         __sync();
         if (deal_v_num > 0) {
