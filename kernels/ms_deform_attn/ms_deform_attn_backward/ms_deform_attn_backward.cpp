@@ -35,8 +35,6 @@
 #include "kernels/debug.h"
 #include "kernels/kernel.h"
 
-char API[] = "[mluOpMsDeformAttnBackward]";
-
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 /*!
@@ -107,6 +105,7 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
     const mluOpTensorDescriptor_t grad_attn_weight_desc, void *grad_attn_weight,
     bool *calc_grad_loc_weight_flag, bool *calc_grad_value_flag,
     bool *calc_grad_value_loc_weight_flag) {
+  const char API[] = "[mluOpMsDeformAttnBackward]";
   // check desc
   PARAM_CHECK(API, handle != NULL);
   PARAM_CHECK(API, value_desc != NULL);
@@ -131,23 +130,23 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
   PARAM_CHECK(API, grad_attn_weight_desc->getDim() == 5);
 
   // check stride
-  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", value_desc,
+  STRIDE_TENSOR_CHECK(API, value_desc,
                       "value_desc must be contiguous");
-  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", spatial_shapes_desc,
+  STRIDE_TENSOR_CHECK(API, spatial_shapes_desc,
                       "spatial_shapes_desc must be contiguous");
-  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", level_start_index_desc,
+  STRIDE_TENSOR_CHECK(API, level_start_index_desc,
                       "level_start_index_desc must be contiguous");
-  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", sampling_loc_desc,
+  STRIDE_TENSOR_CHECK(API, sampling_loc_desc,
                       "sampling_loc_desc must be contiguous");
-  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", attn_weight_desc,
+  STRIDE_TENSOR_CHECK(API, attn_weight_desc,
                       "attn_weight_desc must be contiguous");
-  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", grad_output_desc,
+  STRIDE_TENSOR_CHECK(API, grad_output_desc,
                       "grad_output_desc must be contiguous");
-  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", grad_value_desc,
+  STRIDE_TENSOR_CHECK(API, grad_value_desc,
                       "grad_value_desc must be contiguous");
-  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", grad_sampling_loc_desc,
+  STRIDE_TENSOR_CHECK(API, grad_sampling_loc_desc,
                       "grad_sampling_loc_desc must be contiguous");
-  STRIDE_TENSOR_CHECK("[mluOpMsDeformAttnBackward]:", grad_attn_weight_desc,
+  STRIDE_TENSOR_CHECK(API, grad_attn_weight_desc,
                       "grad_attn_weight_desc must be contiguous");
 
   // check datatype
