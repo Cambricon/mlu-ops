@@ -28,8 +28,8 @@
 #include "kernels/utils/common.h"
 
 #define NMS_SIZE 64
-#define NMS_UP(x, y) (x / y + (int)(x % y > 0)) * y
-#define NMS_DOWN(x, y) (x / y) * y
+#define NMS_UP(x, y) (((x) / (y) + (int)((x) % (y) > 0)) * (y))
+#define NMS_DOWN(x, y) (((x) / (y)) * (y))
 #define SIZE_NRAM_BUF (MAX_NRAM_SIZE)
 #define SIZE_SRAM_BUF (MAX_SRAM_SIZE)
 // score, x1, y1, x2, y2, max_index (reserve 2 num for half-type input)
