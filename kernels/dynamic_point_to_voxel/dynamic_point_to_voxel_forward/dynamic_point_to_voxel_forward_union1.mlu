@@ -223,13 +223,8 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
         float *voxel_feats_offset = NULL;
         int reduce_to = nram_map[i];
         if (reduce_to == -1) continue;
-        if (num_feats > max_deal_h) {
-          voxel_feats_offset = voxel_feats + reduce_to * num_feats +
-                               h_iter * deal_h + num_feats * p_iter;
-        } else {
-          voxel_feats_offset =
-              voxel_feats + reduce_to * num_feats + h_iter * deal_h;
-        }
+        voxel_feats_offset =
+            voxel_feats + reduce_to * num_feats + h_iter * deal_h;
         if (reduce_mode == MLUOP_REDUCE_DMAX) {
           __bang_atomic_reduce_max(voxel_feats_offset, nram_feats + i * deal_h,
                                    deal_h_num);
