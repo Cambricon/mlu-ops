@@ -126,7 +126,7 @@ function process () {
     done
 
     # generate report
-    genhtml ${temp_dir_}/info/* -o result
+    genhtml ${temp_dir_}/info/* -o result --rc lcov_branch_coverage=1
 
     for arg in ${test_cmd_}; do
         if [[ ${arg} == "--gtest_filter="* ]]; then
