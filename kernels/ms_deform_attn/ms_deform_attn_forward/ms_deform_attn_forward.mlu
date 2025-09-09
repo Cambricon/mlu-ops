@@ -63,7 +63,7 @@ MsDeformAttnForwardPolicy msDeformAttnForwardPolicyFunc(
 
   if (handle->arch == MLUOP_MLU370 && nlp <= 128 && nlpc <= 12288) {
     return MS_DEFORM_ATTN_FORWARD_FAST;
-  } else if (handle->arch == MLUOP_MLU590 && nlp <= 128 && nlpc <= 8192) {
+  } else if (handle->arch >= MLUOP_MLU590 && nlp <= 128 && nlpc <= 8192) {
     return MS_DEFORM_ATTN_FORWARD_FAST;
   } else if (nlp * 3 * sizeof(int32_t) > handle->nram_size) {
     return MS_DEFORM_ATTN_FORWARD_DEFAULT;
