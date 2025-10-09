@@ -77,6 +77,7 @@ mluOpLog(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
     GEN_CASE_HANDLE(handle);
     GEN_CASE_DATA(true, "x", x, x_desc, 10, 0);
     GEN_CASE_DATA(false, "y", y, y_desc, 0, 0);
+    GEN_CASE_OP_PARAM_SINGLE(0, "log", "log_base", base);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
 
