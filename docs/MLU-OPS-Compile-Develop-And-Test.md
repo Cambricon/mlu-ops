@@ -129,6 +129,7 @@ test$ ./mluop_gtest --gtest_filter=*abs*
 1. 在`mlu-ops/kernels/`路径下，创建算子文件夹，添加算子实现，可以参考现有的 abs 算子进行添加。
 2. 在`mlu-ops/test/mlu_op_gtest/src/zoo`创建算子文件夹，添加测试代码。
 3. 在算子测试目录 `mlu-ops/test/mlu_op_gtest/src/zoo/<op_name>/` 下进一步创建子目录`test_case`，用于存放测试用例。
+4. 如果算子性能会因测试用例中的数值变化而变化，则在'mlu-ops/test/mlu_op_gtest/pb_gtest/gtest_config/test_list' 将该算子名记录。
 
 ## 常用环境变量
 
