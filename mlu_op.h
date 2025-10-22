@@ -14550,7 +14550,12 @@ mluOpLgamma(mluOpHandle_t handle,
             const void *x,
             const mluOpTensorDescriptor_t y_desc,
             void *y);
-
+mluOpStatus_t MLUOP_WIN_API
+mluOpAdd(mluOpHandle_t handle,
+            const mluOpTensorDescriptor_t x_desc,
+            const void *x,
+            const mluOpTensorDescriptor_t y_desc,
+            void *y);
 #if defined(__cplusplus)
 }
 #endif
