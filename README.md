@@ -145,4 +145,4 @@ MLU-OPS™提供了以下功能：
 提供基于寒武纪人工智能单元（MLU）开发高性能算子、C 接口封装的示例代码。
 MLU-OPS™ 具体的编译、开发与测试介绍见 [MLU-OPS™算子编译、开发与测试介绍](docs/MLU-OPS-Compile-Develop-And-Test.md)。
 
-更多内容见 docs 目录下文档。
+更多内容详见 docs 目录下文档。
