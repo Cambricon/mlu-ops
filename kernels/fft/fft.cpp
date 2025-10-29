@@ -2818,6 +2818,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
     fft_plan->prime = 1;
     fft_plan->bluestein_fft == false;
   }
+
+  if ((fft_plan->fft_type == CNFFT_FLOAT2COMPLEX_FLOAT ||
+       fft_plan->fft_type == CNFFT_COMPLEX_FLOAT2FLOAT) &&
+      rank == 1 && n[0] < 512) {
+    // 512 is experimental
+    fft_plan->prime = 1;
+  }
+
   fft_plan->prime =
       fft_plan->prime ||
       ((n[0] <= 2 || n[0] == 400 || n[0] == 512 || n[0] == 48000) && rank == 1);
