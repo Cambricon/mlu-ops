@@ -4,7 +4,7 @@ project(mlu_op_test)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# check
+#check
 message(STATUS "[MLUOP GTEST STYLE]: ")
 set(MLUOP_BUILD_SPECIFIC_OP ${MLUOP_BUILD_SPECIFIC_OP})
 
@@ -20,16 +20,16 @@ execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/register_
 
 
 ## Try to find libxml2 and protobuf
-# @ref cmake wiki: How-To-Find-Libraries
+#@ref cmake wiki : How - To - Find - Libraries
 find_package(PkgConfig)
-# XXX If we install cmake-modules, we could use find_package(LibXML2) directly
+#XXX If we install cmake - modules, we could use find_package(LibXML2) directly
 pkg_check_modules(PC_LIBXML QUIET libxml-2.0)
 set(LIBXML2_DEFINITIONS ${PC_LIBXML_CFLAGS_OTHER})
 find_path(LIBXML2_INCLUDE_DIR libxml/xpath.h
   HINTS ${PC_LIBXML_INCLUDEDIR} ${PC_LIBXML_INCLUDE_DIRS}
   PATH_SUFFIXES libxml2
 )
-# prefer to search static library
+#prefer to search static library
 find_library(LIBXML2_LIBRARY NAMES xml2 libxml2
   HINTS ${PC_LIBXML_LIBDIR} ${PC_LIBXML_LIBRARY_DIRS}
 )
@@ -41,7 +41,7 @@ mark_as_advanced(LIBXML2_INCLUDE_DIR LIBXML2_LIBRARY)
 set(LIBXML2_LIBRARIES ${LIBXML2_LIBRARY})
 set(LIBXML2_INCLUDE_DIRS ${LIBXML2_INCLUDE_DIR})
 
-# prefer to use protobuf static libraries
+#prefer to use protobuf static libraries
 set(ORIG_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 
@@ -56,10 +56,10 @@ if(NOT ${EIGEN3_INCLUDE_DIRS})
     message( FATAL_ERROR "Cannot find eigen3, CMake will exit." )
   endif()
 endif()
-# FindProtobuf will generate important variables (could be overrided):
-# (cache) PROTOBUF_LIBRARY, (set) PROTOBUF_LIBRARIES
-# (cache) PROTOBUF_INCLUDE_DIR, (set) PROTOBUF_INCLUDE_DIRS
-# PROTOBUF_PROTOC_EXECUTABLE
+#FindProtobuf will generate important variables(could be overrided):
+#(cache) PROTOBUF_LIBRARY, (set) PROTOBUF_LIBRARIES
+#(cache) PROTOBUF_INCLUDE_DIR, (set) PROTOBUF_INCLUDE_DIRS
+#PROTOBUF_PROTOC_EXECUTABLE
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${ORIG_FIND_LIBRARY_SUFFIXES})
 
 message(STATUS "libxml2 include: " ${LIBXML2_INCLUDE_DIRS})
@@ -74,10 +74,16 @@ include_directories(${PROTOBUF_INCLUDE_DIR})
 include_directories(${LIBEIGEN3_INCLUDE_DIRS})
 
 if(${MLUOP_TARGET_CPU_ARCH} MATCHES "aarch64")
-  # set(DEFAULT_PROTOBUF_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/include/")
-  # set(DEFAULT_PROTOBUF_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/lib/")
-  # set(DEFAULT_LIBXML2_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/libxml2-2.7.4/include/libxml2")
-  # set(DEFAULT_LIBXML2_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/libxml2-2.7.4/lib/")
+#set(                        \
+    DEFAULT_PROTOBUF_INCLUDE \
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/include/")
+#set(DEFAULT_PROTOBUF_LIBRARY \
+     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/protobuf-2.6.1/lib/")
+#set(                       \
+    DEFAULT_LIBXML2_INCLUDE \
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/libxml2-2.7.4/include/libxml2")
+#set(DEFAULT_LIBXML2_LIBRARY \
+     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/aarch64/libxml2-2.7.4/lib/")
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2  -mf16c")
 endif()
@@ -99,10 +105,11 @@ execute_process(
   WORKING_DIRECTORY ${PROTO_PATH}
 )
 
-# protoc code
+#protoc code
 set(PROTOBUF_PROTOC_EXECUTABLE protoc CACHE STRING "protoc command location")
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
-message(${PROTO_SRCS} "-----------" ${PROTO_FILES})
+message(${
+  PROTO_SRCS} "-----------" ${PROTO_FILES})
 add_custom_target(mluop_build_proto DEPENDS ${PROTO_SRCS} ${PROTO_HDRS} ${PROTO_FILES})
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 add_library(mluop_test_proto ${PROTO_SRCS} ${PROTO_HDRS})
@@ -158,9 +165,10 @@ file(GLOB SRC_DIR "${GOOGLETEST_SRC}/*.cc")
 #add_library(gtest_shared SHARED ${SRC_DIR})
 add_library(gtest_shared STATIC ${SRC_DIR}) # for runtime convenience
 
-# For some code generation
-# generate Half(uint16) to Float32 mapping table, for debug purpose
-# #add_executable(gen_half2float_table ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_half2float_table.cpp)
+#For some code generation
+#generate Half(uint16) to Float32 mapping table, for debug purpose
+# #add_executable(gen_half2float_table ${CMAKE_CURRENT_SOURCE_DIR } / tools / \
+                                         gen_half2float_table.cpp)
 # #target_link_libraries(gen_half2float_table cnrt)
 add_custom_command(
  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gen_half2float_table
@@ -244,7 +252,7 @@ set_target_properties(mluop_api_gtest
 )
 set(targets_mluop_api_gtest mluop_api_gtest)
 
-# pb to prototxt tool
+#pb to prototxt tool
 add_executable(pb2prototxt ${CMAKE_CURRENT_SOURCE_DIR}/tools/pb2prototxt.cpp)
 add_executable(prototxt2pb ${CMAKE_CURRENT_SOURCE_DIR}/tools/prototxt2pb.cpp)
 target_link_libraries(pb2prototxt ${PROTOBUF_LIBRARIES} mluop_test_proto)
