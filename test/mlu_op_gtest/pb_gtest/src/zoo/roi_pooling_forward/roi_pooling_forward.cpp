@@ -32,23 +32,14 @@
 #define getDevicePtr(x) data_vector_[x].device_ptr
 
 namespace mluoptest {
-static char pooling_mode_str[3][64] =
-                          {"MLUOP_POOLING_MAX",
-                           "MLUOP_POOLING_AVERAGE_COUNT_INCLUDE_PADDING",
-                           "MLUOP_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING"};
+static char pooling_mode_str[3][64] = {
+    "MLUOP_POOLING_MAX", "MLUOP_POOLING_AVERAGE_COUNT_INCLUDE_PADDING",
+    "MLUOP_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING"};
 
-void RoiPoolingForwardExecutor::cpuRoiPoolingForward(float *input_v,
-                                                     float *rois,
-                                                     int batch_v,
-                                                     int height,
-                                                     int width,
-                                                     int channels,
-                                                     int pool_height,
-                                                     int pool_width,
-                                                     int rois_num,
-                                                     float spatial_scale,
-                                                     float *output,
-                                                     float *argmax) {
+void RoiPoolingForwardExecutor::cpuRoiPoolingForward(
+    float *input_v, float *rois, int batch_v, int height, int width,
+    int channels, int pool_height, int pool_width, int rois_num,
+    float spatial_scale, float *output, float *argmax) {
   int bin_num = rois_num * pool_height * pool_width * channels;
   theory_ops = 0;
   for (int index = 0; index < bin_num; index++) {
@@ -66,10 +57,10 @@ void RoiPoolingForwardExecutor::cpuRoiPoolingForward(float *input_v,
 
     int roi_w = std::max(roi_x2 - roi_x1 + 1, 1);
     int roi_h = std::max(roi_y2 - roi_y1 + 1, 1);
-    float bin_size_w = static_cast<float>(roi_w) /
-                       static_cast<float>(pool_width);
-    float bin_size_h = static_cast<float>(roi_h) /
-                       static_cast<float>(pool_height);
+    float bin_size_w =
+        static_cast<float>(roi_w) / static_cast<float>(pool_width);
+    float bin_size_h =
+        static_cast<float>(roi_h) / static_cast<float>(pool_height);
 
     int bin_x1 = floor(static_cast<float>(pw) * bin_size_w);
     int bin_y1 = floor(static_cast<float>(ph) * bin_size_h);
@@ -81,8 +72,8 @@ void RoiPoolingForwardExecutor::cpuRoiPoolingForward(float *input_v,
     bin_y2 = std::min(std::max(bin_y2 + roi_y1, 0), height);
     bool is_empty = (bin_y2 <= bin_y1) || (bin_x2 <= bin_x1);
 
-    const float *offset_input = input_v + (batch_id * height *
-                                width * channels + c);
+    const float *offset_input =
+        input_v + (batch_id * height * width * channels + c);
     float max_v = is_empty ? 0 : -FLT_MAX;
     float max_idx = -1.0;
     for (int h = bin_y1; h < bin_y2; h++) {
@@ -126,15 +117,14 @@ void RoiPoolingForwardExecutor::initData() {
   VLOG(4) << "############################### initData() End ##";
 }
 
-
 void RoiPoolingForwardExecutor::compute() {
   VLOG(4) << "############################### compute() Begin ##";
   initData();
 
   interface_timer_.start();
-  MLUOP_CHECK(mluOpRoiPoolingForward(handle_, pooling_mode_, input_desc_,
-                   input_mlu_, rois_desc_, rois_mlu_, spatial_scale_,
-                   output_desc_, output_mlu_, argmax_mlu_));
+  MLUOP_CHECK(mluOpRoiPoolingForward(
+      handle_, pooling_mode_, input_desc_, input_mlu_, rois_desc_, rois_mlu_,
+      spatial_scale_, output_desc_, output_mlu_, argmax_mlu_));
   interface_timer_.stop();
   VLOG(4) << "############################### compute() End ##";
 }
@@ -152,8 +142,6 @@ void RoiPoolingForwardExecutor::cpuCompute() {
   VLOG(4) << "############################### cpuCompute() End ##";
 }
 
-int64_t RoiPoolingForwardExecutor::getTheoryOps() {
-  return theory_ops * 2;
-}
+int64_t RoiPoolingForwardExecutor::getTheoryOps() { return theory_ops * 2; }
 
 }  // namespace mluoptest

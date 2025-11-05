@@ -55,11 +55,11 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
     std::vector<int> xyz_stride_size = xyz_params.get_dim_stride();
     if (xyz_stride_size.empty()) {
       MLUOP_CHECK(mluOpSetTensorDescriptor(xyz_desc_, xyz_layout, xyz_dtype,
-                                          xyz_dim, xyz_dim_size.data()));
+                                           xyz_dim, xyz_dim_size.data()));
     } else {
       MLUOP_CHECK(mluOpSetTensorDescriptorEx(xyz_desc_, xyz_layout, xyz_dtype,
-                                          xyz_dim, xyz_dim_size.data(),
-                                          xyz_stride_size.data()));
+                                             xyz_dim, xyz_dim_size.data(),
+                                             xyz_stride_size.data()));
     }
     uint64_t xyz_ele_num = mluOpGetTensorElementNum(xyz_desc_);
     uint64_t xyz_bytes = mluOpDataTypeBytes(xyz_dtype) * xyz_ele_num;
@@ -76,13 +76,12 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
     std::vector<int> new_xyz_stride_size = new_xyz_params.get_dim_stride();
     if (new_xyz_stride_size.empty()) {
       MLUOP_CHECK(mluOpSetTensorDescriptor(new_xyz_desc_, new_xyz_layout,
-                                          new_xyz_dtype, new_xyz_dim,
-                                          new_xyz_dim_size.data()));
+                                           new_xyz_dtype, new_xyz_dim,
+                                           new_xyz_dim_size.data()));
     } else {
-      MLUOP_CHECK(mluOpSetTensorDescriptorEx(new_xyz_desc_, new_xyz_layout,
-                                          new_xyz_dtype, new_xyz_dim,
-                                          new_xyz_dim_size.data(),
-                                          new_xyz_stride_size.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptorEx(
+          new_xyz_desc_, new_xyz_layout, new_xyz_dtype, new_xyz_dim,
+          new_xyz_dim_size.data(), new_xyz_stride_size.data()));
     }
     uint64_t new_xyz_ele_num = mluOpGetTensorElementNum(new_xyz_desc_);
     uint64_t new_xyz_bytes =
@@ -104,11 +103,11 @@ class ball_query_general : public testing::TestWithParam<BallQuery> {
     std::vector<int> idx_stride_size = idx_params.get_dim_stride();
     if (idx_stride_size.empty()) {
       MLUOP_CHECK(mluOpSetTensorDescriptor(idx_desc_, idx_layout, idx_dtype,
-                                          idx_dim, idx_dim_size.data()));
+                                           idx_dim, idx_dim_size.data()));
     } else {
       MLUOP_CHECK(mluOpSetTensorDescriptorEx(idx_desc_, idx_layout, idx_dtype,
-                                          idx_dim, idx_dim_size.data(),
-                                          idx_stride_size.data()));
+                                             idx_dim, idx_dim_size.data(),
+                                             idx_stride_size.data()));
     }
     uint64_t idx_ele_num = mluOpGetTensorElementNum(idx_desc_);
     uint64_t idx_bytes = mluOpDataTypeBytes(idx_dtype) * idx_ele_num;

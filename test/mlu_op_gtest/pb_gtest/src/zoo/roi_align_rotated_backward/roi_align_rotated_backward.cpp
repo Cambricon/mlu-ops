@@ -255,8 +255,7 @@ void RoiAlignRotatedBackwardExecutor::cpuCompute() {
 
     for (int c_idx = 0; c_idx < channel; ++c_idx) {
       // next stmt not count theory_ops_
-      int bottom_grad_offset = roi_batch_idx * height * width * channel +
-      c_idx;
+      int bottom_grad_offset = roi_batch_idx * height * width * channel + c_idx;
       int pre_calc_idx = 0;
 
       // loop for each bin

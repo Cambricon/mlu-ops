@@ -27,8 +27,8 @@ namespace mluoptest {
 
 void MutualInformationBackwardExecutor::initParam() {
   overwrite_ans_grad_ = parser_->getProtoNode()
-                               ->mutual_information_backward_param()
-                               .overwrite_ans_grad();
+                            ->mutual_information_backward_param()
+                            .overwrite_ans_grad();
   px_desc_ = tensor_desc_[0].tensor;
   py_desc_ = tensor_desc_[1].tensor;
   float *host_ans_grad_in = nullptr;
@@ -84,7 +84,7 @@ void MutualInformationBackwardExecutor::workspaceFree() {
 
 void MutualInformationBackwardExecutor::paramCheck() {
   GTEST_CHECK(parser_->getProtoNode()->has_mutual_information_backward_param(),
-             "[MutualInformationBackwardExecutor] Missing param.");
+              "[MutualInformationBackwardExecutor] Missing param.");
   GTEST_CHECK(parser_->getInputNum() == 4 || parser_->getInputNum() == 5,
               "[MutualInformationBackwardExecutor] Input number is wrong.");
   GTEST_CHECK(parser_->getOutputNum() == 3,
@@ -118,8 +118,8 @@ void MutualInformationBackwardExecutor::compute() {
   MLUOP_CHECK(mluOpMutualInformationBackward(
       handle_, px_desc_, dev_px, py_desc_, dev_py, opt_boundary_desc_,
       dev_opt_boundary, p_desc_, dev_p, ans_grad_desc_, dev_ans_grad,
-      overwrite_ans_grad_, workspace_[0], workspace_size_,
-      px_grad_desc_, dev_px_grad, py_grad_desc_, dev_py_grad));
+      overwrite_ans_grad_, workspace_[0], workspace_size_, px_grad_desc_,
+      dev_px_grad, py_grad_desc_, dev_py_grad));
   interface_timer_.stop();
 }
 
@@ -218,17 +218,17 @@ void MutualInformationBackwardExecutor::computeTerm1AndTerm2(
     for (int t = t_begin; t <= t_end; ++t) {
       if (s < s_end) {
         // compute term1
-        px[px_index_(b, s, t)] = safeExp(p[p_index_(b, s, t)] +
-                                         px[px_index_(b, s, t)] -
-                                         p[p_index_(b, s + 1, t)]);
+        px[px_index_(b, s, t)] =
+            safeExp(p[p_index_(b, s, t)] + px[px_index_(b, s, t)] -
+                    p[p_index_(b, s + 1, t)]);
         theory_ops_ += 2;
       }
 
       if (t < t_end) {
         // compute term2
-        py[py_index_(b, s, t)] = safeExp(p[p_index_(b, s, t)] +
-                                         py[py_index_(b, s, t)] -
-                                         p[p_index_(b, s, t + 1)]);
+        py[py_index_(b, s, t)] =
+            safeExp(p[p_index_(b, s, t)] + py[py_index_(b, s, t)] -
+                    p[p_index_(b, s, t + 1)]);
         theory_ops_ += 2;
       }
     }
@@ -245,24 +245,23 @@ void MutualInformationBackwardExecutor::computePGrad(
 
   // compute p_grad[b][s_end][0:t_end]
   for (int t = t_end - 1; t >= t_begin; --t) {
-    p[p_index_(b, s_end, t)] = term2[py_index_(b, s_end, t)] *
-                               p[p_index_(b, s_end, t + 1)];
+    p[p_index_(b, s_end, t)] =
+        term2[py_index_(b, s_end, t)] * p[p_index_(b, s_end, t + 1)];
     theory_ops_++;
   }
 
   // compute p_grad[b][0:s_end][t_end]
   for (int s = s_end - 1; s >= s_begin; --s) {
-    p[p_index_(b, s, t_end)] = term1[px_index_(b, s, t_end)] *
-                               p[p_index_(b, s + 1, t_end)];
+    p[p_index_(b, s, t_end)] =
+        term1[px_index_(b, s, t_end)] * p[p_index_(b, s + 1, t_end)];
     theory_ops_++;
   }
 
   for (int s = s_end - 1; s >= s_begin; --s) {
     for (int t = t_end - 1; t >= t_begin; --t) {
-      p[p_index_(b, s, t)] = term1[px_index_(b, s, t)] *
-                             p[p_index_(b, s + 1, t)] +
-                             term2[py_index_(b, s, t)] *
-                             p[p_index_(b, s, t + 1)];
+      p[p_index_(b, s, t)] =
+          term1[px_index_(b, s, t)] * p[p_index_(b, s + 1, t)] +
+          term2[py_index_(b, s, t)] * p[p_index_(b, s, t + 1)];
       theory_ops_ += 3;
     }
   }
@@ -281,14 +280,14 @@ void MutualInformationBackwardExecutor::computePxGradAndPyGrad(
     for (int t = t_begin; t <= t_end; ++t) {
       if (s < s_end) {
         // compute px_grad
-        px_grad[px_index_(b, s, t)] = p_grad[p_index_(b, s + 1, t)] *
-                                      term1[px_index_(b, s, t)];
+        px_grad[px_index_(b, s, t)] =
+            p_grad[p_index_(b, s + 1, t)] * term1[px_index_(b, s, t)];
       }
 
       if (t < t_end) {
         // compute py_grad
-        py_grad[py_index_(b, s, t)] = p_grad[p_index_(b, s, t + 1)] *
-                                      term2[py_index_(b, s, t)];
+        py_grad[py_index_(b, s, t)] =
+            p_grad[p_index_(b, s, t + 1)] * term2[py_index_(b, s, t)];
       }
     }
   }

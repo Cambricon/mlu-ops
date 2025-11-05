@@ -1,0 +1,64 @@
+/*************************************************************************
+ * Copyright (C) 2021 by Cambricon, Inc. All rights reserved.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "kernels/unary_op/unary_op_3pipeline.h"
+#include "kernels/unary_op/unary_op_5pipeline.h"
+
+#define ABS_NRAM_USED MAX_NRAM_SIZE
+#define ABS_SRAM_USED (CORE_DIM * ABS_NRAM_USED)
+
+__nram__ float nram_tmp[NFU_ALIGN_SIZE];
+__nram__ char nram_buffer[ABS_NRAM_USED];
+__mlu_shared__ char sram_buffer[ABS_SRAM_USED];
+
+template <typename T>
+__mlu_func__ void get3OffsetAbsFast(int32_t &offset_x_half,
+                                    int32_t &offset_aux_a,
+                                    int32_t &offset_aux_b,
+                                    int32_t &num_deal,
+                                    int32_t &num_pong) {
+  // need ping_pong nram sapce,
+  num_deal = FLOOR_ALIGN(ABS_NRAM_USED / sizeof(T) / 2, UNARY_ALIGN_NUM);
+  num_pong = num_deal;
+  offset_x_half = 0;
+  offset_aux_a = 0;
+  offset_aux_b = 0;
+}
+
+template <typename T>
+__mlu_func__ void computeAbsFast(T *nram_x,
+                                 T *nram_x_half,
+                                 T *nram_aux_a,
+                                 T *nram_aux_b,
+                                 int deal_num,
+                                 int actual_num,
+                                 float coef) {
+  __bang_active_abs(nram_x, nram_x_half, deal_num);
+}
+
+template <typename T>
+__mlu_func__ void get5OffsetAbsFast(int32_t &offset_x_half,
+                                    int32_t &offset_aux_a,
+                                    int32_t &offset_aux_b,
+                                    int32_t &num_deal) {
+  // need ping_pong nram space.
+  num_deal = FLOOR_ALIGN(ABS_NRAM_USED / 2 / sizeof(T), UNARY_ALIGN_NUM);
+  offset_x_half = 0;
+  offset_aux_a = 0;
+  offset_aux_b = 0;
+}
+
+// function implementation
+UNARY_OP_KERNEL_3PIPELINE_IMPLE(Abs, float, Fast);
+UNARY_OP_KERNEL_3PIPELINE_IMPLE(Abs, half, Fast);
+
+UNARY_OP_KERNEL_5PIPELINE_IMPLE(Abs, float, Fast);
+UNARY_OP_KERNEL_5PIPELINE_IMPLE(Abs, half, Fast);

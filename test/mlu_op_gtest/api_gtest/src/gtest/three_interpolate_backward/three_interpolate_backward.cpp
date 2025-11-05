@@ -71,8 +71,7 @@ class three_interprolate_backward : public testing::Test {
       size_t grad_output_ele_num = 1 * 2 * 4;
       size_t grad_output_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t grad_output_bytes = grad_output_ele_num * grad_output_dtype_bytes;
-      GTEST_CHECK(cnrtSuccess ==
-                  cnrtMalloc(&grad_output_, grad_output_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_output_, grad_output_bytes));
     }
     if (indices) {
       size_t indices_ele_num = 1 * 4 * 3;

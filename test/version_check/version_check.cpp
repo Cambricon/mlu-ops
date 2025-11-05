@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include <iostream>
-using namespace std;  //NOLINT
+using namespace std;  // NOLINT
 
 /*
 Add version check by mluOpGetLibVersion.
@@ -39,7 +39,8 @@ int main(int argc, char *argv[]) {
     int version_in_str_size = strlen(argv[1]);
     if (version_in_str_size < 3) {
       char err_info[100];
-      sprintf(err_info, "Expect version string length >= 3, but now is: %d",  // NOLINT
+      sprintf(err_info,
+              "Expect version string length >= 3, but now is: %d",  // NOLINT
               version_in_str_size);
       cerr << err_info << endl;
       return 1;
@@ -63,7 +64,8 @@ int main(int argc, char *argv[]) {
     mluOpGetLibVersion(&major, &minor, &patch);
     if (major != major_in || minor != minor_in || patch != patch_in) {
       char err_info[100];
-      sprintf(err_info, "Expect version:  %d.%d.%d, but get %d.%d.%d", major_in,  // NOLINT
+      sprintf(err_info, "Expect version:  %d.%d.%d, but get %d.%d.%d",
+              major_in,  // NOLINT
               minor_in, patch_in, major, minor, patch);
       cerr << err_info << endl;
       return 1;

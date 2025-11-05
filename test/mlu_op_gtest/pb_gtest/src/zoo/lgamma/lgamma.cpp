@@ -70,4 +70,3 @@ int64_t LgammaExecutor::getTheoryOps() {
 }
 
 }  // namespace mluoptest
-

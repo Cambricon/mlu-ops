@@ -98,7 +98,7 @@ static int __attribute__((unused)) init_asan_stuff = init_asan_process();
 #endif
 }
 
-using namespace mluoptest; // NOLINT
+using namespace mluoptest;  // NOLINT
 
 int main(int argc, char **argv) {
   // XXX(zhaolianshui): do we need a try-catch block?

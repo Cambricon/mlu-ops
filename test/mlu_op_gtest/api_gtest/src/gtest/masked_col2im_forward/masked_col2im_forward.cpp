@@ -55,8 +55,7 @@ class masked_col2im_forward : public testing::Test {
                     cnrtMalloc(&col_, MLUOP_DTYPE_FLOAT *
                                           mluOpGetTensorElementNum(col_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess ==
-                    cnrtMalloc(&col_, MLUOP_DTYPE_FLOAT * 2));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&col_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
 
@@ -114,8 +113,7 @@ class masked_col2im_forward : public testing::Test {
                     cnrtMalloc(&im_, MLUOP_DTYPE_FLOAT *
                                          mluOpGetTensorElementNum(im_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess ==
-                    cnrtMalloc(&im_, MLUOP_DTYPE_FLOAT * 2));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&im_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
 

@@ -68,8 +68,7 @@ class voxelization : public testing::Test {
       size_t voxel_size_ele_num = 3;
       size_t voxel_size_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t voxel_size_bytes = voxel_size_ele_num * voxel_size_dtype_bytes;
-      GTEST_CHECK(cnrtSuccess ==
-                  cnrtMalloc(&voxel_size_, voxel_size_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&voxel_size_, voxel_size_bytes));
     }
     if (coors_range_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&coors_range_desc_));
@@ -82,8 +81,7 @@ class voxelization : public testing::Test {
       size_t coors_range_ele_num = 6;
       size_t coors_range_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t coors_range_bytes = coors_range_ele_num * coors_range_dtype_bytes;
-      GTEST_CHECK(cnrtSuccess ==
-                  cnrtMalloc(&coors_range_, coors_range_bytes));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&coors_range_, coors_range_bytes));
     }
     if (workspace) {
       size_t workspace_ele_num = workspace_size_;
@@ -131,7 +129,7 @@ class voxelization : public testing::Test {
       size_t num_points_per_voxel_bytes =
           num_points_per_voxel_ele_num * num_points_per_voxel_dtype_bytes;
       GTEST_CHECK(cnrtSuccess == cnrtMalloc(&num_points_per_voxel_,
-                                                 num_points_per_voxel_bytes));
+                                            num_points_per_voxel_bytes));
     }
     if (voxel_num_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&voxel_num_desc_));

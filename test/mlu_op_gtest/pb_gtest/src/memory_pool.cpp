@@ -264,7 +264,7 @@ void *MLUMemoryPool::allocate(size_t num_bytes, const std::string &name) {
       (global_var.exclusive_ || global_var.run_on_jenkins_)) {  // exclusive
     int granularity = 0;
     unsigned long maxFreeSize = 0;  // NOLINT
-    unsigned long temp = 0;  // NOLINT
+    unsigned long temp = 0;         // NOLINT
 #ifndef ROUND_DOWN
 #define ROUND_DOWN(x, y) (((x) / (y)) * (y))
     cnDeviceGetAttribute(&granularity,

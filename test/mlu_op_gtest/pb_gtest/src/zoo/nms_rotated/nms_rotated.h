@@ -53,9 +53,9 @@ class NmsRotatedExecutor : public Executor {
 
  private:
   template <typename T>
-  void cpuNmsRotated(
-          const T *boxes, const T *scores, T *output,
-          const int num_box, const float iou_threshold, const int box_dim);
+  void cpuNmsRotated(const T *boxes, const T *scores, T *output,
+                     const int num_box, const float iou_threshold,
+                     const int box_dim);
   template <typename T>
   T singleBoxIouRotated(const T *box1, const T *box2, const int mode);
   template <typename T>

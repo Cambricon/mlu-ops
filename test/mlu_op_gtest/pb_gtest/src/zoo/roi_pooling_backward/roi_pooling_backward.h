@@ -42,4 +42,3 @@ class RoiPoolingBackwardExecutor : public Executor {
 
 }  // namespace mluoptest
 #endif  // TEST_MLUOP_GTEST_SRC_ZOO_ROI_POOLING_BACKWARD_ROI_POOLING_BACKWARD_H_
-

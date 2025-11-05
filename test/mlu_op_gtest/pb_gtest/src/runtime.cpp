@@ -120,11 +120,11 @@ bool MLURuntime::checkOneMemBlock(const struct MemBlock &mem_block) {
                  mem_block.unalign_address_offset;
   GTEST_CHECK(
       cnrtSuccess == cnrtMemcpy((void *)header_check_.get(), header,
-                                     mask_bytes_, cnrtMemcpyDevToHost),
+                                mask_bytes_, cnrtMemcpyDevToHost),
       "MLURuntime: memcpy device to host failed when check overwritten");
   GTEST_CHECK(
       cnrtSuccess == cnrtMemcpy((void *)footer_check_.get(), footer,
-                                     mask_bytes_, cnrtMemcpyDevToHost),
+                                mask_bytes_, cnrtMemcpyDevToHost),
       "MLURuntime: memcpy device to host failed when check overwritten");
 
   if (!check_byte((void *)header_check_.get(), (void *)header_mask_.get(),

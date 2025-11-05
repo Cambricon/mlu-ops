@@ -44,8 +44,7 @@ class fft_SetFFTReserveArea : public testing::Test {
     }
 
     if (reservespace) {
-      GTEST_CHECK(cnrtSuccess ==
-                  cnrtMalloc(&reservespace_, reservespace_size));
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&reservespace_, reservespace_size));
     }
   }
 

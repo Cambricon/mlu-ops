@@ -66,8 +66,7 @@ void RoiAlignBackwardExecutor::compute() {
     MLUOP_CHECK(mluOpRoiAlignBackward_v2(
         handle_, grads_desc, grads_ptr, boxes_desc, boxes_ptr, argmax_x_desc,
         argmax_x_ptr, argmax_y_desc, argmax_y_ptr, spatial_scale,
-        sampling_ratio, aligned, pool_mode, grads_image_desc,
-        grads_image_ptr));
+        sampling_ratio, aligned, pool_mode, grads_image_desc, grads_image_ptr));
   } else {
     VLOG(4) << "call mluOp mluOpRoiAlignBackward_v2 with max mode";
     auto argmax_x_desc = parser_->getMetaTensor(2).tensor;
@@ -81,9 +80,8 @@ void RoiAlignBackwardExecutor::compute() {
     MLUOP_CHECK(mluOpRoiAlignBackward_v2(
         handle_, grads_desc, grads_ptr, boxes_desc, boxes_ptr, argmax_x_desc,
         argmax_x_ptr, argmax_y_desc, argmax_y_ptr, spatial_scale,
-        sampling_ratio, aligned, pool_mode, grads_image_desc,
-        grads_image_ptr));
-    }
+        sampling_ratio, aligned, pool_mode, grads_image_desc, grads_image_ptr));
+  }
   interface_timer_.stop();
 }
 

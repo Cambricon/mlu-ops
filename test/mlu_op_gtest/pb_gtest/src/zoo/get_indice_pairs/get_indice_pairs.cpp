@@ -353,11 +353,11 @@ void GetIndicePairsExecutor::cpuGetIndicePairs(
               spatail_volume * batchIdx;
       if (sub_m) {
         if (grid_out[index] > -1) {
-          int32_t  oldNum = indice_num[offset];
+          int32_t oldNum = indice_num[offset];
           indice_num[offset]++;
           indice_pairs[offset * 2 * num_act_in + oldNum] = j;
-          indice_pairs[offset * 2 * num_act_in + num_act_in +
-                       oldNum] = grid_out[index];
+          indice_pairs[offset * 2 * num_act_in + num_act_in + oldNum] =
+              grid_out[index];
         }
       } else {
         int32_t oldNum = indice_num[offset];

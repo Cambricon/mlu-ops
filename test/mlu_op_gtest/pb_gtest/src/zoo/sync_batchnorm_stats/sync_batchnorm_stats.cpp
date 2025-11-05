@@ -25,8 +25,7 @@
 namespace mluoptest {
 
 void SyncBatchnormStatsExecutor::paramCheck() {
-  GTEST_CHECK(parser_->getProtoNode()
-              ->has_sync_batchnorm_stats_param(),
+  GTEST_CHECK(parser_->getProtoNode()->has_sync_batchnorm_stats_param(),
               "Lose sync_batchnorm_stats param.");
 }
 

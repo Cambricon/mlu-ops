@@ -25,7 +25,6 @@
 #include <vector>
 #include "core/tensor.h"
 
-
 template <typename T>
 static void transposeCpuNd(const int loop_d, T *x, T *y, const uint64_t sum,
                            uint64_t *dim, uint64_t *DIM, uint64_t *permute) {
@@ -113,10 +112,9 @@ mluOpStatus_t mluOpTransposeCpu(const int64_t dim_desc,
   uint64_t dim[TRANSPOSE_MAX_DIM + 1] = {0};
 
   if (x_desc->getDim() != dim_all || y_desc->getDim() != dim_all) {
-    LOG(ERROR)
-        << "cnnlTransposeCpu: dimension information mismatch, dim of x: "
-        << x_desc->getDim() << ", dim of y: " << y_desc->getDim()
-        << ", dim of descriptor: " << dim_all;
+    LOG(ERROR) << "cnnlTransposeCpu: dimension information mismatch, dim of x: "
+               << x_desc->getDim() << ", dim of y: " << y_desc->getDim()
+               << ", dim of descriptor: " << dim_all;
     return MLUOP_STATUS_BAD_PARAM;
   }
 

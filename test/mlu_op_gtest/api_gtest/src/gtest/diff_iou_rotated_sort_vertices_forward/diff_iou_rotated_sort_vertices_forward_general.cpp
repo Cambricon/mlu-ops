@@ -56,11 +56,10 @@ class diff_iou_rotated_sort_vertices_forward_general
             cnrtMalloc(&vertices_,
                        mluOpDataTypeBytes(vertices_params.get_dtype()) * 2));
       } else {
-        GTEST_CHECK(
-             cnrtSuccess ==
-            cnrtMalloc(&vertices_,
-                       mluOpDataTypeBytes(vertices_params.get_dtype()) *
-                       mluOpGetTensorElementNum(vertices_desc_)));
+        GTEST_CHECK(cnrtSuccess ==
+                    cnrtMalloc(&vertices_,
+                               mluOpDataTypeBytes(vertices_params.get_dtype()) *
+                                   mluOpGetTensorElementNum(vertices_desc_)));
       }
 
       MLUOpTensorParam mask_params = std::get<1>(GetParam());
@@ -76,9 +75,8 @@ class diff_iou_rotated_sort_vertices_forward_general
       } else {
         GTEST_CHECK(
             cnrtSuccess ==
-            cnrtMalloc(&mask_,
-                       mluOpDataTypeBytes(mask_params.get_dtype()) *
-                       mluOpGetTensorElementNum(mask_desc_)));
+            cnrtMalloc(&mask_, mluOpDataTypeBytes(mask_params.get_dtype()) *
+                                   mluOpGetTensorElementNum(mask_desc_)));
       }
 
       MLUOpTensorParam num_valid_params = std::get<2>(GetParam());
@@ -90,9 +88,8 @@ class diff_iou_rotated_sort_vertices_forward_general
       if (mluOpGetTensorElementNum(num_valid_desc_) >= LARGE_TENSOR_NUM) {
         GTEST_CHECK(
             cnrtSuccess ==
-            cnrtMalloc(
-                &num_valid_,
-                mluOpDataTypeBytes(num_valid_params.get_dtype()) * 2));
+            cnrtMalloc(&num_valid_,
+                       mluOpDataTypeBytes(num_valid_params.get_dtype()) * 2));
       } else {
         GTEST_CHECK(
             cnrtSuccess ==
@@ -114,7 +111,7 @@ class diff_iou_rotated_sort_vertices_forward_general
         GTEST_CHECK(
             cnrtSuccess ==
             cnrtMalloc(&idx_, mluOpDataTypeBytes(idx_params.get_dtype()) *
-                              mluOpGetTensorElementNum(idx_desc_)));
+                                  mluOpGetTensorElementNum(idx_desc_)));
       }
 
       target_device_ = std::get<4>(GetParam());
@@ -348,19 +345,19 @@ INSTANTIATE_TEST_CASE_P(
 
 INSTANTIATE_TEST_CASE_P(
     large_tensor_notsupported, diff_iou_rotated_sort_vertices_forward_general,
-    testing::Combine(
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
-                                         4, std::vector<int>(
-                                                {65536, 65536, 24, 2})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_BOOL,
-                                         3,
-                                         std::vector<int>({65536, 65536, 24})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         2, std::vector<int>({65536, 65536})}),
-        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32,
-                                         3,
-                                         std::vector<int>({65536, 65536, 9})}),
-        testing::Values(MLUOP_UNKNOWN_DEVICE),
-        testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
+    testing::Combine(testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT, 4,
+                         std::vector<int>({65536, 65536, 24, 2})}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_BOOL, 3,
+                         std::vector<int>({65536, 65536, 24})}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32, 2,
+                         std::vector<int>({65536, 65536})}),
+                     testing::Values(MLUOpTensorParam{
+                         MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32, 3,
+                         std::vector<int>({65536, 65536, 9})}),
+                     testing::Values(MLUOP_UNKNOWN_DEVICE),
+                     testing::Values(MLUOP_STATUS_NOT_SUPPORTED)));
 
 }  // namespace mluopapitest

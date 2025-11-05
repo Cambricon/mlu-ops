@@ -31,19 +31,14 @@
 namespace mluoptest {
 
 float MsDeformAttnForwardExecutor::ms_deform_attn_im2col_bilinear(
-    const float *&bottom_data,
-    const int &height,
-    const int &width,
-    const int &nheads,
-    const int &channels,
-    const float &h,
-    const float &w,
-    const int &m,
-    const int &c) {
+    const float *&bottom_data, const int &height, const int &width,
+    const int &nheads, const int &channels, const float &h, const float &w,
+    const int &m, const int &c) {
   const int h_low = floorf(h);
   const int w_low = floorf(w);
   const int h_high = h_low + 1;
-  const int w_high = w_low + 1;  const float lh = h - h_low;
+  const int w_high = w_low + 1;
+  const float lh = h - h_low;
   const float lw = w - w_low;
   const float hh = 1 - lh, hw = 1 - lw;
   const int w_stride = nheads * channels;
@@ -79,19 +74,11 @@ float MsDeformAttnForwardExecutor::ms_deform_attn_im2col_bilinear(
 }
 
 void MsDeformAttnForwardExecutor::cpuMsDeformAttnForward(
-    const float *data_value,
-    const float *data_spatial_shapes,
-    const float *data_level_start_index,
-    const float *data_sampling_loc,
-    const float *data_attn_weight,
-    const int batch_size,
-    const int num_keys,
-    const int num_heads,
-    const int channels,
-    const int num_levels,
-    const int num_query,
-    const int num_point,
-    float *data_col) {
+    const float *data_value, const float *data_spatial_shapes,
+    const float *data_level_start_index, const float *data_sampling_loc,
+    const float *data_attn_weight, const int batch_size, const int num_keys,
+    const int num_heads, const int channels, const int num_levels,
+    const int num_query, const int num_point, float *data_col) {
   const int n = batch_size * num_query * num_heads * channels;
   for (int index = 0; index < n; ++index) {
     int _temp = index;
@@ -113,9 +100,8 @@ void MsDeformAttnForwardExecutor::cpuMsDeformAttnForward(
       const int spatial_h_ptr = l_col << 1;
       const int spatial_h = data_spatial_shapes[spatial_h_ptr];
       const int spatial_w = data_spatial_shapes[spatial_h_ptr + 1];
-      const float *data_value_ptr =
-          data_value +
-          (data_value_ptr_init_offset + level_start_id * qid_stride);
+      const float *data_value_ptr = data_value + (data_value_ptr_init_offset +
+                                                  level_start_id * qid_stride);
       for (int p_col = 0; p_col < num_point; ++p_col) {
         const float loc_w = data_sampling_loc[data_loc_w_ptr];
         const float loc_h = data_sampling_loc[data_loc_w_ptr + 1];
@@ -123,9 +109,9 @@ void MsDeformAttnForwardExecutor::cpuMsDeformAttnForward(
         const float h_im = loc_h * spatial_h - 0.5;
         const float w_im = loc_w * spatial_w - 0.5;
         if (h_im > -1 && w_im > -1 && h_im < spatial_h && w_im < spatial_w) {
-          col += ms_deform_attn_im2col_bilinear(
-                     data_value_ptr, spatial_h, spatial_w, num_heads,
-                     channels, h_im, w_im, m_col, c_col) *
+          col += ms_deform_attn_im2col_bilinear(data_value_ptr, spatial_h,
+                                                spatial_w, num_heads, channels,
+                                                h_im, w_im, m_col, c_col) *
                  weight;
         }
         data_weight_ptr += 1;
@@ -144,7 +130,8 @@ void MsDeformAttnForwardExecutor::paramCheck() {
               "[GTEST_MSDEFORMATTN_FORWARD] Output num must be 1.");
   if (!parser_->getProtoNode()->has_ms_deform_attn_forward_param()) {
     LOG(ERROR) << "[GTEST_MSDEFORMATTN_FORWARD] Missing ms_deform_attn param.";
-    throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));  // NOLINT
+    throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                std::to_string(__LINE__));  // NOLINT
   }
 }
 
@@ -165,13 +152,14 @@ void MsDeformAttnForwardExecutor::compute() {
   // get params
   auto param_proto_desc =
       parser_->getProtoNode()->ms_deform_attn_forward_param();
-  int im2col_step_ = param_proto_desc.im2col_step();  interface_timer_.start();
+  int im2col_step_ = param_proto_desc.im2col_step();
+  interface_timer_.start();
   MLUOP_CHECK(mluOpMsDeformAttnForward(
       handle_, tensor_data_value, dev_data_value, tensor_data_spatial_shapes,
       dev_data_spatial_shapes, tensor_data_level_start_index,
       dev_data_level_start_index, tensor_data_sampling_loc,
-      dev_data_sampling_loc, tensor_data_attn_weight,
-      dev_data_attn_weight, im2col_step_, tensor_data_col, dev_data_col));
+      dev_data_sampling_loc, tensor_data_attn_weight, dev_data_attn_weight,
+      im2col_step_, tensor_data_col, dev_data_col));
   interface_timer_.stop();
   VLOG(4) << "MsDeformAttnForwardExecutor::compute() End.";
 }
@@ -197,10 +185,10 @@ void MsDeformAttnForwardExecutor::cpuCompute() {
   auto data_sampling_loc = cpu_fp32_input_[3];
   auto data_attn_weight = cpu_fp32_input_[4];
   auto data_col = cpu_fp32_output_[0];
-  cpuMsDeformAttnForward(
-      data_value, data_spatial_shapes, data_level_start_index,
-      data_sampling_loc, data_attn_weight, batch_size, num_keys, num_heads,
-      channels, num_levels, num_query, num_point, data_col);
+  cpuMsDeformAttnForward(data_value, data_spatial_shapes,
+                         data_level_start_index, data_sampling_loc,
+                         data_attn_weight, batch_size, num_keys, num_heads,
+                         channels, num_levels, num_query, num_point, data_col);
   VLOG(4) << "MsDeformAttnForwardExecutor::cpuCompute() End.";
 }
 
@@ -222,8 +210,7 @@ int64_t MsDeformAttnForwardExecutor::getTheoryIoSize() {
   size_t num_point = tensor_data_sampling_loc->getDimIndex(4);
   size_t total_size = 0;
   total_size += 4 * batch_size * num_query * num_heads * num_levels *
-                num_point * channels *
-                parser_->input(0)->sizeof_dtype;
+                num_point * channels * parser_->input(0)->sizeof_dtype;
   for (size_t i = 1; i < parser_->inputs().size(); ++i) {
     MetaTensor *ts = parser_->input(i);
     total_size += ts->shape_count * ts->sizeof_dtype;
@@ -246,9 +233,8 @@ int64_t MsDeformAttnForwardExecutor::getTheoryOps() {
   size_t num_query = tensor_data_sampling_loc->getDimIndex(1);
   size_t num_point = tensor_data_sampling_loc->getDimIndex(4);
   int64_t count = 11;
-  int64_t theory_ops = batch_size * num_query * num_heads * num_levels *
-                       num_point * count;
+  int64_t theory_ops =
+      batch_size * num_query * num_heads * num_levels * num_point * count;
   return theory_ops;
 }
 }  // namespace mluoptest
-

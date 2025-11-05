@@ -78,8 +78,7 @@ class generate_proposals_v2_general
     uint64_t bbox_deltas_bytes =
         mluOpDataTypeBytes(bbox_deltas_dtype) * bbox_deltas_ele_num;
     if (bbox_deltas_bytes > 0) {
-      GTEST_CHECK(cnrtSuccess ==
-                  cnrtMalloc(&bbox_deltas_, bbox_deltas_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&bbox_deltas_, bbox_deltas_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&im_shape_desc_));
@@ -180,8 +179,7 @@ class generate_proposals_v2_general
     uint64_t rpn_rois_num_bytes =
         mluOpDataTypeBytes(rpn_rois_num_dtype) * rpn_rois_num_ele_num;
     if (rpn_rois_num_bytes > 0) {
-      GTEST_CHECK(cnrtSuccess ==
-                  cnrtMalloc(&rpn_rois_num_, rpn_rois_num_bytes))
+      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&rpn_rois_num_, rpn_rois_num_bytes))
     }
 
     GTEST_CHECK(cnrtSuccess ==

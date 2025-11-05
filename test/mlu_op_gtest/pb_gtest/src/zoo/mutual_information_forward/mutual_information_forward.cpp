@@ -51,7 +51,7 @@ void MutualInformationForwardExecutor::initParam() {
 
   int p_size = B_ * (S_ + 1) * (T_ + 1);
   p_in_ = (float *)cpu_runtime_.allocate(p_size * sizeof(float));
-  memcpy(p_in_, host_p_in, p_size  * sizeof(float));
+  memcpy(p_in_, host_p_in, p_size * sizeof(float));
 }
 
 void MutualInformationForwardExecutor::workspaceMalloc() {
@@ -180,24 +180,24 @@ void MutualInformationForwardExecutor::computeMutualInformation(
   theory_ops_++;
 
   for (int s = s_begin + 1; s <= s_end; ++s) {
-    p[p_index_(b, s, t_begin)] = logAdd(p[p_index_(b, s - 1, t_begin)] +
-                                        px[px_index_(b, s - 1, t_begin)],
-                                        -INFINITY);
+    p[p_index_(b, s, t_begin)] = logAdd(
+        p[p_index_(b, s - 1, t_begin)] + px[px_index_(b, s - 1, t_begin)],
+        -INFINITY);
     theory_ops_++;
   }
 
   for (int t = t_begin + 1; t <= t_end; ++t) {
-    p[p_index_(b, s_begin, t)] = logAdd(-INFINITY,
-                                        p[p_index_(b, s_begin, t - 1)] +
-                                        py[py_index_(b, s_begin, t - 1)]);
+    p[p_index_(b, s_begin, t)] =
+        logAdd(-INFINITY, p[p_index_(b, s_begin, t - 1)] +
+                              py[py_index_(b, s_begin, t - 1)]);
     theory_ops_++;
   }
 
   for (int s = s_begin + 1; s <= s_end; ++s) {
     for (int t = t_begin + 1; t <= t_end; ++t) {
-      p[p_index_(b, s, t)] = logAdd(
-          p[p_index_(b, s - 1, t)] + px[px_index_(b, s - 1, t)],
-          p[p_index_(b, s, t - 1)] + py[py_index_(b, s, t - 1)]);
+      p[p_index_(b, s, t)] =
+          logAdd(p[p_index_(b, s - 1, t)] + px[px_index_(b, s - 1, t)],
+                 p[p_index_(b, s, t - 1)] + py[py_index_(b, s, t - 1)]);
       theory_ops_ += 2;
     }
   }

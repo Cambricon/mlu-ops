@@ -51,4 +51,5 @@ class MaskedCol2imForwardExecutor : public Executor {
 };
 
 }  // namespace mluoptest
-#endif  // TEST_MLUOP_GTEST_SRC_ZOO_MASKED_COL2IM_FORWARD_MASKED_COL2IM_FORWARD_H_ //NOLINT
+#endif  // TEST_MLUOP_GTEST_SRC_ZOO_MASKED_COL2IM_FORWARD_MASKED_COL2IM_FORWARD_H_
+        // //NOLINT

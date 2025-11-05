@@ -14,11 +14,12 @@
 namespace mluoptest {
 
 class SearchFile {
-  public:
-    SearchFile(const std::string &file_path) : file_path_(file_path) {}
-    std::string searchFilePath();
-  private:
-    std::string file_path_;
+ public:
+  SearchFile(const std::string &file_path) : file_path_(file_path) {}
+  std::string searchFilePath();
+
+ private:
+  std::string file_path_;
 };
 
 // Try to search the file accurately, if it cannot be found,
@@ -45,7 +46,8 @@ std::string SearchFile::searchFilePath() {
     auto bin_file = file_path.substr(0, file_path.size() - ext_length);
     if (fileExists(bin_file)) {
       file_path_ = bin_file;
-      LOG(WARNING) << file_path << " does not exist, use " << bin_file << " instead";
+      LOG(WARNING) << file_path << " does not exist, use " << bin_file
+                   << " instead";
       return bin_file;
     }
   }
@@ -53,15 +55,14 @@ std::string SearchFile::searchFilePath() {
   auto zst_file = file_path + ".zst";
   if (fileExists(zst_file)) {
     file_path_ = zst_file;
-    LOG(WARNING) << file_path << " does not exist, use " << zst_file << " instead";
+    LOG(WARNING) << file_path << " does not exist, use " << zst_file
+                 << " instead";
     return zst_file;
   }
   return std::string();
 }
 
-std::string FileReaderCreator::getRealFilePath() {
-  return file_path_;
-}
+std::string FileReaderCreator::getRealFilePath() { return file_path_; }
 
 void FileReaderCreator::setRealFilePath() {
   auto search_file = std::make_shared<SearchFile>(file_path_);
@@ -72,14 +73,14 @@ std::shared_ptr<FileReader> FileReaderCreator::getFileReader() {
   // check whether file is exist.
   bool find_data_file_failed = !file_path_.empty();
   GTEST_CHECK(find_data_file_failed,
-    "Please check the data file path of tensor in pb/prototxt");
+              "Please check the data file path of tensor in pb/prototxt");
   std::shared_ptr<FileReaderFactory> reader_factory = nullptr;
 
   if (getFileExtension(file_path_) == "zst") {
     reader_factory = std::make_shared<ZstdFactory>();
-  // some binary data file not end with ".bin", such as:
-  // /SOFT_TRAIN/release_test/split/split_data_split_float16_1648201505743.pb
-  // so cannot use extention ".bin" to create object
+    // some binary data file not end with ".bin", such as:
+    // /SOFT_TRAIN/release_test/split/split_data_split_float16_1648201505743.pb
+    // so cannot use extention ".bin" to create object
   } else {
     reader_factory = std::make_shared<BinFactory>();
   }

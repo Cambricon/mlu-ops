@@ -135,11 +135,13 @@ class GTEST_API_ String {
   // which compares according to LC_CTYPE category of the current locale.
   // On MacOS X, it uses towlower, which also uses LC_CTYPE category of the
   // current locale.
-  static bool CaseInsensitiveWideCStringEquals(const wchar_t *lhs, const wchar_t *rhs);
+  static bool CaseInsensitiveWideCStringEquals(const wchar_t *lhs,
+                                               const wchar_t *rhs);
 
   // Returns true iff the given string ends with the given suffix, ignoring
   // case. Any string is considered to end with an empty suffix.
-  static bool EndsWithCaseInsensitive(const std::string &str, const std::string &suffix);
+  static bool EndsWithCaseInsensitive(const std::string &str,
+                                      const std::string &suffix);
 
   // Formats an int value as "%02d".
   static std::string FormatIntWidth2(int value);  // "%02d" for width == 2

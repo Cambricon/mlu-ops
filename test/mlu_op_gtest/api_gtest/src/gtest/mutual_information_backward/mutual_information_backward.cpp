@@ -56,8 +56,7 @@ class mutual_information_backward : public testing::Test {
                     cnrtMalloc(&px_, MLUOP_DTYPE_FLOAT *
                                          mluOpGetTensorElementNum(px_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess ==
-                    cnrtMalloc(&px_, MLUOP_DTYPE_FLOAT * 2));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&px_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
 
@@ -75,8 +74,7 @@ class mutual_information_backward : public testing::Test {
                     cnrtMalloc(&py_, MLUOP_DTYPE_FLOAT *
                                          mluOpGetTensorElementNum(py_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess ==
-                    cnrtMalloc(&py_, MLUOP_DTYPE_FLOAT * 2));
+        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&py_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
 

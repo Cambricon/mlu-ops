@@ -23,7 +23,7 @@
 
 #include "fill_ram_device.h"
 #include "kernels/kernel.h"  // MAX_NRAM_SIZE
-#include "kernels/debug.h"  // MLULOG
+#include "kernels/debug.h"   // MLULOG
 
 #define FILL_NRAM_SIZE (MAX_NRAM_SIZE + REM_FOR_STACK - 4096)
 #define FILL_SRAM_SIZE (MAX_SRAM_SIZE + REM_FOR_STACK - 4096)
@@ -33,8 +33,7 @@ __nram__ int8_t nram_buffer[FILL_NRAM_SIZE];
 __wram__ int8_t wram_buffer[MAX_WRAM_SIZE];
 
 template <typename T>
-__mlu_func__ void fillRamBase(const int &fill_value,
-                              int8_t *sram_buffer) {
+__mlu_func__ void fillRamBase(const int &fill_value, int8_t *sram_buffer) {
   T *tmp = (T *)&fill_value;
   __bang_write_value(nram_buffer, FILL_NRAM_SIZE / sizeof(T), (T)*tmp);
 #if __BANG_ARCH__ == 520  // use nram to fill wram
@@ -50,11 +49,11 @@ __mlu_func__ void fillRamBase(const int &fill_value,
   __sync_cluster();
 #if __BANG_ARCH__ == 290
   // 290: MAX_WRAM_SIZE = physical wram size - 8KB
-  __memcpy(wram_buffer, sram_buffer, MAX_WRAM_SIZE,
-           SRAM2WRAM, MAX_WRAM_SIZE, MAX_WRAM_SIZE, 0);
-#else  // fill all wram
-  __memcpy(wram_buffer, sram_buffer, WRAM_LT_STRIDE, SRAM2WRAM,
-           WRAM_LT_STRIDE, WRAM_LT_STRIDE, LT_NUM - 1);
+  __memcpy(wram_buffer, sram_buffer, MAX_WRAM_SIZE, SRAM2WRAM, MAX_WRAM_SIZE,
+           MAX_WRAM_SIZE, 0);
+#else   // fill all wram
+  __memcpy(wram_buffer, sram_buffer, WRAM_LT_STRIDE, SRAM2WRAM, WRAM_LT_STRIDE,
+           WRAM_LT_STRIDE, LT_NUM - 1);
 #endif  // 290
 #endif  // 520
 }

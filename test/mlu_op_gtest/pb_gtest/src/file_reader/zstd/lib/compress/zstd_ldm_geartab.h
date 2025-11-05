@@ -100,7 +100,6 @@ static UNUSED_ATTR const U64 ZSTD_ldm_gearTab[256] = {
     0x3b0311f0a27c0656, 0xdb17bf91c0db96e7, 0x8cd4fd6b4e85a5b2,
     0xfab071054ba6409d, 0x40d6fe831fa9dfd9, 0xaf358debad7d791e,
     0xeb8d0e25a65e3e58, 0xbbcbd3df14e08580, 0xcf751f27ecdab2b,
-    0x2b4da14f2613d8f4
-};
+    0x2b4da14f2613d8f4};
 
 #endif /* ZSTD_LDM_GEARTAB_H */

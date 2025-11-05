@@ -52,4 +52,5 @@ class IndiceConvolutionForwardExecutor : public Executor {
   int64_t num_active_out_ = 0;
 };
 }  // namespace mluoptest
-#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_INDICE_CONVOLUTION_FORWARD_INDICE_CONVOLUTION_FORWARD_H_  // NOLINT
+#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_INDICE_CONVOLUTION_FORWARD_INDICE_CONVOLUTION_FORWARD_H_
+        // // NOLINT

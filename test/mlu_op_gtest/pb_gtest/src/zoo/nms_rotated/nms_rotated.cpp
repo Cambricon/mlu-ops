@@ -71,8 +71,8 @@ void NmsRotatedExecutor::paramCheck() {
 void NmsRotatedExecutor::workspaceMalloc() {
   size_t workspace_size = 0;
   auto boxes_desc = tensor_desc_[0].tensor;
-  MLUOP_CHECK(mluOpGetNmsRotatedWorkspaceSize(handle_, boxes_desc,
-                &workspace_size));
+  MLUOP_CHECK(
+      mluOpGetNmsRotatedWorkspaceSize(handle_, boxes_desc, &workspace_size));
   VLOG(4) << "Malloc workspace space.";
   void *temp = mlu_runtime_.allocate(workspace_size);
   workspace_.push_back(temp);
@@ -91,7 +91,7 @@ void NmsRotatedExecutor::compute() {
   VLOG(4) << "NmsRotatedExecutor compute";
 
   float iou_threshold =
-    parser_->getProtoNode()->nms_rotated_param().iou_threshold();
+      parser_->getProtoNode()->nms_rotated_param().iou_threshold();
   auto boxes = tensor_desc_[0].tensor;
   auto dev_boxes = data_vector_[0].device_ptr;
   auto scores = tensor_desc_[1].tensor;
@@ -108,12 +108,10 @@ void NmsRotatedExecutor::compute() {
   //   output->getDimIndex(0) * sizeof(int64_t)));
   VLOG(4) << "call mluOpNmsRotated()";
   interface_timer_.start();
-  MLUOP_CHECK(mluOpGetNmsRotatedWorkspaceSize(
-              handle_, boxes, &workspace_size));
-  MLUOP_CHECK(mluOpNmsRotated(
-      handle_, iou_threshold, boxes, dev_boxes, scores, dev_scores,
-      workspace_[0], workspace_size, output, dev_output,
-      (int32_t *)result_num));
+  MLUOP_CHECK(mluOpGetNmsRotatedWorkspaceSize(handle_, boxes, &workspace_size));
+  MLUOP_CHECK(mluOpNmsRotated(handle_, iou_threshold, boxes, dev_boxes, scores,
+                              dev_scores, workspace_[0], workspace_size, output,
+                              dev_output, (int32_t *)result_num));
   interface_timer_.stop();
   VLOG(4) << "mluOpNmsRotated() finished!";
 }
@@ -127,7 +125,7 @@ void NmsRotatedExecutor::cpuCompute() {
   auto num_box = tensor_desc_[0].tensor->getDimIndex(0);
   auto box_dim = tensor_desc_[0].tensor->getDimIndex(1);
   float iou_threshold =
-    parser_->getProtoNode()->nms_rotated_param().iou_threshold();
+      parser_->getProtoNode()->nms_rotated_param().iou_threshold();
 
   VLOG(4) << "num_box: " << num_box;
   VLOG(4) << "box_dim: " << box_dim;
@@ -141,16 +139,14 @@ void NmsRotatedExecutor::cpuCompute() {
 }
 
 template <typename T>
-void NmsRotatedExecutor::cpuNmsRotated(const T *boxes,
-                                       const T *scores,
-                                       T *output,
-                                       const int num_box,
+void NmsRotatedExecutor::cpuNmsRotated(const T *boxes, const T *scores,
+                                       T *output, const int num_box,
                                        const float iou_threshold,
                                        const int box_dim) {
   std::vector<int32_t> order(num_box);
   for (int i = 0; i < num_box; i++) order[i] = i;
-  sort(order.begin(), order.end(), [&scores] (int i1, int i2)
-    {return scores[i1] > scores[i2];});
+  sort(order.begin(), order.end(),
+       [&scores](int i1, int i2) { return scores[i1] > scores[i2]; });
 
   std::vector<uint8_t> suppressed(num_box, 0);
   int64_t num_to_keep = 0;
@@ -169,8 +165,8 @@ void NmsRotatedExecutor::cpuNmsRotated(const T *boxes,
       if (suppressed[j] == 1) {
         continue;
       }
-      auto ovr = singleBoxIouRotated(boxes + i * box_dim,
-                                    boxes + j * box_dim, 0);
+      auto ovr =
+          singleBoxIouRotated(boxes + i * box_dim, boxes + j * box_dim, 0);
       if (ovr > iou_threshold) {
         suppressed[j] = 1;
       }
@@ -181,8 +177,7 @@ void NmsRotatedExecutor::cpuNmsRotated(const T *boxes,
 }
 
 template <typename T>
-T NmsRotatedExecutor::singleBoxIouRotated(const T *box1_raw,
-                                          const T *box2_raw,
+T NmsRotatedExecutor::singleBoxIouRotated(const T *box1_raw, const T *box2_raw,
                                           const int mode_flag) {
   // 1. Calculate new points
   Box<T> box1, box2;
@@ -280,8 +275,8 @@ void NmsRotatedExecutor::getRotatedVertices(const Box<T> &box,
 }
 template <typename T>
 T NmsRotatedExecutor::getIntersectionPoints(const Point<T> (&pts1)[4],
-                                               const Point<T> (&pts2)[4],
-                                               Point<T> (&intersections)[24]) {
+                                            const Point<T> (&pts2)[4],
+                                            Point<T> (&intersections)[24]) {
   // Line vector, from p1 to p2 is: p1+(p2-p1)*t, t=[0,1]
   Point<T> vec1[4], vec2[4];
   for (int i = 0; i < 4; i++) {
@@ -357,8 +352,7 @@ T NmsRotatedExecutor::getIntersectionPoints(const Point<T> (&pts1)[4],
 }
 template <typename T>
 int NmsRotatedExecutor::convexHullGraham(const Point<T> (&p)[24],
-                                         const int &num_in,
-                                         Point<T> (&q)[24]) {
+                                         const int &num_in, Point<T> (&q)[24]) {
   GTEST_CHECK(num_in >= 2);
   // Step1:
   // Find point with minimum y
@@ -460,7 +454,7 @@ T NmsRotatedExecutor::polygonArea(const Point<T> (&q)[24], const int &m) {
 }
 
 int64_t NmsRotatedExecutor::getTheoryOps() {
-  int64_t theory_ops =  60000 * out_num_;
+  int64_t theory_ops = 60000 * out_num_;
   VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
   return theory_ops;
 }
@@ -468,7 +462,8 @@ int64_t NmsRotatedExecutor::getTheoryOps() {
 int64_t NmsRotatedExecutor::getTheoryIoSize() {
   int64_t theory_ios =
       (parser_->input(0)->total_count + parser_->input(1)->total_count +
-        parser_->output(0)->total_count) * sizeof(float);
+       parser_->output(0)->total_count) *
+      sizeof(float);
   VLOG(4) << "getTheoryIos: " << theory_ios << " bytes";
   return theory_ios;
 }

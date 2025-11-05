@@ -36,7 +36,6 @@
 #include <unordered_map>
 #include <string>
 
-
 /* NOTE: should not include mluop_test pb and other mluop_gtest specified header
  * (executor, evaluator) */
 

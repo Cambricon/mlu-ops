@@ -43,8 +43,10 @@ void LogExecutor::compute() {
   VLOG(4) << "call mluOpLog()";
   mluOpLogBase_t base =
       (mluOpLogBase_t)(parser_->getProtoNode()->log_param().log_base());
-  mluOpComputationPreference_t prefer = (mluOpComputationPreference_t)(
-      parser_->getProtoNode()->log_param().prefer());
+  mluOpComputationPreference_t prefer =
+      (mluOpComputationPreference_t)(parser_->getProtoNode()
+                                         ->log_param()
+                                         .prefer());
   interface_timer_.start();
   MLUOP_CHECK(mluOpLog(handle_, prefer, base, input_tensor, input_dev,
                        output_tensor, output_dev));
