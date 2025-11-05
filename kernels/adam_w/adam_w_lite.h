@@ -53,6 +53,8 @@ NAMESPACE_BANGC_KERNELS_BEGIN
  * A hyperparameter of a shrinking gradient.
  * @param[in] use_nesterov
  * A parameter that determines whether to use the NAG algorithm.
+ * @param[in] need_remove_nan
+ * A parameter that determines whether to remove nan output.
  * @param[in] size
  * A parameter that represents the amount of data for the parameter.
  * @param[in] param_h
@@ -111,6 +113,7 @@ bangcKernelsStatus_t BANGC_KERNELS_WIN_API mluAdamW(const cnrtQueue_t queue,
                                                     const float weight_decay,
                                                     const float scale,
                                                     const bool use_nesterov,
+                                                    const bool need_remove_nan,
                                                     const size_t size,
                                                     T *param_h,
                                                     T *grad,

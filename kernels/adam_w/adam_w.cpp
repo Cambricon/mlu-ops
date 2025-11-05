@@ -66,6 +66,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetAdamWDescAttr(
         return MLUOP_STATUS_BAD_PARAM;
       }
     }; break;
+    case MLUOP_ADAMW_NEED_REMOVE_NAN: {
+      if (size_in_bytes == sizeof(bool) && buf != nullptr) {
+        adamw_desc->need_remove_nan = *((bool *)buf);
+      } else {
+        return MLUOP_STATUS_BAD_PARAM;
+      }
+    }; break;
     default: {
       LOG(ERROR) << "[mluOpSetAdamWDescAttr] failed, attr is not supported.";
       return MLUOP_STATUS_BAD_PARAM;
@@ -85,25 +92,35 @@ mluOpDestroyAdamWDescriptor(mluOpAdamWDescriptor_t desc) {
 }
 
 mluOpStatus_t MLUOP_WIN_API
-mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
-           const mluOpTensorDescriptor_t param_desc, void *param,
-           const mluOpTensorDescriptor_t paramh_desc, void *param_h,
-           const mluOpTensorDescriptor_t momentum_desc, void *momentum,
-           const mluOpTensorDescriptor_t velocity_desc, void *velocity,
-           const mluOpTensorDescriptor_t grad_desc, void *grad, const float lr,
-           const float beta1, const float beta2, const float bias1,
-           const float bias2, const float epsilon) {
+mluOpAdamW(
+    mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
+    const mluOpTensorDescriptor_t param_desc, void *param,
+    const mluOpTensorDescriptor_t paramh_or_step_desc, void *paramh_or_step,
+    const mluOpTensorDescriptor_t momentum_desc, void *momentum,
+    const mluOpTensorDescriptor_t velocity_desc, void *velocity,
+    const mluOpTensorDescriptor_t grad_desc, void *grad, const float lr,
+    const float beta1, const float beta2, const float bias1,
+    const float bias2, const float epsilon) {
   PARAM_CHECK("[mluOpAdamW]", handle != nullptr);
-  PARAM_CHECK("[mluOpAdamW]", param_desc != nullptr || paramh_desc != nullptr);
+  PARAM_CHECK("[mluOpAdamW]", param_desc != nullptr);
   PARAM_CHECK("[mluOpAdamW]", momentum_desc != nullptr);
   PARAM_CHECK("[mluOpAdamW]", velocity_desc != nullptr);
   PARAM_CHECK("[mluOpAdamW]", grad_desc != nullptr);
   PARAM_CHECK("[mluOpAdamW]", param_desc->getDtype() == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK("[mluOpAdamW]", paramh_desc->getDtype() == MLUOP_DTYPE_BFLOAT16);
+  if (adamw_desc->need_remove_nan == false) {
+    PARAM_CHECK("[mluOpAdamW]",
+                paramh_or_step_desc->getDtype() == MLUOP_DTYPE_BFLOAT16);
+  } else {
+    PARAM_CHECK("[mluOpAdamW]",
+                paramh_or_step_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  }
   PARAM_CHECK("[mluOpAdamW]", momentum_desc->getDtype() == MLUOP_DTYPE_FLOAT);
   PARAM_CHECK("[mluOpAdamW]", velocity_desc->getDtype() == MLUOP_DTYPE_FLOAT);
-  PARAM_CHECK("[mluOpAdamW]", grad_desc->getDtype() == MLUOP_DTYPE_BFLOAT16);
-
+  if (adamw_desc->need_remove_nan == false) {
+    PARAM_CHECK("[mluOpAdamW]", grad_desc->getDtype() == MLUOP_DTYPE_BFLOAT16);
+  } else {  // adamw_desc->need_remove_nan == true
+    PARAM_CHECK("[mluOpAdamW]", grad_desc->getDtype() == MLUOP_DTYPE_FLOAT);
+  }
   PARAM_CHECK_LE("[mluOpAdamW]", beta1, 1.0);
   PARAM_CHECK_GE("[mluOpAdamW]", beta1, 0.0);
   PARAM_CHECK_LE("[mluOpAdamW]", beta2, 1.0);
@@ -135,25 +152,38 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
 
   {
     LARGE_TENSOR_CHECK("[mluOpAdamW]", param_desc);
-    LARGE_TENSOR_CHECK("[mluOpAdamW]", paramh_desc);
+    LARGE_TENSOR_CHECK("[mluOpAdamW]", paramh_or_step_desc);
     LARGE_TENSOR_CHECK("[mluOpAdamW]", momentum_desc);
     LARGE_TENSOR_CHECK("[mluOpAdamW]", velocity_desc);
     LARGE_TENSOR_CHECK("[mluOpAdamW]", grad_desc);
   }
 
-  if (param != nullptr && param_h != nullptr) {
+  if (param != nullptr && paramh_or_step != nullptr) {
     param_dims = mluOpGetTensorElementNum(param_desc);
-    paramh_dims = mluOpGetTensorElementNum(paramh_desc);
-    if (param_dims != paramh_dims || param_dims != momentum_dims ||
-        param_dims != velocity_dims || param_dims != grad_dims) {
-      LOG(ERROR)
+    paramh_dims = mluOpGetTensorElementNum(paramh_or_step_desc);
+    if (adamw_desc->need_remove_nan == false) {
+      if (param_dims != paramh_dims || param_dims != momentum_dims ||
+          param_dims != velocity_dims || param_dims != grad_dims) {
+        LOG(ERROR)
+            << "[mluOpAdamW] the size of param, param_h, momentum, velocity"
+            << " and grad should be the same. But now the size of param is "
+            << param_dims << ", the size of param_h is " << paramh_dims
+            << ", the size of momentum is " << momentum_dims
+            << ", the size of velocity is " << velocity_dims
+            << ", the size of grad is " << grad_dims << ".";
+        return MLUOP_STATUS_BAD_PARAM;
+      }
+    } else {
+      if (param_dims != momentum_dims || param_dims != velocity_dims ||
+          param_dims != grad_dims) {
+        LOG(ERROR)
           << "[mluOpAdamW] the size of param, param_h, momentum, velocity"
           << " and grad should be the same. But now the size of param is "
-          << param_dims << ", the size of param_h is " << paramh_dims
-          << ", the size of momentum is " << momentum_dims
+          << param_dims << ", the size of momentum is " << momentum_dims
           << ", the size of velocity is " << velocity_dims
           << ", the size of grad is " << grad_dims << ".";
-      return MLUOP_STATUS_BAD_PARAM;
+        return MLUOP_STATUS_BAD_PARAM;
+      }
     }
   } else if (param != nullptr) {
     param_dims = mluOpGetTensorElementNum(param_desc);
@@ -168,7 +198,7 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {
-    paramh_dims = mluOpGetTensorElementNum(paramh_desc);
+    paramh_dims = mluOpGetTensorElementNum(paramh_or_step_desc);
     if (paramh_dims != momentum_dims || paramh_dims != velocity_dims ||
         paramh_dims != grad_dims) {
       LOG(ERROR)
@@ -189,9 +219,9 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
     STRIDE_TENSOR_CHECK("[mluOpAdamW]:", param_desc,
                         "param_desc must be contiguous");
   }
-  if (paramh_desc != nullptr) {
-    STRIDE_TENSOR_CHECK("[mluOpAdamW]:", paramh_desc,
-                        "paramh_desc must be contiguous");
+  if (paramh_or_step_desc != nullptr) {
+    STRIDE_TENSOR_CHECK("[mluOpAdamW]:", paramh_or_step_desc,
+                        "paramh_or_step_desc must be contiguous");
   }
   STRIDE_TENSOR_CHECK("[mluOpAdamW]:", momentum_desc,
                       "momentum_desc must be contiguous");
@@ -204,17 +234,21 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
   if (MLUOP_GEN_CASE_ON_NEW) {
     GEN_CASE_START("adam_w", "ADAMW");
     GEN_CASE_HANDLE(handle);
-    if (param != nullptr && param_h != nullptr) {
+    if (param != nullptr && paramh_or_step != nullptr) {
       GEN_CASE_DATA(true, "param", param, param_desc, 1, 0);
-      GEN_CASE_DATA(true, "param_h", param_h, paramh_desc, 1, 0);
+      GEN_CASE_DATA(true, "paramh_or_step", paramh_or_step,
+                    paramh_or_step_desc, 1, 0);
       GEN_CASE_DATA(false, "param", param, param_desc, 1, 0);
-      GEN_CASE_DATA(false, "param_h", param_h, paramh_desc, 1, 0);
+      GEN_CASE_DATA(false, "paramh_or_step", paramh_or_step,
+                    paramh_or_step_desc, 1, 0);
     } else if (param != nullptr) {
       GEN_CASE_DATA(true, "param", param, param_desc, 1, 0);
       GEN_CASE_DATA(false, "param", param, param_desc, 1, 0);
     } else {
-      GEN_CASE_DATA(true, "param_h", param_h, paramh_desc, 1, 0);
-      GEN_CASE_DATA(false, "param_h", param_h, paramh_desc, 1, 0);
+      GEN_CASE_DATA(true, "paramh_or_step", paramh_or_step,
+                    paramh_or_step_desc, 1, 0);
+      GEN_CASE_DATA(false, "paramh_or_step", paramh_or_step,
+                    paramh_or_step_desc, 1, 0);
     }
 
     GEN_CASE_DATA(true, "momentum", momentum, momentum_desc, 1, 1);
@@ -235,6 +269,8 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
                              MLUOP_DTYPE_FLOAT);
     GEN_CASE_OP_PARAM_SINGLE(2, "adamw", "use_nesterov",
                              adamw_desc->use_nesterov, MLUOP_DTYPE_BOOL);
+    GEN_CASE_OP_PARAM_SINGLE(2, "adamw", "need_remove_nan",
+                             adamw_desc->need_remove_nan, MLUOP_DTYPE_BOOL);
     GEN_CASE_TEST_PARAM_NEW(true, true, false, 0.003, 0.003, 0);
   }
   // generate adamw prototxt end!
@@ -269,10 +305,11 @@ mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
       CHECK_RETURN(
           "[mluOpAdamW]",
           KernelApplyAdamW(
-              k_dim, k_type, handle->queue, (void *)param, (void *)param_h,
-              (void *)grad, (void *)momentum, (void *)velocity, lr, beta1,
-              beta2, bias1, bias2, epsilon, adamw_desc->weight_decay,
-              adamw_desc->grad_scale, adamw_desc->use_nesterov, size));
+              k_dim, k_type, handle->queue, (void *)param,
+              (void *)paramh_or_step, (void *)grad, (void *)momentum,
+              (void *)velocity, lr, beta1, beta2, bias1, bias2, epsilon,
+              adamw_desc->weight_decay, adamw_desc->grad_scale,
+              adamw_desc->use_nesterov, adamw_desc->need_remove_nan, size));
     }
   }
   GEN_CASE_END();
