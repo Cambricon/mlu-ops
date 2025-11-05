@@ -36,12 +36,19 @@ class RoiAlignBackwardExecutor : public Executor {
   void compute() override;
   void cpuCompute() override;
   int64_t getTheoryOps() override;
-
  private:
-  void bilinear_interpolate_gradient(const int height, const int width, float y,
-                                     float x, float& w1, float& w2, float& w3,
-                                     float& w4, int& x_low, int& x_high,
-                                     int& y_low, int& y_high);
+  void bilinear_interpolate_gradient(const int height,
+                                     const int width,
+                                     float y,
+                                     float x,
+                                     float& w1,
+                                     float& w2,
+                                     float& w3,
+                                     float& w4,
+                                     int& x_low,
+                                     int& x_high,
+                                     int& y_low,
+                                     int& y_high);
 };
 
 }  // namespace mluoptest

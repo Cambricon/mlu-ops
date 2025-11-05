@@ -18,6 +18,7 @@
 
 #include <zstd.h>
 
+
 #define _LARGE_FILES 1
 #if 0
 // TODO copy from ChageGPT 3.5, but maybe bad performance
@@ -35,8 +36,8 @@ static std::vector<char> readBinaryFile(const std::string& filename) {
 }
 #endif
 
-static std::tuple<void *, off_t> readBinaryFileMmap(
-    const std::string &filename) {
+
+static std::tuple<void *, off_t> readBinaryFileMmap(const std::string& filename) {
   int fd = open(filename.c_str(), O_RDONLY | O_CLOEXEC);
   if (fd == -1) {
     perror("Error opening input file");
@@ -48,7 +49,7 @@ static std::tuple<void *, off_t> readBinaryFileMmap(
   lseek(fd, 0, SEEK_SET);
 
   // Map the input file into memory
-  void *input_data = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
+  void* input_data = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
   if (input_data == MAP_FAILED) {
     perror("Error mapping input file into memory");
     close(fd);
@@ -63,42 +64,36 @@ namespace mluoptest {
 
 class ZstdStrategy {
  public:
-  virtual size_t read(void *data, size_t length,
-                      const std::string &filepath) = 0;
+  virtual size_t read(void *data, size_t length, const std::string &filepath) = 0;
   ~ZstdStrategy() = default;
 };
 
 // Class for reading files compressed by zstd or pzstd.
 class ZstdFileReader : public FileReader {
  public:
-  virtual size_t read(void *data, size_t length,
-                      const std::string &filepath) final;
+  virtual size_t read(void *data, size_t length, const std::string &filepath) final;
   virtual ~ZstdFileReader() {}
-
  private:
-  std::shared_ptr<ZstdStrategy> selectZstdStrategy(void *data, size_t length,
-                                                   const std::string &filepath);
+  std::shared_ptr<ZstdStrategy> selectZstdStrategy(void *data, size_t length, const std::string &filepath);
 };
 
 class SingleThreadZstdStrategy : public ZstdStrategy {
  public:
-  virtual size_t read(void *data, size_t length,
-                      const std::string &filepath) final;
+  virtual size_t read(void *data, size_t length, const std::string &filepath) final;
 };
 
 // Class for reading files which compressed by pzstd.
-// Each thread reads and decompresses a fixed size of data until the entire file
-// is traversed Users can modify the number of threads through
-// "CNNL_GTEST_FILE_READ_THREAD_NUM" environment variable
+// Each thread reads and decompresses a fixed size of data until the entire file is traversed
+// Users can modify the number of threads through "CNNL_GTEST_FILE_READ_THREAD_NUM"
+// environment variable
 class ParallelZstdStrategy : public ZstdStrategy {
  public:
   explicit ParallelZstdStrategy() = default;
   // use same pointer to data with class executor
   ParallelZstdStrategy(const ParallelZstdStrategy &) = delete;
-  ParallelZstdStrategy &operator=(const ParallelZstdStrategy &) = delete;
+  ParallelZstdStrategy &operator = (const ParallelZstdStrategy &) = delete;
 
-  virtual size_t read(void *data, size_t length,
-                      const std::string &filepath) final;
+  virtual size_t read(void *data, size_t length, const std::string &filepath) final ;
 
  private:
   std::atomic<size_t> actual_tensor_size_{0};
@@ -112,11 +107,10 @@ class ParallelZstdStrategy : public ZstdStrategy {
 
   void init(void *data, size_t length, const std::string &file_name);
   void initDStream();
-  void asyncReadAndDecompress(
-      size_t input_file_offset,  // for input.zst
-      size_t frame_size,         // .zst once read
-      char *output,              // *data ptr of cnnl_gtest malloc before
-      FILE *fd);
+  void asyncReadAndDecompress(size_t input_file_offset,  // for input.zst
+                              size_t frame_size,  // .zst once read
+                              char *output,  // *data ptr of cnnl_gtest malloc before
+                              FILE *fd);
 };
 
 std::shared_ptr<FileReader> ZstdFactory::create() {
@@ -126,8 +120,7 @@ std::shared_ptr<FileReader> ZstdFactory::create() {
 static size_t readHeader(size_t *offset, FILE *fd) {
   fseek(fd, (long long)(*offset), SEEK_SET);
   Buffer header_buffer(SkippableFrame::kSize);  // const 12
-  auto bytesRead =
-      std::fread(header_buffer.data(), 1, header_buffer.size(), fd);
+  auto bytesRead = std::fread(header_buffer.data(), 1, header_buffer.size(), fd);
   if (bytesRead != SkippableFrame::kSize) {
     throw std::runtime_error("Failed to read .zst file header.");
   }
@@ -137,25 +130,21 @@ static size_t readHeader(size_t *offset, FILE *fd) {
   return frame_size;
 }
 
-size_t SingleThreadZstdStrategy::read(void *data, size_t length,
-                                      const std::string &filepath) {
+size_t SingleThreadZstdStrategy::read(void *data, size_t length, const std::string &filepath) {
   // auto compressed_data = readBinaryFile(filepath);
-  // size_t result = ZSTD_decompress(data, length, compressed_data.data(),
-  // compressed_data.size());
+  // size_t result = ZSTD_decompress(data, length, compressed_data.data(), compressed_data.size());
   auto compressed_data = readBinaryFileMmap(filepath);
-  size_t result = ZSTD_decompress(data, length, std::get<0>(compressed_data),
-                                  std::get<1>(compressed_data));
+  size_t result = ZSTD_decompress(data, length,
+      std::get<0>(compressed_data), std::get<1>(compressed_data));
   munmap(std::get<0>(compressed_data), std::get<1>(compressed_data));
   if (ZSTD_isError(result)) {
-    throw std::runtime_error("Zstd decompression failed: " +
-                             std::string(ZSTD_getErrorName(result)));
+    throw std::runtime_error("Zstd decompression failed: " + std::string(ZSTD_getErrorName(result)));
   }
   if (result != length) {
     // TODO use error log
     std::cerr << "zstd decompress got " << result << std::endl;
-    throw std::runtime_error("Zstd decompression unexpected size " +
-                             std::to_string(result) +
-                             " != " + std::to_string(length));
+    throw std::runtime_error("Zstd decompression unexpected size " + std::to_string(result) + " != "
+        + std::to_string(length));
   }
 
   return result;
@@ -177,8 +166,7 @@ static size_t split(ZSTD_outBuffer &out_buffer) {
   return pos;
 }
 
-size_t ParallelZstdStrategy::read(void *data, size_t length,
-                                  const std::string &filepath) {
+size_t ParallelZstdStrategy::read(void *data, size_t length, const std::string &filepath) {
   init(data, length, filepath);
   FILE *fd = std::fopen(file_name_.c_str(), "rb");
   size_t offset = 0;  // used for determine whether the file ends
@@ -189,9 +177,8 @@ size_t ParallelZstdStrategy::read(void *data, size_t length,
     // data_offset is after header
     size_t data_offset = offset + SkippableFrame::kSize;
     size_t frame_size = readHeader(&offset, fd);
-    res_.push(pool.enqueue(
-        std::bind(&ParallelZstdStrategy::asyncReadAndDecompress, this,
-                  data_offset, frame_size, current_data, fd)));
+    res_.push(pool.enqueue(std::bind(&ParallelZstdStrategy::asyncReadAndDecompress, this,
+              data_offset, frame_size, current_data, fd)));
     // output_offset(*data) for each thread
     current_data += kstep;  // kstep is const value of compress, now is 1 << 23
 
@@ -208,13 +195,11 @@ size_t ParallelZstdStrategy::read(void *data, size_t length,
     fclose(fd);
     fd = nullptr;
   }
-  d_stream_pool_.reset();  // I do not know why, it is unique_ptr, delete it
-                           // will memory leak -.-
+  d_stream_pool_.reset();  // I do not know why, it is unique_ptr, delete it will memory leak -.-
   return actual_tensor_size_;
 }
 
-void ParallelZstdStrategy::init(void *data, size_t length,
-                                const std::string &file_name) {
+void ParallelZstdStrategy::init(void *data, size_t length, const std::string &file_name) {
   thread_num_ = getEnvInt("CNNL_GTEST_FILE_READ_THREAD_NUM", 32);
   file_name_ = file_name;
   length_ = length;
@@ -223,32 +208,35 @@ void ParallelZstdStrategy::init(void *data, size_t length,
 }
 
 void ParallelZstdStrategy::initDStream() {
-  d_stream_pool_.reset(new ResourcePool<ZSTD_DStream>{
-      [this]() -> ZSTD_DStream * {
-        auto zds = ZSTD_createDStream();
-        if (zds) {
-          auto err = ZSTD_initDStream(zds);
-          if (ZSTD_isError(err)) {
-            ZSTD_freeDStream(zds);
-            return nullptr;
-          }
+  d_stream_pool_.reset(new ResourcePool<ZSTD_DStream> {
+    [this]() -> ZSTD_DStream* {
+      auto zds = ZSTD_createDStream();
+      if (zds) {
+        auto err = ZSTD_initDStream(zds);
+        if (ZSTD_isError(err)) {
+          ZSTD_freeDStream(zds);
+          return nullptr;
         }
-        return zds;
-      },
-      [](ZSTD_DStream *zds) { ZSTD_freeDStream(zds); }});
+      }
+      return zds;
+    },
+    [](ZSTD_DStream *zds) {
+      ZSTD_freeDStream(zds);
+    }
+  });
 }
 
-void ParallelZstdStrategy::asyncReadAndDecompress(
-    size_t input_file_offset,  // for input.zst
-    size_t frame_size,         // .zst once read
-    char *output,              // *data ptr of cnnl_gtest malloc before
-    FILE *fd) {
-  // TODO(niewenchang): may malloc fixed memory in advance based on the
-  // thread_num now malloc is fast enough cannot use runtime.allocate, it is not
-  // thread-safe
+void ParallelZstdStrategy::asyncReadAndDecompress(size_t input_file_offset,  // for input.zst
+                                                  size_t frame_size,  // .zst once read
+                                                  char *output,  // *data ptr of cnnl_gtest malloc before
+                                                  FILE *fd) {
+  // TODO(niewenchang): may malloc fixed memory in advance based on the thread_num
+  // now malloc is fast enough
+  // cannot use runtime.allocate, it is not thread-safe
   (void)fd;
-  std::shared_ptr<char> input_data(new char[frame_size],
-                                   [](char *p) { delete[] p; });
+  std::shared_ptr<char> input_data(new char[frame_size], [](char *p) {
+    delete []p;
+  });
   FILE *file_part = std::fopen(file_name_.c_str(), "rb");
   if (!file_part) {
     throw std::runtime_error("Failed to open file: " + file_name_);
@@ -265,7 +253,7 @@ void ParallelZstdStrategy::asyncReadAndDecompress(
 
   // for stream decompress, once decompress chunk_size
   const size_t chunk_size = ZSTD_DStreamInSize();  // const int = 131072
-  const size_t out_size = ZSTD_DStreamOutSize();   // const int = 131072
+  const size_t out_size = ZSTD_DStreamOutSize();  // const int = 131072
   auto ctx = d_stream_pool_->get();
 
   char *current_input = input_data.get();
@@ -275,22 +263,17 @@ void ParallelZstdStrategy::asyncReadAndDecompress(
     size_t current_chunk_size = std::min(chunk_size, rem_size);
     rem_size -= current_chunk_size;
     ZSTD_inBuffer in_buffer{current_input, current_chunk_size, 0};
-    size_t rem_chunk_size =
-        current_chunk_size;  // split input to several chunks
+    size_t rem_chunk_size = current_chunk_size;  // split input to several chunks
     while (rem_chunk_size > 0) {
       if (length_ <= static_cast<size_t>(current_output - data_)) {
-        throw std::runtime_error(
-            "when decompressing, tensor size in \".zst\" is larger than tensor "
-            "size in pb,"
-            " please check whether the data file is valid!");
+        throw std::runtime_error("when decompressing, tensor size in \".zst\" is larger than tensor size in pb,"
+                                 " please check whether the data file is valid!");
       }
-      size_t out_chunk_size =
-          std::min((length_ - (current_output - data_)), out_size);
+      size_t out_chunk_size = std::min((length_ - (current_output - data_)), out_size);
       ZSTD_outBuffer out_buffer{current_output, out_chunk_size, 0};
       auto zstd_ret = ZSTD_decompressStream(ctx.get(), &out_buffer, &in_buffer);
       if (ZSTD_isError(zstd_ret)) {
-        throw std::runtime_error("Zstd decompression failed, reason is: " +
-                                 std::string(ZSTD_getErrorName(zstd_ret)));
+        throw std::runtime_error("Zstd decompression failed, reason is: " + std::string(ZSTD_getErrorName(zstd_ret)));
       }
       size_t output_pos = split(out_buffer);
       size_t input_pos = advance(in_buffer);
@@ -301,14 +284,14 @@ void ParallelZstdStrategy::asyncReadAndDecompress(
   }
 }
 
-size_t ZstdFileReader::read(void *data, size_t length,
-                            const std::string &filepath) {
+size_t ZstdFileReader::read(void *data, size_t length, const std::string &filepath) {
   auto zstd_strategy = selectZstdStrategy(data, length, filepath);
   return zstd_strategy->read(data, length, filepath);
 }
 
-std::shared_ptr<ZstdStrategy> ZstdFileReader::selectZstdStrategy(
-    void *data, size_t length, const std::string &filepath) {
+std::shared_ptr<ZstdStrategy> ZstdFileReader::selectZstdStrategy(void *data,
+                                                                 size_t length,
+                                                                 const std::string &filepath) {
   (void)data;
   (void)length;
   if (getFileSize(filepath) < SkippableFrame::kSize) {  // little file

@@ -34,8 +34,14 @@
 namespace mluopapitest {
 class diff_iou_rotated_sort_vertices_forward : public testing::Test {
  public:
-  void setParam(bool handle, bool vertices_desc, bool vertices, bool mask_desc,
-                bool mask, bool num_valid_desc, bool num_valid, bool idx_desc,
+  void setParam(bool handle,
+                bool vertices_desc,
+                bool vertices,
+                bool mask_desc,
+                bool mask,
+                bool num_valid_desc,
+                bool num_valid,
+                bool idx_desc,
                 bool idx) {
     if (handle) {
       MLUOP_CHECK(mluOpCreate(&handle_));
@@ -52,9 +58,9 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
     if (vertices) {
       if (vertices_desc) {
         GTEST_CHECK(cnrtSuccess ==
-                    cnrtMalloc(&vertices_,
-                               MLUOP_DTYPE_FLOAT *
-                                   mluOpGetTensorElementNum(vertices_desc_)));
+                    cnrtMalloc(&vertices_, MLUOP_DTYPE_FLOAT *
+                                         mluOpGetTensorElementNum(
+                                             vertices_desc_)));
       } else {
         GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&vertices_, MLUOP_DTYPE_FLOAT * 2));
@@ -71,29 +77,29 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
 
     if (mask) {
       if (mask_desc) {
-        GTEST_CHECK(
-            cnrtSuccess ==
-            cnrtMalloc(&mask_, MLUOP_DTYPE_BOOL *
-                                   mluOpGetTensorElementNum(mask_desc_)));
+        GTEST_CHECK(cnrtSuccess ==
+                    cnrtMalloc(&mask_, MLUOP_DTYPE_BOOL *
+                                         mluOpGetTensorElementNum(mask_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&mask_, MLUOP_DTYPE_BOOL * 2));
+        GTEST_CHECK(cnrtSuccess ==
+                    cnrtMalloc(&mask_, MLUOP_DTYPE_BOOL * 2));
       }
     }
 
     if (num_valid_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&num_valid_desc_));
       std::vector<int> num_valid_desc_dims{4, 16};
-      MLUOP_CHECK(mluOpSetTensorDescriptor(num_valid_desc_, MLUOP_LAYOUT_ARRAY,
-                                           MLUOP_DTYPE_INT32, 2,
-                                           num_valid_desc_dims.data()));
+      MLUOP_CHECK(mluOpSetTensorDescriptor(
+          num_valid_desc_, MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_INT32, 2,
+          num_valid_desc_dims.data()));
     }
 
     if (num_valid) {
       if (num_valid_desc) {
         GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&num_valid_,
-                               MLUOP_DTYPE_INT32 *
-                                   mluOpGetTensorElementNum(num_valid_desc_)));
+                               MLUOP_DTYPE_INT32 * mluOpGetTensorElementNum(
+                                                       num_valid_desc_)));
       } else {
         GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&num_valid_, MLUOP_DTYPE_INT32 * 2));
@@ -112,9 +118,10 @@ class diff_iou_rotated_sort_vertices_forward : public testing::Test {
       if (idx_desc) {
         GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&idx_, MLUOP_DTYPE_INT32 *
-                                          mluOpGetTensorElementNum(idx_desc_)));
+                                        mluOpGetTensorElementNum(idx_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&idx_, MLUOP_DTYPE_INT32 * 2));
+        GTEST_CHECK(cnrtSuccess ==
+                    cnrtMalloc(&idx_, MLUOP_DTYPE_INT32 * 2));
       }
     }
   }

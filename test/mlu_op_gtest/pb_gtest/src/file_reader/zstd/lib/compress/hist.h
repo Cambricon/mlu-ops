@@ -11,10 +11,11 @@
  * LICENSE file in the root directory of this source tree) and the GPLv2 (found
  * in the COPYING file in the root directory of this source tree).
  * You may select, at your option, one of the above-listed licenses.
- ****************************************************************** */
+****************************************************************** */
 
 /* --- dependencies --- */
-#include "../common/zstd_deps.h" /* size_t */
+#include "../common/zstd_deps.h"   /* size_t */
+
 
 /* --- simple histogram functions --- */
 
@@ -26,16 +27,16 @@
  *           or an error code, which can be tested using HIST_isError().
  *           note : if return == srcSize, there is only one symbol.
  */
-size_t HIST_count(unsigned* count, unsigned* maxSymbolValuePtr, const void* src,
-                  size_t srcSize);
+size_t HIST_count(unsigned* count, unsigned* maxSymbolValuePtr,
+                  const void* src, size_t srcSize);
 
-unsigned HIST_isError(
-    size_t code); /**< tells if a return value is an error code */
+unsigned HIST_isError(size_t code);  /**< tells if a return value is an error code */
+
 
 /* --- advanced histogram functions --- */
 
 #define HIST_WKSP_SIZE_U32 1024
-#define HIST_WKSP_SIZE (HIST_WKSP_SIZE_U32 * sizeof(unsigned))
+#define HIST_WKSP_SIZE    (HIST_WKSP_SIZE_U32 * sizeof(unsigned))
 /** HIST_count_wksp() :
  *  Same as HIST_count(), but using an externally provided scratch buffer.
  *  Benefit is this function will use very little stack space.
@@ -43,13 +44,12 @@ unsigned HIST_isError(
  * `workSpaceSize` must be >= HIST_WKSP_SIZE
  */
 size_t HIST_count_wksp(unsigned* count, unsigned* maxSymbolValuePtr,
-                       const void* src, size_t srcSize, void* workSpace,
-                       size_t workSpaceSize);
+                       const void* src, size_t srcSize,
+                       void* workSpace, size_t workSpaceSize);
 
 /** HIST_countFast() :
- *  same as HIST_count(), but blindly trusts that all byte values within src are
- * <= *maxSymbolValuePtr. This function is unsafe, and will segfault if any
- * value within `src` is `> *maxSymbolValuePtr`
+ *  same as HIST_count(), but blindly trusts that all byte values within src are <= *maxSymbolValuePtr.
+ *  This function is unsafe, and will segfault if any value within `src` is `> *maxSymbolValuePtr`
  */
 size_t HIST_countFast(unsigned* count, unsigned* maxSymbolValuePtr,
                       const void* src, size_t srcSize);
@@ -60,8 +60,8 @@ size_t HIST_countFast(unsigned* count, unsigned* maxSymbolValuePtr,
  * `workSpaceSize` must be >= HIST_WKSP_SIZE
  */
 size_t HIST_countFast_wksp(unsigned* count, unsigned* maxSymbolValuePtr,
-                           const void* src, size_t srcSize, void* workSpace,
-                           size_t workSpaceSize);
+                           const void* src, size_t srcSize,
+                           void* workSpace, size_t workSpaceSize);
 
 /*! HIST_count_simple() :
  *  Same as HIST_countFast(), this function is unsafe,

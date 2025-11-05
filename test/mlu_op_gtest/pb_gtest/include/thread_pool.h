@@ -19,11 +19,11 @@ namespace mluoptest {
 class ThreadPool {
  public:
   ThreadPool() = default;
-  ThreadPool(ThreadPool&&) = default;
+  ThreadPool(ThreadPool &&) = default;
   explicit ThreadPool(size_t thread_num);
   ~ThreadPool();
 
-  template <class F, class... Args>
+  template<class F, class... Args>
   auto enqueue(F&& f, Args&&... args)
       -> std::future<typename std::result_of<F(Args...)>::type> {
     using return_type = typename std::result_of<F(Args...)>::type;

@@ -13,16 +13,14 @@
 
 using namespace mluoptest;
 
-static inline uint32_t readU32(const void *memPtr) {
-  return *(const uint32_t *)memPtr;
-}
+static inline uint32_t readU32(const void *memPtr)
+{   return *(const uint32_t *)memPtr; }
 
 /* static */ std::size_t SkippableFrame::tryRead(ByteRange bytes) {
   if (bytes.size() < SkippableFrame::kSize ||
       readU32(bytes.begin()) != kSkippableFrameMagicNumber ||
-      readU32(bytes.begin() + 4) != kFrameContentsSize) {
-    return 0;
-  }
+      readU32(bytes.begin() + 4) != kFrameContentsSize)
+{     return 0;   }
 
   return readU32(bytes.begin() + 8);
 }

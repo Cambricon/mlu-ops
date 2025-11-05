@@ -75,7 +75,8 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
     uint64_t voxel_size_bytes =
         mluOpDataTypeBytes(voxel_size_dtype) * voxel_size_ele_num;
     if (voxel_size_bytes > 0) {
-      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&voxel_size_, voxel_size_bytes))
+      GTEST_CHECK(cnrtSuccess ==
+                  cnrtMalloc(&voxel_size_, voxel_size_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&coors_range_desc_));
@@ -91,7 +92,8 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
     uint64_t coors_range_bytes =
         mluOpDataTypeBytes(coors_range_dtype) * coors_range_ele_num;
     if (coors_range_bytes > 0) {
-      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&coors_range_, coors_range_bytes))
+      GTEST_CHECK(cnrtSuccess ==
+                  cnrtMalloc(&coors_range_, coors_range_bytes))
     }
 
     VoxelizationParam voxelizationParam = std::get<3>(GetParam());
@@ -147,7 +149,7 @@ class voxelization_general : public testing::TestWithParam<Voxelization> {
         num_points_per_voxel_ele_num;
     if (num_points_per_voxel_bytes > 0) {
       GTEST_CHECK(cnrtSuccess == cnrtMalloc(&num_points_per_voxel_,
-                                            num_points_per_voxel_bytes))
+                                                 num_points_per_voxel_bytes))
     }
 
     MLUOP_CHECK(mluOpCreateTensorDescriptor(&voxel_num_desc_));

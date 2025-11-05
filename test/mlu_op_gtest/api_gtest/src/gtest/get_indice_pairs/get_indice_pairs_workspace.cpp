@@ -212,3 +212,4 @@ TEST_F(get_indice_pairs_workspace, BAD_PARAM_workspace_null) {
 }
 
 }  // namespace mluopapitest
+

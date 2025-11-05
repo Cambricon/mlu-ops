@@ -596,3 +596,4 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 }  // namespace mluopapitest
+

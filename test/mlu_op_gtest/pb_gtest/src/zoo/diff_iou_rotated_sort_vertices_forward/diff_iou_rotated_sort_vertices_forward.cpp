@@ -61,8 +61,9 @@ compare normalized vertices (vertices around (0,0))
 if vertex1 < vertex2 return true.
 order: minimum at x-aixs, become larger in anti-clockwise direction
 */
-bool DiffIouRotatedSortVerticesForwardExecutor ::compare_vertices(
-    const float x1, const float y1, const float x2, const float y2) {
+bool DiffIouRotatedSortVerticesForwardExecutor
+    ::compare_vertices(const float x1, const float y1, const float x2,
+                       const float y2) {
   if (fabs(x1 - x2) < EPSILON && fabs(y2 - y1) < EPSILON)
     return false;  // if equal, return false
 
@@ -101,7 +102,7 @@ void DiffIouRotatedSortVerticesForwardExecutor::cpuCompute() {
   int dim_n = vertices_desc->getDimIndex(1);
   int dim_m = vertices_desc->getDimIndex(2);
 
-  memset(data_idx, 0, dim_b * dim_n * 9 * sizeof(int));
+  memset(data_idx, 0, dim_b*dim_n*9 * sizeof(int));
   for (int bi = 0; bi < dim_b; ++bi) {
     float *vertices = data_vertices + bi * dim_n * dim_m * 2;
     float *mask = data_mask + bi * dim_n * dim_m;
@@ -110,7 +111,7 @@ void DiffIouRotatedSortVerticesForwardExecutor::cpuCompute() {
 
     for (int i = 0; i < dim_n; ++i) {
       int pad = 0;  // index of arbitrary invalid intersection point (not box
-                    // corner!)
+                // corner!)
       for (int j = INTERSECTION_OFFSET; j < dim_m; ++j) {
         if (!mask[i * dim_m + j]) {
           pad = j;

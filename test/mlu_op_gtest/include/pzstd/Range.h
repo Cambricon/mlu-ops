@@ -34,21 +34,18 @@ template <class T>
 struct IsCharPointer {};
 
 template <>
-struct IsCharPointer<char*> {
-  typedef int type;
-}
+struct IsCharPointer<char*>
+{   typedef int type; }
 
 ;
 
 template <>
-struct IsCharPointer<const char*> {
-  typedef int const_type;
-  typedef int type;
-}
+struct IsCharPointer<const char*>
+{   typedef int const_type;   typedef int type; }
 
 ;
 
-}  // namespace detail
+} // namespace detail
 
 template <typename Iter>
 class Range {
@@ -77,10 +74,12 @@ class Range {
 
   // Allow implicit conversion from Range<From> to Range<To> if From is
   // implicitly convertible to To.
-  template <class OtherIter, typename std::enable_if<
-                                 (!std::is_same<Iter, OtherIter>::value &&
-                                  std::is_convertible<OtherIter, Iter>::value),
-                                 int>::type = 0>
+  template <
+      class OtherIter,
+      typename std::enable_if<
+          (!std::is_same<Iter, OtherIter>::value &&
+           std::is_convertible<OtherIter, Iter>::value),
+          int>::type = 0>
   constexpr /* implicit */ Range(const Range<OtherIter>& other)
       : b_(other.begin()), e_(other.end()) {}
 
@@ -90,35 +89,36 @@ class Range {
   Range& operator=(const Range&) = default;
   Range& operator=(Range&&) = default;
 
-  constexpr size_type size() const { return e_ - b_; }
+  constexpr size_type size() const
+{     return e_ - b_;   }
 
-  bool empty() const { return b_ == e_; }
+  bool empty() const
+{     return b_ == e_;   }
 
-  Iter data() const { return b_; }
-  Iter begin() const { return b_; }
+  Iter data() const
+{     return b_;   }
+  Iter begin() const {     return b_;   }
 
-  Iter end() const { return e_; }
+  Iter end() const
+{     return e_;   }
 
   void advance(size_type n) {
-    if (UNLIKELY(n > size())) {
-      throw std::out_of_range("index out of range");
-    }
+    if (UNLIKELY(n > size()))
+{       throw std::out_of_range("index out of range");     }
 
     b_ += n;
   }
 
   void subtract(size_type n) {
-    if (UNLIKELY(n > size())) {
-      throw std::out_of_range("index out of range");
-    }
+    if (UNLIKELY(n > size()))
+{       throw std::out_of_range("index out of range");     }
 
     e_ -= n;
   }
 
   Range subpiece(size_type first, size_type length = std::string::npos) const {
-    if (UNLIKELY(first > size())) {
-      throw std::out_of_range("index out of range");
-    }
+    if (UNLIKELY(first > size()))
+{       throw std::out_of_range("index out of range");     }
 
     return Range(b_ + first, std::min(length, size() - first));
   }
@@ -127,4 +127,4 @@ class Range {
 using ByteRange = Range<const char*>;
 using MutableByteRange = Range<char*>;
 using StringPiece = Range<const char*>;
-}  // namespace mluoptest
+}

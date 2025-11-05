@@ -36,10 +36,18 @@ class RoiPoolingForwardExecutor : public Executor {
   void initData();
   int64_t getTheoryOps() override;
 
-  void cpuRoiPoolingForward(float *input_v, float *rois, int batch_v,
-                            int height, int width, int channels,
-                            int pool_height, int pool_width, int rois_num,
-                            float spatial_scale, float *output, float *argmax);
+  void cpuRoiPoolingForward(float *input_v,
+                            float *rois,
+                            int batch_v,
+                            int height,
+                            int width,
+                            int channels,
+                            int pool_height,
+                            int pool_width,
+                            int rois_num,
+                            float spatial_scale,
+                            float *output,
+                            float *argmax);
 
  private:
   int batch_;
@@ -50,16 +58,17 @@ class RoiPoolingForwardExecutor : public Executor {
   int pool_height_;
   int pool_width_;
   float spatial_scale_;
-  mluOpPoolingMode_t pooling_mode_ = MLUOP_POOLING_MAX;
-  void *input_mlu_ = NULL;
-  void *rois_mlu_ = NULL;
-  void *output_mlu_ = NULL;
-  int *argmax_mlu_ = NULL;
-  mluOpTensorDescriptor_t input_desc_ = NULL;
-  mluOpTensorDescriptor_t rois_desc_ = NULL;
+  mluOpPoolingMode_t pooling_mode_     = MLUOP_POOLING_MAX;
+  void *input_mlu_                     = NULL;
+  void *rois_mlu_                      = NULL;
+  void *output_mlu_                    = NULL;
+  int *argmax_mlu_                     = NULL;
+  mluOpTensorDescriptor_t input_desc_  = NULL;
+  mluOpTensorDescriptor_t rois_desc_   = NULL;
   mluOpTensorDescriptor_t output_desc_ = NULL;
   int64_t theory_ops = 0;
 };
 
 }  // namespace mluoptest
 #endif  // TEST_MLUOP_GTEST_SRC_ZOO_ROI_POOLING_FORWARD_ROI_POOLING_FORWARD_H_
+

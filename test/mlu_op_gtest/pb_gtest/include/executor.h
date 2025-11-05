@@ -140,11 +140,11 @@ struct ExecuteConfig {
   bool enable_const_dram = false;
   bool auto_tuning = false;
   bool enable_lite_interface = getEnv("MLUOP_GTEST_INTERFACE_MODE", 0) == 1;
-  // #if GTEST_ENABLE_GPERFTOOLS
-  //   // TODO(None) move into global_var
-  //   bool gtest_internal_cpu_profile =
-  //       getEnv("MLUOP_GTEST_ENABLE_GPERFTOOLS", false);
-  // #endif
+// #if GTEST_ENABLE_GPERFTOOLS
+//   // TODO(None) move into global_var
+//   bool gtest_internal_cpu_profile =
+//       getEnv("MLUOP_GTEST_ENABLE_GPERFTOOLS", false);
+// #endif
   std::string kernel_trace_policy;
 };
 
@@ -646,7 +646,9 @@ class Executor {
     return TestEnvironment::test_env_.mlu_platform.find("MLU590") !=
            std::string::npos;
   }
-  inline bool isMagpie() { return handle_->arch == 592 && !isSwift(); }
+  inline bool isMagpie() {
+    return handle_->arch == 592 && !isSwift();
+  }
   size_t llc_size_ = 48 * 1024 * 1024;
 
   EvaluateResult eva_res_;

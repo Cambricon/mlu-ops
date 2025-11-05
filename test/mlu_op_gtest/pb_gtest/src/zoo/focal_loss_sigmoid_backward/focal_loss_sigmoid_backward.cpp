@@ -67,8 +67,8 @@ void FocalLossSigmoidBackwardExecutor::compute() {
     interface_timer_.start();
     MLUOP_CHECK(mluOpFocalLossSigmoidBackward(
         handle_, prefer, reduction, input_desc, input_mlu, target_desc,
-        target_mlu, weight_desc, weight_mlu, alpha, gamma, grad_input_desc,
-        grad_input_mlu));
+        target_mlu, weight_desc, weight_mlu,
+        alpha, gamma, grad_input_desc, grad_input_mlu));
     interface_timer_.stop();
   } else {
     auto grad_input_desc = tensor_desc_[2].tensor;
@@ -76,7 +76,8 @@ void FocalLossSigmoidBackwardExecutor::compute() {
     interface_timer_.start();
     MLUOP_CHECK(mluOpFocalLossSigmoidBackward(
         handle_, prefer, reduction, input_desc, input_mlu, target_desc,
-        target_mlu, NULL, NULL, alpha, gamma, grad_input_desc, grad_input_mlu));
+        target_mlu, NULL, NULL, alpha, gamma,
+        grad_input_desc, grad_input_mlu));
     interface_timer_.stop();
   }
 }

@@ -631,8 +631,8 @@ static std::ostringstream print_log(const mluoptest::EvaluateResult &eva,
   }
   // print perf test result
   if (std::getenv("MLUOP_GTEST_PERF_BASELINE") != NULL &&
-      std::string(std::getenv("MLUOP_GTEST_PERF_BASELINE")).compare("ON") ==
-          0) {
+      std::string(std::getenv("MLUOP_GTEST_PERF_BASELINE")).
+      compare("ON") == 0) {
     out << "[Baseline MLU Hardware Time       ]: "
         << eva.mlu.baseline_mlu_hw_time << " (us)\n"
         << "[This Time MLU Hardware Time      ]: "
@@ -642,8 +642,7 @@ static std::ostringstream print_log(const mluoptest::EvaluateResult &eva,
         << " (us)\n"
         << "[MLU Hardware Time Promotion Ratio]: "
         << (eva.mlu.baseline_mlu_hw_time - eva.mlu.thistime_mlu_hw_time) /
-               eva.mlu.baseline_mlu_hw_time * 100
-        << " (%)\n";
+            eva.mlu.baseline_mlu_hw_time * 100 << " (%)\n";
   }
   out << "[GPU Hardware Time      ]: " << eva.gpu.hardware_time << " (us)\n"
       << "[GPU IO Efficiency      ]: " << eva.gpu.io_efficiency << "\n"
@@ -776,9 +775,8 @@ void TestSuite::recordXml(mluoptest::EvaluateResult &er) {
   this->RecordProperty("hardware_time_promotion_mlu", mhtp_oss.str());
 
   std::ostringstream mhtpr_oss;
-  mhtpr_oss << std::setprecision(10)
-            << (er.mlu.baseline_mlu_hw_time - er.mlu.thistime_mlu_hw_time) /
-                   er.mlu.baseline_mlu_hw_time * 100;
+  mhtpr_oss << std::setprecision(10) << (er.mlu.baseline_mlu_hw_time -
+    er.mlu.thistime_mlu_hw_time) / er.mlu.baseline_mlu_hw_time * 100;
   this->RecordProperty("hardware_time_promotion_ratio_mlu", mhtpr_oss.str());
 
   std::ostringstream gws_oss;

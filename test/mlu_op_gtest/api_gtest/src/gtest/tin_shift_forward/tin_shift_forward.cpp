@@ -53,7 +53,8 @@ class tin_shift_forward : public testing::Test {
             cnrtMalloc(&input_, MLUOP_DTYPE_FLOAT *
                                     mluOpGetTensorElementNum(input_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&input_, MLUOP_DTYPE_FLOAT * 2));
+        GTEST_CHECK(cnrtSuccess ==
+                    cnrtMalloc(&input_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
     if (shifts_desc) {
@@ -70,7 +71,8 @@ class tin_shift_forward : public testing::Test {
             cnrtMalloc(&shifts_, MLUOP_DTYPE_INT32 *
                                      mluOpGetTensorElementNum(shifts_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&shifts_, MLUOP_DTYPE_INT32 * 2));
+        GTEST_CHECK(cnrtSuccess ==
+                    cnrtMalloc(&shifts_, MLUOP_DTYPE_INT32 * 2));
       }
     }
     if (output_desc) {
@@ -87,7 +89,8 @@ class tin_shift_forward : public testing::Test {
             cnrtMalloc(&output_, MLUOP_DTYPE_FLOAT *
                                      mluOpGetTensorElementNum(output_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&output_, MLUOP_DTYPE_FLOAT * 2));
+        GTEST_CHECK(cnrtSuccess ==
+                    cnrtMalloc(&output_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
   }

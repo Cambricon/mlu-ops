@@ -59,7 +59,8 @@ class dynamic_point_to_voxel_forward : public testing::Test {
             cnrtMalloc(&feats_, MLUOP_DTYPE_FLOAT *
                                     mluOpGetTensorElementNum(feats_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&feats_, MLUOP_DTYPE_FLOAT * 2));
+        GTEST_CHECK(cnrtSuccess ==
+                    cnrtMalloc(&feats_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
 
@@ -78,7 +79,8 @@ class dynamic_point_to_voxel_forward : public testing::Test {
             cnrtMalloc(&coors_, MLUOP_DTYPE_INT32 *
                                     mluOpGetTensorElementNum(coors_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&coors_, MLUOP_DTYPE_INT32 * 2));
+        GTEST_CHECK(cnrtSuccess ==
+                    cnrtMalloc(&coors_, MLUOP_DTYPE_INT32 * 2));
       }
     }
 

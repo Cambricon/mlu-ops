@@ -41,7 +41,9 @@ class Index3D {
   explicit Index3D(int S, int T) : S_(S), T_(T) {}
   ~Index3D() {}
 
-  int operator()(int b, int s, int t) { return b * T_ * S_ + s * T_ + t; }
+  int operator()(int b, int s, int t) {
+    return b * T_ * S_ + s * T_ + t;
+  }
 };
 
 class MutualInformationBackwardExecutor : public Executor {

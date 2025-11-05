@@ -26,11 +26,12 @@ namespace mluoptest {
  */
 class Buffer {
   std::shared_ptr<char> buffer_;
-  char* buffer_origin_;
+  char *buffer_origin_;
   MutableByteRange range_;
   bool use_origin_ptr = false;
 
-  static void delete_buffer(char* buffer) { delete[] buffer; }
+  static void delete_buffer(char* buffer)
+{     delete[] buffer;   }
 
  public:
   /// Construct an empty buffer that owns no data.
@@ -44,10 +45,9 @@ class Buffer {
   explicit Buffer(std::shared_ptr<char> buffer, MutableByteRange data)
       : buffer_(buffer), range_(data) {}
 
-  explicit Buffer(char* buffer, MutableByteRange data)
-      : buffer_origin_(buffer), range_(data) {
-    use_origin_ptr = true;
-  }
+  explicit Buffer(char *buffer, MutableByteRange data)
+      : buffer_origin_(buffer), range_(data)
+{         use_origin_ptr = true;       }
 
   Buffer(Buffer&&) = default;
   Buffer& operator=(Buffer&&) = default;
@@ -63,30 +63,36 @@ class Buffer {
   Buffer splitAt(std::size_t n) {
     auto firstPiece = range_.subpiece(0, n);
     range_.advance(n);
-    if (!use_origin_ptr) {
-      return Buffer(buffer_, firstPiece);
-    }
+    if (!use_origin_ptr)
+{       return Buffer(buffer_, firstPiece);     }
 
     return Buffer(buffer_origin_, firstPiece);
   }
 
   /// Modifies the buffer to point to the range [begin + n, end).
-  void advance(std::size_t n) { range_.advance(n); }
+  void advance(std::size_t n)
+{     range_.advance(n);   }
 
   /// Modifies the buffer to point to the range [begin, end - n).
-  void subtract(std::size_t n) { range_.subtract(n); }
+  void subtract(std::size_t n)
+{     range_.subtract(n);   }
 
   /// Returns a read only `Range` pointing to the `Buffer`s data.
-  ByteRange range() const { return range_; }
+  ByteRange range() const
+{     return range_;   }
   /// Returns a mutable `Range` pointing to the `Buffer`s data.
-  MutableByteRange range() { return range_; }
+  MutableByteRange range() {     return range_;   }
 
-  const char* data() const { return range_.data(); }
+  const char* data() const
+{     return range_.data();   }
 
-  char* data() { return range_.data(); }
+  char* data() {     return range_.data();   }
 
-  std::size_t size() const { return range_.size(); }
+  std::size_t size() const
+{     return range_.size();   }
 
-  bool empty() const { return range_.empty(); }
+  bool empty() const
+{     return range_.empty();   }
+
 };
-}  // namespace mluoptest
+}

@@ -25,7 +25,8 @@
 
 #include "mlu_op.h"  // mluOpStatus_t
 
-mluOpStatus_t mluOpFillLLC(mluOpHandle_t handle, void *const_addr,
-                           const int llc_size);
+mluOpStatus_t mluOpFillLLC(mluOpHandle_t handle,
+                         void *const_addr,
+                         const int llc_size);
 
 #endif  // TEST_MLU_OP_GTEST_SRC_INTERNAL_KERNEL_FILL_LLC_FILL_LLC_H_

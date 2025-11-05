@@ -27,16 +27,27 @@ namespace mluoptest {
 class RoialignForwardExecutor : public Executor {
  public:
   RoialignForwardExecutor() {}
-  ~RoialignForwardExecutor() {}
+  ~RoialignForwardExecutor() {
+  }
 
   void paramCheck() override;
   void compute() override;
   void cpuCompute() override;
   int64_t getTheoryOps() override;
   int64_t getTheoryIoSize() override;
-  void bilinear_interpolate(int height, int width, float y, float x, float& w1,
-                            float& w2, float& w3, float& w4, int& x_low,
-                            int& x_high, int& y_low, int& y_high, int& empty);
+  void bilinear_interpolate(int height,
+                            int width,
+                            float y,
+                            float x,
+                            float& w1,
+                            float& w2,
+                            float& w3,
+                            float& w4,
+                            int& x_low,
+                            int& x_high,
+                            int& y_low,
+                            int& y_high,
+                            int& empty);
 };
 }  // namespace mluoptest
 #endif  // TEST_MLU_OP_GTEST_SRC_ZOO_ROIALIGN_FORWARD_ROIALIGN_FORWARD_H_

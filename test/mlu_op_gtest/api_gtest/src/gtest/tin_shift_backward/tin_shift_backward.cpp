@@ -72,7 +72,8 @@ class tin_shift_backward : public testing::Test {
             cnrtMalloc(&shifts_, MLUOP_DTYPE_INT32 *
                                      mluOpGetTensorElementNum(shifts_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&shifts_, MLUOP_DTYPE_INT32 * 2));
+        GTEST_CHECK(cnrtSuccess ==
+                    cnrtMalloc(&shifts_, MLUOP_DTYPE_INT32 * 2));
       }
     }
     if (grad_input_desc) {

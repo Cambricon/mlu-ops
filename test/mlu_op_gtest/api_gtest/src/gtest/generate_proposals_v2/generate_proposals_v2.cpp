@@ -69,7 +69,8 @@ class generate_proposals_v2 : public testing::Test {
       size_t bbox_deltas_ele_num = 2 * 32 * 16 * 16;
       size_t bbox_deltas_dtype_bytes = mluOpDataTypeBytes(MLUOP_DTYPE_FLOAT);
       size_t bbox_deltas_bytes = bbox_deltas_ele_num * bbox_deltas_dtype_bytes;
-      GTEST_CHECK(cnrtSuccess == cnrtMalloc(&bbox_deltas_, bbox_deltas_bytes));
+      GTEST_CHECK(cnrtSuccess ==
+                  cnrtMalloc(&bbox_deltas_, bbox_deltas_bytes));
     }
     if (im_shape_desc) {
       MLUOP_CHECK(mluOpCreateTensorDescriptor(&im_shape_desc_));

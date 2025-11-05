@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_MS_DEFORM_ATTN_FORWARD_MS_DEFORM_ATTN_FORWARD_H_  // NOLINT
-#define TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_MS_DEFORM_ATTN_FORWARD_MS_DEFORM_ATTN_FORWARD_H_  // NOLINT
+#ifndef TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_MS_DEFORM_ATTN_FORWARD_MS_DEFORM_ATTN_FORWARD_H_   // NOLINT
+#define TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_MS_DEFORM_ATTN_FORWARD_MS_DEFORM_ATTN_FORWARD_H_   // NOLINT
 #include "executor.h"
 
 namespace mluoptest {
@@ -34,13 +34,11 @@ class MsDeformAttnForwardExecutor : public Executor {
   void cpuCompute();
   int64_t getTheoryIoSize() override;
   int64_t getTheoryOps() override;
-
  private:
-  float ms_deform_attn_im2col_bilinear(const float *&bottom_data,
-                                       const int &height, const int &width,
-                                       const int &nheads, const int &channels,
-                                       const float &h, const float &w,
-                                       const int &m, const int &c);
+  float ms_deform_attn_im2col_bilinear(
+      const float *&bottom_data, const int &height, const int &width,
+      const int &nheads, const int &channels, const float &h, const float &w,
+      const int &m, const int &c);
   void cpuMsDeformAttnForward(
       const float *data_value, const float *data_spatial_shapes,
       const float *data_level_start_index, const float *data_sampling_loc,
@@ -50,5 +48,4 @@ class MsDeformAttnForwardExecutor : public Executor {
 };
 }  // namespace mluoptest
 
-#endif  // TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_MS_DEFORM_ATTN_FORWARD_MS_DEFORM_ATTN_FORWARD_H_
-        // // NOLINT
+#endif  // TEST_MLUOP_GTEST_PB_GTEST_SRC_ZOO_MS_DEFORM_ATTN_FORWARD_MS_DEFORM_ATTN_FORWARD_H_  // NOLINT

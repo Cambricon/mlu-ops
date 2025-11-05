@@ -54,10 +54,11 @@ class dynamic_point_to_voxel_backward : public testing::Test {
 
     if (grad_voxel_feats) {
       if (grad_voxel_feats_desc) {
-        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&grad_voxel_feats_,
-                                              MLUOP_DTYPE_FLOAT *
-                                                  mluOpGetTensorElementNum(
-                                                      grad_voxel_feats_desc_)));
+        GTEST_CHECK(
+            cnrtSuccess ==
+            cnrtMalloc(&grad_voxel_feats_,
+                       MLUOP_DTYPE_FLOAT *
+                           mluOpGetTensorElementNum(grad_voxel_feats_desc_)));
       } else {
         GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&grad_voxel_feats_, MLUOP_DTYPE_FLOAT * 2));
@@ -79,7 +80,8 @@ class dynamic_point_to_voxel_backward : public testing::Test {
             cnrtMalloc(&feats_, MLUOP_DTYPE_FLOAT *
                                     mluOpGetTensorElementNum(feats_desc_)));
       } else {
-        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&feats_, MLUOP_DTYPE_FLOAT * 2));
+        GTEST_CHECK(cnrtSuccess ==
+                    cnrtMalloc(&feats_, MLUOP_DTYPE_FLOAT * 2));
       }
     }
 

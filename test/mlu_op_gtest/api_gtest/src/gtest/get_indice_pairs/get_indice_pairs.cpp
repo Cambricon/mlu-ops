@@ -308,3 +308,4 @@ TEST_F(get_indice_pairs, BAD_PARAM_indice_num_null) {
   }
 }
 }  // namespace mluopapitest
+

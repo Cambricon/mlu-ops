@@ -23,9 +23,10 @@
 #ifndef TEST_MLU_OP_GTEST_SRC_INTERNAL_KERNEL_FILL_RAM_FILL_RAM_H_
 #define TEST_MLU_OP_GTEST_SRC_INTERNAL_KERNEL_FILL_RAM_FILL_RAM_H_
 
-#include "mlu_op.h"          // mluOpStatus_t
+#include "mlu_op.h"  // mluOpStatus_t
 #include "fill_ram_utils.h"  // nram_value
 
-mluOpStatus_t mluOpFillRam(mluOpHandle_t handle, nram_value value);
+mluOpStatus_t mluOpFillRam(mluOpHandle_t handle,
+                         nram_value value);
 
 #endif  // TEST_MLU_OP_GTEST_SRC_INTERNAL_KERNEL_FILL_RAM_FILL_RAM_H_

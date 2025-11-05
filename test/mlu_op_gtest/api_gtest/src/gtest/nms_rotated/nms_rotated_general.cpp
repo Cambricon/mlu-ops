@@ -117,7 +117,8 @@ class nms_rotated_general : public testing::TestWithParam<MmsRotatedParam> {
     }
     if (workspace_size_ > 0) {
       if (workspace_size_ < LARGE_TENSOR_NUM) {
-        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, workspace_size_));
+        GTEST_CHECK(cnrtSuccess ==
+                    cnrtMalloc(&workspace_, workspace_size_));
       } else {
         GTEST_CHECK(cnrtSuccess == cnrtMalloc(&workspace_, 8));
       }

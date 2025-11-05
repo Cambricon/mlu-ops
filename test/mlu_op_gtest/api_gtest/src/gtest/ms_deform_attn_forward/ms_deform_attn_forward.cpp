@@ -102,7 +102,7 @@ class ms_deform_attn_forward : public testing::Test {
                                                data_level_start_index_desc_)));
       } else {
         GTEST_CHECK(cnrtSuccess == cnrtMalloc(&data_level_start_index_,
-                                              MLUOP_DTYPE_INT32 * 2));
+                                                   MLUOP_DTYPE_INT32 * 2));
       }
     }
 
@@ -137,10 +137,11 @@ class ms_deform_attn_forward : public testing::Test {
 
     if (data_attn_weight) {
       if (data_attn_weight_desc) {
-        GTEST_CHECK(cnrtSuccess == cnrtMalloc(&data_attn_weight_,
-                                              MLUOP_DTYPE_INT32 *
-                                                  mluOpGetTensorElementNum(
-                                                      data_attn_weight_desc_)));
+        GTEST_CHECK(
+            cnrtSuccess ==
+            cnrtMalloc(&data_attn_weight_,
+                       MLUOP_DTYPE_INT32 *
+                           mluOpGetTensorElementNum(data_attn_weight_desc_)));
       } else {
         GTEST_CHECK(cnrtSuccess ==
                     cnrtMalloc(&data_attn_weight_, MLUOP_DTYPE_INT32 * 2));

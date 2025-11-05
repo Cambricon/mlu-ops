@@ -380,7 +380,8 @@ void Executor::setupForPerfIter(int repeat, int iter, int iter_start) {
           if (perfUseOriginData()) {
             void *src_data = getPerfSrcData(db);
             GTEST_CHECK(cnrtMemcpy(db->device_perf_ptr, src_data, db->size,
-                                   cnrtMemcpyDevToDev) == cnrtSuccess);
+                                   cnrtMemcpyDevToDev) ==
+                        cnrtSuccess);
             oss << "copy data from " << src_data;
           } else {
             oss << "random data is fed to MLU kernel, if it should be real "
@@ -528,9 +529,11 @@ std::tuple<size_t, float> Executor::callBackKernelSyncAndGetTime(
   float hwtime = 0;
   cnrtNotifier_t n_start = notifier->n_start;
   cnrtNotifier_t n_stop = notifier->n_stop;
-  GTEST_CHECK(cnrtSuccess == cnrtPlaceNotifier(n_start, exe_context_->queue));
+  GTEST_CHECK(cnrtSuccess ==
+              cnrtPlaceNotifier(n_start, exe_context_->queue));
   launch_kernel();
-  GTEST_CHECK(cnrtSuccess == cnrtPlaceNotifier(n_stop, exe_context_->queue));
+  GTEST_CHECK(cnrtSuccess ==
+              cnrtPlaceNotifier(n_stop, exe_context_->queue));
   GTEST_CHECK(cnrtSuccess == cnrtQueueSync(exe_context_->queue));
   size_t tp = MONITOR_CLOCK::now().time_since_epoch().count();
   GTEST_CHECK(cnrtSuccess == cnrtNotifierDuration(n_start, n_stop, &hwtime));
@@ -2133,8 +2136,9 @@ void Executor::copyIn() {
       // runtime error )
       auto t_a = std::chrono::system_clock::now();
       // host to dev for compute
-      GTEST_CHECK(cnrtSuccess == cnrtMemcpy(db->device_origin_ptr, db->host_ptr,
-                                            db->size, cnrtMemcpyHostToDev));
+      GTEST_CHECK(cnrtSuccess == cnrtMemcpy(db->device_origin_ptr,
+                                                 db->host_ptr, db->size,
+                                                 cnrtMemcpyHostToDev));
       auto t_b = std::chrono::system_clock::now();
       auto dur =
           std::chrono::duration_cast<std::chrono::microseconds>(t_b - t_a);
@@ -2142,9 +2146,9 @@ void Executor::copyIn() {
     }
     if (needDevPerfDataSpace()) {
       VLOG(4) << "copy from device_origin_ptr to device_perf_data_ptr";
-      GTEST_CHECK(cnrtSuccess == cnrtMemcpy(db->device_perf_data_ptr,
-                                            db->device_origin_ptr, db->size,
-                                            cnrtMemcpyDevToDev));
+      GTEST_CHECK(cnrtSuccess ==
+                  cnrtMemcpy(db->device_perf_data_ptr, db->device_origin_ptr,
+                             db->size, cnrtMemcpyDevToDev));
     }
     // for debug
     if (exe_config_->dump_data) {
@@ -2198,8 +2202,9 @@ void Executor::copyOut() {
 
     // memcpy dev to host
     auto t_a = std::chrono::system_clock::now();
-    GTEST_CHECK(cnrtSuccess == cnrtMemcpy(db->host_ptr, db->device_origin_ptr,
-                                          db->size, cnrtMemcpyDevToHost));
+    GTEST_CHECK(cnrtSuccess == cnrtMemcpy(db->host_ptr,
+                                               db->device_origin_ptr, db->size,
+                                               cnrtMemcpyDevToHost));
     auto t_b = std::chrono::system_clock::now();
     auto dur = std::chrono::duration_cast<std::chrono::microseconds>(t_b - t_a);
     eva_res_.mlu.d2h_time += dur.count();

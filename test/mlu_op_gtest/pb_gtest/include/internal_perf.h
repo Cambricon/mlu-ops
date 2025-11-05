@@ -79,4 +79,4 @@ class TestInternalInfo {
   std::mutex cases_info_mutex;
 };
 
-}  // namespace mluoptest
+}  // namespace mluoptest  // NOLINT

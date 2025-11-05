@@ -32,22 +32,22 @@ __mlu_global__ void flushLLC(void* input, int fill_bytes) {
   __nram__ int8_t buf[256 * 1024];
   int repeat = fill_bytes / size_once;
   for (int i = 0; i < repeat; i++) {
-    __asm__ volatile(
-        ".volatile{ld.3d.async.nram.gdram.scmlock [%[dst]], [%[src]], \
-                      %[size], 0, 0, 0, 0, 0, 0, 0, 0;}\n\t" ::[dst] "r"(buf),
-        [src] "r"((char*)input + i * size_once), [size] "r"(size_once));
+    __asm__ volatile(".volatile{ld.3d.async.nram.gdram.scmlock [%[dst]], [%[src]], \
+                      %[size], 0, 0, 0, 0, 0, 0, 0, 0;}\n\t"
+                      ::[dst] "r"(buf), [src] "r"((char*)input + i * size_once),
+                      [size] "r"(size_once));
   }
   for (int i = 0; i < repeat; i++) {
-    __asm__ volatile(
-        ".volatile{ld.3d.async.nram.gdram.scmunlock [%[dst]], [%[src]], \
-                      %[size], 0, 0, 0, 0, 0, 0, 0, 0;}\n\t" ::[dst] "r"(buf),
-        [src] "r"((char*)input + i * size_once), [size] "r"(size_once));
+    __asm__ volatile(".volatile{ld.3d.async.nram.gdram.scmunlock [%[dst]], [%[src]], \
+                      %[size], 0, 0, 0, 0, 0, 0, 0, 0;}\n\t"
+                      ::[dst] "r"(buf), [src] "r"((char*)input + i * size_once),
+                      [size] "r"(size_once));
   }
   for (int i = 0; i < repeat; i++) {
-    __asm__ volatile(
-        ".volatile{ld.3d.async.nram.gdram.scmnormal [%[dst]], [%[src]], \
-                      %[size], 0, 0, 0, 0, 0, 0, 0, 0;}\n\t" ::[dst] "r"(buf),
-        [src] "r"((char*)input + i * size_once), [size] "r"(size_once));
+    __asm__ volatile(".volatile{ld.3d.async.nram.gdram.scmnormal [%[dst]], [%[src]], \
+                      %[size], 0, 0, 0, 0, 0, 0, 0, 0;}\n\t"
+                      ::[dst] "r"(buf), [src] "r"((char*)input + i * size_once),
+                      [size] "r"(size_once));
   }
 #endif  // __BANG_ARCH__ == 592
 }
