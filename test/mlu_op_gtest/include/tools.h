@@ -24,22 +24,23 @@
 #define TEST_MLU_OP_GTEST_INCLUDE_TOOLS_H_
 
 #include <algorithm>
-#include <sstream>
 #include <fstream>
 #include <iostream>
 #include <limits>
-#include <string>
 #include <random>
+#include <sstream>
+#include <string>
 #include <thread>  // NOLINT
-#include <vector>
 #include <unordered_map>
-#include "gtest/gtest.h"
-#include "mlu_op_test.pb.h"
-#include "mlu_op.h"
+#include <vector>
+
+#include "check_tools.h"
 #include "cndev.h"
 #include "core/tensor.h"
-#include "check_tools.h"
+#include "gtest/gtest.h"
 #include "math_half.h"
+#include "mlu_op.h"
+#include "mlu_op_test.pb.h"
 
 // failed tests in GoogleTest will have RUN_ALL_TEST() return 1, so to
 // distinguish it from mluOp, choose a different exit code

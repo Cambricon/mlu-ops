@@ -8,12 +8,12 @@
  */
 #pragma once
 
-#include "pzstd/Range.h"
-
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+
+#include "pzstd/Range.h"
 
 namespace mluoptest {
 /**

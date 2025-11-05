@@ -1,17 +1,18 @@
 #ifndef TEST_MLU_OP_GTEST_INCLUDE_THREAD_POOL_H_
 #define TEST_MLU_OP_GTEST_INCLUDE_THREAD_POOL_H_
 
-#include <mutex>               // NOLINT
-#include <condition_variable>  // NOLINT
-#include <future>              // NOLINT
-#include <thread>              // NOLINT
-#include <utility>             // NOLINT
-#include <functional>
-#include <queue>
-#include <memory>
-#include <vector>
-#include <iostream>
 #include <atomic>
+#include <condition_variable>  // NOLINT
+#include <functional>
+#include <future>  // NOLINT
+#include <iostream>
+#include <memory>
+#include <mutex>  // NOLINT
+#include <queue>
+#include <thread>   // NOLINT
+#include <utility>  // NOLINT
+#include <vector>
+
 #include "tools.h"
 
 namespace mluoptest {
@@ -19,11 +20,11 @@ namespace mluoptest {
 class ThreadPool {
  public:
   ThreadPool() = default;
-  ThreadPool(ThreadPool &&) = default;
+  ThreadPool(ThreadPool&&) = default;
   explicit ThreadPool(size_t thread_num);
   ~ThreadPool();
 
-  template<class F, class... Args>
+  template <class F, class... Args>
   auto enqueue(F&& f, Args&&... args)
       -> std::future<typename std::result_of<F(Args...)>::type> {
     using return_type = typename std::result_of<F(Args...)>::type;

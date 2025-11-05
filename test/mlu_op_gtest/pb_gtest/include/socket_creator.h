@@ -10,9 +10,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #pragma once
-#include <mutex>
-#include <memory>
 #include <unistd.h>
+
+#include <memory>
+#include <mutex>
 
 #include "socket_comm.h"
 

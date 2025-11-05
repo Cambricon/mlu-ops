@@ -1,12 +1,12 @@
+#include <fstream>
+#include <future>
+#include <iostream>
+#include <tuple>
+#include <vector>
+
 #include "file_reader.h"
 #include "thread_pool.h"
 #include "tools.h"
-
-#include <vector>
-#include <fstream>
-#include <iostream>
-#include <future>
-#include <tuple>
 
 namespace mluoptest {
 

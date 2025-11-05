@@ -13,15 +13,15 @@
  */
 #pragma once
 
-#include "pzstd/Likely.h"
-#include "pzstd/Portability.h"
-
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+
+#include "pzstd/Likely.h"
+#include "pzstd/Portability.h"
 
 namespace mluoptest {
 
