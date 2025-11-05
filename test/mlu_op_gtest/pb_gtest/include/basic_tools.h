@@ -1,7 +1,4 @@
-/ home / cambricon / lyb / 11.5 / mlu_ops / mlu -
-    ops / test / mlu_op_gtest / pb_gtest / include /
-        socket_comm
-            .h /*************************************************************************
+/*************************************************************************
                 * Copyright (C) [2019-2022] by Cambricon, Inc.
                 *
                 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
@@ -12,7 +9,7 @@
                 *WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
                 *FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
                 *OTHER DEALINGS IN THE SOFTWARE.
-                *************************************************************************/
+ *************************************************************************/
 #pragma once
 #include <fcntl.h>
 #include <sys/stat.h>
