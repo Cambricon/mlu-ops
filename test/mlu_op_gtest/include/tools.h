@@ -101,6 +101,17 @@ int getEnvInt(const std::string &env, int default_ret);
 size_t proc_usage_peak();
 std::unordered_map<std::string, std::vector<std::string>> readFileByLine(
     const std::string &file);
+inline static std::string getFileExtension(const std::string &filename) {
+  size_t lastDotPos = filename.find_last_of(".");
+  if (lastDotPos != std::string::npos) {
+    return filename.substr(lastDotPos + 1);
+  }
+  return "";  // No extension found
+}
+inline static bool fileExists(const std::string &filepath) {
+  std::ifstream f(filepath);
+  return f.good();
+}
 
 // half mult
 int float_mult(int in_a, int in_b, int float_16or32, int round_mode,

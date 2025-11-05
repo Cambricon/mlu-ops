@@ -117,6 +117,7 @@ find_path(LIBMLUOP_INCLUDE_DIR mlu_op.h
 message(STATUS "Found mlu_op.h under ${LIBMLUOP_INCLUDE_DIR}")
 include_directories("${LIBMLUOP_INCLUDE_DIR}")
 
+
 set(GOOGLETEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/googletest"
                        "${CMAKE_CURRENT_SOURCE_DIR}/googletest/include")
 set(GOOGLETEST_SRC     "${CMAKE_CURRENT_SOURCE_DIR}/googletest/src")
@@ -127,10 +128,14 @@ set(MLUOP_PB_GTEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/include"
                         "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/zoo"
                         "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/extra_lib/jsoncppDist/json"
                         "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/file_reader/zstd/lib/common"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/file_reader/zstd/lib"
 )
-set(MLUOP_PB_GTEST_SRC "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/*.cpp"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/*.cpp"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/extra_lib/jsoncppDist/*.cpp"
+set(MLUOP_PB_GTEST_SRC
+  "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/extra_lib/jsoncppDist/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/file_reader/*.cpp" 
 )
 set(MLUOP_API_GTEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/include"
                         "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/gtest"
@@ -183,12 +188,16 @@ else()
   file(GLOB_RECURSE MLUOP_PB_GTEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/zoo/*/*.cpp")
 endif()
 
+
 add_library(mluop_pb_gtest_obj OBJECT ${MLUOP_PB_TEST_DIR} ${MLUOP_PB_GTEST_DIR} ${PROTO_HDRS} ${GENERATED_SRC})
 target_include_directories(mluop_pb_gtest_obj PRIVATE ${MLUOP_PB_GTEST_INCLUDE} ${PROTO_PATH})
 add_dependencies(mluop_pb_gtest_obj mluop_build_proto)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/file_reader/zstd/lib)
+target_link_libraries(mluop_pb_gtest_obj PRIVATE zstd)
 add_executable(mluop_gtest $<TARGET_OBJECTS:mluop_pb_gtest_obj>)
 target_link_libraries(mluop_pb_gtest_obj PRIVATE fmt::fmt)
 target_link_libraries(mluop_gtest mluops)
+target_link_libraries(mluop_gtest zstd)
 set(targets_mluop_gtest mluop_gtest)
 
 message(STATUS "EXTRA_LIBS: ${EXTRA_LIBS}")

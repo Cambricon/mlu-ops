@@ -37,7 +37,8 @@
 
 #include "tools.h"
 #include "zero_element.h"
-
+#include "file_reader.h"
+#include "socket_creator.h"
 static void zeroElementCreate(mluoptest::Node *node) {
   std::string tem_name = node->op_name();
   const char *env = std::getenv("MLUOP_GTEST_BUILD_ZERO_ELEMENT");
@@ -808,35 +809,29 @@ void Parser::getTensorValueRandom(Tensor *pt, void *data, size_t count) {
 }
 
 // get value by random data param
-void Parser::getTensorValueByFile(Tensor *pt, void *data, size_t count) {
+void Parser::getTensorValueByFile(mluoptest::Tensor *pt, void *data, size_t count) {
   auto cur_pb_path = pb_path_ + pt->path();
   size_t tensor_length = count * getTensorSize(pt);
   auto start = std::chrono::steady_clock::now();
-  std::ifstream fin(cur_pb_path, std::ios::in | std::ios::binary);
-  if (pt->dtype() == DTYPE_INT31) {
-    auto tensor_length_int31 = tensor_length / 2;
-    fin.read((char *)data + tensor_length_int31, tensor_length_int31);
-    fin.read((char *)data, tensor_length_int31);
-  } else {
-    fin.read((char *)data, tensor_length);
-  }
+
+  auto creator = std::make_shared<FileReaderCreator>(cur_pb_path);
+  // find data file or file with the same name after modifying the suffix
+  auto file_reader = creator->getFileReader();
+  cur_pb_path = creator->getRealFilePath();
+  auto actual_tensor_size = file_reader->read(data, tensor_length, cur_pb_path);
+  VLOG(2) << "file reader tensor size = " << actual_tensor_size;
+  if (tensor_length != actual_tensor_size) {     LOG(ERROR) << "The number of data calculated by shape and stride in pb/prototxt ("                << tensor_length << " bytes)"                << " is not equal to the number of true values actually saved(" << actual_tensor_size                << " bytes), "                << "please check whether pb/prototxt is valid.";     throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));   }
+
   auto stop = std::chrono::steady_clock::now();
   std::chrono::duration<double> cost_s = stop - start;
-
-  ASSERT_TRUE(fin) << "read data in file failed.";
-#if 0
-  if (!fin) {
-    LOG(ERROR) << "read data in file failed.";
-    throw std::invalid_argument(
-      std::string(__FILE__) + " +" + std::to_string(__LINE__));
-  }
-#endif
-
-  VLOG(2) << __func__ << " " << cur_pb_path << ", time cost: " << cost_s.count()
-          << " s"
-          << ", speed: " << tensor_length / 1024. / 1024. / cost_s.count()
-          << " MB/s";
-  parsed_file_size += tensor_length;
+  double once_io_speed = tensor_length / 1024. / 1024. / cost_s.count();
+  VLOG(2) << __func__ << " " << cur_pb_path
+          << ", file_size: " << getFileSize(cur_pb_path) / 1024. / 1024. << " MB"
+          << ", tensor_length: " << tensor_length / 1024. / 1024. << " MB"
+          << ", compress ratio: " << getFileSize(cur_pb_path) / double(tensor_length)
+          << ", time cost: " << cost_s.count() << " s"
+          << ", speed: " << once_io_speed << " MB/s";
+  parsed_file_size += getFileSize(cur_pb_path);
   parsed_cost_seconds += cost_s.count();
 }
 
