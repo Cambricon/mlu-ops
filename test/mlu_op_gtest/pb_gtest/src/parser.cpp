@@ -73,7 +73,7 @@ namespace mluoptest {
 
 // env for test negative_scale
 __attribute__((__unused__)) bool negative_scale_ =
-getEnv("MLUOP_GTEST_NEGATIVE_SCALE", false);
+    getEnv("MLUOP_GTEST_NEGATIVE_SCALE", false);
 
 Parser::~Parser() {
   if (proto_node_ != nullptr) {
@@ -809,7 +809,8 @@ void Parser::getTensorValueRandom(Tensor *pt, void *data, size_t count) {
 }
 
 // get value by random data param
-void Parser::getTensorValueByFile(mluoptest::Tensor *pt, void *data, size_t count) {
+void Parser::getTensorValueByFile(mluoptest::Tensor *pt, void *data,
+                                  size_t count) {
   auto cur_pb_path = pb_path_ + pt->path();
   size_t tensor_length = count * getTensorSize(pt);
   auto start = std::chrono::steady_clock::now();
@@ -820,15 +821,26 @@ void Parser::getTensorValueByFile(mluoptest::Tensor *pt, void *data, size_t coun
   cur_pb_path = creator->getRealFilePath();
   auto actual_tensor_size = file_reader->read(data, tensor_length, cur_pb_path);
   VLOG(2) << "file reader tensor size = " << actual_tensor_size;
-  if (tensor_length != actual_tensor_size) {     LOG(ERROR) << "The number of data calculated by shape and stride in pb/prototxt ("                << tensor_length << " bytes)"                << " is not equal to the number of true values actually saved(" << actual_tensor_size                << " bytes), "                << "please check whether pb/prototxt is valid.";     throw std::invalid_argument(std::string(__FILE__) + " +" + std::to_string(__LINE__));   }
+  if (tensor_length != actual_tensor_size) {
+    LOG(ERROR)
+        << "The number of data calculated by shape and stride in pb/prototxt ("
+        << tensor_length << " bytes)"
+        << " is not equal to the number of true values actually saved("
+        << actual_tensor_size << " bytes), "
+        << "please check whether pb/prototxt is valid.";
+    throw std::invalid_argument(std::string(__FILE__) + " +" +
+                                std::to_string(__LINE__));
+  }
 
   auto stop = std::chrono::steady_clock::now();
   std::chrono::duration<double> cost_s = stop - start;
   double once_io_speed = tensor_length / 1024. / 1024. / cost_s.count();
   VLOG(2) << __func__ << " " << cur_pb_path
-          << ", file_size: " << getFileSize(cur_pb_path) / 1024. / 1024. << " MB"
+          << ", file_size: " << getFileSize(cur_pb_path) / 1024. / 1024.
+          << " MB"
           << ", tensor_length: " << tensor_length / 1024. / 1024. << " MB"
-          << ", compress ratio: " << getFileSize(cur_pb_path) / double(tensor_length)
+          << ", compress ratio: "
+          << getFileSize(cur_pb_path) / double(tensor_length)
           << ", time cost: " << cost_s.count() << " s"
           << ", speed: " << once_io_speed << " MB/s";
   parsed_file_size += getFileSize(cur_pb_path);
@@ -839,7 +851,7 @@ void Parser::getTensorValueByFile(mluoptest::Tensor *pt, void *data, size_t coun
 // random data(for cpu compute) value is fp32 definitely
 // valueh valuef valuei dtype is according dtype in proto
 void Parser::getTensorValue(Tensor *pt, void *data, ValueType value_type,
-size_t count) {
+                            size_t count) {
   switch (value_type) {
     case VALUE_H:
       getTensorValueH(pt, data, count);
@@ -928,8 +940,8 @@ bool Parser::common_threshold() {
   return res;
 }
 
-std::set<Evaluator::Criterion> Parser::criterions(int index,
-const std::set<Evaluator::Formula> &criterions_use) {
+std::set<Evaluator::Criterion> Parser::criterions(
+    int index, const std::set<Evaluator::Formula> &criterions_use) {
   std::set<Evaluator::Criterion> res;
   // check if there exists complex output tensor
   bool has_complex_output = false;
@@ -1034,7 +1046,7 @@ const std::set<Evaluator::Formula> &criterions_use) {
 }
 
 static inline bool strEndsWith(const std::string &self,
-const std::string &pattern) {
+                               const std::string &pattern) {
   if (self.size() < pattern.size()) return false;
   return (self.compare(self.size() - pattern.size(), pattern.size(), pattern) ==
           0);

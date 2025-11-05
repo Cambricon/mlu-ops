@@ -20,7 +20,7 @@
 
 using json = nlohmann::json;
 
-#define CNNL_GTEST_PORT 16315  // date of establishment of cambricon
+#define CNNL_GTEST_PORT 16315      // date of establishment of cambricon
 #define CNNL_GTEST_JSON_SIZE 4096  // now 512 is enough
 
 /*
@@ -32,7 +32,7 @@ json like this
  "tid": xxx,
  "time": xxx,
  "file_info":
-   
+
 {      "file_name": xxx,      "file_size": xxx,      "once_io_speed": xxx    }
 
 }
@@ -43,49 +43,64 @@ class JsonMsg {
   JsonMsg() = default;
   // used for server
   JsonMsg(json inputJson) : json_(inputJson) {}
-  JsonMsg(std::string jsonStr) : dump_str_(jsonStr)
-{     std::string str = std::move(jsonStr);     json_ = json::parse(str);   }
+  JsonMsg(std::string jsonStr) : dump_str_(jsonStr) {
+    std::string str = std::move(jsonStr);
+    json_ = json::parse(str);
+  }
 
   // reset the json
   void clear() { json_.clear(); }
 
   // used for client
-  void setBasicInfo()
-{     pid_ = static_cast<int64_t>(getpid());     json_["pid"] = pid_;     tid_ = static_cast<int64_t>(pthread_self());     json_["tid"] = tid_;     time_ = static_cast<int64_t>(mluoptest::getCurrentTimeT());     json_["time"] = time_;   }
-
-  void setAfterReadFile(std::string fileName, size_t fileSize, double onceIoSpeed) {
-    json_["label"] = "after_read_file";
-    json_["file_info"] =
-     
-{         {"file_name", fileName}
-
-,
-        {"file_size", fileSize},
-        {"once_io_speed", onceIoSpeed}
-      };
+  void setBasicInfo() {
+    pid_ = static_cast<int64_t>(getpid());
+    json_["pid"] = pid_;
+    tid_ = static_cast<int64_t>(pthread_self());
+    json_["tid"] = tid_;
+    time_ = static_cast<int64_t>(mluoptest::getCurrentTimeT());
+    json_["time"] = time_;
   }
 
-  void setBeforeReadFile(std::string fileName)
-{     json_["label"] = "before_read_file";     json_["file_info"]["file_name"] = fileName;   }
+  void setAfterReadFile(std::string fileName, size_t fileSize,
+                        double onceIoSpeed) {
+    json_["label"] = "after_read_file";
+    json_["file_info"] =
 
-  void setStart()
-{     json_["label"] = "process_status";     json_["status"] = 1;   }
+        {{"file_name", fileName}
 
-  void setEnd()
-{     json_["label"] = "process_status";     json_["status"] = 0;   }
+         ,
+         {"file_size", fileSize},
+         {"once_io_speed", onceIoSpeed}};
+  }
 
-  json get() { return json_;}
-  std::string getJsonStr()
-{     json2Str();     return dump_str_;   }
+  void setBeforeReadFile(std::string fileName) {
+    json_["label"] = "before_read_file";
+    json_["file_info"]["file_name"] = fileName;
+  }
 
-  size_t getSizeOfDumpStr()
-{     return dump_str_.size();   }
+  void setStart() {
+    json_["label"] = "process_status";
+    json_["status"] = 1;
+  }
+
+  void setEnd() {
+    json_["label"] = "process_status";
+    json_["status"] = 0;
+  }
+
+  json get() { return json_; }
+  std::string getJsonStr() {
+    json2Str();
+    return dump_str_;
+  }
+
+  size_t getSizeOfDumpStr() { return dump_str_.size(); }
 
  private:
   json json_;
   // for data transmission
   std::string dump_str_ = "";
-  void json2Str() { dump_str_ = json_.dump();}
+  void json2Str() { dump_str_ = json_.dump(); }
   // contents of json
   int64_t pid_ = -1;
   int64_t tid_ = -1;
