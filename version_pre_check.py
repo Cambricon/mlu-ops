@@ -1,6 +1,7 @@
 import sys
 import json
 import os
+import re
 # version_check Module: packaging 1, distutils 0
 version_check_module = 1
 
@@ -55,6 +56,71 @@ def get_build_requires(print_mode=1):
                 )
             required_version[key] = required_version[key][1].split("-")[0]
 
+def check_zstd():
+    sys_out = os.popen("zstd --version").readline().strip()
+    if len(sys_out) == 0:
+        print("Warning: Not found zstd (command not exists)")
+        return version_status["not_found_version"]
+
+    match = re.search(r"v?(\d+\.\d+\.\d+)", sys_out)
+    if not match:
+        print(f"Warning: Failed to parse zstd version from output: {sys_out}")
+        return version_status["version_check_failed"]
+
+    current_version = match.group(1)
+
+    if gtVersion(required_version.get("zstd", "0.0.0"), current_version):
+        print(
+            "Warning: The version of zstd needs to be at least "
+            + required_version["zstd"]
+            + ", but local version is "
+            + current_version
+        )
+        return version_status["version_check_failed"]
+
+    print(f"zstd version check success: {current_version}")
+    return version_status["success"]
+
+def check_nlohmann_json():
+    # 第一步：检查核心头文件是否存在（nlohmann-json 是单头文件库）
+    header_paths = [
+        "/usr/include/nlohmann/json.hpp",       # 系统默认路径（包管理器安装）
+        "/usr/local/include/nlohmann/json.hpp", # 源码安装路径
+        "/usr/include/x86_64-linux-gnu/nlohmann/json.hpp"  # Debian/Ubuntu 特殊路径
+    ]
+    header_found = False
+    for path in header_paths:
+        if os.path.exists(path):
+            header_found = True
+            break
+
+    if not header_found:
+        print("Warning: Not found nlohmann-json (header file json.hpp missing)")
+        return version_status["not_found_version"]
+
+    # 第二步：尝试通过 pkg-config 获取精确版本（包管理器安装的版本支持）
+    try:
+        # nlohmann-json3-dev 对应的 pkg-config 名称为 nlohmann-json3
+        sys_out = os.popen("dpkg -l | grep nlohmann-json3-dev").readline().strip("\n")
+        if not sys_out:
+            # 无 pkg-config 配置（如源码安装），仅确认头文件存在，不强制版本检查
+            print("Info: nlohmann-json header found, but pkg-config not available (skip precise version check)")
+            return version_status["success"]
+
+        # 有版本号，检查是否满足最低要求
+        if gtVersion(required_version.get("nlohmann-json", "3.0.0"), sys_out):
+            print(
+                "Warning: The version of nlohmann-json needs to be at least "
+                + required_version["nlohmann-json"]
+                + ", but local version is "
+                + sys_out
+            )
+            return version_status["version_check_failed"]
+    except Exception as e:
+        print(f"Warning: nlohmann-json version check warning: {e} (header exists, skip version check)")
+        return version_status["success"]
+
+    return version_status["success"]
 
 def check_cntoolkit():
     toolkit_ver_path = env_vars["NEUWARE_HOME"] + "/version.txt"
@@ -226,7 +292,10 @@ def check_build_requires():
         print("If compilation failed, please check eigen3 version")
     if check_fmt() != version_status["success"]:
         print("If compilation failed, please check fmt version")
-
+    if check_zstd() != version_status["success"]:
+        print("If compilation failed, please check zstd version")
+    if check_nlohmann_json() != version_status["success"]:
+        print("If compilation failed, please check nlohmann-json version")
 
 argvs = sys.argv[1:]
 if len(argvs) == 1:
