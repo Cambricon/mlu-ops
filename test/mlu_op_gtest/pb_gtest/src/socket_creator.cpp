@@ -60,8 +60,6 @@ int32_t SocketCreator::connectSocket() {
   return 1;
 }
 
-// TODO(niewenchang): 目前每次发送数据都会重复connect，实际上是可以复用的
-// 之后考虑数据发送这个过程本身放到队列里，后台线程处理发送
 int SocketCreator::sendMsg(JsonMsg json_msg) {
   if (false == enable_monitor_) {  // not set env
     return -1;
