@@ -117,7 +117,6 @@ find_path(LIBMLUOP_INCLUDE_DIR mlu_op.h
 message(STATUS "Found mlu_op.h under ${LIBMLUOP_INCLUDE_DIR}")
 include_directories("${LIBMLUOP_INCLUDE_DIR}")
 
-
 set(GOOGLETEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/googletest"
                        "${CMAKE_CURRENT_SOURCE_DIR}/googletest/include")
 set(GOOGLETEST_SRC     "${CMAKE_CURRENT_SOURCE_DIR}/googletest/src")
