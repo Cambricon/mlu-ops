@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <chrono>
+#include <chrono>  //NOLINT
 #include <cstring>
 #include <ctime>
 #include <iostream>
@@ -41,16 +41,11 @@ inline bool getEnv(const std::string &env, bool default_ret) {
   if (env_temp != NULL) {
     if (strcmp(env_temp, "ON") == 0 || strcmp(env_temp, "1") == 0) {
       return true;
-    }
-
-    else if (strcmp(env_temp, "OFF") == 0 || strcmp(env_temp, "0") == 0) {
+    } else if (strcmp(env_temp, "OFF") == 0 || strcmp(env_temp, "0") == 0) {
       return false;
-    }
-
-    else {
+    } else {
       return default_ret;
     }
-
   } else {
     return default_ret;
   }
@@ -65,7 +60,7 @@ inline int getEnvInt(const std::string &env, int default_ret) {
   return default_ret;
 }
 
-inline static unsigned long getFileSize(const std::string &filename) {
+inline static unsigned long getFileSize(const std::string &filename) {  // NOLINT
   // XXX I want C++17 and std::file_system ...
   struct stat file_stat;
   int fd = open(filename.c_str(), O_RDONLY | O_CLOEXEC);

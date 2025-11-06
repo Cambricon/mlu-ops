@@ -9,13 +9,14 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+
 #include "file_reader.h"
 #include "tools.h"
 namespace mluoptest {
 
 class SearchFile {
  public:
-  SearchFile(const std::string &file_path) : file_path_(file_path) {}
+  SearchFile(const std::string &file_path) : file_path_(file_path) {}//NOLINT
   std::string searchFilePath();
 
  private:

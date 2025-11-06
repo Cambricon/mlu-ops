@@ -13,7 +13,8 @@
 #include <unistd.h>
 
 #include <memory>
-#include <mutex>
+#include <mutex>//NOLINT
+#include <string>
 
 #include "socket_comm.h"
 

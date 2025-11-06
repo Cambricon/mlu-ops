@@ -62,7 +62,7 @@ int SocketCreator::sendMsg(JsonMsg json_msg) {
 
   std::string send_msg(json_msg.getJsonStr());
   char buffer[CNNL_GTEST_JSON_SIZE] = {0};
-  strcpy(buffer, send_msg.c_str());
+  strcpy(buffer, send_msg.c_str());//NOLINT
   // std::cout << "buffer = " << buffer << std::endl;  // for debug, not delete
   // TODO(niewenchang): may use non-blocking method, like create a thread
   if (send(client_socket_, &buffer, CNNL_GTEST_JSON_SIZE, 0) == -1) {

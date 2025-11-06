@@ -1,14 +1,26 @@
+/*************************************************************************
+ * Copyright (C) [2019-2024] by Cambricon, Inc.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <zstd.h>
 
-#include <chrono>
+
 #include <fstream>
 #include <iostream>
 #include <tuple>
 #include <vector>
-
+#include <chrono>//NOLINT
 #include "ResourcePool.h"
 #include "basic_tools.h"
 #include "file_reader.h"
@@ -20,7 +32,6 @@
 
 #define _LARGE_FILES 1
 #if 0
-// TODO copy from ChageGPT 3.5, but maybe bad performance
 static std::vector<char> readBinaryFile(const std::string& filename) {
   // Open the file in binary mode
   std::ifstream file(filename, std::ios::binary);
@@ -71,8 +82,7 @@ class ZstdStrategy {
 // Class for reading files compressed by zstd or pzstd.
 class ZstdFileReader : public FileReader {
  public:
-  virtual size_t read(void *data, size_t length,
-                      const std::string &filepath) final;
+  virtual size_t read(void *data, size_t length, const std::string &filepath) final;//NOLINT
   virtual ~ZstdFileReader() {}
 
  private:
@@ -82,8 +92,7 @@ class ZstdFileReader : public FileReader {
 
 class SingleThreadZstdStrategy : public ZstdStrategy {
  public:
-  virtual size_t read(void *data, size_t length,
-                      const std::string &filepath) final;
+  virtual size_t read(void *data, size_t length,const std::string &filepath) final;//NOLINT
 };
 
 // Class for reading files which compressed by pzstd.
@@ -92,13 +101,12 @@ class SingleThreadZstdStrategy : public ZstdStrategy {
 // "CNNL_GTEST_FILE_READ_THREAD_NUM" environment variable
 class ParallelZstdStrategy : public ZstdStrategy {
  public:
-  explicit ParallelZstdStrategy() = default;
+  explicit ParallelZstdStrategy() = default;//NOLINT
   // use same pointer to data with class executor
   ParallelZstdStrategy(const ParallelZstdStrategy &) = delete;
   ParallelZstdStrategy &operator=(const ParallelZstdStrategy &) = delete;
 
-  virtual size_t read(void *data, size_t length,
-                      const std::string &filepath) final;
+  virtual size_t read(void *data, size_t length,const std::string &filepath) final;//NOLINT
 
  private:
   std::atomic<size_t> actual_tensor_size_{0};
@@ -124,7 +132,7 @@ std::shared_ptr<FileReader> ZstdFactory::create() {
 }
 
 static size_t readHeader(size_t *offset, FILE *fd) {
-  fseek(fd, (long long)(*offset), SEEK_SET);
+  fseek(fd, (long long)(*offset), SEEK_SET);//NOLINT
   Buffer header_buffer(SkippableFrame::kSize);  // const 12
   auto bytesRead =
       std::fread(header_buffer.data(), 1, header_buffer.size(), fd);
@@ -151,7 +159,6 @@ size_t SingleThreadZstdStrategy::read(void *data, size_t length,
                              std::string(ZSTD_getErrorName(result)));
   }
   if (result != length) {
-    // TODO use error log
     std::cerr << "zstd decompress got " << result << std::endl;
     throw std::runtime_error("Zstd decompression unexpected size " +
                              std::to_string(result) +
@@ -243,7 +250,6 @@ void ParallelZstdStrategy::asyncReadAndDecompress(
     size_t frame_size,         // .zst once read
     char *output,              // *data ptr of cnnl_gtest malloc before
     FILE *fd) {
-  // TODO(niewenchang): may malloc fixed memory in advance based on the
   // thread_num now malloc is fast enough cannot use runtime.allocate, it is not
   // thread-safe
   (void)fd;
@@ -325,3 +331,4 @@ std::shared_ptr<ZstdStrategy> ZstdFileReader::selectZstdStrategy(
 }
 
 }  // namespace mluoptest
+

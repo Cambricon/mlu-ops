@@ -10,14 +10,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #pragma once
-#include <unistd.h>
 
-#include <chrono>
+#include <unistd.h>      // C system headers
+#include <sys/socket.h>  // C system headers
+#include <arpa/inet.h>   // C system headers
+#include <netinet/in.h>  // C system headers
+
+#include <string>        // C++ system headers
 #include <iostream>
-#include <nlohmann/json.hpp>
-#include <string>
+#include <utility>
+#include <chrono>  // NOLINT(build/c++11)
 
-#include "basic_tools.h"
+#include <nlohmann/json.hpp>  // third-party headers
+
+#include "basic_tools.h"      // project headers
 
 using json = nlohmann::json;
 
@@ -43,8 +49,8 @@ class JsonMsg {
  public:
   JsonMsg() = default;
   // used for server
-  JsonMsg(json inputJson) : json_(inputJson) {}
-  JsonMsg(std::string jsonStr) : dump_str_(jsonStr) {
+  explicit  JsonMsg(json inputJson) : json_(inputJson) {}
+  explicit JsonMsg(std::string jsonStr) : dump_str_(jsonStr) {
     std::string str = std::move(jsonStr);
     json_ = json::parse(str);
   }

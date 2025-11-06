@@ -193,6 +193,7 @@ add_dependencies(mluop_pb_gtest_obj mluop_build_proto)
 add_executable(mluop_gtest $<TARGET_OBJECTS:mluop_pb_gtest_obj>)
 target_link_libraries(mluop_pb_gtest_obj PRIVATE fmt::fmt)
 target_link_libraries(mluop_gtest mluops)
+target_link_libraries(mluop_gtest zstd)
 set(targets_mluop_gtest mluop_gtest)
 
 message(STATUS "EXTRA_LIBS: ${EXTRA_LIBS}")
