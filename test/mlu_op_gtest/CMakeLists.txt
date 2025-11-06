@@ -219,7 +219,6 @@ else()
   file(GLOB_RECURSE MLUOP_API_GTEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/gtest/*/*.cpp")
 endif()
 
-
 target_include_directories(mluop_pb_gtest_obj PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>
