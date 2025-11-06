@@ -128,9 +128,11 @@ set(MLUOP_PB_GTEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/include"
                         "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/extra_lib/jsoncppDist/json"
                         "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src"
 )
-set(MLUOP_PB_GTEST_SRC "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/*.cpp"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/*.cpp"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/extra_lib/jsoncppDist/*.cpp"
+set(MLUOP_PB_GTEST_SRC
+  "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/gtest/extra_lib/jsoncppDist/*.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/file_reader/*.cpp" 
 )
 set(MLUOP_API_GTEST_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/include"
                         "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/gtest"
@@ -189,6 +191,7 @@ add_dependencies(mluop_pb_gtest_obj mluop_build_proto)
 add_executable(mluop_gtest $<TARGET_OBJECTS:mluop_pb_gtest_obj>)
 target_link_libraries(mluop_pb_gtest_obj PRIVATE fmt::fmt)
 target_link_libraries(mluop_gtest mluops)
+target_link_libraries(mluop_gtest zstd)
 set(targets_mluop_gtest mluop_gtest)
 
 message(STATUS "EXTRA_LIBS: ${EXTRA_LIBS}")
@@ -215,7 +218,6 @@ if (MLUOP_BUILD_SPECIFIC_OP)
 else()
   file(GLOB_RECURSE MLUOP_API_GTEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/api_gtest/src/gtest/*/*.cpp")
 endif()
-
 
 target_include_directories(mluop_pb_gtest_obj PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>

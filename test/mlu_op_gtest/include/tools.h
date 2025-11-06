@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2025] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -24,22 +24,23 @@
 #define TEST_MLU_OP_GTEST_INCLUDE_TOOLS_H_
 
 #include <algorithm>
-#include <sstream>
 #include <fstream>
 #include <iostream>
 #include <limits>
-#include <string>
 #include <random>
+#include <sstream>
+#include <string>
 #include <thread>  // NOLINT
-#include <vector>
 #include <unordered_map>
-#include "gtest/gtest.h"
-#include "mlu_op_test.pb.h"
-#include "mlu_op.h"
+#include <vector>
+
+#include "check_tools.h"
 #include "cndev.h"
 #include "core/tensor.h"
-#include "check_tools.h"
+#include "gtest/gtest.h"
 #include "math_half.h"
+#include "mlu_op.h"
+#include "mlu_op_test.pb.h"
 
 // failed tests in GoogleTest will have RUN_ALL_TEST() return 1, so to
 // distinguish it from mluOp, choose a different exit code
@@ -101,6 +102,17 @@ int getEnvInt(const std::string &env, int default_ret);
 size_t proc_usage_peak();
 std::unordered_map<std::string, std::vector<std::string>> readFileByLine(
     const std::string &file);
+inline static std::string getFileExtension(const std::string &filename) {
+  size_t lastDotPos = filename.find_last_of(".");
+  if (lastDotPos != std::string::npos) {
+    return filename.substr(lastDotPos + 1);
+  }
+  return "";  // No extension found
+}
+inline static bool fileExists(const std::string &filepath) {
+  std::ifstream f(filepath);
+  return f.good();
+}
 
 // half mult
 int float_mult(int in_a, int in_b, int float_16or32, int round_mode,

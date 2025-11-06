@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2025] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -23,17 +23,18 @@
 #ifndef TEST_MLU_OP_GTEST_INCLUDE_THREAD_POOL_H_
 #define TEST_MLU_OP_GTEST_INCLUDE_THREAD_POOL_H_
 
-#include <mutex>               // NOLINT
-#include <condition_variable>  // NOLINT
-#include <future>              // NOLINT
-#include <thread>              // NOLINT
-#include <utility>             // NOLINT
-#include <functional>
-#include <queue>
-#include <memory>
-#include <vector>
-#include <iostream>
 #include <atomic>
+#include <condition_variable>  // NOLINT
+#include <functional>
+#include <future>  // NOLINT
+#include <iostream>
+#include <memory>
+#include <mutex>  // NOLINT
+#include <queue>
+#include <thread>   // NOLINT
+#include <utility>  // NOLINT
+#include <vector>
+
 #include "tools.h"
 
 namespace mluoptest {
@@ -41,19 +42,32 @@ namespace mluoptest {
 class ThreadPool {
  public:
   ThreadPool() = default;
-  ThreadPool(ThreadPool &&) = default;
+  ThreadPool(ThreadPool&&) = default;
   explicit ThreadPool(size_t thread_num);
   ~ThreadPool();
 
-  template <typename F, typename... Args>
-  void enqueue(F &&f, Args &&... args) {
-    auto task = std::make_shared<std::packaged_task<void()>>(
+  template <class F, class... Args>
+  auto enqueue(F&& f, Args&&... args)
+      -> std::future<typename std::result_of<F(Args...)>::type> {
+    using return_type = typename std::result_of<F(Args...)>::type;
+
+    if (!ctx_) {
+      throw std::runtime_error("ThreadPool not initialized.");
+    }
+
+    auto task = std::make_shared<std::packaged_task<return_type()>>(
         std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+
+    std::future<return_type> res = task->get_future();
+
     {
-      std::lock_guard<std::mutex> lk(ctx_->mtx);
+      std::unique_lock<std::mutex> lock(ctx_->mtx);
+      if (ctx_->is_shutdown)
+        throw std::runtime_error("enqueue on stopped ThreadPool");
       ctx_->tasks.emplace([task]() { (*task)(); });
     }
-    ctx_->cond.notify_all();
+    ctx_->cond.notify_one();
+    return res;
   }
 
  private:
