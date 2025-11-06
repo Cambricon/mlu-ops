@@ -1,0 +1,205 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "adam_w_func.h"
+
+__mlu_func__ void computeAdamWRemoveNan(
+    float *nbuf_step, float *nbuf_param, float *nbuf_grad_ptr,
+    float *nbuf_momentum, float *nbuf_velocity,
+    float *output_mask, float *input_mask,
+    float *temp_param, float *temp_momentum,
+    float *temp_velocity, float lr, float beta1,
+    float beta2, float bias1, float bias2,
+    float epsilon, float weight_decay,
+    float scale, bool use_nesterov, int deal_num,
+    int offset) {  // offset is pingpong offset
+  __bang_mul_scalar(nbuf_grad_ptr + offset, nbuf_grad_ptr + offset,
+                    1.0f / scale, deal_num);
+  // m = m * beta1 + (1 - beta1) * g
+  __bang_mul_scalar(temp_momentum, nbuf_momentum + offset, beta1,
+                    deal_num);
+  __bang_fusion(FUSION_FMA, temp_momentum, nbuf_grad_ptr + offset,
+                (1.0f - beta1), temp_momentum, deal_num,
+                deal_num);
+
+  // v = v * beta2 + (1 - beta2) * g * g
+  __bang_mul_scalar(temp_velocity, nbuf_velocity + offset, beta2,
+                    deal_num);
+  __bang_mul_scalar(output_mask, nbuf_grad_ptr + offset, 1.0f - beta2,
+                    deal_num);
+  __bang_fusion(FUSION_FMA, temp_velocity, output_mask,
+                nbuf_grad_ptr + offset, temp_velocity, deal_num,
+                deal_num);
+
+  // param = param * (1 - lr * weight_decay) -
+  //         lr * m / bias1 / (sqrt(v / bias2) + epsilon)
+  bang_fusor<float>(input_mask, temp_velocity, deal_num)
+                  .mul(1.0f / bias2)
+                  .sqrt()
+                  .add(epsilon);
+  bang_fusor<float>(output_mask, temp_momentum, deal_num)
+                  .mul(lr)
+                  .mul(1.0f / bias1);
+  __bang_div(output_mask, output_mask, input_mask, deal_num);
+  __bang_mul_scalar(input_mask, nbuf_param + offset,
+                    (1 - lr * weight_decay), deal_num);
+  __bang_sub(temp_param, input_mask, output_mask, deal_num);
+
+  // get output_mask and input_mask
+  get_nan_inf_mask(input_mask, temp_param, deal_num);
+  get_nan_inf_mask(output_mask, temp_momentum, deal_num);
+  __bang_band(input_mask, input_mask, output_mask, deal_num);
+  get_nan_inf_mask(output_mask, temp_velocity, deal_num);
+  __bang_band(input_mask, input_mask, output_mask, deal_num);
+  __bang_not((uint32_t *)output_mask, (uint32_t *)input_mask, deal_num);
+
+  // param
+  __bang_mul((uint32_t *)temp_param, (uint32_t *)output_mask,
+             (uint32_t *)temp_param, deal_num);
+  __bang_mul((uint32_t *)(nbuf_param + offset), (uint32_t *)input_mask,
+             (uint32_t *)(nbuf_param + offset), deal_num);
+  __bang_add(nbuf_param + offset, temp_param, nbuf_param + offset,
+             deal_num);
+  // momentum
+  __bang_mul((uint32_t *)temp_momentum, (uint32_t *)output_mask,
+             (uint32_t *)temp_momentum, deal_num);
+  __bang_mul((uint32_t *)(nbuf_momentum + offset), (uint32_t *)input_mask,
+             (uint32_t *)(nbuf_momentum + offset), deal_num);
+  __bang_add(nbuf_momentum + offset, temp_momentum, nbuf_momentum + offset,
+             deal_num);
+  // velocity
+  __bang_mul((uint32_t *)temp_velocity, (uint32_t *)output_mask,
+             (uint32_t *)temp_velocity, deal_num);
+  __bang_mul((uint32_t *)(nbuf_velocity + offset), (uint32_t *)input_mask,
+             (uint32_t *)(nbuf_velocity + offset), deal_num);
+  __bang_add(nbuf_velocity + offset, temp_velocity, nbuf_velocity + offset,
+             deal_num);
+}
+
+template <typename T>
+__mlu_global__ void unionApplyAdamWRemoveNan(T *step, T *grad, float *param,
+                                            float *momentum, float *velocity, float lr,
+                                            float beta1, float beta2, float bias1,
+                                            float bias2, float epsilon,
+                                            float weight_decay, float scale,
+                                            bool use_nesterov, size_t size) {
+  PERF_TIME_BEGIN();
+  if (__is_mpu()) {
+    return;
+  }
+  // assign task to per core
+  int num_align = NFU_ALIGN_SIZE / sizeof(float);
+  size_t num_var = size / sizeof(float);
+  size_t num_per_task = num_var / taskDim;
+  size_t rem_idx = num_var % taskDim;
+  size_t task_offset = 0;
+  size_t num_task = 0;
+  if (taskId < rem_idx) {
+    task_offset = taskId * (num_per_task + 1);
+    num_task = num_per_task + 1;
+  } else {
+    task_offset = taskId * num_per_task + rem_idx;
+    num_task = num_per_task;
+  }
+  // when dtype is float, NRAM is split to 15 part for ping-pong pipeline
+  int num_nbuf_part = 13;
+  int num_x =
+      PAD_DOWN((MAX_NRAM_SIZE / sizeof(float) -1 ) / num_nbuf_part, num_align);
+  int pong = num_x;
+
+  // param: 2 * num_x
+  float *nbuf_param = (float *)nbuf_head;
+  // nbuf_grad: 2 * num_x
+  float *nbuf_grad = nbuf_param + 2 * num_x;
+  // nbuf_momentum: 2 * num_x
+  float *nbuf_momentum = nbuf_grad + 2 * num_x;
+  // nbuf_velocity: 2 * num_x
+  float *nbuf_velocity = nbuf_momentum + 2 * num_x;
+  // temp_param: num_x
+  float *temp_param = nbuf_velocity + 2 * num_x;
+  // temp_momentum: num_x
+  float *temp_momentum = temp_param + num_x;
+  // temp_velocity: num_x
+  float *temp_velocity = temp_momentum + num_x;
+  // output_mask: num_x
+  float *output_mask = temp_velocity + num_x;
+  // input_mask: num_x
+  float *input_mask = output_mask + num_x;
+  // step: 1
+  float *nbuf_step = input_mask + num_x;
+
+  float *ddr_step = (float *)step;
+  float *ddr_grad = (float *)grad + task_offset;
+  float *ddr_param = param + task_offset;
+  float *ddr_momentum = momentum + task_offset;
+  float *ddr_velocity = velocity + task_offset;
+  int num_iter = (num_task + num_x - 1) / num_x;
+  bias1 = 1.0f - std::pow(beta1, ((float *)step)[0]);
+  bias2 = 1.0f - std::pow(beta2, ((float *)step)[0]);
+
+  // 3 stage pipeline
+  for (int i = 0; i < num_iter + 2; ++i) {
+    // store data
+    if (i >= 2) {
+      storeData(ddr_param - 2 * num_x, ddr_momentum - 2 * num_x,
+                ddr_velocity - 2 * num_x, nbuf_param,
+                nbuf_momentum, nbuf_velocity,
+                MIN(num_x, (int)(num_task - (i - 2) * num_x)),
+                (i - 2) % 2 * pong);
+      if ((i == num_iter + 1) && (taskId == taskDim - 1)) {
+        __memcpy_async(ddr_step, nbuf_step, sizeof(float), NRAM2GDRAM);
+      }
+    }
+    // load data
+    if (i <= num_iter - 1) {
+      loadData(nbuf_grad, nbuf_param,
+              nbuf_momentum, nbuf_velocity, ddr_grad, ddr_param,
+              ddr_momentum, ddr_velocity,
+              MIN(num_x, (int)(num_task - i * num_x)), i % 2 * pong);
+      if ((i == num_iter - 1) && (taskId == taskDim - 1)) {
+        __memcpy_async(nbuf_step, ddr_step, sizeof(float), GDRAM2NRAM);
+      }
+    }
+    // compute
+    if (i >= 1 && i <= num_iter) {
+      computeAdamWRemoveNan(
+          nbuf_step, nbuf_param,
+          nbuf_grad, nbuf_momentum, nbuf_velocity, output_mask, input_mask,
+          temp_param, temp_momentum, temp_velocity, lr,
+          beta1, beta2, bias1, bias2, epsilon, weight_decay, scale,
+          use_nesterov, MIN(num_x, (int)(num_task - (i - 1) * num_x)),
+          (i - 1) % 2 * pong);
+      if ((i == num_iter) && (taskId == taskDim - 1)) {
+        __bang_add_scalar(nbuf_step, nbuf_step, 1.0f, 1);
+        if (std::isinf((nbuf_step)[0])) {
+          __bang_write_value(nbuf_step, 1, std::numeric_limits<float>::max());
+        }
+      }
+    }
+    ddr_grad += num_x;
+    ddr_param += num_x;
+    ddr_momentum += num_x;
+    ddr_velocity += num_x;
+    __asm__ volatile("sync;");
+  }
+  PERF_TIME_END();
+}

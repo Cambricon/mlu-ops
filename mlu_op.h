@@ -8824,6 +8824,8 @@ typedef enum {
   /*!< Set the grad_scale attribute for the AdamW operation. */
   MLUOP_ADAMW_USE_NESTEROV = 2,
   /*!< Specifies whether to use nesterov on the AdamW operation. */
+  MLUOP_ADAMW_NEED_REMOVE_NAN = 3,
+  /*!< Specifies whether to remove nan output on the AdamW operation. */
 } mluOpAdamWDescAttribute_t;
 
 typedef struct mluOpAdamWStruct *mluOpAdamWDescriptor_t;

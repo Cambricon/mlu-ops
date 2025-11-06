@@ -29,6 +29,7 @@ struct mluOpAdamWStruct {
   float weight_decay = 0;
   float grad_scale = 1;
   bool use_nesterov = false;
+  bool need_remove_nan = false;
 };
 
 mluOpStatus_t MLUOP_WIN_API KernelApplyAdamW(
@@ -36,6 +37,6 @@ mluOpStatus_t MLUOP_WIN_API KernelApplyAdamW(
     const cnrtQueue_t queue, void *param, void *param_h, void *grad,
     void *momentum, void *velocity, float lr, float beta1, float beta2,
     float bias1, float bias2, float epsilon, float weight_decay, float scale,
-    bool use_nesterov, size_t size);
+    bool use_nesterov, bool need_remove_nan, size_t size);
 
 #endif  // KERNELS_ADAMW_ADAMW_H_
