@@ -44,7 +44,7 @@ int32_t SocketCreator::connectSocket() {
 
   struct sockaddr_in serverAddr;
   serverAddr.sin_family = AF_INET;
-  serverAddr.sin_port = htons(CNNL_GTEST_PORT);
+  serverAddr.sin_port = htons(MLUOP_GTEST_PORT);
   // TODO(niewenchang): may use configurable ip, because gtest can run on
   // different ip.
   serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -70,11 +70,11 @@ int SocketCreator::sendMsg(JsonMsg json_msg) {
   }
 
   std::string send_msg(json_msg.getJsonStr());
-  char buffer[CNNL_GTEST_JSON_SIZE] = {0};
+  char buffer[MLUOP_GTEST_JSON_SIZE] = {0};
   strcpy(buffer, send_msg.c_str());//NOLINT
   // std::cout << "buffer = " << buffer << std::endl;  // for debug, not delete
   // TODO(niewenchang): may use non-blocking method, like create a thread
-  if (send(client_socket_, &buffer, CNNL_GTEST_JSON_SIZE, 0) == -1) {
+  if (send(client_socket_, &buffer, MLUOP_GTEST_JSON_SIZE, 0) == -1) {
     std::cerr << "Error sending data, this error does not affect test results."
               << std::endl;
     close(client_socket_);
@@ -85,7 +85,7 @@ int SocketCreator::sendMsg(JsonMsg json_msg) {
   return 1;
 }
 void SocketCreator::getConnectEnv() {
-  enable_monitor_ = getEnv("CNNL_GTEST_ENABLE_MONITOR", false);
+  enable_monitor_ = getEnv("MLUOP_GTEST_ENABLE_MONITOR", false);
 }
 
 std::shared_ptr<mluoptest::SocketCreator> mluoptest::SocketCreator::instance_ =

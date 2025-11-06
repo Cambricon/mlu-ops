@@ -38,8 +38,8 @@
 
 using json = nlohmann::json;
 
-#define CNNL_GTEST_PORT 16315      // date of establishment of cambricon
-#define CNNL_GTEST_JSON_SIZE 4096  // now 512 is enough
+#define MLUOP_GTEST_PORT 16315      // date of establishment of cambricon
+#define MLUOP_GTEST_JSON_SIZE 4096  // now 512 is enough
 
 /*
 json like this

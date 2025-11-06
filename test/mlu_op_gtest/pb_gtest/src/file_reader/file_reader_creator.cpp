@@ -44,7 +44,7 @@ std::string SearchFile::searchFilePath() {
     return file_path;
   }
   // set the env false, will not try to change the suffix of data file
-  bool fuzzy_search = getEnv("CNNL_GTEST_FUZZY_SEARCH_DATA_FILE", true);
+  bool fuzzy_search = getEnv("MLUOP_GTEST_FUZZY_SEARCH_DATA_FILE", true);
   if (!fuzzy_search) {
     return std::string();
   }

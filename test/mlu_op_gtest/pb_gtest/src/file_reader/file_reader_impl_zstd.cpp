@@ -109,7 +109,7 @@ class SingleThreadZstdStrategy : public ZstdStrategy {
 // Class for reading files which compressed by pzstd.
 // Each thread reads and decompresses a fixed size of data until the entire file
 // is traversed Users can modify the number of threads through
-// "CNNL_GTEST_FILE_READ_THREAD_NUM" environment variable
+// "MLUOP_GTEST_FILE_READ_THREAD_NUM" environment variable
 class ParallelZstdStrategy : public ZstdStrategy {
  public:
   explicit ParallelZstdStrategy() = default;//NOLINT
@@ -134,7 +134,7 @@ class ParallelZstdStrategy : public ZstdStrategy {
   void asyncReadAndDecompress(
       size_t input_file_offset,  // for input.zst
       size_t frame_size,         // .zst once read
-      char *output,              // *data ptr of cnnl_gtest malloc before
+      char *output,              // *data ptr of MLUOP_gtest malloc before
       FILE *fd);
 };
 
@@ -233,7 +233,7 @@ size_t ParallelZstdStrategy::read(void *data, size_t length,
 
 void ParallelZstdStrategy::init(void *data, size_t length,
                                 const std::string &file_name) {
-  thread_num_ = getEnvInt("CNNL_GTEST_FILE_READ_THREAD_NUM", 32);
+  thread_num_ = getEnvInt("MLUOP_GTEST_FILE_READ_THREAD_NUM", 32);
   file_name_ = file_name;
   length_ = length;
   data_ = (char *)data;
@@ -259,7 +259,7 @@ void ParallelZstdStrategy::initDStream() {
 void ParallelZstdStrategy::asyncReadAndDecompress(
     size_t input_file_offset,  // for input.zst
     size_t frame_size,         // .zst once read
-    char *output,              // *data ptr of cnnl_gtest malloc before
+    char *output,              // *data ptr of MLUOP_gtest malloc before
     FILE *fd) {
   // thread_num now malloc is fast enough cannot use runtime.allocate, it is not
   // thread-safe

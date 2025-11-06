@@ -39,7 +39,7 @@ namespace mluoptest {
 // number of opened threads until the complete file is read.
 // When 32 threads are enabled, the speed is incresased by about 4 times
 // compared with single thread. Users can modify the number of threads through
-// "CNNL_GTEST_FILE_READ_THREAD_NUM" environment variable
+// "MLUOP_GTEST_FILE_READ_THREAD_NUM" environment variable
 class BinFileReader : public FileReader {
  public:
   size_t read(void *data, size_t length, const std::string &filepath) final;
@@ -80,7 +80,7 @@ size_t BinFileReader::readPart(size_t offset, size_t read_size) {
 size_t BinFileReader::read(void *data, size_t length,
                            const std::string &filepath) {
   init(data, length, filepath);
-  size_t thread_num = getEnvInt("CNNL_GTEST_FILE_READ_THREAD_NUM", 32);
+  size_t thread_num = getEnvInt("MLUOP_GTEST_FILE_READ_THREAD_NUM", 32);
   ThreadPool pool(thread_num);
 
   size_t repeat = length / k_once_size_;
