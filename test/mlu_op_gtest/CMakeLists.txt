@@ -185,7 +185,6 @@ else()
   file(GLOB_RECURSE MLUOP_PB_GTEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src/zoo/*/*.cpp")
 endif()
 
-
 add_library(mluop_pb_gtest_obj OBJECT ${MLUOP_PB_TEST_DIR} ${MLUOP_PB_GTEST_DIR} ${PROTO_HDRS} ${GENERATED_SRC})
 target_include_directories(mluop_pb_gtest_obj PRIVATE ${MLUOP_PB_GTEST_INCLUDE} ${PROTO_PATH})
 add_dependencies(mluop_pb_gtest_obj mluop_build_proto)
