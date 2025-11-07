@@ -157,7 +157,6 @@ void AdamWExecutor::cpuCompute() {
   auto cpu_tensor_momentum_output = cpu_fp32_output_[2];
   auto cpu_tensor_velocity_output = cpu_fp32_output_[3];
 
-  float temp_momentum, temp_velocity, temp_param;
   if (need_remove_nan) {
     bias1 = 1.0f - std::pow(beta1, cpu_tensor_paramh[0]);
     bias2 = 1.0f - std::pow(beta2, cpu_tensor_paramh[0]);
@@ -190,9 +189,12 @@ void AdamWExecutor::cpuCompute() {
 
     // remove nan
     if (need_remove_nan &&
-        ((std::isnan(temp_momentum) || std::isinf(temp_momentum))
-        && (std::isnan(temp_velocity) || std::isinf(temp_velocity))
-        && (std::isnan(temp_param) || std::isinf(temp_param)))) {
+        ((std::isnan(cpu_tensor_momentum_output[i])
+          || std::isinf(cpu_tensor_momentum_output[i]))
+         && (std::isnan(cpu_tensor_velocity_output[i])
+             || std::isinf(cpu_tensor_velocity_output[i]))
+         && (std::isnan(cpu_tensor_param_output[i])
+             || std::isinf(cpu_tensor_param_output[i])))) {
       cpu_tensor_momentum_output[i] = cpu_tensor_momentum[i];
       cpu_tensor_velocity_output[i] = cpu_tensor_velocity[i];
       cpu_tensor_param_output[i] = cpu_tensor_param[i];
