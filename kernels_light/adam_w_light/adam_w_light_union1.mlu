@@ -20,9 +20,9 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include "adam_w_lite.h"
-#include "adam_w_device.mluh"
-#include "adam_w_device_remove_nan.mluh"
+#include "adam_w_light.h"
+#include "kernels/adam_w/adam_w_device.mluh"
+#include "kernels/adam_w/adam_w_device_remove_nan.mluh"
 
 NAMESPACE_BANGC_KERNELS_BEGIN
 
@@ -32,8 +32,7 @@ mluAdamW(const cnrtQueue_t queue, const float lr, const float beta1,
          const float beta2, const float bias1, const float bias2,
          const float epsilon, const float weight_decay, const float scale,
          const bool use_nesterov, const bool need_remove_nan, size_t size,
-         T *param_h, T *grad, float *param, float *momentum,
-         float *velocity) {
+         T *param_h, T *grad, float *param, float *momentum, float *velocity) {
   // set job type
   int ordinal = -1;
   int cluster_num;

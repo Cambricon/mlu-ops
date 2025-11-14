@@ -95,7 +95,7 @@ if (NOT EXISTS ${PROTO_FILES})
 endif()
 
 execute_process(
-  COMMAND python3 "merge_proto_files.py"
+  COMMAND bash "build.sh"
   WORKING_DIRECTORY ${PROTO_PATH}
 )
 

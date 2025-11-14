@@ -21,23 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include <limits>
-#include "adam_w.h"
+#include "adam_w_light.h"
 #include "cn_api.h"
 
 namespace mluoptest {
 
-void AdamWExecutor::paramCheck() {
+void AdamWLightExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_adamw_param()) {
-    LOG(ERROR) << "Lose AdamW param. ";
+    LOG(ERROR) << "Lose AdamWLightExecutor param. ";
   }
   if (parser_->getInputNum() != 5) {
-    LOG(ERROR) << "AdamW input number is wrong. ";
+    LOG(ERROR) << "AdamWLight input number is wrong. ";
   }
   // set flag
   flag_input_reuse_ = true;
 }
 
-void AdamWExecutor::compute() {
+void AdamWLightExecutor::compute() {
   auto desc_param = tensor_desc_[0].tensor;
   auto desc_paramh = tensor_desc_[1].tensor;
   auto desc_momentum = tensor_desc_[2].tensor;
@@ -63,37 +63,34 @@ void AdamWExecutor::compute() {
   bool need_remove_nan =
       parser_->getProtoNode()->adamw_param().need_remove_nan();
 
-  VLOG(4) << "call mluOpAdamw. ";
-  mluOpAdamWDescriptor_t adamw_desc;
-  MLUOP_CHECK(mluOpCreateAdamWDescriptor(&adamw_desc));
-  MLUOP_CHECK(mluOpSetAdamWDescAttr(adamw_desc, MLUOP_ADAMW_WEIGHT_DECAY,
-                                    &fp32_weight_decay,
-                                    sizeof(fp32_weight_decay)));
-  MLUOP_CHECK(mluOpSetAdamWDescAttr(adamw_desc, MLUOP_ADAMW_GRAD_SCALE,
-                                    &fp32_scale, sizeof(fp32_scale)));
-  MLUOP_CHECK(mluOpSetAdamWDescAttr(adamw_desc, MLUOP_ADAMW_USE_NESTEROV,
-                                    &use_nesterov, sizeof(use_nesterov)));
-  MLUOP_CHECK(
-      mluOpSetAdamWDescAttr(adamw_desc, MLUOP_ADAMW_NEED_REMOVE_NAN,
-                            &need_remove_nan, sizeof(need_remove_nan)));
+  VLOG(4) << "call mluAdamW. ";
+  const int size = mluOpGetTensorElementNum(desc_momentum) * sizeof(float);
   interface_timer_.start();
-  MLUOP_CHECK(mluOpAdamW(handle_, adamw_desc, desc_param, dev_param,
-                          desc_paramh, dev_paramh, desc_momentum, dev_momentum,
-                          desc_velocity, dev_velocity, desc_grad, dev_grad,
-                          fp32_lr, fp32_beta1, fp32_beta2, fp32_bias1,
-                          fp32_bias2, fp32_epsilon));
+  if (need_remove_nan) {
+    const auto adamw_status = bangc_kernels::mluAdamW(
+        handle_->queue, fp32_lr, fp32_beta1, fp32_beta2, fp32_bias1,
+        fp32_bias2, fp32_epsilon, fp32_weight_decay, fp32_scale, use_nesterov,
+        need_remove_nan, size, (float *)dev_paramh, (float *)dev_grad,
+        (float *)dev_param, (float *)dev_momentum, (float *)dev_velocity);
+  } else {
+    const auto adamw_status = bangc_kernels::mluAdamW(
+        handle_->queue, fp32_lr, fp32_beta1, fp32_beta2, fp32_bias1,
+        fp32_bias2, fp32_epsilon, fp32_weight_decay, fp32_scale, use_nesterov,
+        need_remove_nan, size, BANG_WRAP_T((Eigen::bfloat16 *)dev_paramh),
+        BANG_WRAP_T((Eigen::bfloat16 *)dev_grad), (float *)dev_param,
+        (float *)dev_momentum, (float *)dev_velocity);
+  }
   interface_timer_.stop();
-  MLUOP_CHECK(mluOpDestroyAdamWDescriptor(adamw_desc));
 }
 
-void AdamWExecutor::setMiscellaneousParam() {
+void AdamWLightExecutor::setMiscellaneousParam() {
   data_vector_[0].alsoServeAsOutput();
   data_vector_[1].alsoServeAsOutput();
   data_vector_[2].alsoServeAsOutput();
   data_vector_[3].alsoServeAsOutput();
 }
 
-void AdamWExecutor::cpuCompute() {
+void AdamWLightExecutor::cpuCompute() {
   GTEST_CHECK(parser_->getInputNum() == 5);
   GTEST_CHECK(parser_->getOutputNum() == 4);
   float lr = parser_->getProtoNode()->adamw_param().lr();

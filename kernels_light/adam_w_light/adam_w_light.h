@@ -77,16 +77,16 @@ NAMESPACE_BANGC_KERNELS_BEGIN
  *   - param tensor: float
  *   - momentum tensor: float
  *   - velocity tensor: float
- * 
+ *
  * @par Data Layout
- * - The supported data layouts of \b param tensor, \b param_h tensor, \b momentum tensor, \b velocity tensor, and \b
- *   grad tensor are as follows:
+ * - The supported data layouts of \b param tensor, \b param_h tensor, \b
+ *   momentum tensor, \b velocity tensor, and \b grad tensor are as follows:
  *   - param tensor: ARRAY
  *   - param_h tensor: ARRAY
  *   - momentum tensor: ARRAY
  *   - velocity tensor: ARRAY
  *   - grad tensor: ARRAY
- * 
+ *
  * @par Scale Limitation
  * - None.
  *
@@ -103,23 +103,12 @@ NAMESPACE_BANGC_KERNELS_BEGIN
  * - https://github.com/OpenBMB/BMTrain/blob/6abcf772aa1e120192f7656e55c4adbcde53c886/csrc/cuda/adam_cuda.cu
  */
 template <typename T>
-bangcKernelsStatus_t BANGC_KERNELS_WIN_API mluAdamW(const cnrtQueue_t queue,
-                                                    const float lr,
-                                                    const float beta1,
-                                                    const float beta2,
-                                                    const float bias1,
-                                                    const float bias2,
-                                                    const float epsilon,
-                                                    const float weight_decay,
-                                                    const float scale,
-                                                    const bool use_nesterov,
-                                                    const bool need_remove_nan,
-                                                    const size_t size,
-                                                    T *param_h,
-                                                    T *grad,
-                                                    float *param,
-                                                    float *momentum,
-                                                    float *velocity);
+bangcKernelsStatus_t BANGC_KERNELS_WIN_API
+mluAdamW(const cnrtQueue_t queue, const float lr, const float beta1,
+         const float beta2, const float bias1, const float bias2,
+         const float epsilon, const float weight_decay, const float scale,
+         const bool use_nesterov, const bool need_remove_nan, const size_t size,
+         T *param_h, T *grad, float *param, float *momentum, float *velocity);
 
 NAMESPACE_BANGC_KERNELS_END
 
