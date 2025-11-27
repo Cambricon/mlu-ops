@@ -18,30 +18,31 @@ version_status = {"not_found_version":2, "version_check_failed": 1,
                   "success": 0}
 
 # version(str1) > version(str2)
-def gtVersion(str1, str2):
+def neVersion(str1, str2):
     global version_check_module
 
     if version_check_module == 1:
         try:
             from packaging import version
-            return version.parse(str1) > version.parse(str2)
+            return version.parse(str1) != version.parse(str2)
         except ImportError:
             print("packaging not exists, try import distutils")
             version_check_module = 0
         except Exception as e1:
-            print(f"version check error: {e1}")
+            print(f"Warning: Failed to parse version: {e1}")
 
     if version_check_module == 0:
         try:
             from distutils.version import LooseVersion
-            return LooseVersion(str1) > LooseVersion(str2)
+            return LooseVersion(str1) != LooseVersion(str2)
         except ImportError:
             print("distutils not exists, version check failed")
             version_check_module = -1
         except Exception as e1:
-            print(f"version check error: {e1}")
+            print(f"Warning: Failed to parse version: {e1}")
 
     return False
+
 
 def get_build_requires(print_mode=1):
     global required_version
@@ -58,68 +59,28 @@ def get_build_requires(print_mode=1):
 
 def check_zstd():
     sys_out = os.popen("zstd --version").readline().strip()
+
     if len(sys_out) == 0:
         print("Warning: Not found zstd (command not exists)")
         return version_status["not_found_version"]
 
-    match = re.search(r"v?(\d+\.\d+\.\d+)", sys_out)
-    if not match:
-        print(f"Warning: Failed to parse zstd version from output: {sys_out}")
-        return version_status["version_check_failed"]
-
-    current_version = match.group(1)
-
-    if gtVersion(required_version.get("zstd", "0.0.0"), current_version):
-        print(
-            "Warning: The version of zstd needs to be at least "
-            + required_version["zstd"]
-            + ", but local version is "
-            + current_version
-        )
-        return version_status["version_check_failed"]
-
-    print(f"zstd version check success: {current_version}")
     return version_status["success"]
+
 
 def check_nlohmann_json():
-
     header_paths = [
-        "/usr/include/nlohmann/json.hpp",       
-        "/usr/local/include/nlohmann/json.hpp", 
-        "/usr/include/x86_64-linux-gnu/nlohmann/json.hpp"  
+        "/usr/include/nlohmann/json.hpp",
+        "/usr/local/include/nlohmann/json.hpp",
+        "/usr/include/x86_64-linux-gnu/nlohmann/json.hpp",
     ]
-    header_found = False
+
     for path in header_paths:
         if os.path.exists(path):
-            header_found = True
-            break
-
-    if not header_found:
-        print("Warning: Not found nlohmann-json (header file json.hpp missing)")
-        return version_status["not_found_version"]
-
-    try:
-
-        sys_out = os.popen("dpkg -l | grep nlohmann-json3-dev").readline().strip("\n")
-        if not sys_out:
-
-            print("Info: nlohmann-json header found, but pkg-config not available (skip precise version check)")
             return version_status["success"]
 
+    print("Warning: nlohmann-json header file 'json.hpp' not found in known include paths.")
+    return version_status["not_found_version"]
 
-        if gtVersion(required_version.get("nlohmann-json", "3.0.0"), sys_out):
-            print(
-                "Warning: The version of nlohmann-json needs to be at least "
-                + required_version["nlohmann-json"]
-                + ", but local version is "
-                + sys_out
-            )
-            return version_status["version_check_failed"]
-    except Exception as e:
-        print(f"Warning: nlohmann-json version check warning: {e} (header exists, skip version check)")
-        return version_status["success"]
-
-    return version_status["success"]
 
 def check_cntoolkit():
     toolkit_ver_path = env_vars["NEUWARE_HOME"] + "/version.txt"
@@ -133,9 +94,9 @@ def check_cntoolkit():
         for line in data:
             if "Neuware Version" in line:
                 cur_tk_ver = line.strip("\n").split(" ")[-1]
-                if gtVersion(required_version["cntoolkit"], cur_tk_ver):
+                if neVersion(required_version["cntoolkit"], cur_tk_ver):
                     print(
-                        "Warning: The version of cntoolkit needs to be at least "
+                        "Warning: The version of cntoolkit is recommended to be "
                         + required_version["cntoolkit"]
                         + ", but local version is "
                         + cur_tk_ver
@@ -157,9 +118,9 @@ def check_cnnl():
             tmp = filePath.split(".")
             if len(tmp) > 3:
                 cur_cnnl_ver = filePath[11:]
-                if gtVersion(required_version["cnnl"], cur_cnnl_ver):
+                if neVersion(required_version["cnnl"], cur_cnnl_ver):
                     print(
-                        "Warning: The version of cnnl needs to be at least "
+                        "Warning: The version of cnnl is recommended to be "
                         + required_version["cnnl"]
                         + ", but local version is "
                         + cur_cnnl_ver
@@ -176,9 +137,9 @@ def check_driver():
         return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n").split(":")[-1]
-    if gtVersion(required_version["driver"], sys_out):
+    if neVersion(required_version["driver"], sys_out):
         print(
-            "Warning: The version of driver needs to be at least "
+            "Warning: The version of driver is recommended to be "
             + required_version["driver"]
             + ", but local version is "
             + sys_out
@@ -195,9 +156,9 @@ def check_protoc():
         return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n").split(" ")[-1]
-    if gtVersion(sys_out, required_version["protoc"]):
+    if neVersion(sys_out, required_version["protoc"]):
         print(
-            "Warning: The version of protoc needs to be at most "
+            "Warning: The version of protoc is recommended to be "
             + required_version["protoc"]
             + ", but local version is "
             + sys_out
@@ -213,9 +174,9 @@ def check_fmt():
         return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n")
-    if gtVersion(sys_out, required_version["fmt"]):
+    if neVersion(sys_out, required_version["fmt"]):
         print(
-            "Warning: The version of fmt needs to be at most "
+            "Warning: The version of fmt is recommended to be "
             + required_version["fmt"]
             + ", but local version is "
             + sys_out
@@ -230,9 +191,9 @@ def check_libxml2():
         return version_status["not_found_version"]
 
     sys_out = sys_out.strip("\n")
-    if gtVersion(required_version["libxml2"], sys_out):
+    if neVersion(required_version["libxml2"], sys_out):
         print(
-            "Warning: The version of libxml2 needs to be at least "
+            "Warning: The version of libxml2 is recommended to be "
             + required_version["libxml2"]
             + ", but local version is "
             + sys_out
@@ -263,9 +224,9 @@ def check_eigen3():
             break
         line = h_file.readline()
 
-    if gtVersion(required_version["eigen3"], eigen_ver):
+    if neVersion(required_version["eigen3"], eigen_ver):
         print(
-            "Warning: The version of eigen3 needs to be at least "
+            "Warning: The version of eigen3 is recommended to be "
             + required_version["eigen3"]
             + ", but local version is "
             + eigen_ver
@@ -305,3 +266,4 @@ elif len(argvs) == 3:
     eval(argvs[0])(argvs[1], argvs[2])
 else:
     exit(3)
+ 

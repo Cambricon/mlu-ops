@@ -5,8 +5,8 @@
                      "cnnl":["release","2.1.9-1"],
                      "driver": "6.0.3",
                      "eigen3": "3.4.0",
-                     "libxml2": "2.9.0",
+                     "libxml2": "2.9.13",
                      "fmt": "11.0.2",
-                     "protoc": "3.9.0"},
+                     "protoc": "3.12.4"},
   "package_type": ["rpm","deb"]
 }
