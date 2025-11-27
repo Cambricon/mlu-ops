@@ -28,8 +28,8 @@
       "header": "kernels_light/adam_w_light/adam_w_light.h",
       "sources": [
           "kernels_light/adam_w_light/adam_w_light.h",
-          "kernels/adam_w/adam_w_union1.mluh",
-          "kernels/adam_w/adam_w_light_union1.mlu"
+          "kernels/adam_w/adam_w_device.mluh",
+          "kernels/adam_w/adam_w_device_remove_nan.mluh"
       ]
     }
   ]

@@ -7,8 +7,8 @@ CMAKE=cmake
 MLUOP_TARGET_CPU_ARCH=`uname -m`
 
 GEN_SYMBOL_VIS_FILE_PY="./scripts/gen_symbol_visibility_map.py"
-GEN_BANGC_KERNELS_COLLECTION_H_PY="./scripts/bangc_kernels_path_config/bangc_kernels_gen_header_file_for_mlu_ops.py"
-BANGC_KERNEL_PATH_CHECK="./scripts/bangc_kernels_path_config/bangc_kernels_path_check.py"
+GEN_BANGC_KERNELS_COLLECTION_H_PY="./scripts/kernels_light_config/gen_header_file_for_mlu_ops.py"
+BANGC_KERNEL_PATH_CHECK="./scripts/kernels_light_config/kernels_path_check.py"
 MLUOP_SYMBOL_VIS_FILE="symbol_visibility.map"
 TARGET_SYMBOL_FILE="mlu_op.h"
 TARGET_SYMBOL_FILE_LITE_COLLECTION="bangc_kernels_collection.h"
@@ -453,8 +453,6 @@ fi
 export PATH=${NEUWARE_HOME}/bin:$PATH
 export LD_LIBRARY_PATH=${NEUWARE_HOME}/lib64:$LD_LIBRARY_PATH
 
-# GEN_BANGC_KERNELS_COLLECTION_H_PY="scripts/bangc_kernels_path_config/bangc_kernels_gen_header_file_for_mlu_ops.py"
-# BANGC_KERNEL_PATH_CHECK="scripts/bangc_kernels_path_config/bangc_kernels_path_check.py"
 python3 ${BANGC_KERNEL_PATH_CHECK}
 python3 ${GEN_BANGC_KERNELS_COLLECTION_H_PY}
 
