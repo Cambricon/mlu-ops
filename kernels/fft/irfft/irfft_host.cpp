@@ -585,15 +585,7 @@ static void configureIRFFT1dMatmulWorkspaceAddrs(mluOpHandle_t handle,
   // matmul output
   size_t per_matmul_output_size = 0;
   int per_matmul_output_num = batch * n;
-  if (fft_plan->fft_strategy == CNFFT_FUNC_MATMUL) {
-    per_matmul_output_size = in_c_dtype_size * per_matmul_output_num;
-    // matmut_im_mul_im reuse output_coniguous
-    fft_plan->matmul_addrs.matmul_re_mul_re_addr =
-        fft_plan->matmul_addrs.output_contiguous_addr;
-    workspace_cur_offset_to_end += per_matmul_output_size;
-    fft_plan->matmul_addrs.matmul_re_mul_re_addr =
-        (uint8_t *)workspace_end - workspace_cur_offset_to_end;
-  } else if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY ||
+  if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY ||
              fft_plan->fft_strategy == CNFFT_FUNC_STOCKHAM) {
     per_matmul_output_size = in_r_dtype_size * per_matmul_output_num;
     workspace_cur_offset_to_end += per_matmul_output_size;
