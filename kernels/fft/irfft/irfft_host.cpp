@@ -136,11 +136,6 @@ mluOpStatus_t makeIRFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
       size_t padded_input_size = in_c_dtype_size * padded_input_num;
       fft_plan->workspace_size += need_pad ? padded_input_size : 0;
 
-      // matmul output(reuse output_coniguous)
-      int per_matmul_output_num = batch * n;
-      size_t per_matmul_output_size = in_c_dtype_size * per_matmul_output_num;
-      fft_plan->workspace_size += per_matmul_output_size;
-
       // matmul workspace
       size_t matmul_workspace_size = 0;
       status = fftGetMatMulWorkspaceSize(
@@ -380,15 +375,12 @@ static void configureIRFFT1dMatmulReserveAddrs(mluOpHandle_t handle,
 
   switch (fft_plan->fft_strategy) {
     case CNFFT_FUNC_MATMUL: {
-      // Matmul Matrix : 2 * [n, (n / 2 + 1)]
+      // Matmul Matrix : [n, (n / 2 + 1)*2]
       int dim0 = n;
       int dim1 = FFT_HALF(n);
-      size_t per_dft_mat_size = dim0 * dim1 * in_r_dtype_size;
+      size_t per_dft_mat_size = dim0 * dim1 * mluOpDataTypeBytes(in_c_dtype);
       dft_mat_size = dft_mat_times * per_dft_mat_size;
       fft_plan->matmul_addrs.dft_matrix_addr = fft_plan->reservespace_addr;
-      fft_plan->matmul_addrs.dft_re_matrix_addr = fft_plan->reservespace_addr;
-      fft_plan->matmul_addrs.dft_im_matrix_addr =
-          (uint8_t *)fft_plan->reservespace_addr + per_dft_mat_size;
     }; break;
     case CNFFT_FUNC_COOLEY_TUKEY:
     case CNFFT_FUNC_STOCKHAM: {
@@ -432,10 +424,10 @@ mluOpStatus_t setIRFFT1dReserveArea(mluOpHandle_t handle,
 
     switch (fft_plan->fft_strategy) {
       case CNFFT_FUNC_MATMUL: {
-        // Matmul Matrix : 2 * [n, (n / 2 + 1)]
+        // Matmul Matrix : [n, (n / 2 + 1) * 2]
         int dim0 = n;
-        int dim1 = (n / 2 + 1);
-        int dft_mat_num = dft_mat_times * dim0 * dim1;
+        int dim1 = (n / 2 + 1) * dft_mat_times;
+        int dft_mat_num = dim0 * dim1;
         kernelGenerateIRFFTHalfDFTMatrix(k_dim, k_type, handle->queue, fft_plan,
                                          in_r_dtype, n);
       }; break;
