@@ -371,8 +371,6 @@ __mlu_func__ void generateIRFFTHalfDFTMatrixImpl(int n, void *output) {
     int row_final = 0;
     if (row_i == 0) {
       row_final = 0;
-    } else if (row_i == 1) {
-      row_final = row - 1;
     } else {
       row_final = row - row_i;
     }
