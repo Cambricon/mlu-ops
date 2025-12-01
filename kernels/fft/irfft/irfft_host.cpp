@@ -74,18 +74,17 @@ mluOpStatus_t makeIRFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
         return MLUOP_STATUS_NOT_SUPPORTED;
       }
 
-      // Matmul Input  : 2 * [batch, (n / 2 + 1)]
-      // Matmul Matrix : 2 * [n, (n / 2 + 1)]
-      // Matmul Result : 2 * [batch, n]
-      int dft_mat_times = COMPLEX;
+      // Matmul Input  : [batch, (n / 2 + 1) * 2]
+      // Matmul Matrix : [n, (n / 2 + 1) * 2]
+      // Matmul Result : [batch, n * 2]
       int dim0 = n;
       int dim1 = FFT_HALF(n);
-      int dft_mat_num = dft_mat_times * dim0 * dim1;
+      int dft_mat_num = dim0 * dim1;
 
       // reservespace size allocation
       fft_plan->reservespace_size = 0;
       fft_plan->reservespace_size +=
-          dft_mat_num * mluOpDataTypeBytes(in_r_dtype);
+          dft_mat_num * mluOpDataTypeBytes(in_c_dtype);
 
       /* CNFFT_FUNC_MATMUL :
          -------------------------
@@ -104,22 +103,13 @@ mluOpStatus_t makeIRFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
          |      input_pad        |
          -------------------------
                     |
-                    | input trans: batch * (n / 2 + 1) * 2 --> 2 * batch * (n /
-         2 + 1)
+                    |
                    \|/
          -------------------------
-         |      input_re         |
-         |      input_im         |
+         |        input          |
          -------------------------
                     |
                     | matmul
-                   \|/
-         -------------------------
-         |    matmul_re_mul_re   |
-         |    matmul_im_mul_im   |(reuse output_contiguous)
-         -------------------------
-                    |
-                    | op_tensor
                    \|/
          -------------------------
          |   output_contiguous   |
@@ -146,42 +136,14 @@ mluOpStatus_t makeIRFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
       size_t padded_input_size = in_c_dtype_size * padded_input_num;
       fft_plan->workspace_size += need_pad ? padded_input_size : 0;
 
-      // input trans and workspace
-      size_t transed_input_size = padded_input_size;
-      fft_plan->workspace_size += transed_input_size;
-      // input trans workspace: batch * (n / 2 + 1) * 2 --> 2 * batch * (n / 2 +
-      // 1)
-      const int trans_dim_num = 2;
-      int64_t trans_input_dims[trans_dim_num] = {padded_input_num, COMPLEX};
-      int trans_permute[trans_dim_num] = {1, 0};
-      size_t trans_workspace_size = 0;
-      status = fftGetTransposeWorkspaceSize(handle, trans_workspace_size,
-                                            trans_dim_num, trans_input_dims,
-                                            trans_permute, in_r_dtype, api);
-      fft_plan->matmul_addrs.internal_workspace_size = std::max(
-          fft_plan->matmul_addrs.internal_workspace_size, trans_workspace_size);
-
-      // matmul output(reuse output_coniguous)
-      int matmul_times = COMPLEX;
-      int per_matmul_output_num = batch * n;
-      size_t per_matmul_output_size = in_r_dtype_size * per_matmul_output_num;
-      fft_plan->workspace_size += (matmul_times - 1) * per_matmul_output_size;
       // matmul workspace
       size_t matmul_workspace_size = 0;
-      status = fftGetMatMulWorkspaceSize(handle, matmul_workspace_size, batch,
-                                         dim1, dim0, false, true, in_e_dtype,
-                                         in_e_dtype, in_r_dtype, api);
+      status = fftGetMatMulWorkspaceSize(
+          handle, matmul_workspace_size, batch, dim1 * 2, dim0, false, true,
+          in_e_dtype, in_e_dtype, in_r_dtype, api);
       fft_plan->matmul_addrs.internal_workspace_size =
           std::max(fft_plan->matmul_addrs.internal_workspace_size,
                    matmul_workspace_size);
-      // optensor workspace
-      size_t optensor_workspace_size = 0;
-      status =
-          fftGetOptensorWorkspaceSize(handle, optensor_workspace_size,
-                                      per_matmul_output_num, in_r_dtype, api);
-      fft_plan->matmul_addrs.internal_workspace_size =
-          std::max(fft_plan->matmul_addrs.internal_workspace_size,
-                   optensor_workspace_size);
 
       // output contiguous
       size_t output_size =
@@ -413,15 +375,12 @@ static void configureIRFFT1dMatmulReserveAddrs(mluOpHandle_t handle,
 
   switch (fft_plan->fft_strategy) {
     case CNFFT_FUNC_MATMUL: {
-      // Matmul Matrix : 2 * [n, (n / 2 + 1)]
+      // Matmul Matrix : [n, (n / 2 + 1)*2]
       int dim0 = n;
       int dim1 = FFT_HALF(n);
-      size_t per_dft_mat_size = dim0 * dim1 * in_r_dtype_size;
+      size_t per_dft_mat_size = dim0 * dim1 * mluOpDataTypeBytes(in_c_dtype);
       dft_mat_size = dft_mat_times * per_dft_mat_size;
       fft_plan->matmul_addrs.dft_matrix_addr = fft_plan->reservespace_addr;
-      fft_plan->matmul_addrs.dft_re_matrix_addr = fft_plan->reservespace_addr;
-      fft_plan->matmul_addrs.dft_im_matrix_addr =
-          (uint8_t *)fft_plan->reservespace_addr + per_dft_mat_size;
     }; break;
     case CNFFT_FUNC_COOLEY_TUKEY:
     case CNFFT_FUNC_STOCKHAM: {
@@ -465,10 +424,10 @@ mluOpStatus_t setIRFFT1dReserveArea(mluOpHandle_t handle,
 
     switch (fft_plan->fft_strategy) {
       case CNFFT_FUNC_MATMUL: {
-        // Matmul Matrix : 2 * [n, (n / 2 + 1)]
+        // Matmul Matrix : [n, (n / 2 + 1) * 2]
         int dim0 = n;
-        int dim1 = (n / 2 + 1);
-        int dft_mat_num = dft_mat_times * dim0 * dim1;
+        int dim1 = (n / 2 + 1) * dft_mat_times;
+        int dft_mat_num = dim0 * dim1;
         kernelGenerateIRFFTHalfDFTMatrix(k_dim, k_type, handle->queue, fft_plan,
                                          in_r_dtype, n);
       }; break;
@@ -566,17 +525,8 @@ static void configureIRFFT1dMatmulWorkspaceAddrs(mluOpHandle_t handle,
         fft_plan->matmul_addrs.input_contiguous_addr;
   }
 
-  if (fft_plan->fft_strategy == CNFFT_FUNC_MATMUL) {
-    // input trans: batch * (n / 2 + 1) * 2 --> 2 * batch * (n / 2 + 1)
-    size_t transed_input_size = padded_input_size;
-    fft_plan->matmul_addrs.input_re_addr =
-        (uint8_t *)workspace + workspace_cur_offset;
-    fft_plan->matmul_addrs.input_im_addr =
-        (uint8_t *)fft_plan->matmul_addrs.input_re_addr +
-        transed_input_size / COMPLEX;
-    workspace_cur_offset += transed_input_size;
-  } else if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY ||
-             fft_plan->fft_strategy == CNFFT_FUNC_STOCKHAM) {
+  if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY ||
+      fft_plan->fft_strategy == CNFFT_FUNC_STOCKHAM) {
     // input merge (transed_input and reversed_input reuse input_re)
     // 1st input trans: batch * (n / 2 + 1) * 2 --> 2 * batch * (n / 2 + 1)
     size_t transed_1st_input_size = padded_input_size;
@@ -625,17 +575,11 @@ static void configureIRFFT1dMatmulWorkspaceAddrs(mluOpHandle_t handle,
   }
 
   // matmul output
+  size_t per_matmul_output_size = 0;
   int per_matmul_output_num = batch * n;
-  size_t per_matmul_output_size = in_r_dtype_size * per_matmul_output_num;
-  if (fft_plan->fft_strategy == CNFFT_FUNC_MATMUL) {
-    // matmut_im_mul_im reuse output_coniguous
-    fft_plan->matmul_addrs.matmul_im_mul_im_addr =
-        fft_plan->matmul_addrs.output_contiguous_addr;
-    workspace_cur_offset_to_end += per_matmul_output_size;
-    fft_plan->matmul_addrs.matmul_re_mul_re_addr =
-        (uint8_t *)workspace_end - workspace_cur_offset_to_end;
-  } else if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY ||
+  if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY ||
              fft_plan->fft_strategy == CNFFT_FUNC_STOCKHAM) {
+    per_matmul_output_size = in_r_dtype_size * per_matmul_output_num;
     workspace_cur_offset_to_end += per_matmul_output_size;
     fft_plan->matmul_addrs.matmul_im_mul_im_addr =
         (uint8_t *)workspace_end - workspace_cur_offset_to_end;
@@ -1073,23 +1017,7 @@ static mluOpStatus_t transposeIRFFT1dPaddedInput(mluOpHandle_t handle,
   int batch = fft_plan->batch;
   int n = fft_plan->n[0];
 
-  if (fft_plan->fft_strategy == CNFFT_FUNC_MATMUL) {
-    // transpose: batch * (n / 2 + 1) * 2 --> 2 * batch * (n / 2 + 1)
-    VLOG(5) << "launch mluOpTranspose for input MATMUL";
-    int padded_input_num = batch * FFT_HALF(n);
-    const int trans_dim_num = 2;
-    int64_t trans_input_dims[trans_dim_num] = {padded_input_num, COMPLEX};
-    int64_t trans_output_dims[trans_dim_num] = {COMPLEX, padded_input_num};
-    int trans_permute[trans_dim_num] = {1, 0};
-
-    status =
-        fftTranspose(handle, trans_dim_num, trans_input_dims, trans_output_dims,
-                     trans_permute, fft_plan->matmul_addrs.input_pad_addr,
-                     fft_plan->matmul_addrs.input_re_addr, in_r_dtype,
-                     fft_plan->matmul_addrs.internal_workspace_addr,
-                     fft_plan->matmul_addrs.internal_workspace_size, api);
-    CHECK_RETURN(api, status);
-  } else if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY) {
+  if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY) {
     VLOG(5) << "launch mluOpTranspose for input COOLEY_TUKEY";
     int L = fft_plan->L;
     int m = (1 << fft_plan->m);
@@ -1162,35 +1090,15 @@ static mluOpStatus_t computeIRFFT1dMatmulResult(mluOpHandle_t handle,
 
   if (fft_plan->fft_strategy == CNFFT_FUNC_MATMUL) {
     VLOG(5) << "into computeIRFFT1dMatmulResult CNFFT_FUNC_MATMUL";
-    // input real matmul dft real
-    status = fftMatMul(
-        handle, batch, FFT_HALF(n), n, fft_plan->matmul_addrs.input_re_addr,
-        fft_plan->matmul_addrs.dft_re_matrix_addr,
-        fft_plan->matmul_addrs.matmul_re_mul_re_addr, false, true, scale_factor,
-        0.0, in_e_dtype, in_e_dtype, in_r_dtype,
-        fft_plan->matmul_addrs.internal_workspace_addr,
-        fft_plan->matmul_addrs.internal_workspace_size, api);
-    CHECK_RETURN(api, status);
-
-    // input imag matmul dft imag
-    status = fftMatMul(
-        handle, batch, FFT_HALF(n), n, fft_plan->matmul_addrs.input_im_addr,
-        fft_plan->matmul_addrs.dft_im_matrix_addr,
-        fft_plan->matmul_addrs.matmul_im_mul_im_addr, false, true, scale_factor,
-        0.0, in_e_dtype, in_e_dtype, in_r_dtype,
-        fft_plan->matmul_addrs.internal_workspace_addr,
-        fft_plan->matmul_addrs.internal_workspace_size, api);
-    CHECK_RETURN(api, status);
-
-    // real mul real add imag mul imag
-    int per_matmul_output_num = batch * n;
-    status = fftOptensor(handle, per_matmul_output_num,
-                         fft_plan->matmul_addrs.matmul_re_mul_re_addr,
-                         fft_plan->matmul_addrs.matmul_im_mul_im_addr,
-                         fft_plan->matmul_addrs.output_contiguous_addr, 1.0,
-                         1.0, 0.0, in_r_dtype, CNNL_OP_TENSOR_ADD,
-                         fft_plan->matmul_addrs.internal_workspace_addr,
-                         fft_plan->matmul_addrs.internal_workspace_size, api);
+    // input matmul dft
+    status =
+        fftMatMul(handle, batch, 2 * FFT_HALF(n), n,
+                  fft_plan->matmul_addrs.input_pad_addr,
+                  fft_plan->matmul_addrs.dft_matrix_addr,
+                  fft_plan->matmul_addrs.output_contiguous_addr, false, true,
+                  scale_factor, 0.0, in_e_dtype, in_e_dtype, in_r_dtype,
+                  fft_plan->matmul_addrs.internal_workspace_addr,
+                  fft_plan->matmul_addrs.internal_workspace_size, api);
     CHECK_RETURN(api, status);
   } else if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY) {
     VLOG(5) << "into computeIRFFT1dMatmulResult CNFFT_FUNC_COOLEY_TUKEY";

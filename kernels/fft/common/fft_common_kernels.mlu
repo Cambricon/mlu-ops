@@ -321,6 +321,7 @@ __mlu_func__ void generateIRFFTHalfDFTMatrixImpl(int n, void *output) {
   int32_t *offset_int_addr = (int32_t *)offset_addr;
   float *temp_addr = offset_addr + deal_size;
   float *row_addr = temp_addr;
+  float *cos_sin = row_addr + deal_size;
 
   // generate 0 to n indices
   __mluop_gen_stage_index(inc_addr, deal_size, 0.0f, 1.0f);
@@ -333,6 +334,8 @@ __mlu_func__ void generateIRFFTHalfDFTMatrixImpl(int n, void *output) {
   cos_coeff_addr[(n + 1) / 2] = 1.0;
   sin_coeff_addr[(n + 1) / 2] = -1.0;
 
+  // sin * -1 只需要实部结果即可，实部相减改为累加中减法部分用负数累加
+  __bang_mul_scalar(sin_coeff_addr, sin_coeff_addr, (float)-1, deal_size);
   // generate sin and cos vectors
   const float scale = 2.0 * M_PI / n;
   __memcpy(offset_addr, inc_addr, deal_size * sizeof(float), NRAM2NRAM);
@@ -344,27 +347,35 @@ __mlu_func__ void generateIRFFTHalfDFTMatrixImpl(int n, void *output) {
     // generate offsets
     __memcpy(offset_addr, inc_addr, pad_col * sizeof(float), NRAM2NRAM);
     __bang_mul_scalar(offset_addr, offset_addr, (float)row_i, pad_col);
-    __mluop_mod(offset_addr, temp_addr, (float)n, pad_col);
+    __bang_rem(offset_addr, offset_addr, (float)n, pad_col);
 
     genSelectOffsetVec(offset_addr, offset_int_addr, pad_col);
 
     // select cos result
-    selectVec(cos_addr, offset_int_addr, row_addr, col);
+    __gather(row_addr, cos_addr, (uint32_t *)offset_int_addr, sizeof(float),
+             NRAM2NRAM, sizeof(float), col);
     __bang_mul(row_addr, row_addr, cos_coeff_addr, pad_col);
-    convert((DT *)row_addr, row_addr, pad_col);
-
-    // save cos result
-    DT *dst_addr = (DT *)output + row_i * col;
-    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+    __bang_move(cos_sin, row_addr, sizeof(float), 2 * sizeof(float),
+                sizeof(float), pad_col);
 
     // select sin result
-    selectVec(sin_addr, offset_int_addr, row_addr, col);
+    __gather(row_addr, sin_addr, (uint32_t *)offset_int_addr, sizeof(float),
+             NRAM2NRAM, sizeof(float), col);
     __bang_mul(row_addr, row_addr, sin_coeff_addr, pad_col);
-    convert((DT *)row_addr, row_addr, pad_col);
 
-    // save sin result
-    dst_addr = (DT *)output + (row_i + row) * col;
-    __memcpy(dst_addr, row_addr, col * sizeof(DT), NRAM2GDRAM);
+    __bang_move(cos_sin + 1, row_addr, sizeof(float), 2 * sizeof(float),
+                sizeof(float), pad_col);
+    convert((DT *)cos_sin, cos_sin, 2 * pad_col);
+
+    // irfft 结果需共轭反转
+    int row_final = 0;
+    if (row_i == 0) {
+      row_final = 0;
+    } else {
+      row_final = row - row_i;
+    }
+    DT *dst_addr = (DT *)output + row_final * col * 2;
+    __memcpy(dst_addr, cos_sin, 2 * col * sizeof(DT), NRAM2GDRAM);
   }
 }
 
