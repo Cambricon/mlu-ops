@@ -639,13 +639,12 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
                   (int32_t)(c_slice_align % nram_sum_tmp_channel > 0);
               __bang_sumpool(nram_sum_tmp, nram_tmp1, nram_sum_tmp_channel, 1,
                              kernel_width, 1, kernel_width, kernel_width, 1);
-              __bang_reduce_sum(nram_sum_tmp, nram_sum_tmp,
-                                nram_sum_tmp_channel);
+              T tmp_sum = __bang_sum(nram_sum_tmp, nram_sum_tmp_channel);
               __bang_atomic_reduce_add(
                   (T *)(grad_offset +
                         out_batch * pooled_width * pooled_height * 2 +
                         out_height * pooled_width + out_width),
-                  (T *)nram_sum_tmp, 1);
+                  tmp_sum, 1);
               __bang_write_value((T *)nram_sum_tmp, nram_sum_tmp_channel, (T)0);
               __bang_mul_scalar(nram_tmp1, nram_ping_input + 3 * c_slice_align,
                                 x - x_low, c_slice_align);
@@ -663,14 +662,13 @@ __mlu_func__ void MLUMultiKernelDeformRoiPoolBackward(
               __bang_mul(nram_tmp1, nram_grad_output, nram_tmp1, c_slice_align);
               __bang_sumpool(nram_sum_tmp, nram_tmp1, nram_sum_tmp_channel, 1,
                              kernel_width, 1, kernel_width, kernel_width, 1);
-              __bang_reduce_sum(nram_sum_tmp, nram_sum_tmp,
-                                NFU_ALIGN_SIZE / sizeof(T));
+              tmp_sum = __bang_sum(nram_sum_tmp, NFU_ALIGN_SIZE / sizeof(T));
               __bang_atomic_reduce_add(
                   (T *)(grad_offset +
                         out_batch * pooled_width * pooled_height * 2 +
                         pooled_width * pooled_height +
                         out_height * pooled_width + out_width),
-                  (T *)nram_sum_tmp, 1);
+                  tmp_sum, 1);
 
               T *nram_tmp = nram_ping_input;
               nram_ping_input = nram_pong_input;
