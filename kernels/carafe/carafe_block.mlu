@@ -377,11 +377,8 @@ __mlu_global__ void MLUKernelCarafeBackward(T *input, T *mask, T *grad_output,
                          NFU_ALIGN_SIZE / sizeof(T),
                          num_align / (NFU_ALIGN_SIZE / sizeof(T)), 1,
                          num_align / (NFU_ALIGN_SIZE / sizeof(T)), 1, 1, 1);
-
-          __bang_reduce_sum((T *)nram_buf, (T *)nram_buf,
-                            NFU_ALIGN_SIZE / sizeof(T));
           ((T *)nram_buf + 4 * NRAM_BLOCK / sizeof(T))[mask_index] +=
-              ((T *)nram_buf)[0];
+              __bang_sum((T *)nram_buf, NFU_ALIGN_SIZE / sizeof(T));
         }
       }
     }
@@ -421,11 +418,8 @@ __mlu_global__ void MLUKernelCarafeBackward(T *input, T *mask, T *grad_output,
               (T *)nram_buf, (T *)nram_buf, NFU_ALIGN_SIZE / sizeof(T),
               rem_for_loop_align / (NFU_ALIGN_SIZE / sizeof(T)), 1,
               rem_for_loop_align / (NFU_ALIGN_SIZE / sizeof(T)), 1, 1, 1);
-          __bang_reduce_sum((T *)nram_buf, (T *)nram_buf,
-                            NFU_ALIGN_SIZE / sizeof(T));
-
           ((T *)nram_buf + 4 * NRAM_BLOCK / sizeof(T))[mask_index] +=
-              ((T *)nram_buf)[0];
+              __bang_sum((T *)nram_buf, NFU_ALIGN_SIZE / sizeof(T));
         }
       }
     }
