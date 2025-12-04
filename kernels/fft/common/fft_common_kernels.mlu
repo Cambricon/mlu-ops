@@ -107,10 +107,12 @@ __mlu_func__ void selectVec(float *src_addr, int32_t *offset_int_addr,
                             float *dst_addr, int deal_size) {
 #if __BANG_ARCH__ >= 372 && __BANG_ARCH__ != 520
   __asm__ volatile(
-      "gather.clean.nram.nram.nram.b32.u32 "
-      "[%[dst]], [%[src]], [%[offset]], %[data_num];\n\t" ::[dst] "r"(dst_addr),
-      [src] "r"(src_addr), [offset] "r"(offset_int_addr),
-      [data_num] "r"(deal_size));
+      "gather.vector.nram.nram.nram.u32 "
+      "[%[dst]], [%[src]], [%[offset]], %[transfer_size], %[transfer_num], %[stride];\n\t"
+      ::[dst] "r"(dst_addr),
+        [src] "r"(src_addr), [offset] "r"(offset_int_addr),
+        [transfer_size] "i"(4), [transfer_num] "r"(deal_size),
+        [stride] "i"(4));
 #else
   for (auto i = 0; i < deal_size; i++) {
     dst_addr[i] = src_addr[offset_int_addr[i]];

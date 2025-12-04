@@ -72,6 +72,9 @@ add_mlu_arch_support () {
     --mtp613)
       bang_arch="mtp_613;"
       ;;
+    --mtp617)
+      bang_arch="mtp_617;"
+      ;;
     *)
       ;;
   esac
