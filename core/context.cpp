@@ -60,6 +60,10 @@ mluOpDevType_t convertDeviceNameFromInt(int device_code) {
       return MLUOP_MTP613;
       break;
     }
+    case 617: {
+      return MLUOP_MTP617;
+      break;
+    }
     default:
       break;
   }
