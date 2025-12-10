@@ -3,9 +3,25 @@ Update History
 
 This section lists contents that were made for each product release.
 
+* V1.8.1
+
+  **Date:** Oct 29, 2025
+
+  **Changes:**
+
+  - None.
+
 * V1.8.0
 
   **Date:** July 16, 2025
+
+  **Changes:**
+
+  - None.
+
+* V1.7.1
+
+  **Date:** June 20, 2025
 
   **Changes:**
 
