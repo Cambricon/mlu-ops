@@ -294,25 +294,25 @@ __mlu_func__ void genIndiceOutLast(int32_t *nram_output, int32_t *nram_input,
           o_w = output_space.o_w;
   int32_t o_hw = o_h * o_w, o_dhw = o_d * o_h * o_w;
   __bang_write_value((int32_t *)nram_aux + 4 * deal_num, deal_num, int(o_dhw));
-  __cn_vector_div_s32(deal_num, (int32_t *)nram_aux, (int32_t *)nram_input,
-                      (int32_t *)nram_aux + 4 * deal_num);
+  __bang_div((int32_t *)nram_aux, (int32_t *)nram_input,
+                      (int32_t *)nram_aux + 4 * deal_num,deal_num);
   __bang_mul_scalar((int32_t *)nram_output, (int32_t *)nram_aux, (int)o_dhw,
                     deal_num);
   __bang_sub((int32_t *)nram_input, (int32_t *)nram_input, (int *)nram_output,
              deal_num);
   __bang_write_value((int32_t *)nram_aux + 4 * deal_num, deal_num, int(o_hw));
-  __cn_vector_div_s32(deal_num, (int32_t *)nram_aux + deal_num,
+  __bang_div((int32_t *)nram_aux + deal_num,
                       (int32_t *)nram_input,
-                      (int32_t *)nram_aux + 4 * deal_num);
+                      (int32_t *)nram_aux + 4 * deal_num,deal_num);
   __bang_mul_scalar((int32_t *)nram_output, (int32_t *)nram_aux + deal_num,
                     (int)o_hw, deal_num);
   __bang_sub((int32_t *)nram_input, (int32_t *)nram_input,
              (int32_t *)nram_output, deal_num);
 
   __bang_write_value((int32_t *)nram_aux + 4 * deal_num, deal_num, int(o_w));
-  __cn_vector_div_s32(deal_num, (int32_t *)nram_aux + 2 * deal_num,
+  __bang_div( (int32_t *)nram_aux + 2 * deal_num,
                       (int32_t *)nram_input,
-                      (int32_t *)nram_aux + 4 * deal_num);
+                      (int32_t *)nram_aux + 4 * deal_num,deal_num);
   __bang_mul_scalar((int32_t *)nram_output, (int32_t *)nram_aux + 2 * deal_num,
                     (int)o_w, deal_num);
   __bang_sub((int32_t *)nram_aux + 3 * deal_num, (int32_t *)nram_input,
