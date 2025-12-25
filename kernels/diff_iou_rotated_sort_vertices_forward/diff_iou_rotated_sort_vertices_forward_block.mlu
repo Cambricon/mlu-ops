@@ -54,11 +54,7 @@ static __mlu_func__ void load(const T *addr_vertices, const bool *addr_mask,
 template <typename T>
 static __mlu_func__ void computeDiv(T *nram_dst, T *nram_src0, T *nram_src1,
                                     int deal_num) {
-#if (__BANG_ARCH__ != 372)
   __bang_div(nram_dst, nram_src0, nram_src1, deal_num);
-#else
-  __cn_vector_div_f32_rn(deal_num, nram_dst, nram_src0, nram_src1);
-#endif
 }
 
 template <typename T>

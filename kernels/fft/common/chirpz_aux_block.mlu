@@ -73,7 +73,7 @@ __mlu_global__ void MLUKernelChirpz(const int length, int n, int pad_n,
     __bang_square(nram_index, nram_index, num_deal);
     __bang_mul_scalar(nram_index, nram_index, M_PI, num_deal);
     __bang_write_value(nram_temp, num_deal, (float)n);
-    __cn_vector_div_f32_rn(num_deal, nram_temp, nram_index, nram_temp);
+    __bang_div(nram_temp, nram_index, nram_temp, num_deal);
     __bang_move(nram_index, nram_temp, num_deal * sizeof(float));
     __cn_vector_cos_f32(num_deal, nram_index, nram_index);
     __cn_vector_sin_f32(num_deal, nram_temp, nram_temp);
@@ -137,7 +137,7 @@ __mlu_global__ void MLUKernelSignal(const int length, int n, int pad_n,
     __bang_square(nram_index, nram_index, 2 * num_deal);
     __bang_mul_scalar(nram_index, nram_index, M_PI, 2 * num_deal);
     __bang_write_value(nram_temp, 2 * num_deal, (float)n);
-    __cn_vector_div_f32_rn(2 * num_deal, nram_temp, nram_index, nram_temp);
+    __bang_div(nram_temp, nram_index, nram_temp, 2 * num_deal);
     __bang_move(nram_index, nram_temp, 2 * num_deal * sizeof(float));
     __cn_vector_cos_f32(2 * num_deal, nram_index, nram_index);
     __cn_vector_sin_f32(2 * num_deal, nram_temp, nram_temp);
