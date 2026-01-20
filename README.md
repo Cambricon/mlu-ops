@@ -140,7 +140,7 @@ MLU-OPS™提供了以下功能：
 ## 编译、开发与测试
 
 提供基于 BANG C 的算子开发教程，涵盖算子入门、算子进阶、算子高级篇，帮助开发者迅速上手算子开发。
-具体见[ BANG C 算子开发指南](./docs/BANG-C-OPS-Develop-Guide.md)。
+具体见[BANG C 算子开发指南](./docs/BANG-C-OPS-Develop-Guide.md)。
 
 提供基于寒武纪人工智能单元（MLU）开发高性能算子、C 接口封装的示例代码。
 MLU-OPS™ 具体的编译、开发与测试介绍见 [MLU-OPS™算子编译、开发与测试介绍](docs/MLU-OPS-Compile-Develop-And-Test.md)。
