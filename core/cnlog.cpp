@@ -33,7 +33,7 @@
 
 #include "tool.h"
 
-#if defined(WINDOWS) || defined(WIN32)  // used in windows
+#if defined(WINDOWS) || defined(WIN32)  // used in  windows
 
 #include <windows.h>
 #include <process.h>
