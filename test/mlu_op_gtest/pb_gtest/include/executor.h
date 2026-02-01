@@ -45,6 +45,7 @@
 #include "core/type.h"
 #include "core/context.h"
 #include "core/logging.h"
+#include "dispatch_enum2dtype.h"
 #include "tools.h"
 #include "parser.h"
 #include "evaluator.h"
