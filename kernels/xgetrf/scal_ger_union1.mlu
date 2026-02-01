@@ -1,0 +1,1889 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "xgetrf.h"
+#include "xgetrf_utils.h"
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+
+#define N 16
+
+#if taskType == 1
+#define SCALE TaskUnion1
+#elif taskType == 8
+#define SCALE TaskUnion8
+#else
+#error "Unsupported TASK_TYPE value"
+#endif
+
+__mlu_func__ void findMax(float arr[], int index[], int gbindex[],
+                          int &max_core_pos, int cur_core, int length) {
+  int max_index, max_gb_index;
+  float max_value;
+  if (length < 0) {
+    max_value = 0.0f;
+    max_index = -1;
+    return;
+  }
+
+  max_value = arr[0];
+  max_index = index[0];
+  max_gb_index = gbindex[0];
+  max_core_pos = 0;
+
+  for (int i = 1; i < length; ++i) {
+    if ((fabs(arr[i]) > fabs(max_value))) {
+      max_value = arr[i];
+      max_index = index[i];
+      max_gb_index = gbindex[i];
+      max_core_pos = i;
+    }
+  }
+  arr[0] = max_value;
+  index[0] = max_index;
+  gbindex[0] = max_gb_index;
+}
+
+__mlu_func__ void MLUSubKernelCcal_ger(
+    int m, int n, int step, int J, int taskdim, int batch, float *d_rA,
+    float *d_iA, int lda, int ldL1, int *info, int gbstep, int m_per_core,
+    int m_per_core_, int len_extra, int k, int cur, int m_e, float *r_shared_y,
+    float *i_shared_y, float *r_temp, float *i_temp, float *r_L1, float *i_L1,
+    float *r_temp_L1, float *i_temp_L1, float *r_orig, float *i_orig) {
+  float *ii_temp = i_orig + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+  float *ir_temp = ii_temp + MAX_M_SIZE_COMPLEX + N * N + N * 2;
+
+  if ((*info) != 0) return;
+
+  r_L1 = r_L1 + step + step * ldL1;
+  i_L1 = i_L1 + step + step * ldL1;
+  __memcpy(r_shared_y, r_L1, 1 * sizeof(float), NRAM2NRAM, 1 * sizeof(float),
+           ldL1 * sizeof(float), n - 1);
+  __memcpy(i_shared_y, i_L1, 1 * sizeof(float), NRAM2NRAM, 1 * sizeof(float),
+           ldL1 * sizeof(float), n - 1);
+
+  if (r_shared_y[0] * r_shared_y[0] + i_shared_y[0] * i_shared_y[0] == 0) {
+    (*info) = J + step + gbstep;
+    return;
+  }
+
+  int offset_L1 = 0;
+  int of = 1;
+  int elem_count = m_e - of;
+
+  if (k > 0) {
+    offset_L1 += len_extra - 1 - step;
+    of = 0;
+    elem_count = m_per_core;
+  }
+
+  float r_reg, i_reg;
+  float div = r_shared_y[0] * r_shared_y[0] + i_shared_y[0] * i_shared_y[0];
+
+  r_reg = r_shared_y[0] / div;
+  i_reg = -i_shared_y[0] / div;
+
+  if (elem_count > 0) {
+    __bang_mul_scalar(r_temp_L1 + offset_L1 + 1, r_L1 + offset_L1 + 1, r_reg,
+                      elem_count);
+    __bang_mul_scalar(ii_temp + offset_L1 + 1, i_L1 + offset_L1 + 1, i_reg,
+                      elem_count);
+
+    __bang_sub(r_temp_L1 + offset_L1 + 1, r_temp_L1 + offset_L1 + 1,
+               ii_temp + offset_L1 + 1, elem_count);
+    __bang_mul_scalar(i_temp_L1 + offset_L1 + 1, r_L1 + offset_L1 + 1, i_reg,
+                      elem_count);
+
+    __bang_mul_scalar(ir_temp + offset_L1 + 1, i_L1 + offset_L1 + 1, r_reg,
+                      elem_count);
+    __bang_add(i_temp_L1 + offset_L1 + 1, i_temp_L1 + offset_L1 + 1,
+               ir_temp + offset_L1 + 1, elem_count);
+
+    for (int i = 0; i < n - 1; i++) {
+      __bang_mul_scalar(r_temp, r_temp_L1 + offset_L1 + 1,
+                        *(r_shared_y + i + 1), elem_count);
+      __bang_mul_scalar(ii_temp, i_temp_L1 + offset_L1 + 1,
+                        *(i_shared_y + i + 1), elem_count);
+      __bang_sub(r_temp, r_temp, ii_temp, elem_count);
+
+      __bang_mul_scalar(i_temp, r_temp_L1 + offset_L1 + 1,
+                        *(i_shared_y + i + 1), elem_count);
+      __bang_mul_scalar(ir_temp, i_temp_L1 + offset_L1 + 1,
+                        *(r_shared_y + i + 1), elem_count);
+      __bang_add(i_temp, i_temp, ir_temp, elem_count);
+
+      __bang_sub(r_L1 + 1 + offset_L1 + (i + 1) * (ldL1),
+                 r_L1 + 1 + offset_L1 + (i + 1) * (ldL1), r_temp, elem_count);
+      __bang_sub(i_L1 + 1 + offset_L1 + (i + 1) * (ldL1),
+                 i_L1 + 1 + offset_L1 + (i + 1) * (ldL1), i_temp, elem_count);
+    }
+
+    __memcpy(r_L1 + 1 + offset_L1, r_temp_L1 + offset_L1 + 1,
+             (elem_count) * sizeof(float), NRAM2NRAM, ldL1 * sizeof(float),
+             sizeof(float), 0);  // 写回第一列
+    __memcpy(i_L1 + 1 + offset_L1, i_temp_L1 + offset_L1 + 1,
+             (elem_count) * sizeof(float), NRAM2NRAM, ldL1 * sizeof(float),
+             sizeof(float), 0);  // 写回第一列
+  }
+
+  return;
+}
+
+__mlu_global__ void MLUKernelCcal_ger(int batch, int M_size, int N_size, int ib,
+                                      int J, int m, int n, int step,
+                                      float *d_rA, float *d_iA, int lda,
+                                      int stride_a, int *dipiv, int *info,
+                                      int gbstep, int mode) {
+  int id, batch_id, tx, taskdim;
+  if (batch > 1) {
+    id = taskId;
+    batch_id = id / 4;
+    if (batch_id >= batch) return;
+    tx = taskId % 4;
+    d_rA += batch_id * stride_a;
+    d_iA += batch_id * stride_a;
+    taskdim = TaskUnion1;
+  } else {
+    id = taskId;
+    batch_id = 0;
+    taskdim = taskDim;
+    tx = taskId;
+  }
+
+  int gbj, STEP;
+  float *r_shared_y = NRAM_BUFFER;
+  float *r_extra_vec = SRAM_BUFFER;
+  float *r_extra_vec_nram = r_shared_y + N;
+  float *r_temp = r_extra_vec_nram + N * N;
+  float *r_L1 = r_temp + MAX_M_SIZE_COMPLEX + N + N * 2;
+  float *r_temp_L1 = r_L1 + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+  float *r_orig = r_temp_L1 + MAX_M_SIZE_COMPLEX + N + N * 2;
+
+  float *i_shared_y = r_orig + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+  float *i_extra_vec = r_extra_vec + N * N;
+  float *i_extra_vec_nram = i_shared_y + N;
+  float *i_temp = i_extra_vec_nram + N * N;
+  float *i_L1 = i_temp + MAX_M_SIZE_COMPLEX + N + N * 2;
+  float *i_temp_L1 = i_L1 + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+  float *i_orig = i_temp_L1 + MAX_M_SIZE_COMPLEX + N + N * 2;
+
+  float *rA = d_rA + J + J * lda;
+  float *iA = d_iA + J + J * lda;
+
+  if (tx % TaskUnion1 == 0) {
+    __memcpy(r_extra_vec, rA, n * sizeof(float), GDRAM2SRAM, n * sizeof(float),
+             lda * sizeof(float), n - 1);
+    __memcpy(i_extra_vec, iA, n * sizeof(float), GDRAM2SRAM, n * sizeof(float),
+             lda * sizeof(float), n - 1);
+  }
+  __sync_cluster();
+  __memcpy(r_extra_vec_nram, r_extra_vec, n * sizeof(float), SRAM2NRAM,
+           n * sizeof(float), n * sizeof(float), n - 1);
+  __memcpy(i_extra_vec_nram, i_extra_vec, n * sizeof(float), SRAM2NRAM,
+           n * sizeof(float), n * sizeof(float), n - 1);
+
+  int mp = m / taskdim;
+  const int mp_ = mp;
+  int seg = CEILDIV(mp, MAX_M_SIZE_COMPLEX);
+  mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
+  seg = ((tx == taskdim - 1) && (seg == 0)) ? 1 : seg;
+
+  for (int k = 0; k < seg; k++) {
+    int remain_m = mp - k * MAX_M_SIZE_COMPLEX;
+    int m_per_core =
+        remain_m < MAX_M_SIZE_COMPLEX ? remain_m : MAX_M_SIZE_COMPLEX;
+    m_per_core =
+        ((tx == taskdim - 1) && (k == seg - 1)) ? remain_m : m_per_core;
+    const int m_per_core_ = m_per_core;
+    if (m_per_core_ == 0) return;
+
+    int len_extra = 0;
+    int offset = tx * mp_ + k * MAX_M_SIZE_COMPLEX;
+    len_extra = offset <= n ? offset : n;
+
+    if ((len_extra - 1 >= 0 && k == 0)) {
+      __memcpy(r_orig, r_extra_vec_nram, n * sizeof(float), NRAM2NRAM,
+               n * sizeof(float), n * sizeof(float), len_extra - 1);
+      __memcpy(i_orig, i_extra_vec_nram, n * sizeof(float), NRAM2NRAM,
+               n * sizeof(float), n * sizeof(float), len_extra - 1);
+    }
+
+    if (m_per_core - 1 >= 0) {
+      __memcpy(r_orig + len_extra * n,
+               rA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX,
+               n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
+               lda * sizeof(float), m_per_core - 1);
+      __memcpy(i_orig + len_extra * n,
+               iA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX,
+               n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
+               lda * sizeof(float), m_per_core - 1);
+    }
+
+    int m_e = m_per_core + len_extra;
+    const int m_e1 = m_e;
+    int ld_L1 = m_e;
+    const int mm_per_core = m_per_core;
+    const int llen_extra = len_extra;
+
+    if (m_e > 0) {
+      __bang_transpose(r_L1, r_orig, m_e, n);
+      __bang_transpose(i_L1, i_orig, m_e, n);
+    }
+
+    m_e = (k > 0) ? m_per_core : m_e;
+
+    for (STEP = 0; STEP < ib; STEP++) {
+      gbj = J + STEP;
+
+      if (gbj < M_size) {
+        int cur = STEP / m_per_core_;
+        MLUSubKernelCcal_ger(m - gbj, ib - STEP, STEP, J, taskdim, batch, rA,
+                             iA, lda, ld_L1, info, gbstep, m_per_core,
+                             m_per_core_, len_extra, k, cur, m_e, r_shared_y,
+                             i_shared_y, r_temp, i_temp, r_L1, i_L1, r_temp_L1,
+                             i_temp_L1, r_orig, i_orig);
+        m_e--;
+        if (m_e == 0) break;
+      }
+    }
+    // 转置回
+    if (m_e1 > 0) {
+      __bang_transpose(r_orig, r_L1, n, m_e1);
+      __bang_transpose(i_orig, i_L1, n, m_e1);
+    }
+
+    if (mm_per_core - 1 >= 0) {
+      __memcpy(rA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX,
+               r_orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
+               lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+      __memcpy(iA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX,
+               i_orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
+               lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+    }
+  }
+  return;
+}
+
+__mlu_func__ void MLUSubKernelScal_ger(int m, int n, int step, int J,
+                                       int taskdim, int batch, float *dA,
+                                       int lda, int ldL1, int *info, int gbstep,
+                                       int m_per_core, int m_per_core_,
+                                       int len_extra, int k, int cur, int m_e,
+                                       float *shared_y, float *temp, float *L1,
+                                       float *temp_L1, float *orig) {
+  // checkinfo to avoid computation of the singular matrix
+  if ((*info) != 0) return;
+
+  L1 = L1 + step + step * ldL1;
+
+  __memcpy(shared_y, L1, 1 * sizeof(float), NRAM2NRAM, 1 * sizeof(float),
+           ldL1 * sizeof(float), n - 1);
+  if (shared_y[0] == 0) {
+    (*info) = step + gbstep + J;
+    return;
+  }
+
+  int offset_L1 = 0;
+  int of = 1;
+  int elem_count = m_e - of;
+  if (k > 0) {
+    offset_L1 += len_extra - 1 - step;
+    of = 0;
+    elem_count = m_per_core;
+  }
+
+  float reg;
+  reg = 1 / shared_y[0];
+
+  if (elem_count > 0) {
+    __bang_mul_scalar(L1 + 1 + offset_L1, L1 + 1 + offset_L1, reg, elem_count);
+    for (int i = 0; i < n - 1; i++) {
+      __bang_mul_scalar(temp, L1 + 1 + offset_L1, *(shared_y + i + 1),
+                        elem_count);
+      __bang_sub(L1 + 1 + offset_L1 + (i + 1) * (ldL1),
+                 L1 + 1 + offset_L1 + (i + 1) * (ldL1), temp, elem_count);
+    }
+  }
+
+  return;
+}
+
+__mlu_entry__ void MLUKernelScal_ger(int batch, int M_size, int N_size, int ib,
+                                     int J, int m, int n, int step, float *dA,
+                                     int lda, int stride_a, int *dipiv,
+                                     int *info, int gbstep, int mode) {
+  int id, batch_id, tx, taskdim;
+  if (batch > 1) {
+    id = taskId;
+    batch_id = id / 4;
+    if (batch_id >= batch) return;
+    tx = taskId % 4;
+    dA += batch_id * stride_a;
+    taskdim = TaskUnion1;
+  } else {
+    id = taskId;
+    batch_id = 0;
+    taskdim = taskDim;
+    tx = taskId;
+  }
+  // L1 and orig store the matrix assigned to each core, which requires the
+  // largest memory space. (MAX_NRAM_SIZE / 8 - 8 * 1024) ~ (MAX_NRAM_SIZE /
+  // sizeof(float) - T * N * N) calculates the available space for L1 and orig
+  // after accounting for the memory used by the other T variables where T is
+  // less than 8 and N is typically 32, 16 or 8.
+  int gbj, STEP;
+  float *shared_y = NRAM_BUFFER;
+  float *extra_vec = SRAM_BUFFER;
+  float *extra_vec_nram = shared_y + N;
+  float *temp = extra_vec_nram + N * N + N * 2;
+  float *L1 = temp + (MAX_M_SIZE + N + N * 2);
+  float *temp_L1 = L1 + (MAX_NRAM_SIZE / 8 - 8 * 1024);
+  float *orig = temp_L1 + (MAX_M_SIZE + N + N * 2);
+
+  float *A = dA + J + J * lda;
+
+  if (tx % TaskUnion1 == 0)
+    __memcpy(extra_vec, A, n * sizeof(float), GDRAM2SRAM, n * sizeof(float),
+             lda * sizeof(float), n - 1);
+  __sync_cluster();
+  __memcpy(extra_vec_nram, extra_vec, n * sizeof(float), SRAM2NRAM,
+           n * sizeof(float), n * sizeof(float), n - 1);
+
+  int mp = m / taskdim;
+  const int mp_ = mp;
+
+  int seg = CEILDIV(mp, MAX_M_SIZE);
+  mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
+  seg = ((tx == taskdim - 1) && (seg == 0)) ? 1 : seg;
+  for (int k = 0; k < seg; k++) {
+    int remain_m = mp - k * MAX_M_SIZE;
+    int m_per_core = remain_m < MAX_M_SIZE ? remain_m : MAX_M_SIZE;
+    m_per_core =
+        ((tx == taskdim - 1) && (k == seg - 1)) ? remain_m : m_per_core;
+    const int m_per_core_ = m_per_core;
+    if (m_per_core_ == 0) return;
+
+    int len_extra = 0;
+    int offset = tx * mp_ + k * MAX_M_SIZE;
+    len_extra = offset <= n ? offset : n;
+
+    if ((len_extra - 1 >= 0 && k == 0))
+      __memcpy(orig, extra_vec_nram, n * sizeof(float), NRAM2NRAM,
+               n * sizeof(float), n * sizeof(float), len_extra - 1);
+    if (m_per_core - 1 >= 0)
+      __memcpy(orig + len_extra * n, A + tx * lda * mp_ + k * lda * MAX_M_SIZE,
+               n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
+               lda * sizeof(float), m_per_core - 1);
+
+    int m_e = m_per_core + len_extra;
+    const int m_e1 = m_e;
+    int ld_L1 = m_e;
+    const int mm_per_core = m_per_core;
+    const int llen_extra = len_extra;
+
+    if (m_e > 0) __bang_transpose(L1, orig, m_e, n);
+
+    m_e = (k > 0) ? m_per_core : m_e;
+    for (STEP = 0; STEP < ib; STEP++) {
+      gbj = J + STEP;
+      if (gbj < M_size) {
+        int cur = STEP / m_per_core_;
+        MLUSubKernelScal_ger(m - gbj, ib - STEP, STEP, J, taskdim, batch, A,
+                             lda, ld_L1, info, gbstep, m_per_core, m_per_core_,
+                             len_extra, k, cur, m_e, shared_y, temp, L1,
+                             temp_L1, orig);
+
+        m_e--;
+        if (m_e == 0) break;
+      }
+    }
+
+    if (m_e1 > 0) __bang_transpose(orig, L1, n, m_e1);
+
+    if (mm_per_core - 1 >= 0) {
+      __memcpy(A + tx * lda * mp_ + k * lda * MAX_M_SIZE, orig + llen_extra * n,
+               n * sizeof(float), NRAM2GDRAM, lda * sizeof(float),
+               n * sizeof(float), mm_per_core - 1);
+    }
+  }
+  return;
+}
+// Handle the complex matrix pivoting for the given segment
+__mlu_func__ void MLUKernelCPivot(int m, int n, int step, int batch, int M_size,
+                                  int N_size, int k, float *d_rA, float *d_iA,
+                                  int lda, int stride_a, float *r_orig,
+                                  float *i_orig, int ld_orig, int len_extra,
+                                  int m_e, float *k_max, int *k_max_idx,
+                                  int *k_max_gbidx, int tx, int taskdim,
+                                  int batch_id, int mp, int mp_, int m_per_core,
+                                  int m_per_core_, int *dipiv, int *dipiv2,
+                                  int *info, int gbstep) {
+  float *r_src_nram = r_orig;
+  float *i_src_nram = i_orig;
+  float *sram_buffer = SRAM_BUFFER + (4 + 2 * N) * N +
+                       3 * MAX_M_SIZE_COMPLEX_PIVOT + MAX_SRAM_SIZE / 8;
+  int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
+  int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
+  int max_core_pos = -1;
+
+  __sramset(sram_buffer, TaskUnion1, 0);
+  __sramset(sram_buffer_idx, TaskUnion1, -1);
+  __sramset(sram_buffer_gb_idx, TaskUnion1, -1);
+  __sync_cluster();
+  int cur_core, cur_core_row, len, start;
+
+  start = 0;
+
+  if (m_e > 0) {
+    if (mp_ == 0) {
+      cur_core = taskdim - 1;
+      cur_core_row = step;
+    } else {
+      cur_core = step / mp_;
+      cur_core_row =
+          (k > 0) ? step % MAX_M_SIZE_COMPLEX_PIVOT : step % m_per_core;
+    }
+
+    if (tx < cur_core) {
+      len = m_per_core - step;
+    } else if (tx == cur_core) {
+      len = (k > 0) ? m_per_core : m_per_core - cur_core_row;
+    } else {
+      len = m_per_core;
+    }
+
+    if (len > 0) {
+      start = (len_extra - step >= 0) ? 0 : step;
+      r_src_nram = r_orig + start;
+      i_src_nram = i_orig + start;
+
+      float absmax = FABS(r_src_nram[0]) + FABS(i_src_nram[0]);
+      int max_gb_pos =
+          0 + (m_per_core - len) + tx * mp_ + k * MAX_M_SIZE_COMPLEX_PIVOT;
+      int max_pos = 0;
+
+      __bang_abs(r_src_nram, r_src_nram, len);
+      __bang_abs(i_src_nram, i_src_nram, len);
+      __bang_add(r_src_nram, r_src_nram, i_src_nram, len);
+      __bang_argmax(r_src_nram, r_src_nram, len);
+      absmax = r_src_nram[0];
+      max_pos = ((int *)r_src_nram)[1];
+      max_gb_pos = max_pos + (m_per_core - len) + tx * mp_ +
+                   k * MAX_M_SIZE_COMPLEX_PIVOT;
+
+      sram_buffer[tx % TaskUnion1] = absmax;
+      sram_buffer_idx[tx % TaskUnion1] = max_pos;
+      sram_buffer_gb_idx[tx % TaskUnion1] = max_gb_pos;
+    }
+  }
+
+  __sync_cluster();
+  if (m_e > 0) {
+    findMax(sram_buffer, sram_buffer_idx, sram_buffer_gb_idx, max_core_pos,
+            cur_core, TaskUnion1);
+    k_max[k] = sram_buffer[0];
+    k_max_idx[k] = sram_buffer_idx[0];
+    k_max_gbidx[k] = sram_buffer_gb_idx[0];
+  }
+  __sync_cluster();
+}
+// Swap rows based on the pivoting results to maintain correctness for complex
+__mlu_func__ void MLUKernelCKSwap(int m, int n, int step, int batch, int M_size,
+                                  int N_size, float *d_rA, float *d_iA, int lda,
+                                  int stride_a, float *r_orig, float *i_orig,
+                                  int ld_orig, int m_per_core, float *k_max,
+                                  int *k_max_idx, int *k_max_gbidx,
+                                  float *r_k_max_arr, float *i_k_max_arr,
+                                  int tx, int taskdim, int batch_id, int mp,
+                                  int mp_, int *dipiv, int *dipiv2, int *pivot,
+                                  int *info, int J, int gbstep) {
+  float *rA = d_rA;
+  float *iA = d_iA;
+
+  if (m_per_core > 0) {
+    if (tx == taskdim - 1) {
+      __memcpy(r_k_max_arr, rA + k_max_gbidx[0] * lda,
+               (n + step) * sizeof(float), LDRAM2SRAM);
+      __memcpy(i_k_max_arr, iA + k_max_gbidx[0] * lda,
+               (n + step) * sizeof(float), LDRAM2SRAM);
+
+      __memcpy(rA + k_max_gbidx[0] * lda, rA + step * lda,
+               (n + step) * sizeof(float), GDRAM2GDRAM);
+      __memcpy(iA + k_max_gbidx[0] * lda, iA + step * lda,
+               (n + step) * sizeof(float), GDRAM2GDRAM);
+
+      __memcpy(rA + step * lda, r_k_max_arr, (n + step) * sizeof(float),
+               SRAM2LDRAM);
+      __memcpy(iA + step * lda, i_k_max_arr, (n + step) * sizeof(float),
+               SRAM2LDRAM);
+
+      int temp = dipiv[step];
+      dipiv[step] = dipiv[k_max_gbidx[0]];
+      dipiv[k_max_gbidx[0]] = temp;
+      pivot[step] = k_max_gbidx[0] + 1 + J + gbstep;  // 1-indexing
+
+      int temp2 = dipiv2[step];
+      dipiv2[step] = dipiv2[k_max_gbidx[0]];
+      dipiv2[k_max_gbidx[0]] = temp2;
+    }
+  }
+  __sync_cluster();
+}
+// Swap rows based on the pivoting results to maintain correctness
+__mlu_func__ void MLUKernelKSwap(int m, int n, int step, int batch, int M_size,
+                                 int N_size, float *dA, int lda, int stride_a,
+                                 float *orig, int ld_orig, int m_per_core,
+                                 float *k_max, int *k_max_idx, int *k_max_gbidx,
+                                 float *k_max_arr, int tx, int taskdim,
+                                 int batch_id, int mp, int mp_, int *dipiv,
+                                 int *dipiv2, int *pivot, int *info, int J,
+                                 int gbstep) {
+  float *A = dA;
+
+  if (m_per_core > 0) {
+    if (tx == taskdim - 1) {
+      __memcpy(k_max_arr, A + k_max_gbidx[0] * lda, (n + step) * sizeof(float),
+               LDRAM2SRAM);
+      __memcpy(A + k_max_gbidx[0] * lda, A + step * lda,
+               (n + step) * sizeof(float), GDRAM2GDRAM);
+      __memcpy(A + step * lda, k_max_arr, (n + step) * sizeof(float),
+               SRAM2LDRAM);
+
+      int temp = dipiv[step];
+      dipiv[step] = dipiv[k_max_gbidx[0]];
+      dipiv[k_max_gbidx[0]] = temp;
+      pivot[step] = k_max_gbidx[0] + 1 + J + gbstep;
+
+      int temp2 = dipiv2[step];
+      dipiv2[step] = dipiv2[k_max_gbidx[0]];
+      dipiv2[k_max_gbidx[0]] = temp2;
+    }
+  }
+  __sync_cluster();
+}
+// Handle the matrix pivoting for the given segment
+__mlu_func__ void MLUKernelPivot(int m, int n, int step, int batch, int M_size,
+                                 int N_size, int k, float *dA, int lda,
+                                 int stride_a, float *orig, int ld_orig,
+                                 int len_extra, int m_e, float *k_max,
+                                 int *k_max_idx, int *k_max_gbidx, int tx,
+                                 int taskdim, int batch_id, int mp, int mp_,
+                                 int m_per_core, int m_per_core_, int *dipiv,
+                                 int *dipiv2, int *info, int gbstep) {
+  float *src_nram = orig;
+  float *sram_buffer =
+      SRAM_BUFFER + 3 * MAX_M_SIZE_PIVOT + (N + 2) * N + MAX_SRAM_SIZE / 8;
+  int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
+  int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
+  int max_core_pos = -1;
+
+  __sramset(sram_buffer, TaskUnion1, 0);
+  __sramset(sram_buffer_idx, TaskUnion1, -1);
+
+  __sync_cluster();
+  int cur_core, cur_core_row, len, start;
+
+  start = 0;
+
+  if (m_e > 0) {
+    if (mp_ == 0) {
+      cur_core = taskdim - 1;
+      cur_core_row = step;
+    } else {
+      cur_core = step / mp_;
+      cur_core_row = (k > 0) ? step % MAX_M_SIZE_PIVOT : step % m_per_core;
+    }
+
+    if (tx < cur_core) {
+      len = m_per_core - step;
+    } else if (tx == cur_core) {
+      len = (k > 0) ? m_per_core : m_per_core - cur_core_row;
+    } else {
+      len = m_per_core;
+    }
+    if (len > 0) {
+      start = (len_extra - step >= 0) ? 0 : step;
+      src_nram = orig + start;
+
+      float absmax = std::fabs(src_nram[0]);
+      int max_gb_pos = 0 + (m_per_core - len) + tx * mp_ + k * MAX_M_SIZE_PIVOT;
+      int max_pos = 0;
+
+      __bang_abs(src_nram, src_nram, len);
+      __bang_argmax(src_nram, src_nram, len);
+      absmax = src_nram[0];
+      max_pos = ((int *)src_nram)[1];
+      max_gb_pos =
+          max_pos + (m_per_core - len) + tx * mp_ + k * MAX_M_SIZE_PIVOT;
+
+      sram_buffer[tx % TaskUnion1] = absmax;
+      sram_buffer_idx[tx % TaskUnion1] = max_pos;
+      sram_buffer_gb_idx[tx % TaskUnion1] = max_gb_pos;
+    }
+  }
+
+  __sync_cluster();
+  if (m_e > 0) {
+    findMax(sram_buffer, sram_buffer_idx, sram_buffer_gb_idx, max_core_pos,
+            cur_core, TaskUnion1);
+    k_max_idx[k] = sram_buffer_idx[0];
+    k_max_gbidx[k] = sram_buffer_gb_idx[0];
+  }
+  __sync_cluster();
+}
+// Handle pivoting and swapping for large-scale matrices
+__mlu_func__ void MLUKernelPivotSwap2(
+    int m, int n, int step, int batch, int M_size, int N_size, float *dA,
+    int lda, int stride_a, float *workspace, float *L1, int ldL1, float *orig,
+    int ld_orig, int len_extra, int m_e, float *max_arr, float *max_arr_vec,
+    int *max_idx, int *max_gbidx, float *shared_y, int tx, int taskdim,
+    int batch_id, int m_per_core, int m_per_core_, int *dipiv, int *dipiv2,
+    int *pivot, int *info, int J, int gbstep) {
+  float *src_nram = L1;
+  float *src_nram1 = orig;
+  float *sram_buffer =
+      SRAM_BUFFER + 3 * MAX_M_SIZE_PIVOT + (N + 2) * N + MAX_SRAM_SIZE / 8;
+  int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
+  int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
+  int max_core_pos = -1;
+  int max_cluster_pos = -1;
+
+  __sramset(sram_buffer, TaskUnion1, 0);
+  __sramset(sram_buffer_idx, TaskUnion1, -1);
+  __sramset(sram_buffer_gb_idx, TaskUnion1, -1);
+  __gdramset(max_arr, taskdim, 0);
+  __gdramset(max_idx, taskdim, -1);
+  __gdramset(max_gbidx, taskdim, -1);
+
+  __sync_cluster();
+  int cur_core, cur_core_row, len, start;
+
+  start = (len_extra - step >= 0) ? len_extra - step : 0;
+
+  if (m_e > 0) {
+    if (m_per_core_ == 0) {
+      cur_core = taskdim - 1;
+      cur_core_row = step;
+    } else {
+      if (step < (taskdim - 1) * m_per_core_) {
+        cur_core = step / m_per_core_;
+        cur_core_row = step % m_per_core_;
+      } else {
+        cur_core = taskdim - 1;
+        cur_core_row = (step - (taskdim - 1) * m_per_core_);
+      }
+    }
+
+    if (tx < cur_core) {
+      len = m_per_core - step;
+    } else if (tx == cur_core) {
+      len = m_per_core - cur_core_row;
+    } else {
+      len = m_per_core;
+    }
+    if (len > 0) {
+      src_nram = L1 + start + step + step * ldL1;
+      float absmax = std::fabs(src_nram[0]);
+      int max_gb_pos = 0 + (m_per_core - len) + tx * m_per_core_;
+      int max_pos = 0;
+
+      __bang_abs(src_nram1, src_nram, len);
+      __bang_argmax(src_nram1, src_nram1, len);
+      absmax = src_nram1[0];
+      max_pos = ((int *)src_nram1)[1];
+      max_gb_pos = max_pos + (m_per_core - len) + tx * m_per_core_;
+
+      sram_buffer[tx % TaskUnion1] = absmax;
+      sram_buffer_idx[tx % TaskUnion1] = max_pos;
+      sram_buffer_gb_idx[tx % TaskUnion1] = max_gb_pos;
+    }
+  }
+
+  __sync_all();
+  if (m_e > 0) {
+    findMax(sram_buffer, sram_buffer_idx, sram_buffer_gb_idx, max_core_pos,
+            cur_core, TaskUnion1);
+    max_arr[clusterId] = sram_buffer[0];
+    max_idx[clusterId] = sram_buffer_idx[0];
+    max_gbidx[clusterId] = sram_buffer_gb_idx[0];
+  }
+  __sync_all();
+  if (m_e > 0) {
+    int cur_cluster = cur_core / TaskUnion1;
+    findMax(max_arr, max_idx, max_gbidx, max_cluster_pos, cur_cluster,
+            clusterDim);
+  }
+  __sync_all();
+  if (m_e > 0) {
+    if (tx == cur_core) {
+      __memcpy(max_arr_vec, L1 + start + step, 1 * sizeof(float), NRAM2GDRAM,
+               1 * sizeof(float), ldL1 * sizeof(float), n + step - 1);
+    }
+  }
+  __sync_all();
+  if (m_e > 0) {
+    if ((clusterId == max_cluster_pos) && (tx % TaskUnion1 == max_core_pos)) {
+      __memcpy(max_arr_vec + N, L1 + start + step + max_idx[0],
+               1 * sizeof(float), NRAM2GDRAM, 1 * sizeof(float),
+               ldL1 * sizeof(float), n + step - 1);
+      __memcpy(L1 + start + step + max_idx[0], max_arr_vec, 1 * sizeof(float),
+               GDRAM2NRAM, ldL1 * sizeof(float), 1 * sizeof(float),
+               n + step - 1);
+    }
+  }
+  __sync_all();
+  if (m_e > 0) {
+    if (tx == cur_core) {
+      __memcpy(L1 + start + step, max_arr_vec + N, 1 * sizeof(float),
+               GDRAM2NRAM, ldL1 * sizeof(float), 1 * sizeof(float),
+               n + step - 1);
+    }
+    __memcpy(shared_y, max_arr_vec + N + step, n * sizeof(float), GDRAM2NRAM);
+
+    int cur_row = step;
+    int max_row = (max_gbidx[0] - step) > 0 ? max_gbidx[0] : step;
+    if (tx == taskdim - 1) {
+      int temp = dipiv[cur_row];
+      dipiv[cur_row] = dipiv[max_row];
+      dipiv[max_row] = temp;
+      pivot[cur_row] = max_row + 1 + J + gbstep;
+
+      int temp2 = dipiv2[cur_row];
+      dipiv2[cur_row] = dipiv2[max_row];
+      dipiv2[max_row] = temp2;
+    }
+  }
+  __sync_all();
+}
+// Handle pivoting and swapping for smaller-scale matrices
+__mlu_func__ void MLUKernelPivotSwap(
+    int m, int n, int step, int batch, int M_size, int N_size, float *dA,
+    int lda, int stride_a, float *workspace, float *L1, int ldL1, float *orig,
+    int ld_orig, int len_extra, int m_e, float *max_arr, float *max_arr_vec,
+    int *max_idx, float *shared_y, int tx, int taskdim, int batch_id,
+    int m_per_core, int m_per_core_, int *dipiv, int *dipiv2, int *pivot,
+    int *info, int J, int gbstep) {
+  float *src_nram = L1;
+  float *src_nram1 = orig;
+  float *sram_buffer =
+      SRAM_BUFFER + 3 * MAX_M_SIZE_PIVOT + (N + 2) * N + MAX_SRAM_SIZE / 8;
+  int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
+  int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
+  float *sram_buffer_arr = (float *)sram_buffer_idx + TaskUnion1;
+  int max_core_pos = -1;
+
+  __sramset(sram_buffer, TaskUnion1, 0);
+  __sramset(sram_buffer_idx, TaskUnion1, -1);
+
+  __sync_cluster();
+  int cur_core, cur_core_row, len, start;
+
+  start = (len_extra - step >= 0) ? len_extra - step : 0;
+
+  if (m_e > 0) {
+    if (m_per_core_ == 0) {
+      cur_core = taskdim - 1;
+      cur_core_row = step;
+    } else {
+      if (step < (taskdim - 1) * m_per_core_) {
+        cur_core = step / m_per_core_;
+        cur_core_row = step % m_per_core_;
+      } else {
+        cur_core = taskdim - 1;
+        cur_core_row = (step - (taskdim - 1) * m_per_core_);
+      }
+    }
+    if (tx < cur_core) {
+      len = m_per_core - step;
+    } else if (tx == cur_core) {
+      len = m_per_core - cur_core_row;
+    } else {
+      len = m_per_core;
+    }
+    if (len > 0) {
+      src_nram = L1 + start + step + step * ldL1;
+      float absmax = std::fabs(src_nram[0]);
+      int max_gb_pos = 0 + (m_per_core - len) + tx * m_per_core_;
+      int max_pos = 0;
+
+      __bang_abs(src_nram1, src_nram, len);
+      __bang_argmax(src_nram1, src_nram1, len);
+      absmax = src_nram1[0];
+      max_pos = ((int *)src_nram1)[1];
+      max_gb_pos = max_pos + (m_per_core - len) + tx * m_per_core_;
+
+      sram_buffer[tx % TaskUnion1] = absmax;
+      sram_buffer_idx[tx % TaskUnion1] = max_pos;
+      sram_buffer_gb_idx[tx % TaskUnion1] = max_gb_pos;
+    }
+  }
+
+  __sync_cluster();
+  if (m_e > 0) {
+    findMax(sram_buffer, sram_buffer_idx, sram_buffer_gb_idx, max_core_pos,
+            cur_core, TaskUnion1);
+  }
+  if (m_e > 0) {
+    if (tx == cur_core) {
+      __memcpy(sram_buffer_arr, L1 + start + step, 1 * sizeof(float), NRAM2SRAM,
+               1 * sizeof(float), ldL1 * sizeof(float), n + step - 1);
+    }
+  }
+  __sync_cluster();
+  if (m_e > 0) {
+    if (tx == max_core_pos) {
+      __memcpy(sram_buffer_arr + N, L1 + start + step + sram_buffer_idx[0],
+               1 * sizeof(float), NRAM2SRAM, 1 * sizeof(float),
+               ldL1 * sizeof(float), n + step - 1);
+      __memcpy(L1 + start + step + sram_buffer_idx[0], sram_buffer_arr,
+               1 * sizeof(float), SRAM2NRAM, ldL1 * sizeof(float),
+               1 * sizeof(float), n + step - 1);
+    }
+  }
+  __sync_cluster();
+  if (m_e > 0) {
+    if (tx == cur_core) {
+      __memcpy(L1 + start + step, sram_buffer_arr + N, 1 * sizeof(float),
+               SRAM2NRAM, ldL1 * sizeof(float), 1 * sizeof(float),
+               n + step - 1);
+    }
+
+    __memcpy(shared_y, sram_buffer_arr + N + step, n * sizeof(float),
+             SRAM2NRAM);
+
+    int cur_row = step;
+    int max_row =
+        (sram_buffer_gb_idx[0] - step) > 0 ? sram_buffer_gb_idx[0] : step;
+
+    if (tx == taskdim - 1) {
+      int temp = dipiv[cur_row];
+      dipiv[cur_row] = dipiv[max_row];
+      dipiv[max_row] = temp;
+      pivot[cur_row] = max_row + 1 + J + gbstep;
+
+      int temp2 = dipiv2[cur_row];
+      dipiv2[cur_row] = dipiv2[max_row];
+      dipiv2[max_row] = temp2;
+    }
+  }
+  __sync_cluster();
+}
+// Handle pivoting and swapping for large-scale complex matrices
+__mlu_func__ void MLUKernelCPivotSwap2(
+    int m, int n, int step, int batch, int M_size, int N_size, float *r_L1,
+    float *i_L1, int ldL1, float *r_orig, float *i_orig, int ld_orig,
+    int len_extra, int m_e, float *max_arr, float *r_max_arr_vec,
+    float *i_max_arr_vec, int *max_idx, int *max_gbidx, float *r_shared_y,
+    float *i_shared_y, int tx, int taskdim, int batch_id, int m_per_core,
+    int m_per_core_, int *dipiv, int *dipiv2, int *pivot, int *info, int J,
+    int gbstep) {
+  float *r_src_nram = r_L1;
+  float *i_src_nram = i_L1;
+  float *r_src_nram1 = r_orig;
+  float *i_src_nram1 = i_orig;
+  float *sram_buffer = SRAM_BUFFER + (4 + 2 * N) * N +
+                       3 * MAX_M_SIZE_COMPLEX_PIVOT + MAX_SRAM_SIZE / 8;
+  int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
+  int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
+  int max_core_pos = -1;
+  int max_cluster_pos = -1;
+
+  __sramset(sram_buffer, TaskUnion1, 0);
+  __sramset(sram_buffer_idx, TaskUnion1, -1);
+  __sramset(sram_buffer_gb_idx, TaskUnion1, -1);
+  __gdramset(max_arr, taskdim, 0);
+  __gdramset(max_idx, taskdim, -1);
+  __gdramset(max_gbidx, taskdim, -1);
+
+  __sync_cluster();
+  int cur_core, cur_core_row, len, start;
+  start = (len_extra - step >= 0) ? len_extra - step : 0;
+
+  if (m_e > 0) {
+    if (m_per_core_ == 0) {
+      cur_core = taskdim - 1;
+      cur_core_row = step;
+    } else {
+      if (step < (taskdim - 1) * m_per_core_) {
+        cur_core = step / m_per_core_;
+        cur_core_row = step % m_per_core_;
+      } else {
+        cur_core = taskdim - 1;
+        cur_core_row = (step - (taskdim - 1) * m_per_core_);
+      }
+    }
+
+    if (tx < cur_core) {
+      len = m_per_core - step;
+    } else if (tx == cur_core) {
+      len = m_per_core - cur_core_row;
+    } else {
+      len = m_per_core;
+    }
+    if (len > 0) {
+      r_src_nram = r_L1 + start + step + step * ldL1;
+      i_src_nram = i_L1 + start + step + step * ldL1;
+
+      float absmax = FABS(r_src_nram[0]) + FABS(i_src_nram[0]);
+      int max_gb_pos = 0 + (m_per_core - len) + tx * m_per_core_;
+      int max_pos = 0;
+
+      __bang_abs(r_src_nram1, r_src_nram, len);
+      __bang_abs(i_src_nram1, i_src_nram, len);
+      __bang_add(r_src_nram1, r_src_nram1, i_src_nram1, len);
+      __bang_argmax(r_src_nram1, r_src_nram1, len);
+      absmax = r_src_nram1[0];
+      max_pos = ((int *)r_src_nram1)[1];
+      max_gb_pos = max_pos + (m_per_core - len) + tx * m_per_core_;
+
+      sram_buffer[tx % TaskUnion1] = absmax;
+      sram_buffer_idx[tx % TaskUnion1] = max_pos;
+      sram_buffer_gb_idx[tx % TaskUnion1] = max_gb_pos;
+    }
+  }
+
+  __sync_all();
+  if (m_e > 0) {
+    findMax(sram_buffer, sram_buffer_idx, sram_buffer_gb_idx, max_core_pos,
+            cur_core, TaskUnion1);
+    max_arr[clusterId] = sram_buffer[0];
+    max_idx[clusterId] = sram_buffer_idx[0];
+    max_gbidx[clusterId] = sram_buffer_gb_idx[0];
+  }
+  __sync_all();
+  if (m_e > 0) {
+    int cur_cluster = cur_core / TaskUnion1;
+    findMax(max_arr, max_idx, max_gbidx, max_cluster_pos, cur_cluster,
+            clusterDim);
+  }
+  __sync_all();
+  if (m_e > 0) {
+    if (tx == cur_core) {
+      __memcpy(r_max_arr_vec, r_L1 + start + step, 1 * sizeof(float),
+               NRAM2GDRAM, 1 * sizeof(float), ldL1 * sizeof(float),
+               n + step - 1);
+      __memcpy(i_max_arr_vec, i_L1 + start + step, 1 * sizeof(float),
+               NRAM2GDRAM, 1 * sizeof(float), ldL1 * sizeof(float),
+               n + step - 1);
+    }
+  }
+  __sync_all();
+  if (m_e > 0) {
+    if ((clusterId == max_cluster_pos) && (tx % TaskUnion1 == max_core_pos)) {
+      __memcpy(r_max_arr_vec + N, r_L1 + start + step + max_idx[0],
+               1 * sizeof(float), NRAM2GDRAM, 1 * sizeof(float),
+               ldL1 * sizeof(float), n + step - 1);
+      __memcpy(i_max_arr_vec + N, i_L1 + start + step + max_idx[0],
+               1 * sizeof(float), NRAM2GDRAM, 1 * sizeof(float),
+               ldL1 * sizeof(float), n + step - 1);
+
+      __memcpy(r_L1 + start + step + max_idx[0], r_max_arr_vec,
+               1 * sizeof(float), GDRAM2NRAM, ldL1 * sizeof(float),
+               1 * sizeof(float), n + step - 1);
+      __memcpy(i_L1 + start + step + max_idx[0], i_max_arr_vec,
+               1 * sizeof(float), GDRAM2NRAM, ldL1 * sizeof(float),
+               1 * sizeof(float), n + step - 1);
+    }
+  }
+  __sync_all();
+  if (m_e > 0) {
+    if (tx == cur_core) {
+      __memcpy(r_L1 + start + step, r_max_arr_vec + N, 1 * sizeof(float),
+               GDRAM2NRAM, ldL1 * sizeof(float), 1 * sizeof(float),
+               n + step - 1);
+      __memcpy(i_L1 + start + step, i_max_arr_vec + N, 1 * sizeof(float),
+               GDRAM2NRAM, ldL1 * sizeof(float), 1 * sizeof(float),
+               n + step - 1);
+    }
+
+    __memcpy(r_shared_y, r_max_arr_vec + N + step, n * sizeof(float),
+             GDRAM2NRAM);
+    __memcpy(i_shared_y, i_max_arr_vec + N + step, n * sizeof(float),
+             GDRAM2NRAM);
+
+    int cur_row = step;
+    int max_row = (max_gbidx[0] - step) > 0 ? max_gbidx[0] : step;
+
+    if (tx == taskdim - 1) {
+      int temp = dipiv[cur_row];
+      dipiv[cur_row] = dipiv[max_row];
+      dipiv[max_row] = temp;
+      pivot[cur_row] = max_row + 1 + J + gbstep;
+
+      int temp2 = dipiv2[cur_row];
+      dipiv2[cur_row] = dipiv2[max_row];
+      dipiv2[max_row] = temp2;
+    }
+  }
+  __sync_all();
+}
+// Handle pivoting and swapping for smaller-scale complex matrices
+__mlu_func__ void MLUKernelCPivotSwap(
+    int m, int n, int step, int batch, int M_size, int N_size, float *r_L1,
+    float *i_L1, int ldL1, float *r_orig, float *i_orig, int ld_orig,
+    int len_extra, int m_e, float *max_arr, float *r_max_arr_vec,
+    float *i_max_arr_vec, int *max_idx, float *r_shared_y, float *i_shared_y,
+    int tx, int taskdim, int batch_id, int m_per_core, int m_per_core_,
+    int *dipiv, int *dipiv2, int *pivot, int *info, int J, int gbstep) {
+  float *r_src_nram = r_L1;
+  float *i_src_nram = i_L1;
+  float *r_src_nram1 = r_orig;
+  float *i_src_nram1 = i_orig;
+  float *sram_buffer = SRAM_BUFFER + (4 + 2 * N) * N +
+                       3 * MAX_M_SIZE_COMPLEX_PIVOT + MAX_SRAM_SIZE / 8;
+  int *sram_buffer_gb_idx = (int *)sram_buffer + TaskUnion1;
+  int *sram_buffer_idx = sram_buffer_gb_idx + TaskUnion1;
+  float *r_sram_buffer_arr = (float *)sram_buffer_idx + TaskUnion1;
+  float *i_sram_buffer_arr = r_sram_buffer_arr + 3 * N;
+  int max_core_pos = -1;
+
+  __sramset(sram_buffer, TaskUnion1, 0);
+  __sramset(sram_buffer_idx, TaskUnion1, -1);
+
+  __sync_cluster();
+  int cur_core, cur_core_row, len, start;
+
+  start = (len_extra - step >= 0) ? len_extra - step : 0;
+
+  if (m_e > 0) {
+    if (m_per_core_ == 0) {
+      cur_core = taskdim - 1;
+      cur_core_row = step;
+    } else {
+      if (step < (taskdim - 1) * m_per_core_) {
+        cur_core = step / m_per_core_;
+        cur_core_row = step % m_per_core_;
+      } else {
+        cur_core = taskdim - 1;
+        cur_core_row = (step - (taskdim - 1) * m_per_core_);
+      }
+    }
+
+    if (tx < cur_core) {
+      len = m_per_core - step;
+    } else if (tx == cur_core) {
+      len = m_per_core - cur_core_row;
+    } else {
+      len = m_per_core;
+    }
+    if (len > 0) {
+      r_src_nram = r_L1 + start + step + step * ldL1;
+      i_src_nram = i_L1 + start + step + step * ldL1;
+
+      float absmax = FABS(r_src_nram[0]) + FABS(i_src_nram[0]);
+      int max_gb_pos = 0 + (m_per_core - len) + tx * m_per_core_;
+      int max_pos = 0;
+
+      __bang_abs(r_src_nram1, r_src_nram, len);
+      __bang_abs(i_src_nram1, i_src_nram, len);
+      __bang_add(r_src_nram1, r_src_nram1, i_src_nram1, len);
+      __bang_argmax(r_src_nram1, r_src_nram1, len);
+      absmax = r_src_nram1[0];
+      max_pos = ((int *)r_src_nram1)[1];
+      max_gb_pos = max_pos + (m_per_core - len) + tx * m_per_core_;
+
+      sram_buffer[tx % TaskUnion1] = absmax;
+      sram_buffer_idx[tx % TaskUnion1] = max_pos;
+      sram_buffer_gb_idx[tx % TaskUnion1] = max_gb_pos;
+    }
+  }
+
+  __sync_cluster();
+  if (m_e > 0) {
+    findMax(sram_buffer, sram_buffer_idx, sram_buffer_gb_idx, max_core_pos,
+            cur_core, TaskUnion1);
+  }
+  if (m_e > 0) {
+    if (tx == cur_core) {
+      __memcpy(r_sram_buffer_arr, r_L1 + start + step, 1 * sizeof(float),
+               NRAM2SRAM, 1 * sizeof(float), ldL1 * sizeof(float),
+               n + step - 1);
+      __memcpy(i_sram_buffer_arr, i_L1 + start + step, 1 * sizeof(float),
+               NRAM2SRAM, 1 * sizeof(float), ldL1 * sizeof(float),
+               n + step - 1);
+    }
+  }
+  __sync_cluster();
+  if (m_e > 0) {
+    if (tx == max_core_pos) {
+      __memcpy(r_sram_buffer_arr + N, r_L1 + start + step + sram_buffer_idx[0],
+               1 * sizeof(float), NRAM2SRAM, 1 * sizeof(float),
+               ldL1 * sizeof(float), n + step - 1);
+      __memcpy(i_sram_buffer_arr + N, i_L1 + start + step + sram_buffer_idx[0],
+               1 * sizeof(float), NRAM2SRAM, 1 * sizeof(float),
+               ldL1 * sizeof(float), n + step - 1);
+
+      __memcpy(r_L1 + start + step + sram_buffer_idx[0], r_sram_buffer_arr,
+               1 * sizeof(float), SRAM2NRAM, ldL1 * sizeof(float),
+               1 * sizeof(float), n + step - 1);
+      __memcpy(i_L1 + start + step + sram_buffer_idx[0], i_sram_buffer_arr,
+               1 * sizeof(float), SRAM2NRAM, ldL1 * sizeof(float),
+               1 * sizeof(float), n + step - 1);
+    }
+  }
+  __sync_cluster();
+  if (m_e > 0) {
+    if (tx == cur_core) {
+      __memcpy(r_L1 + start + step, r_sram_buffer_arr + N, 1 * sizeof(float),
+               SRAM2NRAM, ldL1 * sizeof(float), 1 * sizeof(float),
+               n + step - 1);
+      __memcpy(i_L1 + start + step, i_sram_buffer_arr + N, 1 * sizeof(float),
+               SRAM2NRAM, ldL1 * sizeof(float), 1 * sizeof(float),
+               n + step - 1);
+    }
+
+    __memcpy(r_shared_y, r_sram_buffer_arr + N + step, n * sizeof(float),
+             SRAM2NRAM);
+    __memcpy(i_shared_y, i_sram_buffer_arr + N + step, n * sizeof(float),
+             SRAM2NRAM);
+
+    int cur_row = step;
+    int max_row =
+        (sram_buffer_gb_idx[0] - step) > 0 ? sram_buffer_gb_idx[0] : step;
+
+    if (tx == taskdim - 1) {
+      int temp = dipiv[cur_row];
+      dipiv[cur_row] = dipiv[max_row];
+      dipiv[max_row] = temp;
+      pivot[cur_row] = max_row + 1 + J + gbstep;
+
+      int temp2 = dipiv2[cur_row];
+      dipiv2[cur_row] = dipiv2[max_row];
+      dipiv2[max_row] = temp2;
+    }
+  }
+  __sync_cluster();
+}
+
+__mlu_func__ void MLUSubKernelScal_ger_pivot(
+    int m, int n, int step, int J, int taskdim, int batch, float *dA, int lda,
+    int ldL1, int *info, int gbstep, int m_per_core, int m_per_core_,
+    int len_extra, int k, int m_e, float *shared_y, float *temp, float *L1,
+    float *orig) {
+  if (m_e <= 0) return;
+
+  if ((*info) != 0) return;
+
+  L1 = L1 + step + step * ldL1;
+
+  if (shared_y[0] == 0) {
+    (*info) = step + gbstep + J;
+    return;
+  }
+  int offset_L1 = 0;
+  int of = 1;
+  int elem_count = m_e - of;
+  if (k > 0) {
+    offset_L1 += len_extra - 1 - step;
+    of = 0;
+    elem_count = m_per_core;
+  }
+
+  float reg;
+  reg = 1 / shared_y[0];
+
+  if (elem_count > 0) {
+    __bang_mul_scalar(L1 + 1 + offset_L1, L1 + 1 + offset_L1, reg, elem_count);
+
+    for (int i = 0; i < n - 1; i++) {
+      __bang_mul_scalar(temp, L1 + 1 + offset_L1, *(shared_y + i + 1),
+                        elem_count);
+      __bang_sub(L1 + 1 + offset_L1 + (i + 1) * (ldL1),
+                 L1 + 1 + offset_L1 + (i + 1) * (ldL1), temp, elem_count);
+    }
+  }
+
+  return;
+}
+/// @brief scal_ger pivot version
+__mlu_global__ void MLUKernelScal_ger_pivot(int batch, int M_size, int N_size,
+                                            int ib, int J, int m, int n,
+                                            int step, float *dA, int lda,
+                                            int stride_a, float *workspace,
+                                            int *dipiv, int *dipiv2, int *pivot,
+                                            int *info, int gbstep, int mode) {
+  int id, batch_id, tx, taskdim;
+  if (batch > 1) {
+    id = taskId;
+    batch_id = id / 4;
+    if (batch_id >= batch) return;
+    tx = taskId % 4;
+    dA += batch_id * stride_a;
+    taskdim = TaskUnion1;
+  } else {
+    id = taskId;
+    batch_id = 0;
+    taskdim = taskDim;
+    tx = taskId;
+  }
+
+  int gbj, STEP;
+  float *shared_y = NRAM_BUFFER;
+  float *extra_vec = SRAM_BUFFER;
+  float *extra_vec_nram = shared_y + N;
+  float *temp = extra_vec_nram + N * N;
+  float *L1 = temp + (MAX_M_SIZE_PIVOT + N + N * 2);
+  float *orig = L1 + (MAX_NRAM_SIZE / 8 - 8 * 1024);
+  float *k_max = extra_vec + N * N;
+  int *k_max_idx = (int *)(k_max + MAX_M_SIZE_PIVOT);
+  int *k_max_gbidx = k_max_idx + MAX_M_SIZE_PIVOT;
+  float *k_max_arr = (float *)(k_max_gbidx + MAX_M_SIZE_PIVOT);
+  int *sram_buffer = (int *)(k_max_arr + 2 * N);
+
+  float *A = dA + J + J * lda;
+
+  // initialize dipiv
+  if ((tx % TaskUnion1 == 0) && (gbstep + J == 0)) {
+    for (int i = 0; i < M_size; i++) {
+      dipiv[i] = i;
+    }
+  }
+
+  if ((lda - N > 0) && (tx % TaskUnion1 == 0) && (gbstep + J > 0)) {
+    const int IPIV_SIZE = MAX_SRAM_SIZE / 8;
+    int seg = CEILDIV(m, IPIV_SIZE);
+
+    for (int k = 0; k < seg; k++) {
+      int remain =
+          m - k * IPIV_SIZE > IPIV_SIZE ? IPIV_SIZE : m - k * IPIV_SIZE;
+
+      for (int i = 0; i < remain; i++) sram_buffer[i] = i + k * IPIV_SIZE;
+      __memcpy(dipiv2 + k * IPIV_SIZE, sram_buffer, remain * sizeof(int),
+               SRAM2LDRAM);
+    }
+  }
+
+  if (tx % TaskUnion1 == 0)
+    __memcpy(extra_vec, A, n * sizeof(float), GDRAM2SRAM, n * sizeof(float),
+             lda * sizeof(float), n - 1);
+  __sync_cluster();
+  __memcpy(extra_vec_nram, extra_vec, n * sizeof(float), SRAM2NRAM,
+           n * sizeof(float), n * sizeof(float), n - 1);
+
+  if (m > MAX_M_SIZE_PIVOT * TaskUnion8) {
+    int mp = m / taskdim;
+    const int mp_ = mp;
+    mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
+
+    int seg = CEILDIV(mp, MAX_M_SIZE_PIVOT);
+
+    __mlu_shared__ int shared_seg[TaskUnion1];
+    shared_seg[tx] = seg;
+    __sync_cluster();
+
+    seg = shared_seg[0];
+    int m_e;
+    for (STEP = 0; STEP < ib; STEP++) {
+      gbj = J + STEP;
+      for (int k = 0; k < seg; k++) {
+        int remain_m = mp - k * MAX_M_SIZE_PIVOT;
+        int m_per_core =
+            remain_m < MAX_M_SIZE_PIVOT ? remain_m : MAX_M_SIZE_PIVOT;
+        m_per_core =
+            ((tx == taskdim - 1) && (k == seg - 1)) ? remain_m : m_per_core;
+        const int m_per_core_ = m_per_core;
+
+        int offset = tx * mp_ + k * MAX_M_SIZE_PIVOT;
+        int len_extra = offset <= n ? offset : n;
+
+        if (m_per_core - 1 >= 0)
+          __memcpy(orig, A + STEP + tx * lda * mp_ + k * lda * MAX_M_SIZE_PIVOT,
+                   1 * sizeof(float), GDRAM2NRAM, 1 * sizeof(float),
+                   lda * sizeof(float), m_per_core - 1);
+
+        m_e = m_per_core + len_extra;
+        m_e = (k > 0) ? m_per_core - STEP : m_e - STEP;
+        if (gbj < M_size) {
+          // Perform pivoting for the current segment of the matrix
+          // Handle the matrix pivoting for the given segment
+          MLUKernelPivot(m - gbj, ib - STEP, STEP, batch, M_size, N_size, k, A,
+                         lda, stride_a, orig, 1, len_extra, m_e, k_max,
+                         k_max_idx, k_max_gbidx, tx, taskdim, batch_id, mp, mp_,
+                         m_per_core, m_per_core_, dipiv, dipiv2, info, gbstep);
+        }
+      }
+      // Perform row swaps for the pivoting step
+      // Swap rows based on the pivoting results to maintain correctness
+      MLUKernelKSwap(m - gbj, ib - STEP, STEP, batch, M_size, N_size, A, lda,
+                     stride_a, orig, 1, m_e, k_max, k_max_idx, k_max_gbidx,
+                     k_max_arr, tx, taskdim, batch_id, mp, mp_, dipiv, dipiv2,
+                     pivot, info, J, gbstep);
+
+      __memcpy(shared_y, A + STEP + STEP * lda, (ib - STEP) * sizeof(float),
+               GDRAM2NRAM);
+      for (int k = 0; k < seg; k++) {
+        int remain_m = mp - k * MAX_M_SIZE_PIVOT;
+        int m_per_core =
+            remain_m < MAX_M_SIZE_PIVOT ? remain_m : MAX_M_SIZE_PIVOT;
+        m_per_core =
+            ((tx == taskdim - 1) && (k == seg - 1)) ? remain_m : m_per_core;
+
+        const int m_per_core_ = m_per_core;
+
+        int len_extra = 0;
+        int offset = tx * mp_ + k * MAX_M_SIZE_PIVOT;
+        len_extra = offset <= n ? offset : n;
+
+        if ((len_extra - 1 >= 0 && k == 0))
+          __memcpy(orig, extra_vec_nram, n * sizeof(float), NRAM2NRAM,
+                   n * sizeof(float), n * sizeof(float), len_extra - 1);
+        if (m_per_core - 1 >= 0)
+          __memcpy(orig + len_extra * n,
+                   A + tx * lda * mp_ + k * lda * MAX_M_SIZE_PIVOT,
+                   n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
+                   lda * sizeof(float), m_per_core - 1);
+
+        m_e = m_per_core + len_extra;
+        const int m_e1 = m_e;
+        int ld_L1 = m_e;
+        const int mm_per_core = m_per_core;
+        const int llen_extra = len_extra;
+
+        if (m_e > 0) __bang_transpose(L1, orig, m_e, n);
+
+        m_e = (k > 0) ? m_per_core - STEP : m_e - STEP;
+
+        if (gbj < M_size) {
+          MLUSubKernelScal_ger_pivot(m - gbj, ib - STEP, STEP, J, taskdim,
+                                     batch, A, lda, ld_L1, info, gbstep,
+                                     m_per_core, m_per_core_, len_extra, k, m_e,
+                                     shared_y, temp, L1, orig);
+        }
+
+        if (m_e1 > 0) __bang_transpose(orig, L1, n, m_e1);
+
+        if (mm_per_core - 1 >= 0) {
+          __memcpy(A + tx * lda * mp_ + k * lda * MAX_M_SIZE_PIVOT,
+                   orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
+                   lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+        }
+      }
+    }
+  } else {
+    float *max_arr = workspace;
+    float *max_arr_vec = max_arr + taskdim;
+    int *max_idx = (int *)max_arr_vec + N * 2;
+    int *max_gbidx = max_idx + taskdim;
+
+    int mp = m / taskdim;
+    const int mp_ = mp;
+    mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
+
+    int seg = CEILDIV(mp, MAX_M_SIZE_PIVOT);
+    seg = 1;
+
+    for (int k = 0; k < seg; k++) {
+      int m_per_core = mp;
+      const int m_per_core_ = m_per_core;
+
+      int len_extra = 0;
+      int offset = tx * mp_ + k * MAX_M_SIZE_PIVOT;
+      len_extra = offset <= n ? offset : n;
+
+      if ((len_extra - 1 >= 0 && k == 0))
+        __memcpy(orig, extra_vec_nram, n * sizeof(float), NRAM2NRAM,
+                 n * sizeof(float), n * sizeof(float), len_extra - 1);
+      if (m_per_core - 1 >= 0)
+        __memcpy(orig + len_extra * n,
+                 A + tx * lda * mp_ + k * lda * MAX_M_SIZE_PIVOT,
+                 n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
+                 lda * sizeof(float), m_per_core - 1);
+
+      int m_e = m_per_core < 0 ? 0 : m_per_core + len_extra;
+      const int m_e1 = m_e;
+      int ld_L1 = m_e;
+      const int mm_per_core = m_per_core;
+      const int llen_extra = len_extra;
+
+      if (m_e > 0) __bang_transpose(L1, orig, m_e, n);
+
+      m_e = (k > 0) ? m_per_core : m_e;
+      for (STEP = 0; STEP < ib; STEP++) {
+        gbj = J + STEP;
+        if (gbj < M_size) {
+          if (m > MAX_M_SIZE_PIVOT * TaskUnion1) {
+            // Handle pivoting and swapping for large-scale matrices
+            MLUKernelPivotSwap2(m - gbj, ib - STEP, STEP, batch, M_size, N_size,
+                                A, lda, stride_a, workspace, L1, ld_L1, orig, n,
+                                len_extra, m_e, max_arr, max_arr_vec, max_idx,
+                                max_gbidx, shared_y, tx, taskdim, batch_id,
+                                m_per_core, mp_, dipiv, dipiv2, pivot, info, J,
+                                gbstep);
+          } else {
+            // Handle pivoting and swapping for smaller-scale matrices
+            MLUKernelPivotSwap(m - gbj, ib - STEP, STEP, batch, M_size, N_size,
+                               A, lda, stride_a, workspace, L1, ld_L1, orig, n,
+                               len_extra, m_e, max_arr, max_arr_vec, max_idx,
+                               shared_y, tx, taskdim, batch_id, m_per_core, mp_,
+                               dipiv, dipiv2, pivot, info, J, gbstep);
+          }
+
+          MLUSubKernelScal_ger_pivot(m - gbj, ib - STEP, STEP, J, taskdim,
+                                     batch, A, lda, ld_L1, info, gbstep,
+                                     m_per_core, m_per_core_, len_extra, k, m_e,
+                                     shared_y, temp, L1, orig);
+
+          m_e--;
+        }
+      }
+
+      if (m_e1 > 0) __bang_transpose(orig, L1, n, m_e1);
+
+      if (mm_per_core - 1 >= 0) {
+        __memcpy(A + tx * lda * mp_ + k * lda * MAX_M_SIZE_PIVOT,
+                 orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
+                 lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+      }
+    }
+  }
+
+  return;
+}
+
+__mlu_func__ void MLUSubKernelCcal_ger_pivot(
+    int m, int n, int step, int J, int taskdim, int batch, float *d_rA,
+    float *d_iA, int lda, int ldL1, int *info, int gbstep, int m_per_core,
+    int m_per_core_, int len_extra, int k, int m_e, float *r_shared_y,
+    float *i_shared_y, float *r_temp, float *i_temp, float *r_L1, float *i_L1,
+    float *r_orig, float *i_orig) {
+  float *ii_temp = i_orig + MAX_NRAM_SIZE / 16 - 4 * 1024;
+  float *ir_temp = ii_temp + MAX_M_SIZE_COMPLEX_PIVOT + N * N;
+  float *r_temp_L1 = ir_temp + MAX_M_SIZE_COMPLEX_PIVOT + N * N;
+  float *i_temp_L1 = r_temp_L1 + MAX_M_SIZE_COMPLEX_PIVOT + N * N;
+
+  if (m_e <= 0) return;
+
+  if ((*info) != 0) return;
+
+  r_L1 = r_L1 + step + step * ldL1;
+  i_L1 = i_L1 + step + step * ldL1;
+
+  if (r_shared_y[0] * r_shared_y[0] + i_shared_y[0] * i_shared_y[0] == 0) {
+    (*info) = step + gbstep + J;
+    return;
+  }
+
+  int offset_L1 = 0;
+  int of = 1;
+  int elem_count = m_e - of;
+
+  if (k > 0) {
+    offset_L1 += len_extra - 1 - step;
+    of = 0;
+    elem_count = m_per_core;
+  }
+
+  float r_reg, i_reg;
+  float div = r_shared_y[0] * r_shared_y[0] + i_shared_y[0] * i_shared_y[0];
+
+  r_reg = r_shared_y[0] / div;
+  i_reg = -i_shared_y[0] / div;
+
+  if (elem_count > 0) {
+    __bang_mul_scalar(r_temp_L1 + offset_L1 + 1, r_L1 + offset_L1 + 1, r_reg,
+                      elem_count);
+    __bang_mul_scalar(ii_temp + offset_L1 + 1, i_L1 + offset_L1 + 1, i_reg,
+                      elem_count);
+
+    __bang_sub(r_temp_L1 + offset_L1 + 1, r_temp_L1 + offset_L1 + 1,
+               ii_temp + offset_L1 + 1, elem_count);
+    __bang_mul_scalar(i_temp_L1 + offset_L1 + 1, r_L1 + offset_L1 + 1, i_reg,
+                      elem_count);
+
+    __bang_mul_scalar(ir_temp + offset_L1 + 1, i_L1 + offset_L1 + 1, r_reg,
+                      elem_count);
+    __bang_add(i_temp_L1 + offset_L1 + 1, i_temp_L1 + offset_L1 + 1,
+               ir_temp + offset_L1 + 1, elem_count);
+
+    for (int i = 0; i < n - 1; i++) {
+      __bang_mul_scalar(r_temp, r_temp_L1 + offset_L1 + 1,
+                        *(r_shared_y + i + 1), elem_count);
+      __bang_mul_scalar(ii_temp, i_temp_L1 + offset_L1 + 1,
+                        *(i_shared_y + i + 1), elem_count);
+      __bang_sub(r_temp, r_temp, ii_temp, elem_count);
+
+      __bang_mul_scalar(i_temp, r_temp_L1 + offset_L1 + 1,
+                        *(i_shared_y + i + 1), elem_count);
+      __bang_mul_scalar(ir_temp, i_temp_L1 + offset_L1 + 1,
+                        *(r_shared_y + i + 1), elem_count);
+      __bang_add(i_temp, i_temp, ir_temp, elem_count);
+
+      __bang_sub(r_L1 + 1 + offset_L1 + (i + 1) * (ldL1),
+                 r_L1 + 1 + offset_L1 + (i + 1) * (ldL1), r_temp, elem_count);
+      __bang_sub(i_L1 + 1 + offset_L1 + (i + 1) * (ldL1),
+                 i_L1 + 1 + offset_L1 + (i + 1) * (ldL1), i_temp, elem_count);
+    }
+
+    __memcpy(r_L1 + 1 + offset_L1, r_temp_L1 + offset_L1 + 1,
+             (elem_count) * sizeof(float), NRAM2NRAM, ldL1 * sizeof(float),
+             sizeof(float), 0);  // 写回第一列
+    __memcpy(i_L1 + 1 + offset_L1, i_temp_L1 + offset_L1 + 1,
+             (elem_count) * sizeof(float), NRAM2NRAM, ldL1 * sizeof(float),
+             sizeof(float), 0);  // 写回第一列
+  }
+
+  return;
+}
+
+__mlu_global__ void MLUKernelCcal_ger_pivot(
+    int batch, int M_size, int N_size, int ib, int J, int m, int n, int step,
+    float *d_rA, float *d_iA, int lda, int stride_a, float *workspace,
+    int *dipiv, int *dipiv2, int *pivot, int *info, int gbstep, int mode) {
+  int id, batch_id, tx, taskdim;
+  if (batch > 1) {
+    id = taskId;
+    batch_id = id / 4;
+    if (batch_id >= batch) return;
+    tx = taskId % 4;
+    d_rA += batch_id * stride_a;
+    d_iA += batch_id * stride_a;
+    taskdim = TaskUnion1;
+  } else {
+    id = taskId;
+    batch_id = 0;
+    taskdim = taskDim;
+    tx = taskId;
+  }
+
+  int gbj, STEP;
+  float *r_shared_y = NRAM_BUFFER;
+  float *r_extra_vec = SRAM_BUFFER;
+  float *r_extra_vec_nram = r_shared_y + N;
+  float *r_temp = r_extra_vec_nram + N * N;
+  float *r_L1 = r_temp + (MAX_M_SIZE_COMPLEX_PIVOT + N + N * 2);
+  float *r_orig = r_L1 + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+
+  float *i_shared_y = r_orig + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+  float *i_extra_vec = r_extra_vec + N * N;
+  float *i_extra_vec_nram = i_shared_y + N;
+  float *i_temp = i_extra_vec_nram + N * N;
+  float *i_L1 = i_temp + (MAX_M_SIZE_COMPLEX_PIVOT + N + N * 2);
+  float *i_orig = i_L1 + (MAX_NRAM_SIZE / 16 - 4 * 1024);
+
+  int *sram_buffer = (int *)i_extra_vec + N * N;
+  float *k_max = (float *)sram_buffer + (MAX_SRAM_SIZE / 8);
+  int *k_max_idx = (int *)k_max + MAX_M_SIZE_COMPLEX_PIVOT;
+  int *k_max_gbidx = k_max_idx + MAX_M_SIZE_COMPLEX_PIVOT;
+  float *r_k_max_arr = (float *)k_max_gbidx + MAX_M_SIZE_COMPLEX_PIVOT;
+  float *i_k_max_arr = r_k_max_arr + 2 * N;
+
+  // initialize dipiv
+  if ((tx % TaskUnion1 == 0) && (gbstep + J == 0)) {
+    for (int i = 0; i < M_size; i++) {
+      dipiv[i] = i;
+    }
+  }
+
+  __sync_cluster();
+
+  if ((lda - N > 0) && (tx % TaskUnion1 == 0) && (gbstep + J > 0)) {
+    const int IPIV_SIZE = MAX_SRAM_SIZE / 8;
+    int seg = CEILDIV(m, IPIV_SIZE);
+
+    for (int k = 0; k < seg; k++) {
+      int remain =
+          m - k * IPIV_SIZE > IPIV_SIZE ? IPIV_SIZE : m - k * IPIV_SIZE;
+      for (int i = 0; i < remain; i++) sram_buffer[i] = i + k * IPIV_SIZE;
+      if (remain > 0)
+        __memcpy(dipiv2 + k * IPIV_SIZE, sram_buffer, remain * sizeof(int),
+                 SRAM2LDRAM);
+    }
+  }
+
+  float *rA = d_rA + J + J * lda;
+  float *iA = d_iA + J + J * lda;
+
+  if (tx % TaskUnion1 == 0) {
+    __memcpy(r_extra_vec, rA, n * sizeof(float), GDRAM2SRAM, n * sizeof(float),
+             lda * sizeof(float), n - 1);
+    __memcpy(i_extra_vec, iA, n * sizeof(float), GDRAM2SRAM, n * sizeof(float),
+             lda * sizeof(float), n - 1);
+  }
+  __sync_cluster();
+  __memcpy(r_extra_vec_nram, r_extra_vec, n * sizeof(float), SRAM2NRAM,
+           n * sizeof(float), n * sizeof(float), n - 1);
+  __memcpy(i_extra_vec_nram, i_extra_vec, n * sizeof(float), SRAM2NRAM,
+           n * sizeof(float), n * sizeof(float), n - 1);
+
+  // Choose different scal_ger operations based on rows
+  if (m > MAX_M_SIZE_COMPLEX_PIVOT * TaskUnion8) {
+    int mp = m / taskdim;
+    const int mp_ = mp;
+    mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
+
+    int seg = CEILDIV(mp, MAX_M_SIZE_COMPLEX_PIVOT);
+
+    float *shared_seg = i_k_max_arr + 2 * N;
+    shared_seg[tx] = seg;
+    __sync_cluster();
+    seg = shared_seg[0];
+
+    int m_e;
+    for (STEP = 0; STEP < ib; STEP++) {
+      gbj = J + STEP;
+      for (int k = 0; k < seg; k++) {
+        int remain_m = mp - k * MAX_M_SIZE_COMPLEX_PIVOT;
+        int m_per_core = remain_m < MAX_M_SIZE_COMPLEX_PIVOT
+                             ? remain_m
+                             : MAX_M_SIZE_COMPLEX_PIVOT;
+        m_per_core =
+            ((tx == taskdim - 1) && (k == seg - 1)) ? remain_m : m_per_core;
+        const int m_per_core_ = m_per_core;
+
+        int offset = tx * mp_ + k * MAX_M_SIZE_COMPLEX_PIVOT;
+        int len_extra = offset <= n ? offset : n;
+        if (m_per_core - 1 >= 0) {
+          __memcpy(
+              r_orig,
+              rA + STEP + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+              1 * sizeof(float), GDRAM2NRAM, 1 * sizeof(float),
+              lda * sizeof(float), m_per_core - 1);
+          __memcpy(
+              i_orig,
+              iA + STEP + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+              1 * sizeof(float), GDRAM2NRAM, 1 * sizeof(float),
+              lda * sizeof(float), m_per_core - 1);
+        }
+
+        m_e = m_per_core + len_extra;
+        m_e = (k > 0) ? m_per_core - STEP : m_e - STEP;
+        if (gbj < M_size) {
+          // Perform pivoting for the current segment of the matrix
+          // handles the complex matrix pivoting for the given segment
+          MLUKernelCPivot(m - gbj, ib - STEP, STEP, batch, M_size, N_size, k,
+                          rA, iA, lda, stride_a, r_orig, i_orig, 1, len_extra,
+                          m_e, k_max, k_max_idx, k_max_gbidx, tx, taskdim,
+                          batch_id, mp, mp_, m_per_core, m_per_core_, dipiv,
+                          dipiv2, info, gbstep);
+        }
+      }
+      // Perform row swaps for the pivoting step
+      // swaps rows based on the pivoting results to maintain correctness
+      MLUKernelCKSwap(m - gbj, ib - STEP, STEP, batch, M_size, N_size, rA, iA,
+                      lda, stride_a, r_orig, i_orig, 1, m_e, k_max, k_max_idx,
+                      k_max_gbidx, r_k_max_arr, i_k_max_arr, tx, taskdim,
+                      batch_id, mp, mp_, dipiv, dipiv2, pivot, info, J, gbstep);
+
+      __memcpy(r_shared_y, rA + STEP + STEP * lda, (ib - STEP) * sizeof(float),
+               GDRAM2NRAM);
+      __memcpy(i_shared_y, iA + STEP + STEP * lda, (ib - STEP) * sizeof(float),
+               GDRAM2NRAM);
+      for (int k = 0; k < seg; k++) {
+        int remain_m = mp - k * MAX_M_SIZE_COMPLEX_PIVOT;
+        int m_per_core = remain_m < MAX_M_SIZE_COMPLEX_PIVOT
+                             ? remain_m
+                             : MAX_M_SIZE_COMPLEX_PIVOT;
+        m_per_core =
+            ((tx == taskdim - 1) && (k == seg - 1)) ? remain_m : m_per_core;
+        const int m_per_core_ = m_per_core;
+
+        int len_extra = 0;
+        int offset = tx * mp_ + k * MAX_M_SIZE_COMPLEX_PIVOT;
+        len_extra = offset <= n ? offset : n;
+
+        if ((len_extra - 1 >= 0 && k == 0)) {
+          __memcpy(r_orig, r_extra_vec_nram, n * sizeof(float), NRAM2NRAM,
+                   n * sizeof(float), n * sizeof(float), len_extra - 1);
+          __memcpy(i_orig, i_extra_vec_nram, n * sizeof(float), NRAM2NRAM,
+                   n * sizeof(float), n * sizeof(float), len_extra - 1);
+        }
+
+        if (m_per_core - 1 >= 0) {
+          __memcpy(r_orig + len_extra * n,
+                   rA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+                   n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
+                   lda * sizeof(float), m_per_core - 1);
+          __memcpy(i_orig + len_extra * n,
+                   iA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+                   n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
+                   lda * sizeof(float), m_per_core - 1);
+        }
+        m_e = m_per_core + len_extra;
+        const int m_e1 = m_e;
+        int ld_L1 = m_e;
+        const int mm_per_core = m_per_core;
+        const int llen_extra = len_extra;
+
+        if (m_e > 0) {
+          __bang_transpose(r_L1, r_orig, m_e, n);
+          __bang_transpose(i_L1, i_orig, m_e, n);
+        }
+
+        m_e = (k > 0) ? m_per_core - STEP : m_e - STEP;
+
+        if (gbj < M_size) {
+          MLUSubKernelCcal_ger_pivot(m - gbj, ib - STEP, STEP, J, taskdim,
+                                     batch, rA, iA, lda, ld_L1, info, gbstep,
+                                     m_per_core, m_per_core_, len_extra, k, m_e,
+                                     r_shared_y, i_shared_y, r_temp, i_temp,
+                                     r_L1, i_L1, r_orig, i_orig);
+        }
+
+        if (m_e1 > 0) {
+          __bang_transpose(r_orig, r_L1, n, m_e1);
+          __bang_transpose(i_orig, i_L1, n, m_e1);
+        }
+
+        if (mm_per_core - 1 >= 0) {
+          __memcpy(rA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+                   r_orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
+                   lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+          __memcpy(iA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+                   i_orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
+                   lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+        }
+      }
+    }
+  } else {
+    float *max_arr = workspace;
+    float *r_max_arr_vec = max_arr + taskdim;
+    float *i_max_arr_vec = r_max_arr_vec + N * 2;
+    int *max_idx = (int *)i_max_arr_vec + N * 2;
+    int *max_gbidx = max_idx + taskdim;
+
+    int mp = m / taskdim;
+    const int mp_ = mp;
+    mp = (tx == taskdim - 1) ? m % taskdim + mp : mp;
+    // int seg = CEILDIV(mp, MAX_M_SIZE_COMPLEX_PIVOT);
+    // seg = seg == 0 ? 1 : 1;
+    int k = 0;
+    // if (mp > 0) {
+    int m_per_core = mp;
+    const int m_per_core_ = m_per_core;
+
+    int len_extra = 0;
+    int offset = tx * mp_ + k * MAX_M_SIZE_COMPLEX_PIVOT;
+    len_extra = offset <= n ? offset : n;
+
+    if ((len_extra - 1 >= 0 && k == 0)) {
+      __memcpy(r_orig, r_extra_vec_nram, n * sizeof(float), NRAM2NRAM,
+               n * sizeof(float), n * sizeof(float), len_extra - 1);
+      __memcpy(i_orig, i_extra_vec_nram, n * sizeof(float), NRAM2NRAM,
+               n * sizeof(float), n * sizeof(float), len_extra - 1);
+    }
+
+    if (m_per_core - 1 >= 0) {
+      __memcpy(r_orig + len_extra * n,
+               rA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+               n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
+               lda * sizeof(float), m_per_core - 1);
+      __memcpy(i_orig + len_extra * n,
+               iA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+               n * sizeof(float), GDRAM2NRAM, n * sizeof(float),
+               lda * sizeof(float), m_per_core - 1);
+    }
+
+    int m_e = m_per_core < 0 ? 0 : m_per_core + len_extra;
+    const int m_e1 = m_e;
+    int ld_L1 = m_e;
+    const int mm_per_core = m_per_core;
+    const int llen_extra = len_extra;
+
+    if (m_e > 0) {
+      __bang_transpose(r_L1, r_orig, m_e, n);
+      __bang_transpose(i_L1, i_orig, m_e, n);
+    }
+
+    m_e = (k > 0) ? m_per_core : m_e;
+
+    for (STEP = 0; STEP < ib; STEP++) {
+      gbj = J + STEP;
+      // Choose different pivoting operations based on matrix size
+      if (gbj < M_size) {
+        if (m > MAX_M_SIZE_COMPLEX_PIVOT * TaskUnion1) {
+          // Handle pivoting and swapping for large-scale complex matrices
+          MLUKernelCPivotSwap2(m - gbj, ib - STEP, STEP, batch, M_size, N_size,
+                               r_L1, i_L1, ld_L1, r_orig, i_orig, n, len_extra,
+                               m_e, max_arr, r_max_arr_vec, i_max_arr_vec,
+                               max_idx, max_gbidx, r_shared_y, i_shared_y, tx,
+                               taskdim, batch_id, m_per_core, mp_, dipiv,
+                               dipiv2, pivot, info, J, gbstep);
+        } else {
+          // Handle pivoting and swapping for smaller-scale complex matrices
+          MLUKernelCPivotSwap(
+              m - gbj, ib - STEP, STEP, batch, M_size, N_size, r_L1, i_L1,
+              ld_L1, r_orig, i_orig, n, len_extra, m_e, max_arr, r_max_arr_vec,
+              i_max_arr_vec, max_idx, r_shared_y, i_shared_y, tx, taskdim,
+              batch_id, m_per_core, mp_, dipiv, dipiv2, pivot, info, J, gbstep);
+        }
+
+        MLUSubKernelCcal_ger_pivot(
+            m - gbj, ib - STEP, STEP, J, taskdim, batch, rA, iA, lda, ld_L1,
+            info, gbstep, m_per_core, m_per_core_, len_extra, k, m_e,
+            r_shared_y, i_shared_y, r_temp, i_temp, r_L1, i_L1, r_orig, i_orig);
+        m_e--;
+      }
+    }
+
+    if (m_e1 > 0) {
+      __bang_transpose(r_orig, r_L1, n, m_e1);
+      __bang_transpose(i_orig, i_L1, n, m_e1);
+    }
+
+    if (mm_per_core - 1 >= 0) {
+      __memcpy(rA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+               r_orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
+               lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+      __memcpy(iA + tx * lda * mp_ + k * lda * MAX_M_SIZE_COMPLEX_PIVOT,
+               i_orig + llen_extra * n, n * sizeof(float), NRAM2GDRAM,
+               lda * sizeof(float), n * sizeof(float), mm_per_core - 1);
+    }
+    // }
+  }
+
+  return;
+}
+mluOpStatus_t MLUOP_WIN_API KernelScal_ger(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, int batch, int M_size, int N_size, int ib, int J,
+    int m, int n, int step, float *dA, int lda, int stride_a, float *workspace,
+    int *dipiv, int *dipiv2, int *pivot, int *info, int gbstep, int mode) {
+  if (mode == 0) {
+    KERNEL_CHECK(MLUKernelScal_ger<<<k_dim, k_type, queue>>>(
+        batch, M_size, N_size, ib, J, m, n, step, dA, lda, stride_a, dipiv,
+        info, gbstep, mode));
+  } else {
+    KERNEL_CHECK(MLUKernelScal_ger_pivot<<<k_dim, k_type, queue>>>(
+        batch, M_size, N_size, ib, J, m, n, step, dA, lda, stride_a, workspace,
+        dipiv, dipiv2, pivot, info, gbstep, mode));
+  }
+  return MLUOP_STATUS_SUCCESS;
+}
+
+mluOpStatus_t MLUOP_WIN_API
+KernelCcal_ger(cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+               mluOpDataType_t d_type, int batch, int M_size, int N_size,
+               int ib, int J, int m, int n, int step, float *d_rA, float *d_iA,
+               int lda, int stride_a, float *workspace, int *dipiv, int *dipiv2,
+               int *pivot, int *info, int gbstep, int mode) {
+  if (mode == 0) {
+    KERNEL_CHECK(MLUKernelCcal_ger<<<k_dim, k_type, queue>>>(
+        batch, M_size, N_size, ib, J, m, n, step, d_rA, d_iA, lda, stride_a,
+        dipiv, info, gbstep, mode));
+  } else {
+    KERNEL_CHECK(MLUKernelCcal_ger_pivot<<<k_dim, k_type, queue>>>(
+        batch, M_size, N_size, ib, J, m, n, step, d_rA, d_iA, lda, stride_a,
+        workspace, dipiv, dipiv2, pivot, info, gbstep, mode));
+  }
+  return MLUOP_STATUS_SUCCESS;
+}

@@ -14553,6 +14553,148 @@ mluOpLgamma(mluOpHandle_t handle,
             const mluOpTensorDescriptor_t y_desc,
             void *y);
 
+// Group:Xgetrf
+/*!
+ * @brief Calculates the size of the workspace required for the LU decomposition and initializes a workspace pointer.
+ * This function must be called before performing LU decomposition using mluOpXgetrf.
+ *
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ * queues in the deformable convolution backward data operation. For detailed information,
+ * see ::mluOpHandle_t.
+ *
+ * @param[in] x_desc
+ * The descriptor for the input tensor for which the LU decomposition will be performed.
+ *
+ * @param[out] workspace_size
+ * Pointer to a variable where the size of the required workspace will be stored.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS if the workspace size is successfully calculated and the workspace is successfully
+ * allocated,
+ * - ::MLUOP_STATUS_EXECUTION_FAILED if there are issues during the calculation or memory allocation.
+ *
+ * @par Data Type
+ * - The supported combinations of data types are shown below:
+ *   - size_t( size)
+ *
+ * @par Data Layout
+ * - None
+ *
+ * @par Scale Limitation
+ * - None
+ *
+ * @par API Dependency
+ * - The allocated extra workspace should be passed to ::mluOpXgetrf to perform the LU operation.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpGetXgetrfWorkspaceSize(mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc, size_t *workspace_size);
+
+// Group:Xgetrf
+/*!
+ * @brief Computes the LU decomposition of a matrix using the input tensor descriptor \p x_desc and writes the
+ result to the output tensor descriptor \p y_desc.
+
+ * @param[in] handle
+ * Handle to a Cambricon MLUOP context that is used to manage MLU devices and
+ * queues in the deformable convolution backward data operation. For detailed information,
+ * see ::mluOpHandle_t.
+ *
+ * @param[in] x_desc
+ * The descriptor of the input tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ *
+ * @param[in] x
+ * Pointer to the MLU memory that stores the input tensor.
+ *
+ * @param[in] y_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ *
+ * @param[out] y
+ * Pointer to the MLU memory that stores the output tensor.
+ *
+ * @param[in, out] workspace
+ * Pointer to the MLU memory that is used as an extra workspace for the
+ * ::mluOpXgetrf.
+ *
+ * @param[in, out] dipiv_desc
+ * The descriptor of the output tensor. For detailed information,
+ * see ::mluOpTensorDescriptor_t.
+ *
+ * @param[in, out] dipiv
+ * An array containing the pivot indices. The value dipiv[i] is the
+ * row index that was swapped with row i. The array is updated during
+ * the execution to reflect the new row indices after each swap.The dipiv
+ * array is used to track the row permutation (pivoting),and it is
+ * modified in place as the row swaps are performed.
+ *
+ * @param[out] info
+ * Error code indicating the validity of the input arguments
+ *     -     = 0:  successful exit
+ *     -     < 0:  an error occurred, with the value indicating the parameter number that was invalid.
+ *     -     > 0:  if INFO = i, U(i,i) is exactly zero. The factorization
+ *                 has been completed, but the factor U is exactly
+ *                 singular, and division by zero will occur if it is used
+ *                 to solve a system of equations.
+ *
+ * @param[in] mode
+ * option to perform the operation with pivoting/no pivoting versions
+ * -     = 0: perform the operation without pivoting.
+ * -     = 1: perform the operation with pivoting.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS if the workspace size is successfully calculated.
+ * - ::MLUOP_STATUS_BAD_PARAM if there are issues during the calculation allocation.
+ *
+ * @par Data Type
+ * - The supported combinations of data types are shown below:
+ *   - float(x) - float(y)
+ *   - complex_float(x) - complex_float(y)
+ *
+ * @par Data Layout
+ * - The data layout of x should be MLUOP_LAYOUT_ARRAY.
+ * - The data layout of y should be MLUOP_LAYOUT_ARRAY.
+ *
+ * @par Scale Limitation
+ * - None
+ *
+ * @par API Dependency
+ * - Before calling this function to perform ::mluOpXgetrf, you need to get the size of workspace by
+ * ::mluOpGetXgetrfWorkspaceSize to perform the LU operation.
+ *
+ * @par Note
+ * - None.
+ *
+ * @par Example
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+
+mluOpStatus_t MLUOP_WIN_API
+mluOpXgetrf(mluOpHandle_t handle,
+            const mluOpTensorDescriptor_t x_desc,
+            const void *x,
+            const mluOpTensorDescriptor_t y_desc,
+            void *y,
+            void *workspace,
+            const mluOpTensorDescriptor_t dipiv_desc,
+            int *dipiv,
+            int *info,
+            int mode);
+
 #if defined(__cplusplus)
 }
 #endif
