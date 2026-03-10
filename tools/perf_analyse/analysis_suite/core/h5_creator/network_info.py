@@ -35,7 +35,7 @@ class NetworkInfo:
         self.precision_mode_config = ("amp","tf32","bf16","fp16","fp32","qint8_mixed_float16","qint8_mixed_float32","qint8","force_float16","force_float32")
         self.project_version_config = ("CTR_V","INFERENCE_V")
         self.mluop_version_config = ("mluops_v")
-        self.default_mlu_platform = ["MLU370", "MLU590", "MLU580B"]
+        self.default_mlu_platform = ["MLU370", "MLU590"]
 
     def analyse_json_config(self, json_file):
         self.json_file_ = json_file

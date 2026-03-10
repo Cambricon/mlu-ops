@@ -94,24 +94,14 @@ def append_history_network_summary(df: pd.DataFrame, platform: str, engine):
 
     # add network_summary in database
     # TODO: what about multi version?
-    if platform == 'MLU590-M9':
-        df = \
-            pd.merge(
-                df,
-                network_summary[network_summary[ColDef.mlu_platform]=='MLU590-M9U'].drop(columns=[ColDef.mlu_platform]),
-                how='left',
-                on=[ColDef.network_id],
-                suffixes=["", "_database"]
-            )
-    else:
-        df = \
-            pd.merge(
-                df,
-                network_summary,
-                how='left',
-                on=[ColDef.network_id, ColDef.mlu_platform],
-                suffixes=["", "_database"]
-            )
+    df = \
+        pd.merge(
+            df,
+            network_summary,
+            how='left',
+            on=[ColDef.network_id, ColDef.mlu_platform],
+            suffixes=["", "_database"]
+        )
     return df
 
 def get_network_summary_impl(df, perf_config, is_release):

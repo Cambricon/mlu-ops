@@ -73,7 +73,7 @@ struct mluOpContext {
   cnrtQueue_t queue;
   mluOpDevType_t arch;  // return arch type. e.g. MLUOP_MLU270
   /* device_name e.g.
-   * "MLU590-M9"
+   * "MLU590"
    * "MLU370-X8", "MLU370-X4", "MLU370-S4", "MLU370-M8"
    * can also use printf(printf("name = %c\n", handle->device_name)) if have a
    * new MLUXXX. */
