@@ -23,7 +23,7 @@
 #include "adam_w_light.h"
 #include "kernels/adam_w/adam_w_device.mluh"
 #include "kernels/adam_w/adam_w_device_remove_nan.mluh"
-
+#include "cnnl.h"
 NAMESPACE_BANGC_KERNELS_BEGIN
 
 template <typename T>
@@ -39,8 +39,13 @@ mluAdamW(const cnrtQueue_t queue, const float lr, const float beta1,
   int core_dim;
   cnrtGetDevice(&ordinal);
   cnrtDeviceGetAttribute(&core_dim, cnrtAttrMcorePerCluster, ordinal);
-  cnrtDeviceGetAttribute(&cluster_num, cnrtAttrMaxClusterPerUnionLimitTask,
-                         ordinal);
+  CNcontext drv_ctx;
+  cnCtxGetCurrent(&drv_ctx);
+  CNctxConfigParam ctx_conf_param;
+  cnGetCtxConfigParam(drv_ctx, CN_CTX_CONFIG_VISIBLE_CLUSTER_NUM,
+                      &ctx_conf_param);
+  cluster_num = ctx_conf_param.visibleClusterNumber;
+
   cnrtFunctionType_t k_type = cnrtFuncTypeUnion1;
   cnrtDim3_t k_dim{.x = (uint32_t)core_dim, .y = (uint32_t)cluster_num, .z = 1};
 
