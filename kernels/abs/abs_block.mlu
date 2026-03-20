@@ -33,7 +33,7 @@
 #include "kernels/unary_op/complex_unary_op_stride_3pipeline.h"
 
 __nram__ int8_t nram_buffer[UNARY_NRAM_SIZE];
-//MLU590
+// MLU590
 template <typename T1, typename T2>
 __mlu_func__ void auxFunc3AbsFloat(size_t &output_input_gap,
                                    size_t &ping_pong_gap,
