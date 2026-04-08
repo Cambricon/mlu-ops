@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2024] by Cambricon, Inc.
+ * Copyright (C) [2026] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "adam_w_light.h"
-#include "kernels/adam_w/adam_w_device.mluh"
-#include "kernels/adam_w/adam_w_device_remove_nan.mluh"
+#include "kernels_light/adam_w_light/adam_w_device.mluh"
+#include "kernels_light/adam_w_light/adam_w_device_remove_nan.mluh"
 #include "cnnl.h"
 NAMESPACE_BANGC_KERNELS_BEGIN
 
