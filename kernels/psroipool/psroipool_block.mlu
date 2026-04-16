@@ -31,7 +31,8 @@
 
 __nram__ int8_t nram_ptr[MAX_NRAM_SIZE];
 
-// This function is used to align the round_rn
+// This function is used to align the round_rn, and only sup float currently
+// Commented code is reserved for future extension.
 template <typename T>
 __mlu_func__ T scalarRound(T key) {
   /*
