@@ -9,12 +9,12 @@
 - #### 修改记录
 
 | 修订人 | 修订日期   | 修订描述 |
-| ------ | ---------- | -------- |
-| 张欣杨    | 2022-7-7 | 首次提交 |
+| ----- | --------  | ------- |
+| 张欣杨 | 2022-7-7  | 首次提交 |
 
 - #### 内容描述
 
-本文档为`psroipool_forward`算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录。
+本文档为 `psroipool_forward` 算子的设计文档，包括需求分析、接口设计、方案设计、性能优化记录。
 
 - #### 算子需求 checklist
 
@@ -32,65 +32,93 @@
 ### 1.1 算子需求分析
 
 | 算子功能简介                                                                 | 一种针对位置敏感区域的池化方式  |
-| ---------------------------------------------------------------------------- | --------------------------------------- |
+| -------------------------------------------------------------------------- | -------------------------- |
 | 需求来源               | Pytorch                              |
-| 应用网络               | R-FCN                            |
-| 输入数据类型           |  float                             |
-| 输入 Shape            | input: [batches, hi, wi，channels]; rois: [rois_num，rois_offset]   |
-| 输入 Layout           | input: NHWC; rois: ARRAY              |
-| 输出数据类型            |  output: float; mapping_channel: int                                |
-| 输出 Shape            | output: [rois_num, ho, wo，output_dims]; mapping_channel: [rois_num, ho, wo，output_dims]        |
-| 输出 Layout              | output: NHWC; mapping_channel: NHWC                                  |
-| 模式(可选）                      |                                           |
-| 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理              | 无                         |
-| 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 无                           |
-| 是否需要支持原位                                                             | 否         |
-| 是否需要支持 stride 机制                                                     | 否                                                           |
-| 是否需要支持广播                                                             | 否                                                           |
-| 0 元素检查是否直接返回                                                       | input(是, return MLUOP_STATUS_SUCCESS) rois(否，return MLUOP_STATUS_BAD_PARAM)                               |
-| 其他特殊需求(在线量化，融合，转数提前等，可选)                               |                                                                |
-| 本次开发优先支持的规模/模式                                                  |                                |
+| 应用网络               | R-FCN                                |
+| 输入数据类型           |  float                                |
+| 输入 Shape            | input: [batches, hi, wi，channels] <br />rois: [rois_num，rois_offset]   |
+| 输入 Layout           | input: NHWC <br />rois: ARRAY                                           |
+| 输出数据类型           | output: float <br />mapping_channel: int                                |
+| 输出 Shape            | output: [rois_num, pooled_height, pooled_width, output_dims] <br />mapping_channel: [rois_num, pooled_height, pooled_width, output_dims] |
+| 输出 Layout           | output: NHWC; <br />mapping_channel: NHWC                   |
+| 模式(可选）            |                                                             |
+| 是否含有 dim/axis 等类似语义的参数且该参数支持负数/其他特殊处理             | 无             |
+| 是否含有 labels/index 等类似语义的参数且该参数支持负数/界外情况/其他特殊处理 | 无             |
+| 是否需要支持原位                                                      | 否             |
+| 是否需要支持 stride 机制                                              | 否             |
+| 是否需要支持广播                                                      | 否             |
+| 0 元素检查是否直接返回   | input(是, return MLUOP_STATUS_SUCCESS) <br />rois(否，return MLUOP_STATUS_BAD_PARAM)     |
+| 其他特殊需求(在线量化，融合，转数提前等，可选)                               |                                   |
+| 本次开发优先支持的规模/模式                                               |                                   |
 
 ### 1.2 算子功能和应用场景描述
 
-首先要了解什么是roipool?
+#### 1.2.1 roi_pool
 
-在目标检测算法中，region proposal产生的ROI大小不一，而分类网络的FC层要固定的输入，所以roipool起到一个连接作用。
+在目标检测算法中，特征图中目标 `ROI(Region of Interest)` 大小不一，而分类网络的 `FC` 层要固定的输入，所以 `roi_pool` 起到一个连接作用，`roi_pool` 在 `Faster RCNN` 网络中被用到。
 
-roipool层为Faster RCNN网络中用于将不同图像经过卷积层后得到的feature map进行维度统一的操作，输入为一个feature map以及需要从中提取的ROI框坐标值，输出为一个维度归一化的feature map。
+`roi_pool` 可对不同图像经过卷积层后得到的 `feature map` 进行维度统一的操作：输入一个 `feature map`，以及需要从中提取的 `ROI` 框坐标值，输出为维度归一化后的 `feature map`。
 
-psroipool的操作与roipool类似，不同之处在于不同空间维度输出的图片特征来自不同的feature map channels，且对每个小区域进行的是Average Pooling，不同于roipool的Max Pooling。对于一个输出 k * k 的结果，不同空间维度的特征取自输入feature map中不同的组，即将输入的feature map在通道维度均匀分为k * k组，每组的channel数与输出的channel一致。详细描述见下面方案设计中的流程图。
+
+#### 1.2.2 psroipool
+
+`psroipool` 操作与 `roi_pool` 类似
+- 不同之处在于 `psroipool` 中不同空间维度输出的图片特征来自不同的 `feature map channels`，且对每 `bin` 区域进行的是 `Average Pooling`；
+- 不同于 `roi_pool` 的 Max Pooling；`psroipool` 对于输出形状如 `group_size*group_size`，不同空间维度的特征取自输入 `feature map` 中不同的组，即将输入的 `feature map` 在 `C` 维度均匀分为`group_size*group_size` 组，每组通道数（`output_dim`）与输出通道数一致。
+
+
+
+`psroipool` 输入：
+- `input,   shape = [N, H, W, C], C = output_dim × group_size × group_size`
+- `output,  shape = [roi_num, output_dim, pooled_height, pooled_width]`
+- 
+  1. `rois` 中存储 `output` 在 `input` 中对应的 N 维度下标
+  2. `output_dim` 表示特征数量
+  3. 每张特征图，都有 `group_size*group_size` 个特征（可以理解为位置空间），`group_size=pooled_height=pooled_width`
+  4. `pooled_height/pooled_width` 作用为
+     1. 在 `HW(ROI)` 中找到采样区域
+     2. 在 `C` 维度找到特性位置
+
+- `rois, shape = [rois_num, 5]`
+  1. `rois` 中存储 `output` 在 `input` 中对应的 `N` 维度下标
+  2. 低维度语义为 `[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w]`
+
+计算过程：
+1. 依据 `rois[:,0]` 找到`roi` 在 `input` 中 `HW` 的位置
+2. 将 `roi ` 划分成 `pooled_height*pooled_width` 份 `bin`
+3. 依据拆分找到 `output[,,ph,pw]`在 `input HW` 的对应 `bin` 起始位置，做 `reduce_avg` 并将结果存储至 `output[,,ph,pw]`
+4. 循环 1~3，直至结束
 
 ### 1.3 算子输入输出参数要求
 
 | 参数             | 语义                               | 类型（输入/输出） | 支持类型    | 物理布局   | 规模限制 |
-| ---------------- | ---------------------------------- | ----------------- | ----------- | ---------- | -------- |
+| ---------------- | ---------------------------------- | -------------- | ----------- | ---------- | -------- |
 | handle           | 算子上下文信息                     | /                 | /           | /          | 无       |
-| input_desc  | 输入数据的描述符                   | 输入              | mluOpTensorDescriptor_t           | /          | 无       |
-| input       | 输入数据的指针                 | 输入              |  float      | NHWC       | 无       |
-| rois_desc  | 输入roi的描述符                    | 输入              | mluOpTensorDescriptor_t | /          | 无       |
-| rois       | 输入roi的指针                  | 输入              | float       |  ARRAY      | 无       |
-| pooled_height    | 池化后的高度                      | 输入              | uint32_t          | /          | 无       |
-| pooled_width    | 池化后的宽度                      | 输入              | uint32_t           | /          | 无       |
-| group_size       |  组的大小                        | 输入             | uint32_t      | /       | 无       |
-| spatial_scale    | 变换的尺度                     | 输入              | float      |   /       | 无       |
-| output_dims      | 输出的channel                      | 输入              | uint32_t          | /          | 无       |
-| output_desc | 输出数据的描述符                   | 输入              | mluOpTensorDescriptor_t           | /          | 无       |
-| output      | 输出数据的指针                     | 输出              | float      | NHWC       | 无       |
-| mapping_channel_desc | 输出mapping_channel的描述符            | 输入              | mluOpTensorDescriptor_t          | /          | 无       |
-| mapping_channel      | 输出mapping_channel数据的指针           | 输出              | int32_t      | NHWC       | 无       |
+| input_desc       | 输入数据的描述符                   | 输入              | mluOpTensorDescriptor_t           | /          | 无       |
+| input            | 输入数据的指针                     | 输入              |  float      | NHWC       | 无       |
+| rois_desc        | 输入roi的描述符                    | 输入              | mluOpTensorDescriptor_t  | /          | 无       |
+| rois             | 输入roi的指针                      | 输入              | float       |  ARRAY      | 无       |
+| pooled_height    | 池化后的高度                      | 输入              | uint32_t      | /          | 无       |
+| pooled_width     | 池化后的宽度                      | 输入              | uint32_t      | /          | 无       |
+| group_size       |  组的大小                        | 输入              | uint32_t       | /          | 无       |
+| spatial_scale    | 变换的尺度                        | 输入              | float        |   /        | 无       |
+| output_dims      | 输出的channel                     | 输入              | uint32_t     | /          | 无       |
+| output_desc      | 输出数据的描述符                   | 输入              | mluOpTensorDescriptor_t    | /        | 无       |
+| output           | 输出数据的指针                     | 输出              | float        | NHWC       | 无       |
+| mapping_channel_desc | 输出mapping_channel的描述符    | 输入              | mluOpTensorDescriptor_t   | /        | 无       |
+| mapping_channel      | 输出mapping_channel数据的指针  | 输出              | int32_t      | NHWC       | 无       |
 
 ### 1.4 算子限制
 
 | 限制类型     | 详细说明                                                                                                        |
 | ------------ | --------------------------------------------------------------------------------------------------------------- |
-| 数据类型限制 | 输入数据（包括input和intput_rois）和输出数据（output）的类型必须相同，而且仅支持float。输出数据（mapping_channel）类型必须是int。           |
-| 布局限制     | 对于input不支持NCHW的layout，并且每个roi只支持[batch_id, roi_x_start, roi_y_start, roi_x_end, roi_y_end]规模，</br>roi的首位必须是batch_id。 |
-| 数据规模限制 | 无                                                            |
-| 原位限制     | 不支持原位                                                                                                      |
-| stride 限制  | 不支持 stride 机制                                                                                              |
-| 广播限制     |  参数不支持广播                                                                                              |
-| 输入参数限制 | group_size=pooled_height=pooled_width,rois_offset=5,</br>group_size>=1,output_dim>=1,spatial_scale>0,</br>channels = pooled_height *pooled_width * output_dim,</br>每个roi只支持[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w],</br>0 <= batch_id <= batch - 1 |
+| 数据类型限制   | 输入数据（包括input和intput_rois）和输出数据（output）的类型必须相同，而且仅支持float。输出数据（mapping_channel）类型必须是int。           |
+| 布局限制      | 对于input不支持NCHW的layout，并且每个roi只支持[batch_id, roi_x_start, roi_y_start, roi_x_end, roi_y_end]规模，</br>roi的首位必须是batch_id。 |
+| 数据规模限制   | 无                                                            |
+| 原位限制      | 不支持原位                                                     |
+| stride 限制  | 不支持 stride 机制                                            |
+| 广播限制     |  参数不支持广播                                                |
+| 输入参数限制  | 1. group_size = pooled_height = pooled_width </br>2. group_size >= 1 </br>3. rois_offset = 5 </br>4. output_dim >= 1 </br>5. spatial_scale>0 </br>6. channels = group_size * group_size * output_dim </br>7. 0 <= batch_id <= batch - 1 |
 | nan/inf限制 | 已支持 |
 
 ### 1.5 验收标准
@@ -147,17 +175,21 @@ mluOpPsRoiPoolForward(mluOpHandle_t handle,
 
 ![image](psroipool_forward.png)
 
-​	由上图可以看出，psroipool_forward的计算过程可以总结为：
+由上图可以看出，`psroipool_forward` 详细过程为：
 
-（1)step1，在原始图像input:[batches,hi,wi,C]上计算出当前roi:[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w]的起始位置和终止位置。
+- step1，计算当前 `roi:[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w]` 在图像 `input:[batches,hi,wi,C]` 中对应的起始、终止位置；
 
-（2)step2，通过roi:[batch_id, roi_start_h, roi_start_w, roi_end_h, roi_end_w]和output:[num_rois,pooled_height,pooled_width,output_dims]中pooled_height/pooled_width的比例，将当前roi平均划分为若干个bin，并且循环处理每一个bin.
+- step2，依据 `roi` 与 `output:[num_rois,pooled_height,pooled_width,output_dims]` 中 `pooled_height/pooled_width` 的比例，将当前 `roi`  平均划分为若干个 `bin`，循环处理每一个 `bin`；
 
-（3)step3，针对当前的bin，计算出当前bin的起始位置和终止位置。对bin_h和bin_w每一个点进行循环处理，一次处理c方向上的数据，共计output_dim。对取出的bin_h * bin_w 个output_dim像素进行对位相加后进行取平均，即为输出图像上对应的c方向上的数据，并记录保存当前C到mapping_channels，过程在对步骤3进行循环，即可处理下一个bin(如果output_dim超过nram上最多能处理的数量max_deal,则需要拆分output_dim)。
+- step3，计算当前的 `bin` 在特征图中的 `offset`:
+  - 循环处理 `bin_h,bin_w`：
+    - 每次处理一个 `c`，共计 `output_dim` 个元素；
+    - 对 `bin_h * bin_w` 个 `output_dim` 做 `redcue_avg`，结果存储至 `output`；
+  - 循环step3，依次处理下一个 `bin` (若 `output_dim` 超过 `nram` 上最多能处理的数量 `max_deal`，需要拆分处理 `output_dim`)。
 
-- 后期优化方案
+后期优化方案:
 
-由于每一个c方向上需要的数据并不是连续的，但时间隔都是相同的，当前采用的是整体load到nram上，再transpose的，由于transpose的对齐限制，需要使用stride_io进行取数，而stride_io的性能不仅很差，由于还增加了转置的过程，但有效数据却只有output_dim个，所以针对这个问题，考虑使用VAA模块，可以对离散数据进行load，而且不需要使用stride_io，可以整体将数据load到片上再进行gather处理，从而有效的提升了算子的带宽。
+- 由于每一个 c 方向上需要的数据并不是连续的，但时间隔都是相同的，当前采用的是整体 load 到 nram上，再 transpose 的，由于 transpose 的对齐限制，需要使用 stride_io 进行取数，而 stride_io 的性能不仅很差，由于还增加了转置的过程，但有效数据却只有 output_dim 个，所以针对这个问题，考虑使用 VAA 模块，可以对离散数据进行 load，而且不需要使用 stride_io，可以整体将数据 load 到片上再进行 gather 处理，从而有效的提升了算子的带宽。
 
 ### 3.2 伪代码实现（可选）
 
