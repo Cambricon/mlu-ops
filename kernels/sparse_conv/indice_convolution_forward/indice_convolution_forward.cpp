@@ -232,14 +232,18 @@ static mluOpStatus_t mainIndiceConvolutionForward(
   int matmul_is_transB = 0;
   uint32_t matmul_allow_TF32 = 0;
   uint32_t matmul_computetype = (uint32_t)filters_desc->getDtype();
+  size_t workspaceSize_addN_tmp =
+      mluOpGetTensorElementNum(features_out_desc) *
+      mluop::getSizeOfDataType(features_out_desc->getDtype());
 
   // allocate workspace segment for intermediate data
   void *validFilters_ptr = filters_need_trans ? workspace : (void *)filters;
-  void *transposeExtra_ptr = (int8_t *)workspace + workspaceSize_transpose;
-  void *matmulResult_ptr = (int8_t *)workspace + workspaceSize_transpose;
+  void *addN_temp_ptr = (int8_t *)workspace + workspaceSize_transpose;
+  void *transposeExtra_ptr = (int8_t *)addN_temp_ptr + workspaceSize_addN_tmp;
+  void *matmulResult_ptr = transposeExtra_ptr;
   void *gatherResult_ptr = (int8_t *)matmulResult_ptr + workspaceSize_matmul;
+  void *scatterResult_ptr = gatherResult_ptr;
   void *matmulExtra_ptr = (int8_t *)gatherResult_ptr + workspaceSize_gather;
-  void *scatterResult_ptr = (int8_t *)matmulResult_ptr + workspaceSize_matmul;
   void *addNExtra_ptr = (int8_t *)scatterResult_ptr + workspaceSize_scatter;
   void *addN_ptrs[2] = {scatterResult_ptr, features_out};
 
@@ -339,8 +343,22 @@ static mluOpStatus_t mainIndiceConvolutionForward(
                                                  cnnl_output_desc);
     CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &init_val,
                           cnnl_output_desc, features_out));
+    CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &init_val,
+                          cnnl_output_desc, addN_temp_ptr));
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
+  }
+
+  int valid_iter = 0;
+  int total_valid_num = 0;
+  if (!is_workspace_compute) {
+    for (int i = 0; i < num_filter; ++i) {
+      active_point_num = indice_num[i];
+      if (active_point_num <= 0) {
+        continue;
+      }
+      total_valid_num++;
+    }
   }
 
   for (int i = 0; i < num_filter; ++i) {
@@ -421,6 +439,7 @@ static mluOpStatus_t mainIndiceConvolutionForward(
           (int8_t *)indice_pairs + i * 2 * elementSize_indice_pairs;
       void *scatterAddIndice_buffer =
           (int8_t *)indice_pairs + (i * 2 + 1) * elementSize_indice_pairs;
+      void *addn_out_ptr = nullptr;
       // invoke gather to get input data:
       // [num_act_in, ci] -> [indice_pairs_num[i], ci]
       {
@@ -511,10 +530,17 @@ static mluOpStatus_t mainIndiceConvolutionForward(
         }
         DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(features_out_desc,
                                                      cnnl_output_desc);
-
+        if ((total_valid_num - valid_iter) % 2 == 1) {
+          addN_ptrs[1] = addN_temp_ptr;
+          addn_out_ptr = features_out;
+        } else {
+          addN_ptrs[1] = features_out;
+          addn_out_ptr = addN_temp_ptr;
+        }
         CALL_CNNL(cnnlAddN_v2(cnnl_handle, cnnl_input_descs, addN_ptrs,
-                              addn_num, cnnl_output_desc, features_out,
+                              addn_num, cnnl_output_desc, addn_out_ptr,
                               addNExtra_ptr, tempSize_addNExtra));
+        valid_iter++;
         for (int i = 0; i < addn_num; i++) {
           DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_descs[i]);
         }
@@ -531,7 +557,8 @@ static mluOpStatus_t mainIndiceConvolutionForward(
     workspaceSize_maximum = std::max(
         workspaceSize_matmul + workspaceSize_scatter + workspaceSize_addNExtra,
         workspaceSize_maximum);
-    *workspace_size = workspaceSize_transpose + workspaceSize_maximum;
+    *workspace_size = workspaceSize_transpose + workspaceSize_maximum +
+                      workspaceSize_addN_tmp;
   }
   CHECK_RETURN(api_name, mluOpDestroyTensorDescriptor(active_indice_desc));
   CHECK_RETURN(api_name, mluOpDestroyTensorDescriptor(matmul_a_desc));

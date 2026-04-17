@@ -348,8 +348,8 @@ static void spconvbpdataGencase(
  *                     | cnnlScatterNd_v2(CNNL_SCATTERND_UPDATE)
  *                     |
  *                     V
- *           [workspace_input_grad_tmp]
- *                     |
+ *           [workspace_input_grad_tmp]    [input_grad_tmp]
+ *                     |_______________________|
  *                     | cnnlAddN_v2()
  *                     |
  *                     V
@@ -518,6 +518,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
   uint64_t input_grad_tmp_workspace_size =
       mluOpGetTensorElementNum(input_grad_desc) *
       mluOpDataTypeBytes(input_grad_desc->getDtype());
+  uint64_t input_grad_tmp2_workspace_size =
+      mluOpGetTensorElementNum(input_grad_desc) *
+      mluOpDataTypeBytes(input_grad_desc->getDtype());
 
   // addn workspace
   uint32_t addn_num = 2;
@@ -546,7 +549,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
       (size_t)(filter_transpose_size + transpose_workspace_size +
                output_grad_condence_size + input_grad_condence_size +
                matmul_workspace_size + input_grad_tmp_workspace_size +
-               addn_workspace_size);
+               input_grad_tmp2_workspace_size + addn_workspace_size);
   VLOG(5) << "[mluOpIndiceConvolutionBackwardData] filter_transpose_size="
           << filter_transpose_size
           << ", transpose_workspace_size=" << transpose_workspace_size
@@ -554,6 +557,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
           << ", input_grad_condence_size=" << input_grad_condence_size
           << ", matmul_workspace_size=" << matmul_workspace_size
           << ", input_grad_tmp_workspace_size=" << input_grad_tmp_workspace_size
+          << ", input_grad_tmp2_workspace_size="
+          << input_grad_tmp2_workspace_size
           << ", addn_workspace_size=" << addn_workspace_size;
   VLOG(5) << "[mluOpIndiceConvolutionBackwardData] workspace workspace_size: "
           << *workspace_size;
@@ -699,7 +704,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
 
   void *workspace_matmul = NULL;
   int8_t *workspace_input_grad_tmp = NULL;
+  int8_t *input_grad_tmp = NULL;  // actually workspace
   int8_t *workspace_addn = NULL;
+  // changed between input_grad & input_grad_tmp according to loop details
+  int8_t *input_grad_result_ptr = NULL;
+
+  // before loop, get the number of indice_num[i] not 0
+  int kk_count_total = 0;
+  for (int i = 0; i < K; ++i) {
+    if (indice_num[i] > 0) {
+      kk_count_total += 1;
+    }
+  }
 
   // filters DHW dim loop
   int kk_count = 0;
@@ -839,12 +855,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
     if (kk_count == 0) {
       workspace_input_grad_tmp = workspace_base;
       workspace_base += input_grad_tmp_workspace_size;
+      // as input_grad tmp space, because add_n does not support inplace
+      input_grad_tmp = workspace_base;
+      workspace_base += input_grad_tmp_workspace_size;
     }
     DEFINE_CREATE_AND_SET_CNNL_HANDLE(handle, cnnl_handle);
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(input_grad_desc,
                                                  cnnl_output_desc);
     CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
                           cnnl_output_desc, workspace_input_grad_tmp));
+    if (kk_count == 0) {
+      CALL_CNNL(cnnlFill_v3(cnnl_handle, CNNL_POINTER_MODE_HOST, &fill_value,
+                            cnnl_output_desc, input_grad_tmp));
+    }
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
     DESTROY_CNNL_HANDLE(cnnl_handle);
 
@@ -882,6 +905,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
     }
     void *addn_array[2] = {reinterpret_cast<void *>(workspace_input_grad_tmp),
                            input_grad};
+    if ((kk_count_total - kk_count) % 2 == 1) {
+      // including the last loop
+      // the last output ptr must be input_grad to avoid extra cnnlCopy
+      addn_array[1] = (void *)input_grad_tmp;
+      input_grad_result_ptr = (int8_t *)input_grad;
+      VLOG(5) << "workspace_input_grad_tmp + input_grad_tmp => input_grad";
+    } else {
+      addn_array[1] = input_grad;
+      input_grad_result_ptr = (int8_t *)input_grad_tmp;
+      VLOG(5) << "workspace_input_grad_tmp + input_grad     => input_grad_tmp";
+    }
+
     size_t addn_workspace_size = 0;
     uint32_t addn_num = 2;
 
@@ -901,8 +936,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpIndiceConvolutionBackwardData(
                                          &addn_workspace_size));
 
       CALL_CNNL(cnnlAddN_v2(cnnl_handle, cnnl_input_descs, addn_array, addn_num,
-                            cnnl_output_desc, input_grad, workspace_addn,
-                            addn_workspace_size));
+                            cnnl_output_desc, input_grad_result_ptr,
+                            workspace_addn, addn_workspace_size));
       for (int i = 0; i < addn_num; i++) {
         DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_descs[i]);
       }
