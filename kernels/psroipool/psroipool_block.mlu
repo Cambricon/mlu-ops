@@ -31,14 +31,18 @@
 
 __nram__ int8_t nram_ptr[MAX_NRAM_SIZE];
 
-// This function is used to align the round_rn
+// This function is used to align the round_rn, and only sup float currently
+// Commented code is reserved for future extension.
 template <typename T>
 __mlu_func__ T scalarRound(T key) {
-  if (sizeof(T) == 2) {
-    return (T)(__half2int32_rd(T(key)));
-  } else {
-    return (T)(__float2int32_rd(T(key)));
-  }
+  /*
+    if constexpr (std::is_same<T, float>::value) {
+      return (T)(__float2int32_rd(T(key)));
+    } else {
+      static_assert(!std::is_same<T, float>::value, "unsupported datatype");
+    }
+  */
+  return (T)(__float2int32_rd(T(key)));
 }
 
 template <typename T>
@@ -76,18 +80,11 @@ __mlu_func__ void psRoiAvgPool(
     T *ptr_bottom_rois = bottom_rois + n * rois_offset;
     // batch_id, x1, y1, x2, y2
     bidx = (int)ptr_bottom_rois[0];
-    roi_start_w =
-        static_cast<T>(scalarRound(ptr_bottom_rois[1])) * ((T)spatial_scale);
-    roi_start_h =
-        static_cast<T>(scalarRound(ptr_bottom_rois[2])) * ((T)spatial_scale);
-    roi_end_w = static_cast<T>(scalarRound(ptr_bottom_rois[3]) + 1.) *
-                ((T)spatial_scale);
-    roi_end_h = static_cast<T>(scalarRound(ptr_bottom_rois[4]) + 1.) *
-                ((T)spatial_scale);
+    roi_start_w = static_cast<T>(scalarRound(ptr_bottom_rois[1])) * ((T)spatial_scale);  // NOLINT
+    roi_start_h = static_cast<T>(scalarRound(ptr_bottom_rois[2])) * ((T)spatial_scale);  // NOLINT
+    roi_end_w = static_cast<T>(scalarRound(ptr_bottom_rois[3]) + 1.) * ((T)spatial_scale);  // NOLINT
+    roi_end_h = static_cast<T>(scalarRound(ptr_bottom_rois[4]) + 1.) * ((T)spatial_scale);  // NOLINT
 
-    if (bidx < 0 || bidx > (batch_size - 1)) {
-      return;
-    }
     T roi_height = __mluop_max(roi_end_h - roi_start_h, (T)0.1);
     T roi_width = __mluop_max(roi_end_w - roi_start_w, (T)0.1);
     T bin_size_h = (T)roi_height / (T)(pooled_height);
@@ -237,18 +234,11 @@ __mlu_func__ void psRoiAvgPoolBackwardCompute(
   T roi_start_w, roi_start_h, roi_end_w, roi_end_h;
   // batch_id, x1, y1, x2, y2
   int batch_id = (int)rois[rois_add];
-  roi_start_w =
-      static_cast<T>(scalarRound(rois[rois_add + 1])) * ((T)spatial_scale);
-  roi_start_h =
-      static_cast<T>(scalarRound(rois[rois_add + 2])) * ((T)spatial_scale);
-  roi_end_w =
-      static_cast<T>(scalarRound(rois[rois_add + 3]) + 1.) * ((T)spatial_scale);
-  roi_end_h =
-      static_cast<T>(scalarRound(rois[rois_add + 4]) + 1.) * ((T)spatial_scale);
+  roi_start_w = static_cast<T>(scalarRound(rois[rois_add + 1])) * ((T)spatial_scale);  // NOLINT
+  roi_start_h = static_cast<T>(scalarRound(rois[rois_add + 2])) * ((T)spatial_scale);  // NOLINT
+  roi_end_w = static_cast<T>(scalarRound(rois[rois_add + 3]) + 1.) * ((T)spatial_scale);  // NOLINT
+  roi_end_h = static_cast<T>(scalarRound(rois[rois_add + 4]) + 1.) * ((T)spatial_scale);  // NOLINT
 
-  if (batch_id < 0 || batch_id > (batch_size - 1)) {
-    return;
-  }
   T roi_height = __mluop_max(roi_end_h - roi_start_h, (T)0.1);
   T roi_width = __mluop_max(roi_end_w - roi_start_w, (T)0.1);
   T bin_size_h = (T)roi_height / (T)(pooled_height);
@@ -294,6 +284,7 @@ __mlu_func__ void psRoiAvgPoolBackwardPartOutputdim(
   int *mapping_channel_buffer = (int *)(top_grad_buffer + c_align);
   T *atomic_buffer = (T *)(mapping_channel_buffer + c_align);
   int top_offset = bin_index * output_dim + repeat * max_deal_c;
+
   // load data
   __bang_write_value(top_grad_buffer, c_align, 0);
   __sync();
@@ -356,6 +347,7 @@ __mlu_global__ void MLUKernelPsroipoolBackward(
   int total_bins = rois_num * pooled_height * pooled_width;
   int remainder = total_bins % taskDim;
   int bins_per_core = total_bins / taskDim + (int)(taskId < remainder);
+
   // offset of the bin that core processes
   int bins_offset = taskId * (total_bins / taskDim) +
                     (taskId < remainder ? taskId : remainder);
@@ -364,6 +356,7 @@ __mlu_global__ void MLUKernelPsroipoolBackward(
   // the number of bins that nram can handle at one time
   int nram_deal_bins = (MAX_NRAM_SIZE - c_align * sizeof(T)) /
                        (c_align * sizeof(T) + output_dim * sizeof(int));
+
   // big c situation
   if (nram_deal_bins < 1) {
     int nram_deal_c = FLOOR_ALIGN(MAX_NRAM_SIZE / 3 / sizeof(int),
