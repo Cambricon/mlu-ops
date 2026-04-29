@@ -25,7 +25,9 @@
 
 #include "mlu_op.h"
 
-void mluOpCheckStatus(mluOpStatus_t result, char const *const func,
+namespace abs_sample {
+
+void mluOpCheck(mluOpStatus_t result, char const *const func,
                 const char *const file, int const line) {
   if (result) {
     std::string error = "\"" + std::string(mluOpGetErrorString(result)) +
@@ -34,7 +36,7 @@ void mluOpCheckStatus(mluOpStatus_t result, char const *const func,
   }
 }
 
-#define MLUOP_CHECK_STATUS(val) mluOpCheckStatus((val), #val, __FILE__, __LINE__)
+#define MLUOP_CHECK(val) mluOpCheck((val), #val, __FILE__, __LINE__)
 
 void initDevice(int &dev, cnrtQueue_t &queue, mluOpHandle_t &handle) {
   CNRT_CHECK(cnrtGetDevice(&dev));
@@ -42,11 +44,13 @@ void initDevice(int &dev, cnrtQueue_t &queue, mluOpHandle_t &handle) {
 
   CNRT_CHECK(cnrtQueueCreate(&queue));
 
-  MLUOP_CHECK_STATUS(mluOpCreate(&handle));
-  MLUOP_CHECK_STATUS(mluOpSetQueue(handle, queue));
+  MLUOP_CHECK(mluOpCreate(&handle));
+  MLUOP_CHECK(mluOpSetQueue(handle, queue));
+}
 }
 
 int main(int argc, char *argv[]) {
+  using namespace abs_sample;
   int dev;
   mluOpHandle_t handle = nullptr;
   cnrtQueue_t queue = nullptr;
@@ -69,8 +73,8 @@ int main(int argc, char *argv[]) {
   mluOpDataType_t type = MLUOP_DTYPE_FLOAT;
 
   mluOpTensorDescriptor_t input_tensor_desc;
-  MLUOP_CHECK_STATUS(mluOpCreateTensorDescriptor(&input_tensor_desc));
-  MLUOP_CHECK_STATUS(mluOpSetTensorDescriptor(input_tensor_desc, layout, type, dim_num,
+  MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_tensor_desc));
+  MLUOP_CHECK(mluOpSetTensorDescriptor(input_tensor_desc, layout, type, dim_num,
                                        dim_size));
 
   int output_dim_nb = 1;
@@ -79,14 +83,14 @@ int main(int argc, char *argv[]) {
   mluOpDataType_t output_type = MLUOP_DTYPE_INT32;
 
   mluOpTensorDescriptor_t output_tensor_desc;
-  MLUOP_CHECK_STATUS(mluOpCreateTensorDescriptor(&output_tensor_desc));
-  MLUOP_CHECK_STATUS(mluOpSetTensorDescriptor(output_tensor_desc, output_layout,
+  MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_tensor_desc));
+  MLUOP_CHECK(mluOpSetTensorDescriptor(output_tensor_desc, output_layout,
                                        output_type, output_dim_nb,
                                        output_dim_size));
 
   // get workspace size
   size_t workspace_size = 0;
-  MLUOP_CHECK_STATUS(
+  MLUOP_CHECK(
       mluOpGetPolyNmsWorkspaceSize(handle, input_tensor_desc, &workspace_size));
 
   // create workspace ptr
@@ -111,7 +115,7 @@ int main(int argc, char *argv[]) {
   const float iou_threshold = 0.5;
 
   // call mluOpPolyNms interface
-  MLUOP_CHECK_STATUS(mluOpPolyNms(
+  MLUOP_CHECK(mluOpPolyNms(
       handle, input_tensor_desc, input_tensor_ptr, iou_threshold, workspace_ptr,
       workspace_size, output_tensor_desc, output_tensor_ptr, output_size_ptr));
 
@@ -146,10 +150,10 @@ int main(int argc, char *argv[]) {
   CNRT_CHECK(cnrtFree(workspace_ptr));
   CNRT_CHECK(cnrtFree(output_size_ptr));
 
-  MLUOP_CHECK_STATUS(mluOpDestroyTensorDescriptor(input_tensor_desc));
-  MLUOP_CHECK_STATUS(mluOpDestroyTensorDescriptor(output_tensor_desc));
+  MLUOP_CHECK(mluOpDestroyTensorDescriptor(input_tensor_desc));
+  MLUOP_CHECK(mluOpDestroyTensorDescriptor(output_tensor_desc));
 
   CNRT_CHECK(cnrtQueueDestroy(queue));
-  MLUOP_CHECK_STATUS(mluOpDestroy(handle));
+  MLUOP_CHECK(mluOpDestroy(handle));
   return 0;
 }

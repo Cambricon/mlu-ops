@@ -34,7 +34,9 @@ const double EPSILON = 1e-9;
 const double EPSILON_FLOAT = 1e-6;
 const double EPSILON_HALF = 1e-3;
 
-void mluOpCheckStatus(mluOpStatus_t result, char const *const func,
+namespace abs_sample {
+
+void mluOpCheck(mluOpStatus_t result, char const *const func,
                 const char *const file, int const line) {
   if (result) {
     std::string error = "\"" + std::string(mluOpGetErrorString(result)) +
@@ -43,7 +45,7 @@ void mluOpCheckStatus(mluOpStatus_t result, char const *const func,
   }
 }
 
-#define MLUOP_CHECK_STATUS(val) mluOpCheckStatus((val), #val, __FILE__, __LINE__)
+#define MLUOP_CHECK(val) mluOpCheck((val), #val, __FILE__, __LINE__)
 
 struct HostTimer {
   struct timespec t0 = {0, 0};
@@ -152,8 +154,10 @@ void printTestCaseShape(const ShapeParam &param) {
   }
   printf(" %d]\n", param.shape[param.dims - 1]);
 }
+}
 
 int main(int argc, char *argv[]) {
+  using namespace abs_sample;
   ShapeParam abs_param;
   HostTimer interface_timer;
   HostTimer cpu_compute_timer;
@@ -180,13 +184,13 @@ int main(int argc, char *argv[]) {
   mluOpDataType_t type = MLUOP_DTYPE_FLOAT;
 
   mluOpTensorDescriptor_t input_tensor_desc;
-  MLUOP_CHECK_STATUS(mluOpCreateTensorDescriptor(&input_tensor_desc));
-  MLUOP_CHECK_STATUS(mluOpSetTensorDescriptor(input_tensor_desc, MLUOP_LAYOUT_ARRAY,
+  MLUOP_CHECK(mluOpCreateTensorDescriptor(&input_tensor_desc));
+  MLUOP_CHECK(mluOpSetTensorDescriptor(input_tensor_desc, MLUOP_LAYOUT_ARRAY,
                                        type, dimNb, dimSize));
 
   mluOpTensorDescriptor_t output_tensor_desc;
-  MLUOP_CHECK_STATUS(mluOpCreateTensorDescriptor(&output_tensor_desc));
-  MLUOP_CHECK_STATUS(mluOpSetTensorDescriptor(output_tensor_desc, MLUOP_LAYOUT_ARRAY,
+  MLUOP_CHECK(mluOpCreateTensorDescriptor(&output_tensor_desc));
+  MLUOP_CHECK(mluOpSetTensorDescriptor(output_tensor_desc, MLUOP_LAYOUT_ARRAY,
                                        type, dimNb, dimSize));
 
   // cpu compute
@@ -215,7 +219,7 @@ int main(int argc, char *argv[]) {
 
   // call mluOpAbs interface
   interface_timer.start();
-  MLUOP_CHECK_STATUS(mluOpAbs(handle, input_tensor_desc, input_tensor_ptr,
+  MLUOP_CHECK(mluOpAbs(handle, input_tensor_desc, input_tensor_ptr,
                        output_tensor_desc, output_tensor_ptr));
   interface_timer.stop();
 
@@ -241,13 +245,13 @@ int main(int argc, char *argv[]) {
   CNRT_CHECK(cnrtFree(input_tensor_ptr));
   CNRT_CHECK(cnrtFree(output_tensor_ptr));
 
-  MLUOP_CHECK_STATUS(mluOpDestroyTensorDescriptor(input_tensor_desc));
-  MLUOP_CHECK_STATUS(mluOpDestroyTensorDescriptor(output_tensor_desc));
+  MLUOP_CHECK(mluOpDestroyTensorDescriptor(input_tensor_desc));
+  MLUOP_CHECK(mluOpDestroyTensorDescriptor(output_tensor_desc));
 
   CNRT_CHECK(cnrtNotifierDestroy(start));
   CNRT_CHECK(cnrtNotifierDestroy(end));
 
   CNRT_CHECK(cnrtQueueDestroy(queue));
-  MLUOP_CHECK_STATUS(mluOpDestroy(handle));
+  MLUOP_CHECK(mluOpDestroy(handle));
   return 0;
 }
