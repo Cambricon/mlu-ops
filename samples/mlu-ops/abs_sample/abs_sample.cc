@@ -34,6 +34,8 @@ const double EPSILON = 1e-9;
 const double EPSILON_FLOAT = 1e-6;
 const double EPSILON_HALF = 1e-3;
 
+namespace abs_sample {
+
 void mluOpCheck(mluOpStatus_t result, char const *const func,
                 const char *const file, int const line) {
   if (result) {
@@ -152,8 +154,10 @@ void printTestCaseShape(const ShapeParam &param) {
   }
   printf(" %d]\n", param.shape[param.dims - 1]);
 }
+}
 
 int main(int argc, char *argv[]) {
+  using namespace abs_sample;
   ShapeParam abs_param;
   HostTimer interface_timer;
   HostTimer cpu_compute_timer;
