@@ -25,7 +25,7 @@
 
 #include "mlu_op.h"
 
-namespace abs_sample {
+namespace poly_nms_sample {
 
 void mluOpCheck(mluOpStatus_t result, char const *const func,
                 const char *const file, int const line) {
@@ -50,7 +50,7 @@ void initDevice(int &dev, cnrtQueue_t &queue, mluOpHandle_t &handle) {
 }
 
 int main(int argc, char *argv[]) {
-  using namespace abs_sample;
+  using namespace poly_nms_sample;
   int dev;
   mluOpHandle_t handle = nullptr;
   cnrtQueue_t queue = nullptr;
