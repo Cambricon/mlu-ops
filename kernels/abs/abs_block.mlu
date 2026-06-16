@@ -56,7 +56,7 @@ __mlu_func__ void auxFunc3AbsHalfBfloat16(
   align_num = NFU_ALIGN_SIZE / sizeof(T1);
   // need 2 pingpong sapce,
   span_num_deal = PAD_DOWN(UNARY_NRAM_SIZE / sizeof(T1) / 2, align_num);
-  ping_pong_gap = span_num_deal * sizeof(T1) * 2;
+  ping_pong_gap = span_num_deal * sizeof(T1);
   output_input_gap = 0;
   auxiliary_a_gap = 0;
   auxiliary_b_gap = 0;
