@@ -1,19 +1,4 @@
 {
-  "version": "v1.5.0",
-  
-  "defaultDeps": [
-    {
-      "cntoolkit": "v4.0.0",
-      "driver": "v6.0.3"
-    }
-  ],
-
-  "optionalDeps": [
-    {
-      "cnnl": "v1.28.0"
-    }
-  ],
-
   "common": [
       "bangc_helper_dtype.h",
       "bangc_kernels.h",
