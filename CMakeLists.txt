@@ -236,7 +236,7 @@ endif()
 # Clean up stale BANG compile commands (workaround for FindBANG.cmake appending
 # to bang_compile_commands.json.pre-gen without clearing history)
 ################################################################################
-file(REMOVE "${CMAKE_BINARY_DIR}/bang_compile_commands.json.pre-gen")
+file(REMOVE OPTIONAL "${CMAKE_BINARY_DIR}/bang_compile_commands.json.pre-gen")
 
 bang_add_library(mluops SHARED ${src_files} ${src_helper_files})
 
