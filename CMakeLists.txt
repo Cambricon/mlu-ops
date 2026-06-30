@@ -232,6 +232,12 @@ if (TARGET fmt::fmt-header-only)
   target_link_libraries(mluopscore fmt::fmt-header-only)
 endif()
 
+################################################################################
+# Clean up stale BANG compile commands (workaround for FindBANG.cmake appending
+# to bang_compile_commands.json.pre-gen without clearing history)
+################################################################################
+file(REMOVE "${CMAKE_BINARY_DIR}/bang_compile_commands.json.pre-gen")
+
 bang_add_library(mluops SHARED ${src_files} ${src_helper_files})
 
 if(${MLUOP_BUILD_STATIC} MATCHES "ON")
@@ -277,4 +283,18 @@ message("-- MLUOP_BUILD_GTEST=${MLUOP_BUILD_GTEST}")
 if(${MLUOP_BUILD_GTEST} MATCHES "ON")
   message("-- Build MLUOP Gtest")
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/test/mlu_op_gtest" "mlu_op_gtest")
+endif()
+
+################################################################################
+# Merge BANG compile commands with host compile_commands.json
+################################################################################
+APPEND_BANG_COMPILE_COMMANDS(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+if (TARGET merge_compile_commands)
+  add_dependencies(mluops merge_compile_commands)
+  if (TARGET mluops_static)
+    add_dependencies(mluops_static merge_compile_commands)
+  endif()
+  if (TARGET mluop_gtest_kernels)
+    add_dependencies(mluop_gtest_kernels merge_compile_commands)
+  endif()
 endif()
