@@ -1,10 +1,10 @@
 .. _环境变量:
 
-Cambricon MLU-OPS™ 库环境变量
+Cambricon MLU-OPS 库环境变量
 ================================
 
 
-本章介绍 Cambricon MLU-OPS™ 库环境变量。
+本章介绍 Cambricon MLU-OPS 库环境变量。
 
 .. _MLUOP_BUILD_GTEST:
  
@@ -13,7 +13,7 @@ MLUOP_BUILD_GTEST
 
 **功能描述**
 
-编译 MLU-OPS™ 的GTEST。
+编译 MLU-OPS 的GTEST。
 
 **使用方法**
 
@@ -28,7 +28,7 @@ MLUOP_GTEST_DUMP_DATA
 
 **功能描述**
 
-将 MLU-OPS™的GTEST的输入输出数据打印至文件中。
+将 MLU-OPS的GTEST的输入输出数据打印至文件中。
 
 **使用方法**
 
@@ -52,7 +52,7 @@ MLUOP_GEN_CASE
 - export MLUOP_GEN_CASE=2：生成 prototxt，并保留输入真实值。
 - export MLUOP_GEN_CASE=3：不生成 prototxt，只在屏幕上打印输入输出的 shape 等信息。
 
-更详细请参见 `MLU-OPS™ GEN_CASE 使用指南 <https://github.com/Cambricon/mlu-ops/blob/master/docs/Gencase-User-Guide-zh.md>`_ 。
+更详细请参见 `MLU-OPS GEN_CASE 使用指南 <https://github.com/Cambricon/mlu-ops/blob/master/docs/Gencase-User-Guide-zh.md>`_ 。
 
 .. _MLUOP_GEN_CASE_DIR:
 
@@ -115,6 +115,7 @@ MLUOP_LOG_COLOR_PRINT
 **功能描述**
 
 设置打印日志时是否开启颜色字体特效。该环境变量仅用于打印日志信息到屏幕。生产的日志文件不会有颜色字体特性。
+
 **使用方法**
 
 - export MLUOP_LOG_COLOR_PRINT=ON：打印日志时开启颜色字体特效。

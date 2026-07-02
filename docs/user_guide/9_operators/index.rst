@@ -3,7 +3,7 @@
 算子支持
 ==========================
 
-下面具体介绍 Cambricon MLU-OPS™ 支持的算子及其功能描述。有关算子详情，请参见《Cambricon MLU-OPS™ Developer Guide》。
+下面具体介绍 Cambricon MLU-OPS 支持的算子及其功能描述。有关算子详情，请参见《Cambricon MLU-OPS Developer Guide》。
 
 .. _abs:
 
@@ -46,7 +46,11 @@ mluOpBallQuery
 
 mluOpBboxOverlaps
 -----------------------------
-该算子用于计算给定两个矩形框的交并比，包括两个输入 tensor，Box1[N,4]和Box2[M,4]。参数 ``aligned`` 为 True 时，输出对位计算的交并比，为 False 时，输出两两相交的交并比；参数 ``offset`` 为 True 时，计算过程坐标有偏置，为 False 时，计算过程坐标没有偏置；参数 `mode` 为 0 时，结果为 `IOU` (intersection/(area1+area2))，为 1 时，结果为 `IOF` (intersection/area1)，其中 intersection 表示重叠面积，area1、area2 分别表示两个框的面积。
+该算子用于计算给定两个矩形框的交并比，包括两个输入 tensor，Box1[N,4]和Box2[M,4]。
+
+- 参数 ``aligned`` 为 True 时，输出对位计算的交并比，为 False 时，输出两两相交的交并比。
+- 参数 ``offset`` 为 True 时，计算过程坐标有偏置，为 False 时，计算过程坐标没有偏置。
+- 参数 `mode` 为 0 时，结果为 `IOU` (intersection/(area1+area2))，为 1 时，结果为 `IOF` (intersection/area1)，其中 intersection 表示重叠面积，area1、area2 分别表示两个框的面积。
 
 .. _border_align_backward:
 
@@ -108,25 +112,28 @@ mluOpDeformRoiPoolForward
 --------------------------
 对输入的可形变的感兴趣区域进行池化。该池化过程如下：
 
-1. 将任意尺寸的候选区域转换为固定尺寸的特征图。假设输入特征图为 ``x``，roi 为 w * h 大小且左上角点为 p0 的区域，ROI Pooling 将把 ROI 区域分为 k * k 个 bins，输出 y 为 k * k 大小的特征图。
-对于第 (i, j) 个格子 (0 <= i,j < k)，其计算公式:
+1. 将任意尺寸的候选区域转换为固定尺寸的特征图。
 
-.. math::
+   假设输入特征图为 ``x``，roi 为 w * h 大小且左上角点为 p0 的区域，ROI Pooling 将把 ROI 区域分为 k * k 个 bins，输出 y 为 k * k 大小的特征图。
 
-   y(i,j) = \frac{1}{n_{ij}} * \sum_{p\in bin(i,j)} x(p0 + p)
+   对于第 (i, j) 个格子 (0 <= i,j < k)，其计算公式:
+   
+   .. math::
+   
+      y(i,j) = \frac{1}{n_{ij}} * \sum_{p\in bin(i,j)} x(p0 + p)
 
-其中 :math:`n_{ij}` 表示 ``bin`` 中采样像素的个数，:math:`bin(i,j)` 解释为 :math:`\lfloor i\frac{w}{k}\rfloor\leq p_x < \lceil (i+1)\frac{w}{k} \rceil`
-， :math:`\lfloor j\frac{h}{k}\rfloor\leq p_y < \lceil (j+1)\frac{h}{k} \rceil` 。
+   其中 :math:`n_{ij}` 表示 ``bin`` 中采样像素的个数，:math:`bin(i,j)` 解释为 :math:`\lfloor i\frac{w}{k}\rfloor\leq p_x < \lceil (i+1)\frac{w}{k} \rceil`
+   ， :math:`\lfloor j\frac{h}{k}\rfloor\leq p_y < \lceil (j+1)\frac{h}{k} \rceil` 。
 
 2. 在ROI Pooling 的基础之上对 k * k 个 bins 中的每一个 bin 都对应添加一个偏移量 :math:`\{\triangle p_{i,j}|0\leq i,j<k \}` ，使得每个bin产生位置修正。
 
-.. math::
-
-   y(i,j) = \frac{1}{n_{ij}}*\sum_{p\in bin(i,j)} x(p0 + p + \triangle p_{i,j})\\
-   \triangle p_{i,j} = \gamma * \triangle \hat p_{i,j} \circ(w,h)
-
-其中 :math:`\triangle \hat p_{i,j}` 是通过全连接层获得的归一化偏移量；:math:`\triangle p_{i,j}` 是一个分数；:math:`\gamma` 是预先设定的标量。
-
+   .. math::
+   
+      y(i,j) = \frac{1}{n_{ij}}*\sum_{p\in bin(i,j)} x(p0 + p + \triangle p_{i,j})\\
+      \triangle p_{i,j} = \gamma * \triangle \hat p_{i,j} \circ(w,h)
+   
+   其中 :math:`\triangle \hat p_{i,j}` 是通过全连接层获得的归一化偏移量；:math:`\triangle p_{i,j}` 是一个分数；:math:`\gamma` 是预先设定的标量。
+   
 .. _div:
 
 mluOpDiv
@@ -267,7 +274,7 @@ log2的计算公式为：
    y_i = log2(x_i)
 
 
-Llg10的计算公式为：
+Log10的计算公式为：
 
 .. math::
 
@@ -701,13 +708,13 @@ mluOpDynamicPointToVoxelForward
 ---------------------------------
 该算子dynamic_point_to_voxel_forward算子的主要功能就是将具有相同体素坐标的所有点数据，在 ``num_feats`` 特征维度上利用 ``mean`` 或 ``max`` 方法进行去重; 
 
-该算子包含三个输入: `feats`, `coors`, `reduce_type`，五个输出: `voxel_feats`, `voxel_coors`, `point2voxel_map`, `voxel_points_count`, `voxel_num`;
+该算子包含三个输入: ``feats``, ``coors``, ``reduce_type``，五个输出: ``voxel_feats``, ``voxel_coors``, ``point2voxel_map``, ``voxel_points_count``, ``voxel_num``。
 
 实现算子功能可以划分 2 个部分:
 
-1）将体素坐标 `coors` 进行排序、去重，得到新的体素坐标 `voxel_coors`; 保存去重后体素的个数 ``num_voxels`` 到 `voxel_num`; 保存 `coors` 中每个体素坐标在 `voxel_coors` 中对应的索引到 `point2voxel_map`; 保存 `voxel_coors` 中每个体素坐标在 `coors` 中出现的个数到 `voxel_points_count`;
+1）将体素坐标 ``coors`` 进行排序、去重，得到新的体素坐标 ``voxel_coors``; 保存去重后体素的个数 ``num_voxels`` 到 ``voxel_num``; 保存 ``coors`` 中每个体素坐标在 ``voxel_coors`` 中对应的索引到 ``point2voxel_map``; 保存 ``voxel_coors`` 中每个体素坐标在 ``coors`` 中出现的个数到 ``voxel_points_count``;
 
-2）遍历 `feats` 中每个点，在特征维度上，对每个值根据 `reduce_type` 的方法进行计算，将结果保存到 `voxel_feats` 中; 当 `reduce_type` = ``max``, 在特征维度上对每个值取最大的值; 当 `reduce_type` = ``mean``, 将特征维度每个值都累加到 `voxel_feats` 对应位置中，再利用 `voxel_points_count` 获取该体素位置在原始体素中出现的个数，再对 `voxel_feats` 的特征维度求平均。
+2）遍历 ``feats`` 中每个点，在特征维度上，对每个值根据 ``reduce_type`` 的方法进行计算，将结果保存到 ``voxel_feats`` 中; 当 ``reduce_type`` = ``max`` , 在特征维度上对每个值取最大的值; 当 ``reduce_type`` = ``mean``, 将特征维度每个值都累加到 ``voxel_feats`` 对应位置中，再利用 ``voxel_points_count`` 获取该体素位置在原始体素中出现的个数，再对 ``voxel_feats`` 的特征维度求平均。
 
 .. _sync_batchnorm_stats:
 
