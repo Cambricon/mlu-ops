@@ -19,7 +19,7 @@ MLUOP_BUILD_GTEST
 
 - export MLUOP_BUILD_GTEST=ON。
 
-在build脚本中默认设为ON。设置为OFF时，不再使用此环境变量时。
+在build脚本中默认设为ON。设置为OFF时，不再使用此环境变量。
 
 .. _MLUOP_GTEST_DUMP_DATA:
  
