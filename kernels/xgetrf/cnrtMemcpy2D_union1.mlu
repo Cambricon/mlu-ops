@@ -1,0 +1,74 @@
+/*************************************************************************
+ * Copyright (C) [2024] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#include "xgetrf.h"
+#include "xgetrf_utils.h"
+#include "core/logging.h"
+#include "kernels/debug.h"
+#include "kernels/kernel.h"
+
+__mlu_entry__ void MLUKernelcnrtMemcpy2D(int batch, int m, int n, float *dA,
+                                         int ldda, int stride_a, float *dB,
+                                         int lddb, int stride_b, int mode) {
+  int id, batch_id, tx, taskdim;
+
+  if (batch > 1) {
+    id = taskId;
+    batch_id = id / 4;
+    if (batch_id >= batch) return;
+    tx = taskId % 4;
+    // dA += batch_id * stride_a;
+    // dB += batch_id * stride_b;
+    taskdim = TaskUnion1;
+  } else {
+    id = taskId;
+    batch_id = 0;
+    taskdim = taskDim;
+    tx = taskId;
+  }
+  if (tx == 0) {
+    if (mode == 0) {
+      __memcpy(dB, dA, batch * m * n * sizeof(float), GDRAM2GDRAM);
+    } else if (mode == 1) {
+      dA += batch_id * stride_a;
+      dB += batch_id * stride_b;
+      __memcpy(dB, dA, n * sizeof(float), GDRAM2GDRAM, lddb * sizeof(float),
+               ldda * sizeof(float), m - 1);
+    } else if (mode == 2) {
+      __memcpy(dB, dA, batch * 2 * m * n * sizeof(float), GDRAM2GDRAM);
+    } else if (mode == 3) {
+      __gdramset(dA, 1, 0);
+    } else if (mode == 4) {
+      __memcpy(dB, dA, 1 * m * n * sizeof(int), GDRAM2GDRAM);
+    }
+  }
+}
+
+mluOpStatus_t MLUOP_WIN_API KernelcnrtMemcpy2D(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpDataType_t d_type, int batch, int m, int n, float *dA, int ldda,
+    int stride_a, float *dB, int lddb, int stride_b, int mode) {
+  KERNEL_CHECK(MLUKernelcnrtMemcpy2D<<<k_dim, k_type, queue>>>(
+      batch, m, n, dA, ldda, stride_a, dB, lddb, stride_b, mode));
+
+  return MLUOP_STATUS_SUCCESS;
+}
