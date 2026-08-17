@@ -800,3 +800,6 @@ mluOpLgamma
 
 - ``x`` 为输入张量。
 
+mluOpBoxOverlapBev
+-------------------
+计算旋转边界框之间的面积 (OVERLAP) 。

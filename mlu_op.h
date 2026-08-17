@@ -14553,6 +14553,74 @@ mluOpLgamma(mluOpHandle_t handle,
             const mluOpTensorDescriptor_t y_desc,
             void *y);
 
+// Group:BoxOverlapBev
+/*!
+ * @brief Computes the overlaps between each rotated bounding-box of \p boxes1 and \p boxes2.
+ *
+ * @param[in] handle
+ *   Input. Handle to a Cambricon MLU-OPS context that is used to manage MLU devices and
+ *   queues in the box overlap bev operation. For detailed information,
+ *   see ::mluOpHandle_t.
+ * @param[in] boxes1_desc
+ *   Input. The descriptor of the input tensor \p boxes1 (rotated bounding-box).
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] boxes1
+ *   Input. Pointer to the MLU memory that stores the input tensor \p boxes1.
+ *   It has shape (n, 7), with the number 7 indicating (x, y, z, dx, dy, dz, heading) for each row.
+ *   Note that heading is in radian.
+ * @param[in] boxes2_desc
+ *   Input. The descriptor of the input tensor \p boxes2 (rotated bounding-box).
+ *   For detailed information, see ::mluOpTensorDescriptor_t.
+ * @param[in] boxes2
+ *   Input. Pointer to the MLU memory that stores the input tensor \p boxes2.
+ *   It has shape (m, 7), with the number 7 indicating (x, y, z, dx, dy, dz, heading) for each row.
+ *   Note that heading is in radian.
+ * @param[in] overlaps_desc
+ *   Input. The descriptor of the output tensor \p overlaps. For detailed information,
+ *   see ::mluOpTensorDescriptor_t.
+ * @param[out] overlaps
+ *   Output. Pointer to the MLU memory that stores the output tensor \p overlaps.
+ *   \p overlaps is the overlapped area of rotated bounding boxes.
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ *
+ * @par Data Type
+ * - By the order of \p boxes1 - \p boxes2 - \p overlaps, the supported data types of
+ *    \p boxes1, \p boxes2 and \p overlaps are as follows:
+ *   - float - float - float.
+ *
+ * @par Scale Limitation
+ * - The number of dimensions of \p boxes1 and \p boxes2 tensors must be 2.
+ * - The length of lowest dimension of \p boxes1 and \p boxes2 tensors must be 7.
+ * - Both sets of boxes are expected to be in
+ *   - \p boxes1 (Tensor): shape [n, 7] in (x, y, z, dx, dy, dz, heading) format.
+ *   - \p boxes2 (Tensor): shape [m, 7] in (x, y, z, dx, dy, dz, heading) format.
+ * - For input \p boxes1 with n-rows and \p boxes2 with
+ *   m-rows, the output \p overlaps must be a two-dimensional matrix with shape n*m.
+ * - For input \p boxes1 with n-rows and \p boxes2 with m-rows, the n-rows and m-rows must
+ *   be less than 1000.
+ *
+ * @note
+ * - Input with NaN or Infinity is not supported currently.
+ *
+ * @par API Dependency
+ * - None.
+ *
+ * @par Requirements
+ * - None.
+ *
+ * @par Reference
+ * - None.
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpBoxOverlapBev(mluOpHandle_t handle,
+                   const mluOpTensorDescriptor_t boxes1_desc,
+                   const void *boxes1,
+                   const mluOpTensorDescriptor_t boxes2_desc,
+                   const void *boxes2,
+                   const mluOpTensorDescriptor_t overlaps_desc,
+                   void *overlaps);
+
 #if defined(__cplusplus)
 }
 #endif
