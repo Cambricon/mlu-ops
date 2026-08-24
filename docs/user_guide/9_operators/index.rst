@@ -802,4 +802,4 @@ mluOpLgamma
 
 mluOpBoxOverlapBev
 -------------------
-计算旋转边界框之间的面积 (OVERLAP) 。
+根据输入 boxes1(N 个 box)，boxes2(M 个 box)，计算 box 两两之间重叠的面积(OVERLAP)。

@@ -11,7 +11,7 @@
 
 | 版本号| 修订人 | 修订日期 | 修订描述 |
 | ----- | ------ | -------  | -------  |
-| V1.0  |   zhangxinyang  | 2022-5-5 | 首次提交 |
+| V1.0  |   lijiawei  | 2022-5-5 | 首次提交 |
 
 * #### 内容描述
 
@@ -59,7 +59,7 @@
 
 ### 1.2 算子功能和应用场景描述
 
-算子功能： 根据给定参数boxes1/boxes2求box之间的重叠面积。
+算子功能： 根据输入 boxes1(N 个 box)，boxes2(M 个 box)，计算 box 两两之间重叠的面积，输入 tensor.shape=[N, M]
 
 应用场景： 该算子应用于pointpillar网络。
 
@@ -125,13 +125,14 @@ __global__ void boxes_overlap_kernel(const int num_a, const float *boxes_a,
 ### 2.2 接口设计
 
 ```c++
-mluOpStatus_t MLUOP_WIN_API mluOpBoxOverlapBev(mluOpHandle_t handle,
-                                            const mluOpTensorDescriptor_t boxes1_desc,
-                                            const void *boxes1,
-                                            const mluOpTensorDescriptor_t boxes2_desc,
-                                            const void *boxes2,
-                                            const mluOpTensorDescriptor_t overlaps_desc,
-                                            void *overlaps);
+mluOpStatus_t MLUOP_WIN_API
+mluOpBoxOverlapBev(mluOpHandle_t handle,
+                   const mluOpTensorDescriptor_t boxes1_desc,
+                   const void *boxes1,
+                   const mluOpTensorDescriptor_t boxes2_desc,
+                   const void *boxes2,
+                   const mluOpTensorDescriptor_t overlaps_desc,
+                   void *overlaps);
 ```
 
 

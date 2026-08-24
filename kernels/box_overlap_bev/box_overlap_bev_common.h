@@ -31,6 +31,7 @@
 #define SINGLE_BOX_DIM 5
 __nram__ int8_t nram_buffer[MAX_NRAM_SIZE];
 // cross2d<T>(A, B) = A.x * B.y - A.y * B.x;
+
 template <typename T>
 inline __mlu_func__ void cross2d(T *result, const T *p1_x, const T *p1_y,
                                  const T *p2_x, const T *p2_y, const int &lenth,
@@ -39,6 +40,7 @@ inline __mlu_func__ void cross2d(T *result, const T *p1_x, const T *p1_y,
   __bang_mul((T *)result, (T *)p1_y, (T *)p2_x, lenth);
   __bang_sub((T *)result, (T *)temp_ram, (T *)result, lenth);
 }  // dot2d<T>(A, B) =  A.x * B.x + A.y * B.y
+
 template <typename T>
 inline __mlu_func__ void dot2d(T *result, const T *p1_x, const T *p1_y,
                                const T *p2_x, const T *p2_y, const int &lenth,
@@ -47,6 +49,7 @@ inline __mlu_func__ void dot2d(T *result, const T *p1_x, const T *p1_y,
   __bang_mul((T *)result, (T *)p1_y, (T *)p2_y, lenth);
   __bang_add((T *)result, (T *)temp_ram, (T *)result, lenth);
 }
+
 template <typename T>
 __mlu_func__ void getRotatedVertices(T *pts_x, T *pts_y, T *box, T *temp1,
                                      T *temp2, T *temp3, T *temp4,
@@ -119,6 +122,7 @@ __mlu_func__ void getRotatedVertices(T *pts_x, T *pts_y, T *box, T *temp1,
              (T *)pts_y + 3 * actual_compute_box_num,
              (T *)pts_y + 1 * actual_compute_box_num, actual_compute_box_num);
 }
+
 template <typename T>
 __mlu_func__ void getIntersectionPoints(
     T *rotated_pts1_x, T *rotated_pts1_y, T *rotated_pts2_x, T *rotated_pts2_y,
@@ -182,27 +186,10 @@ __mlu_func__ void getIntersectionPoints(
       cross2d<T>((T *)temp7_ram, (T *)vec1_x + i * actual_compute_box_num,
                  (T *)vec1_y + i * actual_compute_box_num, (T *)temp4_ram,
                  (T *)temp5_ram, actual_compute_box_num, (T *)temp8_ram);
-#if __BANG_ARCH__ == 372
-      // Where temp1 = false, set recip input to 1, avoiding recip(0), cause inf
-      __bang_not((T *)temp4_ram, (T *)temp1_ram, actual_compute_box_num);
-      __bang_mul((T *)temp2_ram, (T *)temp2_ram, (T *)temp1_ram,
-                 actual_compute_box_num);
-      __bang_add((T *)temp2_ram, (T *)temp2_ram, (T *)temp4_ram,
-                 actual_compute_box_num);
-      // bang_recip only support float data type, others should use cast to
-      // float first
-      __bang_recip((float *)temp2_ram, (float *)temp2_ram,
-                   actual_compute_box_num);
-      __bang_mul((T *)temp6_ram, (T *)temp6_ram, (T *)temp2_ram,
-                 actual_compute_box_num);
-      __bang_mul((T *)temp7_ram, (T *)temp7_ram, (T *)temp2_ram,
-                 actual_compute_box_num);
-#else
       __bang_div((T *)temp6_ram, (T *)temp6_ram, (T *)temp2_ram,
                  actual_compute_box_num);
       __bang_div((T *)temp7_ram, (T *)temp7_ram, (T *)temp2_ram,
                  actual_compute_box_num);
-#endif
       // temp1 &= (t1 >= 0.0f && t1 <= 1.0f)  -- temp7
       __bang_ge_scalar((T *)temp5_ram, (T *)temp6_ram, (T)0,
                        actual_compute_box_num);
@@ -410,6 +397,7 @@ __mlu_func__ void getIntersectionPoints(
                actual_compute_box_num);
   }
 }
+
 template <typename T>
 __mlu_func__ void convexHullGraham(
     T *intersect_pts_x, T *intersect_pts_y, T *ordered_pts_x, T *ordered_pts_y,
@@ -717,6 +705,7 @@ __mlu_func__ void convexHullGraham(
   }
 #endif
 }
+
 template <typename T>
 __mlu_func__ void polygonArea(T *ordered_pts_x, T *ordered_pts_y, T *valid_box,
                               T *valid_pts, T *nums_in_ram, T *temp1_ram,
@@ -778,6 +767,7 @@ __mlu_func__ void polygonArea(T *ordered_pts_x, T *ordered_pts_y, T *valid_box,
   __bang_mul_scalar((T *)temp1_ram, (T *)temp1_ram, (T)0.5,
                     actual_compute_box_num);
 }
+
 template <typename T>
 __mlu_func__ void calIntersectIou(T *ious_ram, T *area1_ram, T *area2_ram,
                                   T *intersect_area_ram, T *temp1_ram,
@@ -792,21 +782,7 @@ __mlu_func__ void calIntersectIou(T *ious_ram, T *area1_ram, T *area2_ram,
   } else {
     // Iof = intersection / (area1)
   }
-#if __BANG_ARCH__ == 372
-  // where area1 = 0, set recip input to 1, to avoid recip(0), which will cause
-  // inf and its valid_box = 0, intersection_area = 0, ious = 0
-  __bang_eq_scalar((T *)temp1_ram, (T *)area1_ram, (T)0,
-                   actual_compute_box_num);
-  __bang_add((T *)area1_ram, (T *)area1_ram, (T *)temp1_ram,
-             actual_compute_box_num);
-  // bang_recip only support float data type, others should use cast to float
-  // first
-  __bang_recip((float *)area1_ram, (float *)area1_ram, actual_compute_box_num);
-  __bang_mul((T *)ious_ram, (T *)intersect_area_ram, (T *)area1_ram,
-             actual_compute_box_num);
-#else
   __bang_div((T *)ious_ram, (T *)intersect_area_ram, (T *)area1_ram,
              actual_compute_box_num);
-#endif
 }
 #endif  // KERNELS_BOX_OVERLAP_BEV_BOX_OVERLAP_BEV_COMMON_H_
