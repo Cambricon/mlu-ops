@@ -47,13 +47,18 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 
 find_package(Protobuf)
 find_package(Eigen3 REQUIRED)
-if(NOT ${EIGEN3_INCLUDE_DIRS})
-  if( EXISTS "/usr/include/eigen3")
+if(TARGET Eigen3::Eigen)
+  get_target_property(LIBEIGEN3_INCLUDE_DIRS Eigen3::Eigen INTERFACE_INCLUDE_DIRECTORIES)
+endif()
+if(NOT LIBEIGEN3_INCLUDE_DIRS)
+  if(EIGEN3_INCLUDE_DIRS)
+    set(LIBEIGEN3_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIRS})
+  elseif(EXISTS "/usr/include/eigen3")
     set(LIBEIGEN3_INCLUDE_DIRS "/usr/include/eigen3")
   elseif(EXISTS "/usr/local/include/eigen3")
     set(LIBEIGEN3_INCLUDE_DIRS "/usr/local/include/eigen3")
   else()
-    message( FATAL_ERROR "Cannot find eigen3, CMake will exit." )
+    message(FATAL_ERROR "Cannot find eigen3, CMake will exit.")
   endif()
 endif()
 # FindProtobuf will generate important variables (could be overrided):
@@ -149,7 +154,9 @@ include_directories("${MLUOP_GTEST_INCLUDE}")
 file(GLOB_RECURSE gtest_mlu_files FOLLOW_SYMLINKS "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/src/internal_kernel/*")
 list(APPEND BANG_CNCC_INCLUDE_ARGS -I${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src)
 bang_add_library(mluop_gtest_kernels STATIC "${gtest_mlu_files}")
-target_include_directories(mluop_gtest_kernels PRIVATE ${MLUOP_PB_GTEST_INCLUDE})
+target_include_directories(mluop_gtest_kernels PRIVATE ${MLUOP_PB_GTEST_INCLUDE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/spdlog/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/fmt/include)
 
 file(GLOB SRC_DIR "${GOOGLETEST_SRC}/*.cc")
 #add_library(gtest_shared SHARED ${SRC_DIR})
@@ -190,6 +197,10 @@ target_include_directories(mluop_pb_gtest_obj PRIVATE ${MLUOP_PB_GTEST_INCLUDE} 
 add_dependencies(mluop_pb_gtest_obj mluop_build_proto)
 add_executable(mluop_gtest $<TARGET_OBJECTS:mluop_pb_gtest_obj>)
 target_link_libraries(mluop_pb_gtest_obj PRIVATE fmt::fmt)
+
+if (TARGET spdlog::spdlog)
+  target_link_libraries(mluop_pb_gtest_obj PRIVATE spdlog::spdlog)
+endif()
 target_link_libraries(mluop_gtest mluops)
 target_link_libraries(mluop_gtest zstd)
 set(targets_mluop_gtest mluop_gtest)
@@ -197,6 +208,9 @@ set(targets_mluop_gtest mluop_gtest)
 message(STATUS "EXTRA_LIBS: ${EXTRA_LIBS}")
 foreach(target_gtest ${targets_mluop_gtest})
   target_link_libraries(${target_gtest} fmt::fmt)
+  if (TARGET spdlog::spdlog)
+    target_link_libraries(${target_gtest} spdlog::spdlog)
+  endif()
   target_link_libraries(${target_gtest} mluop_gtest_kernels)
   target_link_libraries(${target_gtest} -Wl,--no-as-needed cnbin -Wl,--as-needed)
   target_link_libraries(${target_gtest} cnrt cndev cndrv pthread gtest_shared stdc++ m dl)
@@ -229,6 +243,11 @@ add_library(mluop_api_gtest_obj OBJECT ${MLUOP_API_TEST_DIR} ${MLUOP_API_GTEST_D
 target_include_directories(mluop_api_gtest_obj PRIVATE ${MLUOP_API_GTEST_INCLUDE})
 add_executable(mluop_api_gtest $<TARGET_OBJECTS:mluop_api_gtest_obj>)
 target_link_libraries(mluop_api_gtest mluops)
+
+if (TARGET spdlog::spdlog)
+  target_link_libraries(mluop_api_gtest_obj PRIVATE spdlog::spdlog)
+  target_link_libraries(mluop_api_gtest spdlog::spdlog)
+endif()
 target_link_libraries(mluop_api_gtest cnrt cndev cndrv pthread gtest_shared stdc++ m dl)
 target_link_libraries(mluop_api_gtest ${LIBXML2_LIBRARIES} ${EXTRA_LIBS})
 set_target_properties(mluop_api_gtest
@@ -236,6 +255,38 @@ set_target_properties(mluop_api_gtest
   INSTALL_RPATH "$ORIGIN/../../$LIB;../../lib${LIB_SUFFIX}"
 )
 set(targets_mluop_api_gtest mluop_api_gtest)
+
+# 新引擎（spdlog 后端）gtest：直接调用 mluop::log::LogEngine 的纯逻辑单测
+#（Severity 取值 / MAX 阈值 / env 解析 / set-get / 钳制 / 回调 functionName）。
+add_executable(log_core_test
+  ${CMAKE_CURRENT_SOURCE_DIR}/logging/log_core_test.cpp)
+target_link_libraries(log_core_test mluopscore)
+if (TARGET spdlog::spdlog)
+  target_link_libraries(log_core_test spdlog::spdlog)
+endif()
+target_link_libraries(log_core_test cnnl cnrt cndev cndrv pthread gtest_shared stdc++ m dl)
+if (TARGET fmt::fmt)
+  target_link_libraries(log_core_test fmt::fmt)
+elseif (TARGET fmt::fmt-header-only)
+  target_link_libraries(log_core_test fmt::fmt-header-only)
+endif()
+set(targets_log_core_test log_core_test)
+
+# golden 快照单测：验证新引擎（spdlog 后端）屏幕输出逐字节复现冻结基线
+# （可变字段归一化为哨兵）。需要 cnrt 初始化（head 无条件调用 cnrtGetDevice）。
+add_executable(log_engine_diff_test
+  ${CMAKE_CURRENT_SOURCE_DIR}/logging/log_engine_diff_test.cpp)
+target_link_libraries(log_engine_diff_test mluopscore)
+if (TARGET spdlog::spdlog)
+  target_link_libraries(log_engine_diff_test spdlog::spdlog)
+endif()
+target_link_libraries(log_engine_diff_test cnnl cnrt cndev cndrv pthread gtest_shared stdc++ m dl)
+if (TARGET fmt::fmt)
+  target_link_libraries(log_engine_diff_test fmt::fmt)
+elseif (TARGET fmt::fmt-header-only)
+  target_link_libraries(log_engine_diff_test fmt::fmt-header-only)
+endif()
+set(targets_log_engine_diff_test log_engine_diff_test)
 
 # pb to prototxt tool
 add_executable(pb2prototxt ${CMAKE_CURRENT_SOURCE_DIR}/tools/pb2prototxt.cpp)
@@ -257,6 +308,20 @@ install(TARGETS ${targets_mluop_gtest}
 )
 
 install(TARGETS ${targets_mluop_api_gtest}
+  COMPONENT mluop_gtest
+  RUNTIME DESTINATION build/test
+  ARCHIVE DESTINATION lib${LIB_SUFFIX}
+  LIBRARY DESTINATION lib${LIB_SUFFIX}
+)
+
+install(TARGETS ${targets_log_core_test}
+  COMPONENT mluop_gtest
+  RUNTIME DESTINATION build/test
+  ARCHIVE DESTINATION lib${LIB_SUFFIX}
+  LIBRARY DESTINATION lib${LIB_SUFFIX}
+)
+
+install(TARGETS ${targets_log_engine_diff_test}
   COMPONENT mluop_gtest
   RUNTIME DESTINATION build/test
   ARCHIVE DESTINATION lib${LIB_SUFFIX}
