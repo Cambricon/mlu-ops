@@ -24,20 +24,75 @@
 #ifndef CORE_LOGGING_H_
 #define CORE_LOGGING_H_
 
+#include <type_traits>
 #include <utility>
 #include <string>
 #include <limits>
 #include <sstream>
 
-#include "core/cnlog.hpp"
+#include "core/log_core/fmt_config.h"
+#include "core/log_core/log_engine.h"
 #include "core/macros.h"
 #include "core/util.h"
 #include "mlu_op.h"
+#include "type.h"
+#include "preprocessor.h"
+#include <algorithm>
+
 
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
 #define LARGE_TENSOR_SIZE ((uint64_t)2147483648)
 
-#define LOG(severity) mluop::logging::CLOG(MLUOP, severity)
+// SEV_ 映射表：旧宏层等级 token（ERROR/WARNING/CNPAPI/INFO/DEBUG1..4/FATAL/VLOG）
+// 到新枚举 Severity 常量（kError..kDebug4 / kFatal / kVlog）的显式映射。
+#define SEV_ERROR kError
+#define SEV_WARNING kWarning
+#define SEV_CNPAPI kCnpapi
+#define SEV_INFO kInfo
+#define SEV_DEBUG1 kDebug1
+#define SEV_DEBUG2 kDebug2
+#define SEV_DEBUG3 kDebug3
+#define SEV_DEBUG4 kDebug4
+// #define SEV_FATAL kFatal
+#define SEV_VLOG kVlog
+
+#define LOG(severity)                                                   \
+  mluop::log::LogMessage(__FILE__, __LINE__,                            \
+                         mluop::log::Severity::SEV_##severity).stream()   
+
+
+                         
+// shouldLog 先短路：过滤路径不查 alive；alive 仅挡退出期对已析构单例的输出。
+#define LOG_GATED_UNLIKELY(sev, fmt_str, ...) \
+  (MLUOP_PREDICT_FALSE( \
+       mluop::log::LogEngine::shouldLog(mluop::log::Severity::sev)) && \
+       MLUOP_PREDICT_TRUE(mluop::log::logEngineAlive()) \
+     ? mluop::log::LogEngine::instance().EmitFmt( \
+           mluop::log::Severity::sev, __FILE__, __LINE__, fmt_str, \
+           ##__VA_ARGS__) \
+     : (void)0)
+
+#define LOG_DEBUG1(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kDebug1, fmt_str, ##__VA_ARGS__)
+#define LOG_DEBUG2(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kDebug2, fmt_str, ##__VA_ARGS__)
+#define LOG_DEBUG3(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kDebug3, fmt_str, ##__VA_ARGS__)
+#define LOG_DEBUG4(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kDebug4, fmt_str, ##__VA_ARGS__)
+#define LOG_INFO(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kInfo, fmt_str, ##__VA_ARGS__)
+#define LOG_WARNING(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kWarning, fmt_str, ##__VA_ARGS__)
+#define LOG_APICALL(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kCnpapi, fmt_str, ##__VA_ARGS__)
+
+#define LOG_ERROR(fmt_str, ...) \
+  (MLUOP_PREDICT_TRUE(mluop::log::logEngineAlive()) \
+     ? mluop::log::LogEngine::instance().EmitFmt(mluop::log::Severity::kError, \
+                                                 __FILE__, __LINE__, fmt_str, \
+                                                 ##__VA_ARGS__) \
+     : (void)0)
 
 #define TOKENPASTE(x, y, z) x##y##z
 #define TOKENPASTE2(x, y, z) TOKENPASTE(x, y, z)
@@ -45,7 +100,7 @@
 #define LOG_FIRST_N(severity, n)                                            \
   static std::atomic<int> TOKENPASTE2(LOG_, __LINE__, _OCCURRENCES)(0);     \
   if (MLUOP_PREDICT_FALSE(TOKENPASTE2(LOG_, __LINE__, _OCCURRENCES)++ < n)) \
-  mluop::logging::CLOG(MLUOP, severity)
+  LOG(severity)
 
 // CHECK with a error if condition is not true.
 #define CHECK(condition, ...)                                    \
@@ -82,7 +137,7 @@
 // kernel check for crop
 #define SYMBOL_CHECK(symbol...)                                                \
   if (MLUOP_PREDICT_FALSE(!&(symbol))) {                                       \
-    LOG(FATAL) << "calling undefined symbol which not be linked: " << #symbol; \
+    LOG(ERROR) << "calling undefined symbol which not be linked: " << #symbol; \
   }                                                                            \
   symbol
 
@@ -141,6 +196,185 @@
     LOG(ERROR) << api << " Check failed: " #condition ". " __VA_ARGS__; \
     return MLUOP_STATUS_BAD_PARAM;                                      \
   }
+
+
+#define PARAM_CHECK_PTR_NOT_NULL(api, ptr, ...)                                \
+  do {                                                                         \
+    if (ptr == nullptr) {                                                      \
+      LOG_ERROR("{} Bad param: {} cannot be NULL. {}", api, #ptr,              \
+                #__VA_ARGS__);                                                 \
+      return MLUOP_STATUS_BAD_PARAM;                                           \
+    }                                                                          \
+  } while (0)
+
+#define PARAM_CHECK_PTR_MUST_NULL(api, ptr, ...)                               \
+  do {                                                                         \
+    if (ptr != nullptr) {                                                      \
+      LOG_ERROR("{} Bad param: expect argument {} to be NULL, but a "          \
+                "non-null pointer({}) was provided. {}",                       \
+                api, #ptr, static_cast<const void*>(ptr), #__VA_ARGS__);       \
+      return MLUOP_STATUS_BAD_PARAM;                                           \
+    }                                                                          \
+  } while (0)
+
+#define PARAM_CHECK_DTYPE_SAME(api, dtype1, dtype2, ...)                       \
+  do {                                                                         \
+    if (dtype1 != dtype2) {                                                    \
+      LOG_ERROR("{} Bad param: expect {} and {} same, but get {}({}) vs "      \
+                "{}({}). {}",                                                  \
+                api, #dtype1, #dtype2, #dtype1, getNameOfDataType(dtype1),     \
+                #dtype2, getNameOfDataType(dtype2), #__VA_ARGS__);             \
+      return MLUOP_STATUS_BAD_PARAM;                                           \
+    }                                                                          \
+  } while (0)
+
+template <typename T, typename U, typename... Args>
+bool is_in_list(const T &value, std::initializer_list<U> list) {
+  return std::find_if(list.begin(), list.end(), [&value](const auto &elem) {
+           return elem == value;
+         }) != list.end();
+}
+
+// 空可变参数列表编译期拦截（供 PARAM_CHECK_* 等带变长参数的宏复用）。
+template <typename... Ts>
+constexpr void assert_va_args_nonempty(Ts...) {
+  static_assert(sizeof...(Ts) > 0, "variadic argument list must not be empty");
+}
+
+/**
+  ctx_msg: 上下文说明信息，用于说明一些额外的信息，辅助用户了解参数具体情况。
+  不需要上下文时用无 _WITH_CTX 后缀的版本。
+ */
+#define PARAM_CHECK_DTYPE_SUPPORT(api, dtype, ...) \
+  PARAM_CHECK_DTYPE_SUPPORT_WITH_CTX(api, dtype, "", __VA_ARGS__)
+
+#define PARAM_CHECK_DTYPE_SUPPORT_WITH_CTX(api, dtype, ctx_msg, ...)           \
+  do {                                                                         \
+    assert_va_args_nonempty(__VA_ARGS__);                                      \
+    if (!is_in_list(dtype, {__VA_ARGS__})) {                                   \
+      if constexpr (MLUOP_PP_NUM_ARGS(__VA_ARGS__) > 1) {                      \
+        LOG_ERROR("{} Bad param: expect {} be one of {{{}}}, but got {}. {}",  \
+                  api, #dtype, #__VA_ARGS__, getNameOfDataType(dtype),         \
+                  ctx_msg);                                                    \
+      } else {                                                                 \
+        LOG_ERROR("{} Bad param: expect {} be {}, but got {}. {}",             \
+                  api, #dtype, #__VA_ARGS__, getNameOfDataType(dtype),         \
+                  ctx_msg);                                                    \
+      }                                                                        \
+      return MLUOP_STATUS_BAD_PARAM;                                           \
+    }                                                                          \
+  } while (0)
+
+#define PARAM_CHECK_DTYPE_NOT_SUPPORT(api, dtype, ...) \
+  PARAM_CHECK_DTYPE_NOT_SUPPORT_WITH_CTX(api, dtype, "", __VA_ARGS__)
+
+#define PARAM_CHECK_DTYPE_NOT_SUPPORT_WITH_CTX(api, dtype, ctx_msg, ...)       \
+  do {                                                                         \
+    assert_va_args_nonempty(__VA_ARGS__);                                      \
+    if (is_in_list(dtype, {__VA_ARGS__})) {                                    \
+      if constexpr (MLUOP_PP_NUM_ARGS(__VA_ARGS__) > 1) {                      \
+        LOG_ERROR("{} Bad param: {} in {{{}}} are not supported, but got {}."  \
+                  " {}",                                                       \
+                  api, #dtype, #__VA_ARGS__, getNameOfDataType(dtype),         \
+                  ctx_msg);                                                    \
+      } else {                                                                 \
+        LOG_ERROR("{} Bad param: {} cannot be {}. {}",                         \
+                  api, #dtype, #__VA_ARGS__, ctx_msg);                         \
+      }                                                                        \
+      return MLUOP_STATUS_BAD_PARAM;                                           \
+    }                                                                          \
+  } while (0)
+
+// LAYOUT 检查
+#define PARAM_CHECK_LAYOUT_SAME(api, layout1, layout2, ...)                    \
+  do {                                                                         \
+    if (layout1 != layout2) {                                                  \
+      LOG_ERROR("{} Bad param: expect {} and {} same, but get {}({}) vs "      \
+                "{}({}). {}",                                                  \
+                api, #layout1, #layout2, #layout1,                             \
+                mluOpGetNameOfTensorLayout(layout1), #layout2,                 \
+                mluOpGetNameOfTensorLayout(layout2), #__VA_ARGS__);            \
+      return MLUOP_STATUS_BAD_PARAM;                                           \
+    }                                                                          \
+  } while (0)
+
+#define PARAM_CHECK_LAYOUT_SUPPORT(api, layout, ...) \
+  PARAM_CHECK_LAYOUT_SUPPORT_WITH_CTX(api, layout, "", __VA_ARGS__)
+
+#define PARAM_CHECK_LAYOUT_SUPPORT_WITH_CTX(api, layout, ctx_msg, ...)         \
+  do {                                                                         \
+    assert_va_args_nonempty(__VA_ARGS__);                                      \
+    if (!is_in_list(layout, {__VA_ARGS__})) {                                  \
+      if constexpr (MLUOP_PP_NUM_ARGS(__VA_ARGS__) > 1) {                      \
+        LOG_ERROR("{} Bad param: expect {} be one of {{{}}}, but got {}. {}",  \
+                  api, #layout, #__VA_ARGS__,                                  \
+                  mluOpGetNameOfTensorLayout(layout), ctx_msg);                \
+      } else {                                                                 \
+        LOG_ERROR("{} Bad param: expect {} be {}, but got {}. {}",             \
+                  api, #layout, #__VA_ARGS__,                                  \
+                  mluOpGetNameOfTensorLayout(layout), ctx_msg);                \
+      }                                                                        \
+      return MLUOP_STATUS_BAD_PARAM;                                           \
+    }                                                                          \
+  } while (0)
+
+#define PARAM_CHECK_LAYOUT_NOT_SUPPORT(api, layout, ...) \
+  PARAM_CHECK_LAYOUT_NOT_SUPPORT_WITH_CTX(api, layout, "", __VA_ARGS__)
+
+#define PARAM_CHECK_LAYOUT_NOT_SUPPORT_WITH_CTX(api, layout, ctx_msg, ...)     \
+  do {                                                                         \
+    assert_va_args_nonempty(__VA_ARGS__);                                      \
+    if (is_in_list(layout, {__VA_ARGS__})) {                                   \
+      if constexpr (MLUOP_PP_NUM_ARGS(__VA_ARGS__) > 1) {                      \
+        LOG_ERROR("{} Bad param: {} in {{{}}} are not supported, but got {}."  \
+                  " {}",                                                       \
+                  api, #layout, #__VA_ARGS__,                                  \
+                  mluOpGetNameOfTensorLayout(layout), ctx_msg);                \
+      } else {                                                                 \
+        LOG_ERROR("{} Bad param: {} cannot be {}. {}",                         \
+                  api, #layout, #__VA_ARGS__, ctx_msg);                        \
+      }                                                                        \
+      return MLUOP_STATUS_BAD_PARAM;                                           \
+    }                                                                          \
+  } while (0)
+
+#define PARAM_CHECK_DIM_RANGE(api, dim, condition, msg)                        \
+  do {                                                                         \
+    if (!condition) {                                                          \
+      LOG(ERROR) << api << " Bad param: " #dim " expect: " #condition ", but " \
+                 << dim << " is provided. " << msg;                            \
+      return MLUOP_STATUS_BAD_PARAM;                                           \
+    }                                                                          \
+  } while (0)
+
+#define PARAM_CHECK_DIM_SAME(api, msg, dim1, dim2, ...)                        \
+  do {                                                                         \
+    const auto &_mluop_dim_base = (dim1);                                      \
+    const auto _mluop_dims[] = {dim2, ##__VA_ARGS__};                          \
+    size_t _mluop_dims_size = sizeof(_mluop_dims) / sizeof(_mluop_dims[0]);    \
+    auto get_dim_string = [_mluop_dim_base, _mluop_dims, _mluop_dims_size]() { \
+      std::ostringstream oss;                                                  \
+      oss << "{" << _mluop_dim_base << ", ";                                   \
+      for (size_t i = 0; i < _mluop_dims_size; ++i) {                          \
+        oss << _mluop_dims[i];                                                 \
+        if (i + 1 < _mluop_dims_size) {                                        \
+          oss << ", ";                                                         \
+        }                                                                      \
+      }                                                                        \
+      oss << "}";                                                              \
+      return oss.str();                                                        \
+    };                                                                         \
+    for (size_t _i = 0; _i < sizeof(_mluop_dims) / sizeof(_mluop_dims[0]);     \
+         ++_i) {                                                               \
+      if (!(_mluop_dims[_i] == _mluop_dim_base)) {                             \
+        LOG(ERROR) << api << " Bad param: " << msg                             \
+                   << " expect {" #dim1 ", " #dim2 ", " #__VA_ARGS__           \
+                      "} all same, but get "                                   \
+                   << get_dim_string() << ".";                                 \
+        return MLUOP_STATUS_BAD_PARAM;                                         \
+      }                                                                        \
+    }                                                                          \
+  } while (0)
 
 // CHECK_EQ/NE/... with return value.
 #define PARAM_CHECK_EQ(api, val1, val2, ...)                              \
