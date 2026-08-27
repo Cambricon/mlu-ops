@@ -101,7 +101,7 @@ example:
 | 原位限制    | 不支持原位|
 | stride限制  | 不支持stride机制|
 | 广播限制    | 不支持广播|
-| 输入限制    | boxes1、boxes2为二维张量，须符合boxes1.shape[1]==boxes2.shape[1]==7，boxes1/2.shape[0]取值范围[1,1000],hw取值范围需满足[0,1]以上 |
+| 输入限制    | boxes1、boxes2为二维张量，须符合boxes1.shape[1]==boxes2.shape[1]==7，boxes1/2.shape[0]取值范围[1,1000],hw取值范围需满足[0,1]以上;<br>数值约束（避免box跨越原点，放大数值误差）：boxex1[i,0] >= boxex1[i,3]/2, boxex1[i,1] >= boxex1[i,4]/2, boxex2[i,0] >= boxex2[i,3]/2, boxex2[i,1] >= boxex2[i,4]/2。 |
 
 ### 1.5 验收标准
 
