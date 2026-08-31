@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#ifndef TEST_CNNL_GTEST_SRC_ZOO_BOX_OVERLAP_BEV_BOX_OVERLAP_BEV_H_
-#define TEST_CNNL_GTEST_SRC_ZOO_BOX_OVERLAP_BEV_BOX_OVERLAP_BEV_H_
+#ifndef TEST_MLU_OP_GTEST_SRC_ZOO_BOX_OVERLAP_BEV_BOX_OVERLAP_BEV_H_
+#define TEST_MLU_OP_GTEST_SRC_ZOO_BOX_OVERLAP_BEV_BOX_OVERLAP_BEV_H_
 #include "executor.h"
 
 namespace mluoptest {
@@ -90,4 +90,4 @@ class BoxOverlapBevExecutor : public Executor {
   T polygonArea(const PPoint<T> (&q)[24], const int &m);
 };  // class Executor
 }  // namespace mluoptest
-#endif  // TEST_CNNL_GTEST_SRC_ZOO_BOX_OVERLAP_BEV_BOX_OVERLAP_BEV_H_
+#endif  // TEST_MLU_OP_GTEST_SRC_ZOO_BOX_OVERLAP_BEV_BOX_OVERLAP_BEV_H_

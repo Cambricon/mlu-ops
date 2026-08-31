@@ -39,7 +39,7 @@ typedef std::tuple<MLUOpTensorParam, MLUOpTensorParam, MLUOpTensorParam,
                    mluOpDevType_t, mluOpStatus_t>
     BoxOverlapBevParam;
 
-class BoxOverlapBev_general
+class box_overlap_bev_general
     : public testing::TestWithParam<BoxOverlapBevParam> {
  public:
   void SetUp() {
@@ -109,7 +109,7 @@ class BoxOverlapBev_general
                                      mluOpGetTensorElementNum(overlaps_desc_)));
     } catch (const std::exception &e) {
       FAIL() << "MLUOPAPIGTEST: catched " << e.what()
-             << " in BoxOverlapBev_general";
+             << " in box_overlap_bev_general";
     }
   }
 
@@ -160,7 +160,7 @@ class BoxOverlapBev_general
       }
     } catch (const std::exception &e) {
       FAIL() << "MLUOPAPIGTEST: catched " << e.what()
-             << " in BoxOverlapBev_general";
+             << " in box_overlap_bev_general";
     }
   }
 
@@ -176,10 +176,10 @@ class BoxOverlapBev_general
   mluOpStatus_t expected_status_ = MLUOP_STATUS_BAD_PARAM;
 };
 
-TEST_P(BoxOverlapBev_general, negative) { EXPECT_TRUE(compute()); }
+TEST_P(box_overlap_bev_general, negative) { EXPECT_TRUE(compute()); }
 
 INSTANTIATE_TEST_CASE_P(
-    zero_element, BoxOverlapBev_general,
+    zero_element, box_overlap_bev_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          2, std::vector<int>({0, 7})}),
@@ -191,7 +191,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_SUCCESS)));
 
 INSTANTIATE_TEST_CASE_P(
-    negative_dtype_boxes1, BoxOverlapBev_general,
+    negative_dtype_boxes1, box_overlap_bev_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_HALF,
                                          2, std::vector<int>({2, 7})},
@@ -205,7 +205,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    negative_dtype_boxes2, BoxOverlapBev_general,
+    negative_dtype_boxes2, box_overlap_bev_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          2, std::vector<int>({2, 7})}),
@@ -219,7 +219,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    negative_dtype_overlap, BoxOverlapBev_general,
+    negative_dtype_overlap, box_overlap_bev_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          2, std::vector<int>({2, 7})}),
@@ -233,7 +233,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    negative_shape_boxes1, BoxOverlapBev_general,
+    negative_shape_boxes1, box_overlap_bev_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          2, std::vector<int>({2, 6})}),
@@ -245,7 +245,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    negative_shape_boxes2, BoxOverlapBev_general,
+    negative_shape_boxes2, box_overlap_bev_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          2, std::vector<int>({2, 7})}),
@@ -257,7 +257,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
 
 INSTANTIATE_TEST_CASE_P(
-    negative_shape_overlap, BoxOverlapBev_general,
+    negative_shape_overlap, box_overlap_bev_general,
     testing::Combine(
         testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
                                          2, std::vector<int>({2, 7})}),
