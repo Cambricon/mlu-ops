@@ -1,0 +1,368 @@
+/*************************************************************************
+ * Copyright (C) [2026] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
+#ifndef KERNELS_BOX_OVERLAP_BEV_BOX_OVERLAP_BEV_UTILS_H_
+#define KERNELS_BOX_OVERLAP_BEV_BOX_OVERLAP_BEV_UTILS_H_
+
+#include "box_overlap_bev_common.h"
+#include "kernels/utils/common.h"
+// each box data contains 7 number: x, y ,z, w, h, dz, a
+#define PCDET_SINGLE_BOX_DIM 7
+
+// The addresses have already add offsets for each mlu core in union.mlu
+template <typename T>
+__mlu_func__ void MLUUnion1BoxOverlapBevUtils(const T *box1, const T *box2,
+                                              T *overlaps,
+                                              const int32_t num_box1,
+                                              const int32_t num_box2) {
+  // If current mlu core don't need to work
+  if (num_box1 <= 0) {
+    return;
+  }
+  // NRAM divide by (2+4*COMPUTE_COUNT_ALIGN) copies of NRAM, counted by bytes
+  const uint32_t copies_of_nram = 258 * sizeof(T);
+  // Num of once max dealing box pair, also need align
+  const uint32_t max_box_pair =
+      FLOOR_ALIGN(MAX_NRAM_SIZE / copies_of_nram, COMPUTE_COUNT_ALIGN);
+  // First, initialize ram with all 0, or could cause nan/inf unexcepted results
+  __bang_write_value((uint8_t *)nram_buffer, copies_of_nram * max_box_pair,
+                     (uint8_t)0);
+
+  void *box1_onchip = nram_buffer + 2 * max_box_pair * sizeof(T);
+  void *box2_onchip =
+      nram_buffer + (2 + COMPUTE_COUNT_ALIGN) * max_box_pair * sizeof(T);
+  void *box1_trans =
+      nram_buffer + (2 + 2 * COMPUTE_COUNT_ALIGN) * max_box_pair * sizeof(T);
+  void *box2_trans =
+      nram_buffer + (2 + 3 * COMPUTE_COUNT_ALIGN) * max_box_pair * sizeof(T);
+
+  void *area2_ram = nram_buffer;
+  void *overlaps_ram = nram_buffer + 1 * max_box_pair * sizeof(T);
+  void *valid_box = nram_buffer + 1 * max_box_pair * sizeof(T);
+
+  void *new_pts2 = ((int8_t *)box2_trans) + 5 * max_box_pair * sizeof(T);
+  // Intersect points = [24xN] points, each point has (x, y)
+  void *intersect_pts_x =
+      ((int8_t *)box1_trans) + 16 * max_box_pair * sizeof(T);
+  void *intersect_pts_y =
+      ((int8_t *)box1_trans) + 40 * max_box_pair * sizeof(T);
+  // Record whether this position of intersect points is valid or not
+  void *valid_pts = ((int8_t *)box1_onchip) + 40 * max_box_pair * sizeof(T);
+  // Record each box pair has how many valid intersect points
+  void *nums_in_ram = ((int8_t *)box1_onchip) + 10 * max_box_pair * sizeof(T);
+
+  void *rotated_pts1_x = ((int8_t *)box2_onchip);
+  void *rotated_pts1_y = ((int8_t *)box2_onchip) + 4 * max_box_pair * sizeof(T);
+  void *rotated_pts2_x = ((int8_t *)box2_onchip) + 8 * max_box_pair * sizeof(T);
+  void *rotated_pts2_y =
+      ((int8_t *)box2_onchip) + 12 * max_box_pair * sizeof(T);
+  void *temp1_ram = ((int8_t *)box1_onchip) + 5 * max_box_pair * sizeof(T);
+  void *temp2_ram = ((int8_t *)box1_onchip) + 6 * max_box_pair * sizeof(T);
+  void *temp3_ram = ((int8_t *)box1_onchip) + 7 * max_box_pair * sizeof(T);
+  void *temp4_ram = ((int8_t *)box1_onchip) + 8 * max_box_pair * sizeof(T);
+  void *temp5_ram = ((int8_t *)box1_onchip) + 9 * max_box_pair * sizeof(T);
+  void *temp6_ram = ((int8_t *)box1_onchip) + 11 * max_box_pair * sizeof(T);
+  void *temp7_ram = ((int8_t *)box1_onchip) + 12 * max_box_pair * sizeof(T);
+  void *temp8_ram = ((int8_t *)box1_onchip) + 13 * max_box_pair * sizeof(T);
+
+  // Line vector, from p1 to p2 is: p1+(p2-p1)*t, t=[0,1]
+  void *vec1_x = ((int8_t *)box2_onchip) + 16 * max_box_pair * sizeof(T);
+  void *vec1_y = ((int8_t *)box2_onchip) + 20 * max_box_pair * sizeof(T);
+  void *vec2_x = ((int8_t *)box2_onchip) + 24 * max_box_pair * sizeof(T);
+  void *vec2_y = ((int8_t *)box2_onchip) + 28 * max_box_pair * sizeof(T);
+
+  // Ordered points = [24xN] points, each point has (x, y)
+  void *ordered_pts_x = ((int8_t *)box2_trans) + 16 * max_box_pair * sizeof(T);
+  void *ordered_pts_y = ((int8_t *)box2_trans) + 40 * max_box_pair * sizeof(T);
+
+  void *dist_ram = ((int8_t *)box1_onchip) + 16 * max_box_pair * sizeof(T);
+  void *temp_long_1 = ((int8_t *)box2_onchip);
+  void *temp_long_2 = ((int8_t *)box2_onchip) + 24 * max_box_pair * sizeof(T);
+  void *temp_long_3 = ((int8_t *)box2_onchip) + 48 * max_box_pair * sizeof(T);
+
+  // load offchip current data, for loop
+  int repeat_box1 = num_box1 / max_box_pair;
+  int remainder_box1 = num_box1 % max_box_pair;
+  repeat_box1 += int(remainder_box1 > 0);
+
+  int repeat_box2 = num_box2 / max_box_pair;
+  int remainder_box2 = num_box2 % max_box_pair;
+  repeat_box2 += int(remainder_box2 > 0);
+
+  // Only consider loop offset inside one mlu core
+  size_t current_box1_offset = 0;
+  size_t current_overlaps_offset;
+  for (int loop_box1_i = 0; loop_box1_i < repeat_box1; loop_box1_i++) {
+    int actual_box1_num;
+    if (remainder_box1 != 0) {
+      actual_box1_num =
+          (loop_box1_i == repeat_box1 - 1) ? remainder_box1 : max_box_pair;
+    } else {
+      actual_box1_num = max_box_pair;
+    }
+
+    for (int i = 0; i < actual_box1_num; i++) {
+      // load box1 x/y
+      __memcpy((T *)box1_onchip + i * SINGLE_BOX_DIM,
+               box1 + current_box1_offset + i * PCDET_SINGLE_BOX_DIM,
+               2 * sizeof(T), GDRAM2NRAM);
+      // load box1 w,h
+      __memcpy((T *)box1_onchip + i * SINGLE_BOX_DIM + 2,
+               box1 + current_box1_offset + i * PCDET_SINGLE_BOX_DIM + 3,
+               2 * sizeof(T), GDRAM2NRAM);
+      // load box1 a
+      __memcpy((T *)box1_onchip + i * SINGLE_BOX_DIM + 4,
+               box1 + current_box1_offset + i * PCDET_SINGLE_BOX_DIM + 6,
+               sizeof(T), GDRAM2NRAM);
+    }
+    current_box1_offset += actual_box1_num * PCDET_SINGLE_BOX_DIM;
+
+    // restore box2 offset, load next box2 from the beginning
+    size_t current_box2_offset = 0;
+    for (int loop_box2_j = 0; loop_box2_j < repeat_box2; loop_box2_j++) {
+      int actual_box2_num;
+      if (remainder_box2 != 0) {
+        actual_box2_num =
+            (loop_box2_j == repeat_box2 - 1) ? remainder_box2 : max_box_pair;
+      } else {
+        actual_box2_num = max_box_pair;
+      }
+
+      for (int j = 0; j < actual_box2_num; j++) {
+        // load box2 x/y
+        __memcpy((T *)box2_onchip + j * SINGLE_BOX_DIM,
+                 box2 + current_box2_offset + j * PCDET_SINGLE_BOX_DIM,
+                 2 * sizeof(T), GDRAM2NRAM);
+        // load box2 w,h
+        __memcpy((T *)box2_onchip + j * SINGLE_BOX_DIM + 2,
+                 box2 + current_box2_offset + j * PCDET_SINGLE_BOX_DIM + 3,
+                 2 * sizeof(T), GDRAM2NRAM);
+        // load box2 a
+        __memcpy((T *)box2_onchip + j * SINGLE_BOX_DIM + 4,
+                 box2 + current_box2_offset + j * PCDET_SINGLE_BOX_DIM + 6,
+                 sizeof(T), GDRAM2NRAM);
+      }
+
+      current_box2_offset += actual_box2_num * PCDET_SINGLE_BOX_DIM;
+      // Use actual_box2_num align to COMPUTE_COUNT_ALIGN, as
+      // actual_compute_box_num uint32_t actual_compute_box_num =
+      // CEIL_ALIGN(actual_box2_num, COMPUTE_COUNT_ALIGN);
+      uint32_t actual_compute_box_num = actual_box2_num;
+      // Trans Box2: Mx5 -> 5xM
+#if __BANG_ARCH__ >= 300
+      // Transpose no need to align
+      __bang_transpose((T *)box2_trans, (T *)box2_onchip,
+                       actual_compute_box_num, SINGLE_BOX_DIM);
+#else
+      // Transpose need onchip memcpy_str, align 5->COMPUTE_COUNT_ALIGN
+      // Use box1_trans as temp
+      __memcpy((T *)box1_trans, (T *)box2_onchip, SINGLE_BOX_DIM * sizeof(T),
+               NRAM2NRAM, COMPUTE_COUNT_ALIGN * sizeof(T),
+               SINGLE_BOX_DIM * sizeof(T), actual_box2_num);
+      __bang_transpose((T *)box2_trans, (T *)box1_trans, actual_compute_box_num,
+                       COMPUTE_COUNT_ALIGN);
+#endif  // BANG_ARCH
+      // area2 = box2.h * box2.w;
+      __bang_mul((T *)area2_ram, ((T *)box2_trans) + 2 * actual_compute_box_num,
+                 ((T *)box2_trans) + 3 * actual_compute_box_num,
+                 actual_compute_box_num);
+
+      for (int loop_onchip_i = 0; loop_onchip_i < actual_box1_num;
+           loop_onchip_i++) {
+        current_overlaps_offset =
+            (loop_box1_i * max_box_pair + loop_onchip_i) * num_box2 +
+            loop_box2_j * max_box_pair;
+        // Each box data: x, y, w, h, a
+        T box1_x, box1_y, box1_w, box1_h, box1_a, area1;
+        box1_w = ((T *)box1_onchip)[loop_onchip_i * SINGLE_BOX_DIM + 2];
+        box1_h = ((T *)box1_onchip)[loop_onchip_i * SINGLE_BOX_DIM + 3];
+        // area1 = box1.h * box1.w;
+        area1 = box1_h * box1_w;
+        // When area < 1e-14, set overlaps to 0
+        const T area_thres = 1e-14;
+        if (area1 < area_thres) {
+          // set all current box-paires overlaps to zeros
+          __bang_write_value((T *)overlaps_ram, actual_compute_box_num, (T)0);
+          __memcpy(overlaps + current_overlaps_offset, (T *)overlaps_ram,
+                   actual_box2_num * sizeof(T), NRAM2GDRAM);
+          continue;
+        }
+
+        box1_x = ((T *)box1_onchip)[loop_onchip_i * SINGLE_BOX_DIM + 0];
+        box1_y = ((T *)box1_onchip)[loop_onchip_i * SINGLE_BOX_DIM + 1];
+        box1_a = ((T *)box1_onchip)[loop_onchip_i * SINGLE_BOX_DIM + 4];
+
+        // Broadcast Box1 1x5 -> 5xN, box1_onchip -> box1_trans
+        __bang_write_value((T *)box1_trans, actual_compute_box_num, box1_x);
+        __bang_write_value((T *)box1_trans + 1 * actual_compute_box_num,
+                           actual_compute_box_num, box1_y);
+        __bang_write_value((T *)box1_trans + 2 * actual_compute_box_num,
+                           actual_compute_box_num, box1_w);
+        __bang_write_value((T *)box1_trans + 3 * actual_compute_box_num,
+                           actual_compute_box_num, box1_h);
+        __bang_write_value((T *)box1_trans + 4 * actual_compute_box_num,
+                           actual_compute_box_num, box1_a);
+
+        // Initialize valid_box, set actual_box2_num boxes2 to 1, else set to 0
+        __bang_write_value((T *)valid_box, actual_compute_box_num, (T)1);
+        if (actual_box2_num < actual_compute_box_num) {
+          for (int i = actual_box2_num; i < actual_compute_box_num; i++) {
+            ((T *)valid_box)[i] = 0;
+          }
+        }
+        // Where area < 1e-14(float), valid_box set to 0
+        __bang_lt_scalar((T *)temp2_ram, (T *)area2_ram, (T)area_thres,
+                         actual_compute_box_num);
+        __bang_not((T *)temp2_ram, (T *)temp2_ram, actual_compute_box_num);
+        __bang_and((T *)valid_box, (T *)valid_box, (T *)temp2_ram,
+                   actual_compute_box_num);
+        // Set actual_box2_num boxes1 to 1, aligned boxes1 set to 0
+
+        __bang_mul((T *)box1_trans, (T *)box1_trans, (T *)valid_box,
+                   actual_compute_box_num);
+        __bang_mul((T *)box1_trans + 1 * actual_compute_box_num,
+                   (T *)box1_trans + 1 * actual_compute_box_num, (T *)valid_box,
+                   actual_compute_box_num);
+        __bang_mul((T *)box1_trans + 2 * actual_compute_box_num,
+                   (T *)box1_trans + 2 * actual_compute_box_num, (T *)valid_box,
+                   actual_compute_box_num);
+        __bang_mul((T *)box1_trans + 3 * actual_compute_box_num,
+                   (T *)box1_trans + 3 * actual_compute_box_num, (T *)valid_box,
+                   actual_compute_box_num);
+        __bang_mul((T *)box1_trans + 4 * actual_compute_box_num,
+                   (T *)box1_trans + 4 * actual_compute_box_num, (T *)valid_box,
+                   actual_compute_box_num);
+
+        __bang_mul((T *)box2_trans, (T *)box2_trans, (T *)valid_box,
+                   actual_compute_box_num);
+        __bang_mul((T *)box2_trans + 1 * actual_compute_box_num,
+                   (T *)box2_trans + 1 * actual_compute_box_num, (T *)valid_box,
+                   actual_compute_box_num);
+        __bang_mul((T *)box2_trans + 2 * actual_compute_box_num,
+                   (T *)box2_trans + 2 * actual_compute_box_num, (T *)valid_box,
+                   actual_compute_box_num);
+        __bang_mul((T *)box2_trans + 3 * actual_compute_box_num,
+                   (T *)box2_trans + 3 * actual_compute_box_num, (T *)valid_box,
+                   actual_compute_box_num);
+        __bang_mul((T *)box2_trans + 4 * actual_compute_box_num,
+                   (T *)box2_trans + 4 * actual_compute_box_num, (T *)valid_box,
+                   actual_compute_box_num);
+
+        // 1. Calculate new points
+        // NOTE: box2_trans cannot be over-written
+        // center_shift_x = (box1_raw.x_ctr + box2_raw.x_ctr) / 2.0;  ----temp1
+        // center_shift_y = (box1_raw.y_ctr + box2_raw.y_ctr) / 2.0;  ----temp2
+        __bang_add((T *)temp1_ram, (T *)box1_trans, (T *)box2_trans,
+                   actual_compute_box_num);
+        __bang_add((T *)temp2_ram,
+                   ((T *)box1_trans) + 1 * actual_compute_box_num,
+                   ((T *)box2_trans) + 1 * actual_compute_box_num,
+                   actual_compute_box_num);
+        __bang_mul_scalar((T *)temp1_ram, (T *)temp1_ram, (T)0.5,
+                          actual_compute_box_num);
+        __bang_mul_scalar((T *)temp2_ram, (T *)temp2_ram, (T)0.5,
+                          actual_compute_box_num);
+        // box1.x_ctr = box1_raw.x_ctr - center_shift_x;
+        // box1.y_ctr = box1_raw.y_ctr - center_shift_y;
+        // box2.x_ctr = box2_raw.x_ctr - center_shift_x;
+        // box2.y_ctr = box2_raw.y_ctr - center_shift_y;
+        __bang_sub((T *)box1_trans, (T *)box1_trans, (T *)temp1_ram,
+                   actual_compute_box_num);
+        __bang_sub((T *)box1_trans + 1 * actual_compute_box_num,
+                   (T *)box1_trans + 1 * actual_compute_box_num, (T *)temp2_ram,
+                   actual_compute_box_num);
+        __bang_sub((T *)new_pts2, (T *)box2_trans, (T *)temp1_ram,
+                   actual_compute_box_num);
+        __bang_sub((T *)new_pts2 + 1 * actual_compute_box_num,
+                   (T *)box2_trans + 1 * actual_compute_box_num, (T *)temp2_ram,
+                   actual_compute_box_num);
+        // new_pts2.w = box2.w
+        // new_pts2.h = box2.h
+        // new_pts2.a = box2.a
+        __memcpy((T *)new_pts2 + 2 * actual_compute_box_num,
+                 (T *)box2_trans + 2 * actual_compute_box_num,
+                 actual_compute_box_num * sizeof(T), NRAM2NRAM);
+        __memcpy((T *)new_pts2 + 3 * actual_compute_box_num,
+                 (T *)box2_trans + 3 * actual_compute_box_num,
+                 actual_compute_box_num * sizeof(T), NRAM2NRAM);
+        __memcpy((T *)new_pts2 + 4 * actual_compute_box_num,
+                 (T *)box2_trans + 4 * actual_compute_box_num,
+                 actual_compute_box_num * sizeof(T), NRAM2NRAM);
+
+        // 2. Calculate rotated vertices
+        // Rotated vertices, each box has 4 vertices, each point has (x, y)
+        getRotatedVertices((T *)rotated_pts1_x, (T *)rotated_pts1_y,
+                           (T *)box1_trans, (T *)temp1_ram, (T *)temp2_ram,
+                           (T *)temp3_ram, (T *)temp4_ram,
+                           actual_compute_box_num);
+        getRotatedVertices((T *)rotated_pts2_x, (T *)rotated_pts2_y,
+                           (T *)new_pts2, (T *)temp1_ram, (T *)temp2_ram,
+                           (T *)temp3_ram, (T *)temp4_ram,
+                           actual_compute_box_num);
+
+        // After calculating rotated vertices, box1_trans data can be
+        // over-written initialize valid_pts, nums_in
+        __bang_write_value((T *)valid_pts, 24 * actual_compute_box_num, (T)0);
+        __bang_write_value((T *)nums_in_ram, actual_compute_box_num, (T)0);
+
+        // 3. Get all intersection points
+        getIntersectionPoints(
+            (T *)rotated_pts1_x, (T *)rotated_pts1_y, (T *)rotated_pts2_x,
+            (T *)rotated_pts2_y, (T *)vec1_x, (T *)vec1_y, (T *)vec2_x,
+            (T *)vec2_y, (T *)intersect_pts_x, (T *)intersect_pts_y,
+            (T *)valid_pts, (T *)nums_in_ram, (T *)temp1_ram, (T *)temp2_ram,
+            (T *)temp3_ram, (T *)temp4_ram, (T *)temp5_ram, (T *)temp6_ram,
+            (T *)temp7_ram, (T *)temp8_ram, actual_compute_box_num);
+        // Where nums_in <= 2, set valid_box to false
+        __bang_le_scalar((T *)temp1_ram, (T *)nums_in_ram, (T)2,
+                         actual_compute_box_num);
+        __bang_not((T *)temp1_ram, (T *)temp1_ram, actual_compute_box_num);
+        __bang_and((T *)valid_box, (T *)valid_box, (T *)temp1_ram,
+                   actual_compute_box_num);
+        __bang_cycle_and((T *)valid_pts, (T *)valid_pts, (T *)valid_box,
+                         24 * actual_compute_box_num, actual_compute_box_num);
+
+        // 4. Convex-hull-graham to order the intersection points in clockwise
+        // order and find the contour area
+        convexHullGraham((T *)intersect_pts_x, (T *)intersect_pts_y,
+                         (T *)ordered_pts_x, (T *)ordered_pts_y, (T *)dist_ram,
+                         (T *)valid_box, (T *)valid_pts, (T *)nums_in_ram,
+                         (T *)temp1_ram, (T *)temp2_ram, (T *)temp3_ram,
+                         (T *)temp_long_1, (T *)temp_long_2, (T *)temp_long_3,
+                         actual_box2_num, actual_compute_box_num);
+
+        // 5. Calculate polygon area
+        // set temp1 = intersection part area
+        polygonArea((T *)ordered_pts_x, (T *)ordered_pts_y, (T *)valid_box,
+                    (T *)valid_pts, (T *)nums_in_ram, (T *)temp1_ram,
+                    (T *)temp2_ram, (T *)temp3_ram, (T *)temp4_ram,
+                    (T *)temp5_ram, (T *)temp6_ram, (T *)temp7_ram,
+                    (T *)temp8_ram, actual_compute_box_num);
+
+        __memcpy(overlaps + current_overlaps_offset, (T *)temp1_ram,
+                 actual_box2_num * sizeof(T), NRAM2GDRAM);
+      }
+    }
+  }
+}
+
+#endif  // KERNELS_BOX_OVERLAP_BEV_BOX_OVERLAP_BEV_UTILS_H_

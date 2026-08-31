@@ -1,0 +1,58 @@
+op_name: "box_overlap_bev"
+input {
+  id: "input1"
+  shape: {
+    dims: 0
+    dims: 7
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+input {
+  id: "input2"
+  shape: {
+    dims: 3
+    dims: 7
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+  value_f: 0.0
+}
+output {
+  id: "output"
+  shape: {
+    dims: 0
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+test_param: {
+  error_func: DIFF1
+  error_func: DIFF2
+  error_func: DIFF3_2
+  error_threshold: 3e-3
+  error_threshold: 3e-3
+  error_threshold: 3e-3
+  baseline_device: CPU
+}
