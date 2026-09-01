@@ -273,4 +273,28 @@ INSTANTIATE_TEST_CASE_P(
                                          1, std::vector<int>({2})}),
         testing::Values(MLUOP_UNKNOWN_DEVICE),
         testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    negative_shape_boxes1_exceed_max_num, box_overlap_bev_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({1001, 7})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({2, 7})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({1001, 2})}),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
+
+INSTANTIATE_TEST_CASE_P(
+    negative_shape_boxes2_exceed_max_num, box_overlap_bev_general,
+    testing::Combine(
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({2, 7})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({1001, 7})}),
+        testing::Values(MLUOpTensorParam{MLUOP_LAYOUT_ARRAY, MLUOP_DTYPE_FLOAT,
+                                         2, std::vector<int>({2, 1001})}),
+        testing::Values(MLUOP_UNKNOWN_DEVICE),
+        testing::Values(MLUOP_STATUS_BAD_PARAM)));
 }  // namespace mluopapitest
