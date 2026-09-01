@@ -269,7 +269,7 @@ __mlu_func__ void MLUUnion1BoxIouRotatedAligned(const T *box1, const T *box2,
                     actual_compute_box_num);
 
     if (sizeof(T) == sizeof(float)) {
-      __nram__ int table[TABLE_LENGTH] = {0, FIILED_ONES};
+      __nram__ int table[TABLE_LENGTH] = {0, FILLED_ONES};
       __bang_float2int32((int32_t *)temp9_ram, (float *)temp9_ram,
                          actual_compute_box_num, 0);
       __bang_lut((int32_t *)temp9_ram, (uint32_t *)temp9_ram, (int32_t *)table,

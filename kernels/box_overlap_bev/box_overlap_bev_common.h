@@ -24,7 +24,7 @@
 #define KERNELS_BOX_OVERLAP_BEV_BOX_OVERLAP_BEV_COMMON_H_
 #include "kernels/utils/common.h"
 
-#define FIILED_ONES (int)0xffffffff
+#define FILLED_ONES (int)0xffffffff
 #define HALF_FILLED_ONES (int16_t)0xffff
 #define TABLE_LENGTH 64
 // each box data contains 5 number: x, y, w, h, a
@@ -217,7 +217,7 @@ __mlu_func__ void getIntersectionPoints(
                  (T *)rotated_pts1_x + i * actual_compute_box_num,
                  (T *)temp7_ram, actual_compute_box_num);
       if (sizeof(T) == sizeof(float)) {
-        __nram__ int table[TABLE_LENGTH] = {0, FIILED_ONES};
+        __nram__ int table[TABLE_LENGTH] = {0, FILLED_ONES};
         __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                            actual_compute_box_num, 0);
         __bang_lut((int32_t *)temp2_ram, (uint32_t *)temp2_ram,
@@ -298,7 +298,7 @@ __mlu_func__ void getIntersectionPoints(
                actual_compute_box_num);
     // 16 means the 4x4 possible intersection points above
     if (sizeof(T) == sizeof(float)) {
-      __nram__ int table[TABLE_LENGTH] = {0, FIILED_ONES};
+      __nram__ int table[TABLE_LENGTH] = {0, FILLED_ONES};
       __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                          actual_compute_box_num, 0);
       __bang_lut((int32_t *)temp2_ram, (uint32_t *)temp2_ram, (int32_t *)table,
@@ -369,7 +369,7 @@ __mlu_func__ void getIntersectionPoints(
                actual_compute_box_num);
     // 20 means the (4x4+4) possible intersection points above
     if (sizeof(T) == sizeof(float)) {
-      __nram__ int table[TABLE_LENGTH] = {0, FIILED_ONES};
+      __nram__ int table[TABLE_LENGTH] = {0, FILLED_ONES};
       __bang_float2int32((int32_t *)temp2_ram, (float *)temp1_ram,
                          actual_compute_box_num, 0);
       __bang_lut((int32_t *)temp2_ram, (uint32_t *)temp2_ram, (int32_t *)table,
