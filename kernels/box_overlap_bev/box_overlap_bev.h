@@ -28,7 +28,7 @@
 // each box data contains 7 number: x, y ,z, w, h, dz, a
 #define PCDET_SINGLE_BOX_DIM 7
 // maximum number of dimensions box can have
-#define MAX_TENSOR_DIM_NUM 1000
+#define MAX_BOX_NUM 1000
 
 mluOpStatus_t MLUOP_WIN_API KernelBoxOverlapBev(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,

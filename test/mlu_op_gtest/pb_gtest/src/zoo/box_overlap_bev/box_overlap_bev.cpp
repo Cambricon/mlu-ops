@@ -50,9 +50,9 @@ void BoxOverlapBevExecutor::compute() {
 
 void BoxOverlapBevExecutor::cpuCompute() {
   auto count_box1 = parser_->getInputDataCount(0);
-  // auto count_box2 = parser_->getInputDataCount(1);
+  auto count_box2 = parser_->getInputDataCount(1);
   auto count_out = parser_->getOutputDataCount(0);
-  if (count_box1 == 0 || count_box1 == 0 || count_out == 0) {
+  if (count_box1 == 0 || count_box2 == 0 || count_out == 0) {
     return;
   }
 
@@ -77,7 +77,7 @@ void BoxOverlapBevExecutor::cpuBoxOverlapBev(const T *box1_raw,
   VLOG(4) << "row_overlaps: " << row_overlaps;
   int col_overlaps = tensor_desc_[2].tensor->getDimIndex(1);
   VLOG(4) << "col_overlaps: " << col_overlaps;
-  GTEST_CHECK(((num_box1 == tensor_desc_[2].tensor->getDimIndex(0)) ||
+  GTEST_CHECK(((num_box1 == tensor_desc_[2].tensor->getDimIndex(0)) &&
                (num_box2 == tensor_desc_[2].tensor->getDimIndex(1))),
               "row_overlaps/col_overlaps should equal to num_box1*num_box2");
 
