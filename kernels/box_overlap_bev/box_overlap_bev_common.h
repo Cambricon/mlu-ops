@@ -491,10 +491,10 @@ __mlu_func__ void convexHullGraham(
   __bang_mul_scalar((T *)temp_long_1, (T *)temp_long_1, (T)-1, total_points);
   __bang_add((T *)temp_long_2, (T *)temp_long_2, (T *)temp_long_1,
              total_points);
-  __bang_argmax((T *)temp_long_1, (T *)nums_in_ram, real_compute_box_num);
   // get the maximum number of intersect points among all pair of boxes.
   int nums_in_max = 0;
   if (valid_box_count > 0) {
+    __bang_argmax((T *)temp_long_1, (T *)nums_in_ram, real_compute_box_num);
     nums_in_max = (int)temp_long_1[0];
   } else {
     nums_in_max = 1;
