@@ -50,7 +50,7 @@ void BoxOverlapBevExecutor::compute() {
 
 void BoxOverlapBevExecutor::cpuCompute() {
   auto count_box1 = parser_->getInputDataCount(0);
-  auto count_box2 = parser_->getInputDataCount(0);
+  auto count_box2 = parser_->getInputDataCount(1);
   auto count_out = parser_->getOutputDataCount(0);
   if (count_box1 == 0 || count_box2 == 0 || count_out == 0) {
     return;

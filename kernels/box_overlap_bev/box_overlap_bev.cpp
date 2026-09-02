@@ -142,7 +142,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxOverlapBev(
     LOG(ERROR)
         << "[mluOpBoxOverlapBev] Check failed: "
         << "overlaps_desc's last dim should equal to boxes2_desc's first dim "
-        << boxes2_desc->getDimIndex(0) << ", But now overlaps_desc's last dim is "
+        << boxes2_desc->getDimIndex(0)
+        << ", But now overlaps_desc's last dim is "
         << overlaps_desc->getDimIndex(1) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }

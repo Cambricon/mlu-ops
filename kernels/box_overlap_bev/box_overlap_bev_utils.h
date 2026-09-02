@@ -163,9 +163,6 @@ __mlu_func__ void MLUUnion1BoxOverlapBevUtils(const T *box1, const T *box2,
       }
 
       current_box2_offset += actual_box2_num * PCDET_SINGLE_BOX_DIM;
-      // Use actual_box2_num align to COMPUTE_COUNT_ALIGN, as
-      // actual_compute_box_num uint32_t actual_compute_box_num =
-      // CEIL_ALIGN(actual_box2_num, COMPUTE_COUNT_ALIGN);
       uint32_t actual_compute_box_num = actual_box2_num;
       // Trans Box2: Mx5 -> 5xM
 #if __BANG_ARCH__ >= 300
