@@ -36,7 +36,7 @@
 mluOpStatus_t MLUOP_WIN_API mluOpGetActiveRotatedFilterForwardWorkspaceSize(
     const mluOpHandle_t handle, const mluOpTensorDescriptor_t input_desc,
     size_t *workspace_size) {
-  // handle and desc ptr check null
+  // handle and desc ptr check  null
   const std::string api_name = "[mluOpActiveRotatedFilterForwardWorkspace]";
   PARAM_CHECK(api_name, handle != NULL);
   PARAM_CHECK(api_name, input_desc != NULL);

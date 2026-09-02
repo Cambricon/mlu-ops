@@ -33,7 +33,7 @@ void AdamWExecutor::paramCheck() {
   if (parser_->getInputNum() != 5) {
     LOG(ERROR) << "AdamW input number is wrong. ";
   }
-  // set flag
+  // set  flag
   flag_input_reuse_ = true;
 }
 
