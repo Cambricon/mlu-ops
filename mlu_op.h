@@ -14595,7 +14595,7 @@ mluOpLgamma(mluOpHandle_t handle,
  * - For input \p boxes1 with n-rows and input \p boxes2 with
  *   m-rows, the output \p overlaps must be a two-dimensional matrix with shape n*m.
  * - For input \p boxes1 with n-rows and \p boxes2 with m-rows, n-rows and m-rows must
- *   be less than 1000.
+ *   not exceed 1000.
  *
  * @note
  * - Input with NaN or Infinity is not supported currently.

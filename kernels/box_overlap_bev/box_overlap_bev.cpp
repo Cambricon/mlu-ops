@@ -84,11 +84,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxOverlapBev(
   // dims and shape check
   PARAM_CHECK_EQ("[mluOpBoxOverlapBev]", boxes1_desc->getDim(), 2);
   PARAM_CHECK_EQ("[mluOpBoxOverlapBev]", boxes2_desc->getDim(), 2);
-  if (boxes1_desc->getDimIndex(0) > MAX_TENSOR_DIM_NUM) {
+  if (boxes1_desc->getDimIndex(0) > MAX_BOX_NUM) {
     LOG(ERROR)
         << "[mluOpBoxOverlapBev]: Check failed: "
         << "the number of boxes must not exceed "
-        << MAX_TENSOR_DIM_NUM << "."
+        << MAX_BOX_NUM << "."
         << "But now box1's first dimension is "
         << boxes1_desc->getDimIndex(0) << ".";
     return MLUOP_STATUS_BAD_PARAM;
@@ -96,17 +96,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxOverlapBev(
   if (boxes1_desc->getDimIndex(boxes1_desc->getDim() - 1) !=
       PCDET_SINGLE_BOX_DIM) {
     LOG(ERROR)
-        << "[mluOpBoxOverlapBev]: Check failed: The Boxes' last dimenstion "
+        << "[mluOpBoxOverlapBev]: Check failed: The Boxes' last dimension "
            "should be 7 ."
         << "But now box1's last dimension is "
         << boxes1_desc->getDimIndex(boxes1_desc->getDim() - 1) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
-  if (boxes2_desc->getDimIndex(0) > MAX_TENSOR_DIM_NUM) {
+  if (boxes2_desc->getDimIndex(0) > MAX_BOX_NUM) {
     LOG(ERROR)
         << "[mluOpBoxOverlapBev]: Check failed: "
         << "the number of boxes must not exceed "
-        << MAX_TENSOR_DIM_NUM << "."
+        << MAX_BOX_NUM << "."
         << "But now box2's first dimension is "
         << boxes2_desc->getDimIndex(0) << ".";
     return MLUOP_STATUS_BAD_PARAM;
@@ -114,7 +114,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxOverlapBev(
   if (boxes2_desc->getDimIndex(boxes2_desc->getDim() - 1) !=
       PCDET_SINGLE_BOX_DIM) {
     LOG(ERROR)
-        << "[mluOpBoxOverlapBev]: Check failed: The Boxes' last dimenstion "
+        << "[mluOpBoxOverlapBev]: Check failed: The Boxes' last dimension "
            "should be 7 ."
         << "But now box2's last dimension is "
         << boxes2_desc->getDimIndex(boxes2_desc->getDim() - 1) << ".";
@@ -142,7 +142,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxOverlapBev(
     LOG(ERROR)
         << "[mluOpBoxOverlapBev] Check failed: "
         << "overlaps_desc's last dim should equal to boxes2_desc's first dim "
-        << boxes2_desc->getDimIndex(0) << ", But now ious_desc's last dim is "
+        << boxes2_desc->getDimIndex(0) << ", But now overlaps_desc's last dim is "
         << overlaps_desc->getDimIndex(1) << ".";
     return MLUOP_STATUS_BAD_PARAM;
   }
@@ -167,11 +167,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxOverlapBev(
 
   // stride tensor check
   STRIDE_TENSOR_CHECK("[mluOpBoxOverlapBev]:", boxes1_desc,
-                      "Boxes1 tensor must be continguous.");
+                      "Boxes1 tensor must be contiguous.");
   STRIDE_TENSOR_CHECK("[mluOpBoxOverlapBev]:", boxes2_desc,
-                      "Boxes2 tensor must be continguous.");
+                      "Boxes2 tensor must be contiguous.");
   STRIDE_TENSOR_CHECK("[mluOpBoxOverlapBev]:", overlaps_desc,
-                      "Overlaps tensor must be continguous.");
+                      "Overlaps tensor must be contiguous.");
 
   // generate prototxt
   if (MLUOP_GEN_CASE_ON_NEW) {
