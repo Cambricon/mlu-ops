@@ -53,7 +53,7 @@
 #define SEV_DEBUG2 kDebug2
 #define SEV_DEBUG3 kDebug3
 #define SEV_DEBUG4 kDebug4
-#define SEV_FATAL kFatal
+// #define SEV_FATAL kFatal
 #define SEV_VLOG kVlog
 
 #define LOG(severity)                                                   \
@@ -103,7 +103,7 @@
 // kernel check for crop
 #define SYMBOL_CHECK(symbol...)                                                \
   if (MLUOP_PREDICT_FALSE(!&(symbol))) {                                       \
-    LOG(FATAL) << "calling undefined symbol which not be linked: " << #symbol; \
+    LOG(ERROR) << "calling undefined symbol which not be linked: " << #symbol; \
   }                                                                            \
   symbol
 

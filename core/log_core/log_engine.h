@@ -51,7 +51,7 @@ enum class Severity : int {
   kDebug2 = 5,
   kDebug3 = 6,
   kDebug4 = 7,
-  kFatal = kError,
+  // kFatal = kError,
   kVlog = kDebug1,
 };
 
