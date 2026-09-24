@@ -51,6 +51,8 @@
 #include <fmt/chrono.h>
 #include <fmt/color.h>
 #include <spdlog/sinks/base_sink.h>
+#include <spdlog/pattern_formatter.h>
+#include <iterator>
 #include <spdlog/spdlog.h>
 
 namespace mluop {
@@ -77,98 +79,6 @@ int maxLogLevelFromEnv(const char* env_name, int default_para) {
 // 是否打印到屏幕：恒写 std::cout，故只判 stdout 是否为 tty。
 bool isPrintToScreen() { return isatty(fileno(stdout)); }
 
-// 彩色/复位转义：屏幕 tail 着色用，局部定义。
-#if !defined(WIN32) && !defined(COLOR_SILENCE)
-constexpr const char* kGreen = "\033[32m";
-constexpr const char* kReset = "\033[0m";
-#else
-constexpr const char* kGreen = "";
-constexpr const char* kReset = "";
-#endif
-
-// 按 Severity 返回终端颜色（与屏幕 head 着色一致）。
-inline static auto formatSeverityColor(Severity severity) {
-  switch (severity) {
-    case Severity::kError: {
-      return fmt::fg(fmt::terminal_color::red);
-    }
-    case Severity::kWarning: {
-      return fmt::fg(fmt::terminal_color::magenta);
-    }
-    case Severity::kInfo: {
-      return fmt::fg(fmt::terminal_color::green);
-    }
-    case Severity::kCnpapi: {
-      return fmt::fg(fmt::terminal_color::blue);
-    }
-    case Severity::kDebug1:
-    case Severity::kDebug2:
-    case Severity::kDebug3:
-    case Severity::kDebug4: {
-      return fmt::fg(fmt::terminal_color::cyan);
-    }
-  }
-  // all enum used
-  return fmt::fg(fmt::terminal_color::white);
-}
-
-// 按 Severity 返回级别名。
-inline static std::string formatSeverityName(Severity severity) {
-  switch (severity) {
-    case Severity::kError: {
-      return "ERROR";
-    }
-    case Severity::kWarning: {
-      return "WARNING";
-    }
-    case Severity::kInfo: {
-      return "INFO";
-    }
-    case Severity::kCnpapi: {
-      return "CNPAPI";
-    }
-    case Severity::kDebug1: {
-      return "DEBUG1";
-    }
-    case Severity::kDebug2: {
-      return "DEBUG2";
-    }
-    case Severity::kDebug3: {
-      return "DEBUG3";
-    }
-    case Severity::kDebug4: {
-      return "DEBUG4";
-    }
-  }
-  return "";
-}
-
-// 按 is_colored 决定是否着色加粗。
-inline static std::string formatSeverity(Severity severity, bool is_colored) {
-  if (is_colored) {
-    return fmt::format("{}", fmt::styled(formatSeverityName(severity),
-                                         formatSeverityColor(severity) |
-                                             fmt::emphasis::bold));
-  } else {
-    return formatSeverityName(severity);
-  }
-}
-
-// 获取当前进程 id。
-inline static auto getpid_() {
-#if defined(WINDOWS) || defined(WIN32)
-  return _getpid();
-#else
-  return getpid();
-#endif
-}
-
-// 获取当前时间戳：[{F %T}] 精确到微秒。
-std::string getTime() {
-  auto now = std::chrono::system_clock::now();
-  return fmt::format("[{:%F %T}]",
-                     std::chrono::time_point_cast<std::chrono::microseconds>(now));
-}
 
 // 把消息中的换行替换为空格，保证单行输出。
 void clearEnter(std::string* ss) {
@@ -184,9 +94,12 @@ void clearEnter(std::string* ss) {
 class ConsoleSink final : public spdlog::sinks::base_sink<std::mutex> {
  protected:
   void sink_it_(const spdlog::details::log_msg& msg) override {
-    std::cout.write(msg.payload.data(),
-                    static_cast<std::streamsize>(msg.payload.size()));
-    std::cout.put('\n');
+    // 标准 spdlog 契约：sink 先用 formatter_ 格式化（pattern head + body），再写出。
+    spdlog::memory_buf_t formatted;
+    formatter_->format(msg, formatted);
+    // pattern_formatter 已追加 eol（\n），这里只写、不再 put('\n')，否则双换行。
+    std::cout.write(formatted.data(),
+                    static_cast<std::streamsize>(formatted.size()));
     std::cout.flush();
   }
   void flush_() override { std::cout.flush(); }
@@ -201,9 +114,11 @@ class FileSink final : public spdlog::sinks::base_sink<std::mutex> {
  protected:
   void sink_it_(const spdlog::details::log_msg& msg) override {
     if (stream_.is_open()) {
-      stream_.write(msg.payload.data(),
-                    static_cast<std::streamsize>(msg.payload.size()));
-      stream_.put('\n');
+      spdlog::memory_buf_t formatted;
+      formatter_->format(msg, formatted);
+      // 同 ConsoleSink：formatter 已带 eol，不再 put('\n')。
+      stream_.write(formatted.data(),
+                    static_cast<std::streamsize>(formatted.size()));
       stream_.flush();
     }
   }
@@ -215,6 +130,121 @@ class FileSink final : public spdlog::sinks::base_sink<std::mutex> {
 
  private:
   std::ofstream& stream_;
+};
+
+// 自定义 pattern flag %k：Card 卡号（cnrtGetDevice）。
+class CardFlag final : public spdlog::custom_flag_formatter {
+ public:
+  void format(const spdlog::details::log_msg&, const std::tm&,
+              spdlog::memory_buf_t& dest) override {
+    int dev_index = -1;
+    cnrtGetDevice(&dev_index);
+    auto sv = std::to_string(dev_index);
+    dest.append(sv.data(), sv.data() + sv.size());
+  }
+  std::unique_ptr<spdlog::custom_flag_formatter> clone() const override {
+    return std::make_unique<CardFlag>();
+  }
+};
+
+// 自定义 pattern flag %K：模块名（kProjectDisplayName），color_print_ 时加粗黄。
+class ModuleFlag final : public spdlog::custom_flag_formatter {
+ public:
+  void format(const spdlog::details::log_msg&, const std::tm&,
+              spdlog::memory_buf_t& dest) override {
+    const char* module = kProjectDisplayName;
+    if (mluop::log::LogEngine::instance().colorPrint()) {
+      // spdlog 的 memory_buf_t 是 bundled fmt，外层 fmt::format_to 写不进去；
+      // 用外层 fmt 栈 buffer 格式化（短串零堆分配），再拷贝到 dest。
+      fmt::memory_buffer tmp;
+      fmt::format_to(std::back_inserter(tmp), "{}",
+                     fmt::styled(module, fmt::emphasis::bold |
+                                              fmt::fg(fmt::terminal_color::yellow)));
+      dest.append(tmp.data(), tmp.data() + tmp.size());
+    } else {
+      dest.append(module, module + strlen(module));
+    }
+  }
+  std::unique_ptr<spdlog::custom_flag_formatter> clone() const override {
+    return std::make_unique<ModuleFlag>();
+  }
+};
+
+// 自定义 pattern flag %c：等级名（小写 spdlog 名，按 cvtSeverityToSpdlog 塌缩），
+// color_print_ 时按旧 per-severity 配色（经塌缩映射到 fmt terminal_color）。
+class LevelFlag final : public spdlog::custom_flag_formatter {
+ public:
+  void format(const spdlog::details::log_msg& msg, const std::tm&,
+              spdlog::memory_buf_t& dest) override {
+    // 等级名大写（按 cvtSeverityToSpdlog 塌缩后的 spdlog 级）。
+    const char* name = "UNKNOWN";
+    switch (msg.level) {
+      case spdlog::level::err: {
+        name = "ERROR";
+        break;
+      }
+      case spdlog::level::warn: {
+        name = "WARNING";
+        break;
+      }
+      case spdlog::level::info: {
+        name = "INFO";
+        break;
+      }
+      case spdlog::level::trace: {
+        name = "TRACE";
+        break;
+      }
+      case spdlog::level::debug: {
+        name = "DEBUG";
+        break;
+      }
+      case spdlog::level::critical: {
+        name = "CRITICAL";
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    if (mluop::log::LogEngine::instance().colorPrint()) {
+      auto color = fmt::terminal_color::white;
+      switch (msg.level) {
+        case spdlog::level::err: {
+          color = fmt::terminal_color::red;
+          break;
+        }
+        case spdlog::level::warn: {
+          color = fmt::terminal_color::magenta;
+          break;
+        }
+        case spdlog::level::info: {
+          color = fmt::terminal_color::green;
+          break;
+        }
+        case spdlog::level::trace: {
+          color = fmt::terminal_color::blue;
+          break;
+        }
+        case spdlog::level::debug: {
+          color = fmt::terminal_color::cyan;
+          break;
+        }
+        default: {
+          break;
+        }
+      }
+      fmt::memory_buffer tmp;
+      fmt::format_to(std::back_inserter(tmp), "{}",
+                     fmt::styled(name, fmt::fg(color) | fmt::emphasis::bold));
+      dest.append(tmp.data(), tmp.data() + tmp.size());
+    } else {
+      dest.append(name, name + strlen(name));
+    }
+  }
+  std::unique_ptr<spdlog::custom_flag_formatter> clone() const override {
+    return std::make_unique<LevelFlag>();
+  }
 };
 
 }  // namespace
@@ -246,14 +276,33 @@ LogEngine::LogEngine()
   // —— spdlog logger 默认 info(2) 会滤掉 ERROR/WARNING（severity 0/1），必须放行。
   // Emit 里已按 max_log_level_ 在函数开头门控，此处只需不额外过滤。
   callback_sink_ = std::make_shared<LogCallbackSinkMt>();
+  // 默认 logger_ 只挂 ConsoleSink（未设回调时日志仅打屏，不付回调 sink 的开销）；
+  // 调 setLogCallback 时才把 callback_sink_ 动态加入 logger_->sinks()。
   logger_ = std::make_shared<spdlog::logger>(
       kProjectDisplayName,
-      spdlog::sinks_init_list{std::make_shared<ConsoleSink>(), callback_sink_});
+      spdlog::sinks_init_list{std::make_shared<ConsoleSink>()});
   logger_->set_level(spdlog::level::trace);
 
   file_logger_ = std::make_shared<spdlog::logger>(
       kProjectDisplayName, std::make_shared<FileSink>(log_file_stream_));
   file_logger_->set_level(spdlog::level::trace);
+
+  // 屏幕 pattern：head 全部由 spdlog 装配（时间 %Y-%m-%d %H:%M:%S.%f、模块 %n、等级 %L
+  // 按 cvtSeverityToSpdlog 塌缩为小写、pid %P、Card 自定义 flag %k），body 为 %v。
+  // 文件 sink 只 %v（无 head）。Debug 下屏幕追加 tail（file:line pid）。
+  auto console_formatter = std::make_unique<spdlog::pattern_formatter>();
+  console_formatter->add_flag<CardFlag>('k');
+  console_formatter->add_flag<ModuleFlag>('K');
+  console_formatter->add_flag<LevelFlag>('c');
+#ifdef NDEBUG
+  console_formatter->set_pattern(
+      "[%Y-%m-%d %H:%M:%S.%f][%K][%c][%P][Card:%k]: %v");
+#else
+  console_formatter->set_pattern(
+      "[%Y-%m-%d %H:%M:%S.%f][%K][%c][%P][Card:%k]: %v  [%s:%#  pid:%P]");
+#endif
+  logger_->set_formatter(std::move(console_formatter));
+  file_logger_->set_pattern("%v");
 
   // 构造完成，置存活标志，允许日志发射。
   g_log_engine_alive_flag.store(kLogEngineAliveMagic, std::memory_order_relaxed);
@@ -310,11 +359,21 @@ void LogEngine::setLogFile(const std::string& file_name) {
 }
 
 void LogEngine::setLogCallback(LogCallback callback) {
-  // 接线回调 sink：callback_sink_ 挂在 logger_（屏幕）上，回调将收到完整屏幕行
-  // （head + body + tail）。callback 存储于 callback_sink_ 内部（atomic），此处
-  // 不再保留 LogEngine 级副本。
-  if (callback_sink_ != nullptr) {
-    callback_sink_->set_callback(callback);
+  // 动态接线：回调收到完整屏幕行（head + body + tail）。callback 存于
+  // callback_sink_（atomic）。设非空回调时把该 sink 加入 logger_，设空回调时移除，
+  // 保证默认（无回调）状态下 logger_ 只有 ConsoleSink、不付额外开销。
+  if (callback_sink_ == nullptr) {
+    return;
+  }
+  callback_sink_->set_callback(callback);
+  auto& sinks = logger_->sinks();
+  if (callback != nullptr) {
+    if (std::find(sinks.begin(), sinks.end(), callback_sink_) == sinks.end()) {
+      sinks.push_back(callback_sink_);
+    }
+  } else {
+    sinks.erase(std::remove(sinks.begin(), sinks.end(), callback_sink_),
+                sinks.end());
   }
 }
 
@@ -369,86 +428,52 @@ void LogEngine::Emit(Severity severity, const std::string& file, int line,
                      const std::string& message) {
   static std::mutex log_mutex;
 
-  // 提前门控：被抑制级别的日志不装配、不输出。
+  // 提前门控：被抑制级别不输出。
   if (static_cast<int>(severity) >
       max_log_level_.load(std::memory_order_relaxed)) {
     return;
   }
 
-  const bool is_colored = color_print_.load(std::memory_order_relaxed);
-  std::stringstream file_str;
-  std::stringstream cout_str;
-
-  // head 只进屏幕（文件无 head）。
-  cout_str << fmt::format(
-      "{datetime}[{module}][{severity}][{pid}][Card:{card}]: ",
-      fmt::arg("datetime", getTime()),
-      fmt::arg("module",
-               is_colored
-                   ? fmt::to_string(fmt::styled(
-                         kProjectDisplayName,
-                         fmt::emphasis::bold |
-                             fmt::fg(fmt::terminal_color::yellow)))
-                   : kProjectDisplayName),
-      fmt::arg("severity", formatSeverity(severity, is_colored)),
-      fmt::arg("pid", getpid_()),
-      fmt::arg("card", []() {
-        int dev_index = -1;
-        cnrtGetDevice(&dev_index);
-        return dev_index;
-      }()));
-
-  // body：文件与屏幕均有。
-  file_str << message;
-  cout_str << message;
-
-#ifndef NDEBUG
-  // tail：文件恒无色，屏幕按 color_print_ 决定彩色。
-  int pid = getpid_();
-#if defined(WINDOWS) || defined(WIN32)
-  int tid = GetCurrentThreadId();
-#else
-  int tid = syscall(SYS_gettid);
-#endif
-  std::stringstream realId;
-  if (pid == tid) {
-    realId << pid;
-  } else {
-    realId << "{" << tid << "}";
-  }
-  file_str << "  "
-           << "[ " << file << ":" << line << "  pid:" << realId.str() << "]";
-  if (is_colored) {
-    cout_str << "  " << kGreen << "[ " << file << ":" << line
-             << "  pid:" << realId.str() << "]" << kReset;
-  } else {
-    cout_str << "  "
-             << "[ " << file << ":" << line << "  pid:" << realId.str()
-             << "]";
-  }
-#endif
-
-  std::string file_ss = file_str.str();
-  std::string cout_ss = cout_str.str();
-  clearEnter(&file_ss);
-  clearEnter(&cout_ss);
+  // 屏幕/文件均只传 body；head 由 spdlog pattern 装配（时间/模块/%L/pid/Card）。
+  std::string body = message;
+  clearEnter(&body);
 
   std::lock_guard<std::mutex> lock(log_mutex);
-  // 屏幕走 logger_（ConsoleSink + callback_sink_），文件走 file_logger_
-  // （FileSink）。payload 为预先装配好的 cout_ss / file_ss，经 string_view_t
-  // 原样传给 spdlog（logger.h 的非模板 log(level, string_view_t) 重载），
-  // sink 逐字节写出（endl 语义）。
-  logger_->log(static_cast<spdlog::level::level_enum>(static_cast<int>(severity)),
-               spdlog::string_view_t(cout_ss.data(), cout_ss.size()));
+  const auto lvl = cvtSeverityToSpdlog(severity);
+  const spdlog::source_loc loc{file.c_str(), line, nullptr};
+  logger_->log(loc, lvl, spdlog::string_view_t(body.data(), body.size()));
   if (!only_show_.load(std::memory_order_relaxed)) {
-    file_logger_->log(
-        static_cast<spdlog::level::level_enum>(static_cast<int>(severity)),
-        spdlog::string_view_t(file_ss.data(), file_ss.size()));
+    file_logger_->log(loc, lvl, spdlog::string_view_t(body.data(), body.size()));
   }
 }
-
 }  // namespace log
 }  // namespace mluop
+
+// severity -> spdlog level。显示不走 %L（head 里已有名字），仅 spdlog 语义用。
+spdlog::level::level_enum mluop::log::LogEngine::cvtSeverityToSpdlog(mluop::log::Severity severity) {
+  switch (severity) {
+    case mluop::log::Severity::kError: {
+      return spdlog::level::err;
+    }
+    case mluop::log::Severity::kWarning: {
+      return spdlog::level::warn;
+    }
+    case mluop::log::Severity::kCnpapi: {
+      return spdlog::level::trace;
+    }
+    case mluop::log::Severity::kInfo: {
+      return spdlog::level::info;
+    }
+    case mluop::log::Severity::kDebug1:
+    case mluop::log::Severity::kDebug2:
+    case mluop::log::Severity::kDebug3:
+    case mluop::log::Severity::kDebug4: {
+      return spdlog::level::debug;
+    }
+  }
+  return spdlog::level::trace;
+}
+
 
 extern "C" {
 

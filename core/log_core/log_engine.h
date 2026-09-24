@@ -28,6 +28,8 @@
 #include <memory>
 #include <mutex>
 #include <sstream>
+#include <utility>
+#include <spdlog/logger.h>
 #include <string>
 
 #include "core/log_core/log_callback_sink.h"
@@ -99,6 +101,26 @@ class LogEngine {
   void Emit(Severity severity, const std::string& file, int line,
             const std::string& message);
 
+  // 函数式门控日志（LOG_*_FMT 走这里）：门控后把 fmt+args 直交 spdlog，由 spdlog 内部
+  // fmt 格式化 body；head 由 spdlog pattern 装配（时间/模块/%L/pid/Card），无预装配 head。
+  // 被过滤时不构造、不格式化、不输出。文件路径仅 only_show 关闭时启用（body 无 head；
+  // fmt::format 以 const 引用绑定参数、不移动，故随后 std::forward 安全）。
+  template <typename... Args>
+  void EmitFmt(Severity severity, const char* file, int line,
+               fmt::string_view fmt, Args&&... args) {
+    if (static_cast<int>(severity) >
+        max_log_level_.load(std::memory_order_relaxed)) {
+      return;
+    }
+    const spdlog::source_loc loc{file, line, nullptr};
+    const auto lvl = cvtSeverityToSpdlog(severity);
+    if (!only_show_.load(std::memory_order_relaxed)) {
+      // 文件 body（无 head）。fmt::format 以 const 引用绑定参数、不移动，随后 forward 安全。
+      file_logger_->log(loc, lvl, fmt::format(fmt, args...));
+    }
+    logger_->log(loc, lvl, fmt, std::forward<Args>(args)...);
+  }
+
   bool onlyShow() const;
   void setOnlyShow(bool only_show);
 
@@ -123,6 +145,9 @@ class LogEngine {
   // 线程安全：日志发射（任意线程）与运行时 C API（mluOpSet*，任意线程）可能
   // 跨线程并发读写下列状态，故一律用 atomic（relaxed 即可：配置类值读到稍旧值
   // 无害，只需避免数据竞争 UB）或互斥锁（std::string 不可原子化）。
+  // severity -> spdlog level（仅 spdlog 语义用，显示不走 %L）。
+  static spdlog::level::level_enum cvtSeverityToSpdlog(Severity severity);
+
   std::atomic<int> max_log_level_;
   std::atomic<bool> only_show_;
   std::atomic<bool> color_print_;

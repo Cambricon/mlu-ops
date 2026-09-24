@@ -37,6 +37,7 @@
 #include "type.h"
 #include "preprocessor.h"
 #include <algorithm>
+#include <fmt/ostream.h>
 
 
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
@@ -58,7 +59,79 @@
 
 #define LOG(severity)                                                   \
   mluop::log::LogMessage(__FILE__, __LINE__,                            \
-                         mluop::log::Severity::SEV_##severity).stream()
+                         mluop::log::Severity::SEV_##severity).stream()   
+
+
+                         
+// === 预门控显式宏组（方案①预埋，2026-09-21）===
+// LOG_DEBUG1..4_STREAM / LOG_INFO_STREAM / LOG_WARNING_STREAM / LOG_CNPAPI_STREAM：
+// 仿 VLOG 提前退出 + Voidifier。
+// 被过滤（severity > max_log_level_）时不构造 LogMessage、不求值 body，几乎零开销；
+// 命中时照常构造 + 格式化 + Emit。门控与 Emit 同旋钮（shouldLog = CNNL_MAX_LOG_LEVEL），
+// 门控通过即会打印，无浪费。注意：max_log_level_ 运行时可调（mluOpSetMaxLogLevel），
+// 故不能像 VLOG 的 VLOG_IS_ON 那样 static 缓存结果。
+#define MLUOP_LOG_GATED(sev) \
+  MLUOP_PREDICT_TRUE(!mluop::log::LogEngine::instance().shouldLog( \
+      mluop::log::Severity::sev)) \
+  ? (void)0 \
+  : ::mluop::internal::Voidifier() & \
+        mluop::log::LogMessage(__FILE__, __LINE__, \
+                               mluop::log::Severity::sev).stream()
+
+#define LOG_DEBUG1_STREAM    MLUOP_LOG_GATED(kDebug1)
+#define LOG_DEBUG2_STREAM    MLUOP_LOG_GATED(kDebug2)
+#define LOG_DEBUG3_STREAM    MLUOP_LOG_GATED(kDebug3)
+#define LOG_DEBUG4_STREAM    MLUOP_LOG_GATED(kDebug4)
+#define LOG_INFO_STREAM    MLUOP_LOG_GATED(kInfo)
+#define LOG_WARNING_STREAM    MLUOP_LOG_GATED(kWarning)
+#define LOG_CNPAPI_STREAM    MLUOP_LOG_GATED(kCnpapi)
+
+// LOG_ERROR_STREAM：最低等级，默认必输出（severity 0 <= 默认 max 0），门控恒通过徒增分支，
+// 故不设预门控，直接构造 LogMessage。
+#define LOG_ERROR_STREAM \
+  mluop::log::LogMessage(__FILE__, __LINE__, mluop::log::Severity::kError).stream()
+// === 函数式门控宏组 LOG_*_FMT(fmt_str, ...)（方案①预埋，2026-09-22）===
+// 保留 fmt::print(stream, fmt, args...) 格式化风格，同时带预门控：
+// 被过滤时不调用 fmt::print（body 不求值，几乎零开销）；命中时 fmt::print 写进
+// LogMessage 的 stream，析构时 Emit。门控与 MLUOP_LOG_GATED 同源（shouldLog）。
+// 需要 <fmt/ostream.h>（logging.h 顶部已 include）。
+#define LOG_GATED_FMT(sev, fmt_str, ...) \
+  (mluop::log::LogEngine::instance().shouldLog(mluop::log::Severity::sev) \
+     ? mluop::log::LogEngine::instance().EmitFmt( \
+           mluop::log::Severity::sev, __FILE__, __LINE__, fmt_str, \
+           ##__VA_ARGS__) \
+     : (void)0)
+
+// LOG_DEBUG*_FMT 专用：大部分场景这些日志被过滤不输出，用 MLUOP_PREDICT_FALSE
+// 提示编译器 shouldLog 通常为假（走 (void)0 分支），减少分支预测惩罚。
+#define LOG_GATED_FMT_UNLIKELY(sev, fmt_str, ...) \
+  (MLUOP_PREDICT_FALSE( \
+       mluop::log::LogEngine::instance().shouldLog(mluop::log::Severity::sev)) \
+     ? mluop::log::LogEngine::instance().EmitFmt( \
+           mluop::log::Severity::sev, __FILE__, __LINE__, fmt_str, \
+           ##__VA_ARGS__) \
+     : (void)0)
+
+#define LOG_DEBUG1_FMT(fmt_str, ...) \
+  LOG_GATED_FMT_UNLIKELY(kDebug1, fmt_str, ##__VA_ARGS__)
+#define LOG_DEBUG2_FMT(fmt_str, ...) \
+  LOG_GATED_FMT_UNLIKELY(kDebug2, fmt_str, ##__VA_ARGS__)
+#define LOG_DEBUG3_FMT(fmt_str, ...) \
+  LOG_GATED_FMT_UNLIKELY(kDebug3, fmt_str, ##__VA_ARGS__)
+#define LOG_DEBUG4_FMT(fmt_str, ...) \
+  LOG_GATED_FMT_UNLIKELY(kDebug4, fmt_str, ##__VA_ARGS__)
+#define LOG_INFO_FMT(fmt_str, ...) \
+  LOG_GATED_FMT(kInfo, fmt_str, ##__VA_ARGS__)
+#define LOG_WARNING_FMT(fmt_str, ...) \
+  LOG_GATED_FMT(kWarning, fmt_str, ##__VA_ARGS__)
+#define LOG_CNPAPI_FMT(fmt_str, ...) \
+  LOG_GATED_FMT(kCnpapi, fmt_str, ##__VA_ARGS__)
+
+// LOG_ERROR_STREAM 默认必输出，不设预门控，直接 fmt::print。
+#define LOG_ERROR_FMT(fmt_str, ...) \
+  mluop::log::LogEngine::instance().EmitFmt(mluop::log::Severity::kError, \
+                                            __FILE__, __LINE__, fmt_str, \
+                                            ##__VA_ARGS__)
 
 #define TOKENPASTE(x, y, z) x##y##z
 #define TOKENPASTE2(x, y, z) TOKENPASTE(x, y, z)
