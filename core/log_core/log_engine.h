@@ -24,16 +24,15 @@
 #define CORE_LOG_CORE_LOG_ENGINE_H_
 
 #include <atomic>
-#include <fstream>
+#include <cstdlib>
 #include <memory>
-#include <mutex>
-#include <sstream>
-#include <utility>
 #include <spdlog/logger.h>
+#include <sstream>
 #include <string>
+#include <utility>
 
-#include "core/log_core/log_callback_sink.h"
 #include "core/log_core/log_project.h"
+#include "core/macros.h"
 
 namespace spdlog {
 class logger;
@@ -42,8 +41,10 @@ class logger;
 namespace mluop {
 namespace log {
 
-// 新引擎日志等级：值越小越严重/越基础，值越大日志越丰富（0..7）。kFatal / kVlog
-// 为继承别名（kFatal==kError，kVlog==kDebug1），供宏层沿用旧等级命名。
+// 文件 sink 定义在 log_engine.cpp（自管日志流/文件名/开关），此处仅前向声明。
+class FileSink;
+
+// 日志等级：值越小越严重，越大越丰富（0..7）。kVlog 为 kDebug1 的旧名别名。
 enum class Severity : int {
   kError = 0,
   kWarning = 1,
@@ -60,65 +61,111 @@ enum class Severity : int {
 inline constexpr int kMinSeverity = static_cast<int>(Severity::kError);
 inline constexpr int kMaxSeverity = static_cast<int>(Severity::kDebug4);
 
-// 上限阈值过滤（MAX 语义）：severity <= max_level 时允许打印。独立命名避免被
-// LogEngine::shouldLog 隐藏。
 constexpr bool severityEnabled(int severity, int max_level) {
   return severity <= max_level;
 }
 
-// 新引擎日志消息 RAII：构造时记录 file/line/severity，析构时经 LogEngine::Emit
-// 统一装配输出。宏层 `LOG(severity)` 映射到
-// `LogMessage(__FILE__, __LINE__, Severity::SEV_##severity).stream()`。
+// 全局日志阈值。sentinel -1 表示尚未从 env 初始化；LogEngine 构造时仅在仍是
+// sentinel 时才从 env 设置，避免覆盖构造前 mluOpSetMaxLogLevel 已设的值。
+inline constexpr int kMaxLogLevelUnset = -1;
+inline std::atomic<int> g_max_log_level{kMaxLogLevelUnset};
+
+// 用户回调签名：`severity` 为原始 Severity 数值；`function_name` 暂固定传空指针；
+// `message` 为格式化后的消息正文（body，无 head）。与 C API 的 MluOpLogCallback
+// 布局一致（void(int,const char*,const char*) 函数指针），可安全 reinterpret_cast
+// 互转。
+using LogCallback = void (*)(int severity, const char* function_name,
+                             const char* message);
+
+// 日志消息 RAII：构造记录 file/line/severity，析构经 LogEngine::Emit 输出。
+// `LOG(severity)` 宏映射到 `LogMessage(__FILE__, __LINE__, SEV_##severity).stream()`。
 class LogMessage {
- public:
+public:
   LogMessage(std::string file, int line, Severity severity);
   ~LogMessage();
-  std::stringstream& stream();
+  std::stringstream &stream();
 
- private:
+private:
   std::string file_;
   int line_;
   Severity severity_;
   std::stringstream stream_;
 };
 
-// 新引擎门面：单例承载日志状态（阈值/落盘/颜色/回调），LogMessage 析构经 Emit
-// 装配并输出。
+// 日志门面单例：承载阈值/落盘/颜色/回调状态，日志经 Emit / EmitFmt 输出。
 class LogEngine {
- public:
-  static LogEngine& instance();
+public:
+  static LogEngine &instance();
 
-  LogEngine(const LogEngine&) = delete;
-  LogEngine& operator=(const LogEngine&) = delete;
+  LogEngine(const LogEngine &) = delete;
+  LogEngine &operator=(const LogEngine &) = delete;
 
-  int maxLogLevel() const;
-  void setMaxLogLevel(int level);
+  static inline void initMaxLogLevel() {
+    if (MLUOP_PREDICT_TRUE(g_max_log_level.load(std::memory_order_relaxed) !=
+                           kMaxLogLevelUnset)) {
+      return;
+    }
+    const char *env_raw_ptr = std::getenv(kEnvMaxLogLevel);
+    int level =
+        env_raw_ptr ? parseMaxLogLevelValue(std::string(env_raw_ptr), 0) : 0;
+    g_max_log_level.store(level, std::memory_order_relaxed);
+  }
 
-  bool shouldLog(Severity severity) const;
+  static inline int maxLogLevel() {
+    static bool inited = (initMaxLogLevel(), true);
+    return g_max_log_level.load(std::memory_order_relaxed);
+  }
 
-  // 装配并输出一条日志：屏幕 = head + body + tail，文件 = body + tail（无 head）。
-  // severity 门控在装配之前（Emit 开头对被抑制级别直接返回，不装配、不输出）。
-  void Emit(Severity severity, const std::string& file, int line,
-            const std::string& message);
+  static inline void setMaxLogLevel(int level) {
+    if (MLUOP_PREDICT_FALSE(level < kMinSeverity)) {
+      level = kMinSeverity;
+    } else if (MLUOP_PREDICT_FALSE(level > kMaxSeverity)) {
+      level = kMaxSeverity;
+    }
+    g_max_log_level.store(level, std::memory_order_relaxed);
+  }
 
-  // 函数式门控日志（LOG_*_FMT 走这里）：门控后把 fmt+args 直交 spdlog，由 spdlog 内部
-  // fmt 格式化 body；head 由 spdlog pattern 装配（时间/模块/%L/pid/Card），无预装配 head。
-  // 被过滤时不构造、不格式化、不输出。文件路径仅 only_show 关闭时启用（body 无 head；
-  // fmt::format 以 const 引用绑定参数、不移动，故随后 std::forward 安全）。
+  static inline bool shouldLog(Severity severity) {
+    return severityEnabled(static_cast<int>(severity), maxLogLevel());
+  }
+
+  // 流式日志入口（LOG()/LOG_*_STREAM 走这里）：body 经 clearEnter 单行化后经
+  // logger_ 分发，head 由各 sink 的 pattern formatter 装配。severity 在开头门控，
+  // 被抑制级别直接返回，不装配、不输出。
+  void Emit(Severity severity, const std::string &file, int line,
+            const std::string &message);
+
+  // 函数式门控日志（LOG_*_FMT 走这里）：门控后把 fmt+args 直交 spdlog，由 spdlog
+  // 内部 fmt 格式化 body（仅一次），head 由各 sink 的 pattern formatter 装配。
+  // 被过滤时不构造、不格式化、不输出。有回调时，body 格式化一次后回调（传原始
+  // severity）并复用交 spdlog。
   template <typename... Args>
-  void EmitFmt(Severity severity, const char* file, int line,
-               fmt::string_view fmt, Args&&... args) {
-    if (static_cast<int>(severity) >
-        max_log_level_.load(std::memory_order_relaxed)) {
+  void EmitFmt(Severity severity, const char *file, int line,
+               fmt::string_view fmt, Args &&... args) {
+    if (!mluop::log::LogEngine::shouldLog(severity)) {
       return;
     }
     const spdlog::source_loc loc{file, line, nullptr};
     const auto lvl = cvtSeverityToSpdlog(severity);
-    if (!only_show_.load(std::memory_order_relaxed)) {
-      // 文件 body（无 head）。fmt::format 以 const 引用绑定参数、不移动，随后 forward 安全。
-      file_logger_->log(loc, lvl, fmt::format(fmt, args...));
+    LogCallback callback = callback_.load(std::memory_order_relaxed);
+    if (MLUOP_PREDICT_FALSE(callback != nullptr)) {
+      // 有回调：body 手动格式化一次，既给回调又给 spdlog（string 版不重格式化）。
+      // fmt::format 包 try/catch 防坏格式串跨 C ABI 逃逸。
+      std::string body;
+      try {
+        body = fmt::format(fmt, args...);
+      } catch (...) {
+        return;
+      }
+      callback(static_cast<int>(severity), /*function_name=*/nullptr,
+               body.c_str());
+      logger_->log(loc, lvl,
+                   spdlog::string_view_t(body.data(), body.size()));
+      return;
     }
-    logger_->log(loc, lvl, fmt, std::forward<Args>(args)...);
+    // 无回调（主路径）：参数以裸左值传递（不 std::forward），fmt 的
+    // make_format_args 恒以引用 / string_view 借用、不移动参数。
+    logger_->log(loc, lvl, fmt, args...);
   }
 
   bool onlyShow() const;
@@ -127,41 +174,31 @@ class LogEngine {
   bool colorPrint() const;
   void setColorPrint(bool color_print);
 
-  // 返回 log_file_ 的副本（锁内拷贝，避免并发 setLogFile 下返回内部引用外泄）。
   std::string logFile() const;
-  void setLogFile(const std::string& file_name);
+  void setLogFile(const std::string &file_name);
 
   void setLogCallback(LogCallback callback);
 
-  // 解析 max-level 环境变量的【值】（非变量名）：0..7 或 ERROR/WARNING/API_TRACE/
-  // INFO/DEBUG(1..4)（DEBUG-n/DEBUG_n 与 DEBUGn 同义；裸 DEBUG=DEBUG1）；非法值
-  // 回落 default_para。
-  static int parseMaxLogLevelValue(const std::string& value, int default_para);
+  // 解析 max-level 环境变量的值（0..7 或 ERROR/WARNING/... 名称）；非法值回落
+  // default_para。
+  static int parseMaxLogLevelValue(const std::string &value, int default_para);
 
- private:
+private:
   LogEngine();
   ~LogEngine();
 
-  // 线程安全：日志发射（任意线程）与运行时 C API（mluOpSet*，任意线程）可能
-  // 跨线程并发读写下列状态，故一律用 atomic（relaxed 即可：配置类值读到稍旧值
-  // 无害，只需避免数据竞争 UB）或互斥锁（std::string 不可原子化）。
   // severity -> spdlog level（仅 spdlog 语义用，显示不走 %L）。
   static spdlog::level::level_enum cvtSeverityToSpdlog(Severity severity);
 
-  std::atomic<int> max_log_level_;
-  std::atomic<bool> only_show_;
+  // 颜色开关供 ConsoleSink 的 Module/Level flag 查询；文件状态整体在 FileSink 内；
+  // 回调以原子函数指针存储，零锁、无 sinks() 修改。
   std::atomic<bool> color_print_;
-  // log_file_ 为 std::string，无法用 std::atomic，改由 log_file_mutex_ 保护。
-  std::string log_file_;
-  mutable std::mutex log_file_mutex_;
-
-  std::ofstream log_file_stream_;
   std::shared_ptr<spdlog::logger> logger_;
-  std::shared_ptr<spdlog::logger> file_logger_;
-  std::shared_ptr<LogCallbackSinkMt> callback_sink_;
+  std::shared_ptr<FileSink> file_sink_;
+  std::atomic<LogCallback> callback_{nullptr};
 };
 
-}  // namespace log
-}  // namespace mluop
+} // namespace log
+} // namespace mluop
 
-#endif  // CORE_LOG_CORE_LOG_ENGINE_H_
+#endif // CORE_LOG_CORE_LOG_ENGINE_H_

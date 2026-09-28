@@ -27,6 +27,7 @@
 #include <cctype>
 #include <chrono>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -60,14 +61,11 @@ namespace log {
 
 namespace {
 
-// 引擎存活标志（对照旧引擎 cnlogSingletonInitFlag_）：默认=存活（1），仅 ~LogEngine
-// 置 0（已析构）。文件级静态原子，进程退出前可安全读取；LogMessage 析构据此在引擎
-// 已销毁时跳过发射（不触碰 instance()），避免退出期后台线程/全局析构打日志的
-// use-after-free。默认=存活使首条日志经 instance() 按需构造引擎，开箱即有日志。
+// 引擎存活标志：默认存活，仅 ~LogEngine 置 0。LogMessage 析构据此在引擎已销毁时
+// 跳过发射（不触碰 instance()），避免退出期后台线程/全局析构打日志的 use-after-free。
 constexpr int kLogEngineAliveMagic = 1;
 std::atomic<int> g_log_engine_alive_flag = kLogEngineAliveMagic;
 
-// 读环境变量并解析为最高可打印级别；未设置或非法回落 default_para。
 int maxLogLevelFromEnv(const char* env_name, int default_para) {
   const char* raw = std::getenv(env_name);
   if (raw == nullptr) {
@@ -76,11 +74,8 @@ int maxLogLevelFromEnv(const char* env_name, int default_para) {
   return LogEngine::parseMaxLogLevelValue(std::string(raw), default_para);
 }
 
-// 是否打印到屏幕：恒写 std::cout，故只判 stdout 是否为 tty。
 bool isPrintToScreen() { return isatty(fileno(stdout)); }
 
-
-// 把消息中的换行替换为空格，保证单行输出。
 void clearEnter(std::string* ss) {
   for (std::string::iterator it = (*ss).begin(); it != (*ss).end(); it++) {
     if (*it == '\n') {
@@ -89,47 +84,31 @@ void clearEnter(std::string* ss) {
   }
 }
 
-// 屏幕 sink：逐字节写 msg.payload 到 std::cout（endl = '\n' + flush）。payload
-// 非持有，sink 同步链保证在本次 log() 调用内写完。
+// 判两个路径是否指向同一文件：字符串快比较优先，不同则用 weakly_canonical
+// 规范化（解析相对/绝对、.、..、多余分隔符及存在部分的符号链接）再比。
+bool isSameFilePath(const std::string& a, const std::string& b) {
+  if (a == b) {
+    return true;
+  }
+  try {
+    return std::filesystem::weakly_canonical(a) ==
+           std::filesystem::weakly_canonical(b);
+  } catch (...) {
+    return false;  // 规范化失败（无效路径）按不同处理，交由 reopen 报错。
+  }
+}
+
 class ConsoleSink final : public spdlog::sinks::base_sink<std::mutex> {
  protected:
   void sink_it_(const spdlog::details::log_msg& msg) override {
-    // 标准 spdlog 契约：sink 先用 formatter_ 格式化（pattern head + body），再写出。
     spdlog::memory_buf_t formatted;
     formatter_->format(msg, formatted);
-    // pattern_formatter 已追加 eol（\n），这里只写、不再 put('\n')，否则双换行。
+    // formatter 已追加 eol（\n），这里只写、不再 put('\n')，否则双换行。
     std::cout.write(formatted.data(),
                     static_cast<std::streamsize>(formatted.size()));
     std::cout.flush();
   }
   void flush_() override { std::cout.flush(); }
-};
-
-// 文件 sink：逐字节写 msg.payload 到 log_file_stream_（endl = '\n' + flush）。
-// 以引用持有流，is_open() 守卫防止流未打开 / 已关闭时写出错。
-class FileSink final : public spdlog::sinks::base_sink<std::mutex> {
- public:
-  explicit FileSink(std::ofstream& stream) : stream_(stream) {}
-
- protected:
-  void sink_it_(const spdlog::details::log_msg& msg) override {
-    if (stream_.is_open()) {
-      spdlog::memory_buf_t formatted;
-      formatter_->format(msg, formatted);
-      // 同 ConsoleSink：formatter 已带 eol，不再 put('\n')。
-      stream_.write(formatted.data(),
-                    static_cast<std::streamsize>(formatted.size()));
-      stream_.flush();
-    }
-  }
-  void flush_() override {
-    if (stream_.is_open()) {
-      stream_.flush();
-    }
-  }
-
- private:
-  std::ofstream& stream_;
 };
 
 // 自定义 pattern flag %k：Card 卡号（cnrtGetDevice）。
@@ -154,8 +133,7 @@ class ModuleFlag final : public spdlog::custom_flag_formatter {
               spdlog::memory_buf_t& dest) override {
     const char* module = kProjectDisplayName;
     if (mluop::log::LogEngine::instance().colorPrint()) {
-      // spdlog 的 memory_buf_t 是 bundled fmt，外层 fmt::format_to 写不进去；
-      // 用外层 fmt 栈 buffer 格式化（短串零堆分配），再拷贝到 dest。
+      // memory_buf_t 属 bundled fmt，外层 fmt 写不进去：先在栈 buffer 格式化再拷贝。
       fmt::memory_buffer tmp;
       fmt::format_to(std::back_inserter(tmp), "{}",
                      fmt::styled(module, fmt::emphasis::bold |
@@ -170,13 +148,13 @@ class ModuleFlag final : public spdlog::custom_flag_formatter {
   }
 };
 
-// 自定义 pattern flag %c：等级名（小写 spdlog 名，按 cvtSeverityToSpdlog 塌缩），
-// color_print_ 时按旧 per-severity 配色（经塌缩映射到 fmt terminal_color）。
+// 自定义 pattern flag %c：等级名（按 cvtSeverityToSpdlog 塌缩到 spdlog 级），
+// color_print_ 时按等级配色。
 class LevelFlag final : public spdlog::custom_flag_formatter {
  public:
   void format(const spdlog::details::log_msg& msg, const std::tm&,
               spdlog::memory_buf_t& dest) override {
-    // 等级名大写（按 cvtSeverityToSpdlog 塌缩后的 spdlog 级）。
+    // 等级名大写。
     const char* name = "UNKNOWN";
     switch (msg.level) {
       case spdlog::level::err: {
@@ -247,7 +225,102 @@ class LevelFlag final : public spdlog::custom_flag_formatter {
   }
 };
 
+// 屏幕 / 回调共用的带 head pattern formatter（时间/模块/等级/pid/Card，Debug 下
+// 追加 file:line tail）。
+std::unique_ptr<spdlog::pattern_formatter> makeConsoleFormatter() {
+  auto formatter = std::make_unique<spdlog::pattern_formatter>();
+  formatter->add_flag<CardFlag>('k');
+  formatter->add_flag<ModuleFlag>('K');
+  formatter->add_flag<LevelFlag>('c');
+#ifdef NDEBUG
+  formatter->set_pattern(
+      "[%Y-%m-%d %H:%M:%S.%f][%K][%c][%P][Card:%k]: %v");
+#else
+  formatter->set_pattern(
+      "[%Y-%m-%d %H:%M:%S.%f][%K][%c][%P][Card:%k]: %v  [%s:%#  pid:%P]");
+#endif
+  return formatter;
+}
+
 }  // namespace
+
+// 文件 sink：pattern 为 %v（无 head），写到自己持有的 ofstream。
+// - 自管流与文件名：setLogFile 在锁内关旧流、开新流（trunc），运行期切换生效。
+// - only_show 映射到 sink level（off/trace）：off 时 logger 分发直接跳过，零落盘
+//   开销；禁用不关流，重新启用不丢已写内容。
+// - sink_it_ 在 base_sink::log 的 mutex_ 内执行，与 setEnabled/setLogFile 互斥。
+class FileSink final : public spdlog::sinks::base_sink<std::mutex> {
+ public:
+  explicit FileSink(std::string file_name, bool enabled)
+      : file_name_(std::move(file_name)) {
+    if (enabled) {
+      reopen();
+    }
+    this->level_.store(enabled ? spdlog::level::trace : spdlog::level::off,
+                       std::memory_order_relaxed);
+  }
+
+  bool enabled() const {
+    return this->level_.load(std::memory_order_relaxed) != spdlog::level::off;
+  }
+
+  // only_show 开关：true 停写（level=off，分发跳过），false 恢复（level=trace）。
+  void setEnabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(this->mutex_);
+    if (enabled && !stream_.is_open()) {
+      reopen();
+    }
+    this->level_.store(enabled ? spdlog::level::trace : spdlog::level::off,
+                       std::memory_order_relaxed);
+  }
+
+  std::string logFile() {
+    std::lock_guard<std::mutex> lock(this->mutex_);
+    return file_name_;
+  }
+
+  void setLogFile(std::string file_name) {
+    std::lock_guard<std::mutex> lock(this->mutex_);
+    if (stream_.is_open() && isSameFilePath(file_name_, file_name)) {
+      return;  // 同一文件已开（含不同路径写法）：跳过 reopen，避免 trunc 清空。
+    }
+    file_name_ = std::move(file_name);
+    // 流开着才换文件；禁用且未开时只记名字，等 setEnabled(true) 时再 reopen。
+    if (stream_.is_open()) {
+      reopen();
+    }
+  }
+
+ protected:
+  void sink_it_(const spdlog::details::log_msg& msg) override {
+    if (!stream_.is_open()) {
+      return;
+    }
+    spdlog::memory_buf_t formatted;
+    formatter_->format(msg, formatted);
+    stream_.write(formatted.data(),
+                  static_cast<std::streamsize>(formatted.size()));
+    stream_.flush();
+  }
+  void flush_() override {
+    if (stream_.is_open()) {
+      stream_.flush();
+    }
+  }
+
+ private:
+  void reopen() {
+    stream_.close();
+    stream_.open(file_name_, std::ios::out | std::ios::trunc);
+    if (!stream_.is_open()) {
+      std::cerr << "can't init Log, open file failed! " << file_name_
+                << std::endl;
+    }
+  }
+
+  std::string file_name_;
+  std::ofstream stream_;
+};
 
 LogEngine& LogEngine::instance() {
   static LogEngine engine;
@@ -255,89 +328,46 @@ LogEngine& LogEngine::instance() {
 }
 
 LogEngine::LogEngine()
-    : max_log_level_(maxLogLevelFromEnv(kEnvMaxLogLevel, 0)),
-      only_show_(mluop::getBoolEnvVar(kEnvOnlyShow, true)),
-      color_print_(mluop::getBoolEnvVar(kEnvColorPrint, true)),
-      log_file_(kLogFileName) {
-  // 仅当非 only_show 时打开日志文件；打开失败打印提示。随后按 stdout 是否
-  // tty 决定是否保留彩色。构造期为单线程初始化，直接读 atomic 值即可。
-  if (!only_show_.load(std::memory_order_relaxed)) {
-    log_file_stream_.open(log_file_);
-    if (!log_file_stream_.is_open()) {
-      std::cerr << "can't init Log, open file failed!" << std::endl;
-    }
-  }
+    : color_print_(mluop::getBoolEnvVar(kEnvColorPrint, true)) {
+  const bool only_show = mluop::getBoolEnvVar(kEnvOnlyShow, true);
   if (color_print_.load(std::memory_order_relaxed)) {
     color_print_.store(isPrintToScreen(), std::memory_order_relaxed);
   }
 
-  // 接线 spdlog：logger_（屏幕）挂 ConsoleSink + callback_sink_，file_logger_
-  // （文件）挂 FileSink（引用 log_file_stream_）。两 logger 均 set_level(trace)
-  // —— spdlog logger 默认 info(2) 会滤掉 ERROR/WARNING（severity 0/1），必须放行。
-  // Emit 里已按 max_log_level_ 在函数开头门控，此处只需不额外过滤。
-  callback_sink_ = std::make_shared<LogCallbackSinkMt>();
-  // 默认 logger_ 只挂 ConsoleSink（未设回调时日志仅打屏，不付回调 sink 的开销）；
-  // 调 setLogCallback 时才把 callback_sink_ 动态加入 logger_->sinks()。
+  // 单 logger_ 挂 Console/File 两 sink，各自独立 formatter；Callback sink 在首次
+  // setLogCallback 时才惰性挂载。级别门控已在 shouldLog / Emit 开头完成，logger_
+  // 仅 set_level(trace) 放行全部；FileSink 例外——它的 level 承载 only_show 开关。
+  auto console_sink = std::make_shared<ConsoleSink>();
+  auto file_sink = std::make_shared<FileSink>(kLogFileName, !only_show);
+  file_sink_ = file_sink;
   logger_ = std::make_shared<spdlog::logger>(
       kProjectDisplayName,
-      spdlog::sinks_init_list{std::make_shared<ConsoleSink>()});
+      spdlog::sinks_init_list{console_sink, file_sink});
   logger_->set_level(spdlog::level::trace);
 
-  file_logger_ = std::make_shared<spdlog::logger>(
-      kProjectDisplayName, std::make_shared<FileSink>(log_file_stream_));
-  file_logger_->set_level(spdlog::level::trace);
-
-  // 屏幕 pattern：head 全部由 spdlog 装配（时间 %Y-%m-%d %H:%M:%S.%f、模块 %n、等级 %L
-  // 按 cvtSeverityToSpdlog 塌缩为小写、pid %P、Card 自定义 flag %k），body 为 %v。
-  // 文件 sink 只 %v（无 head）。Debug 下屏幕追加 tail（file:line pid）。
-  auto console_formatter = std::make_unique<spdlog::pattern_formatter>();
-  console_formatter->add_flag<CardFlag>('k');
-  console_formatter->add_flag<ModuleFlag>('K');
-  console_formatter->add_flag<LevelFlag>('c');
-#ifdef NDEBUG
-  console_formatter->set_pattern(
-      "[%Y-%m-%d %H:%M:%S.%f][%K][%c][%P][Card:%k]: %v");
-#else
-  console_formatter->set_pattern(
-      "[%Y-%m-%d %H:%M:%S.%f][%K][%c][%P][Card:%k]: %v  [%s:%#  pid:%P]");
-#endif
-  logger_->set_formatter(std::move(console_formatter));
-  file_logger_->set_pattern("%v");
+  // 逐 sink 设 formatter：logger_->set_formatter 会把同一实例 clone 给所有 sink，
+  // 覆盖文件的无 head pattern。
+  console_sink->set_formatter(makeConsoleFormatter());
+  file_sink->set_formatter(std::make_unique<spdlog::pattern_formatter>("%v"));
 
   // 构造完成，置存活标志，允许日志发射。
   g_log_engine_alive_flag.store(kLogEngineAliveMagic, std::memory_order_relaxed);
 }
 
 LogEngine::~LogEngine() {
-  // 析构开始即清存活标志：此后日志发射在 LogMessage 析构入口被拦下，
-  // 不会访问已销毁的成员。
+  // 先清存活标志：此后 LogMessage 析构不再触碰已销毁的引擎成员。
   g_log_engine_alive_flag.store(0, std::memory_order_relaxed);
 }
 
-int LogEngine::maxLogLevel() const {
-  return max_log_level_.load(std::memory_order_relaxed);
-}
-
-void LogEngine::setMaxLogLevel(int level) {
-  if (level < kMinSeverity) {
-    level = kMinSeverity;
-  } else if (level > kMaxSeverity) {
-    level = kMaxSeverity;
-  }
-  max_log_level_.store(level, std::memory_order_relaxed);
-}
-
-bool LogEngine::shouldLog(Severity severity) const {
-  return severityEnabled(static_cast<int>(severity),
-                         max_log_level_.load(std::memory_order_relaxed));
-}
-
 bool LogEngine::onlyShow() const {
-  return only_show_.load(std::memory_order_relaxed);
+  // only_show 语义与 FileSink 开关相反：only_show=true → 不落盘。
+  return file_sink_ == nullptr || !file_sink_->enabled();
 }
 
 void LogEngine::setOnlyShow(bool only_show) {
-  only_show_.store(only_show, std::memory_order_relaxed);
+  if (file_sink_ != nullptr) {
+    file_sink_->setEnabled(!only_show);
+  }
 }
 
 bool LogEngine::colorPrint() const {
@@ -349,32 +379,18 @@ void LogEngine::setColorPrint(bool color_print) {
 }
 
 std::string LogEngine::logFile() const {
-  std::lock_guard<std::mutex> lock(log_file_mutex_);
-  return log_file_;
+  return file_sink_ != nullptr ? file_sink_->logFile() : kLogFileName;
 }
 
 void LogEngine::setLogFile(const std::string& file_name) {
-  std::lock_guard<std::mutex> lock(log_file_mutex_);
-  log_file_ = file_name;
+  if (file_sink_ != nullptr) {
+    file_sink_->setLogFile(file_name);
+  }
 }
 
 void LogEngine::setLogCallback(LogCallback callback) {
-  // 动态接线：回调收到完整屏幕行（head + body + tail）。callback 存于
-  // callback_sink_（atomic）。设非空回调时把该 sink 加入 logger_，设空回调时移除，
-  // 保证默认（无回调）状态下 logger_ 只有 ConsoleSink、不付额外开销。
-  if (callback_sink_ == nullptr) {
-    return;
-  }
-  callback_sink_->set_callback(callback);
-  auto& sinks = logger_->sinks();
-  if (callback != nullptr) {
-    if (std::find(sinks.begin(), sinks.end(), callback_sink_) == sinks.end()) {
-      sinks.push_back(callback_sink_);
-    }
-  } else {
-    sinks.erase(std::remove(sinks.begin(), sinks.end(), callback_sink_),
-                sinks.end());
-  }
+  // 原子函数指针 store：零锁，与 EmitFmt/Emit 的 relaxed load 无数据竞争。
+  callback_.store(callback, std::memory_order_relaxed);
 }
 
 int LogEngine::parseMaxLogLevelValue(const std::string& value,
@@ -411,7 +427,7 @@ LogMessage::LogMessage(std::string file, int line, Severity severity)
     : file_(file), line_(line), severity_(severity) {}
 
 LogMessage::~LogMessage() {
-  // 引擎未存活（未构造完成或已析构）时不发射，避免访问已销毁单例。
+  // 引擎未构造完成或已析构时不发射，避免访问已销毁单例。
   if (g_log_engine_alive_flag.load(std::memory_order_relaxed) !=
       kLogEngineAliveMagic) {
     return;
@@ -421,30 +437,29 @@ LogMessage::~LogMessage() {
 
 std::stringstream& LogMessage::stream() { return stream_; }
 
-// 装配并输出一条日志。屏幕 = head + body + tail；文件 = body + tail（无 head）。
-// severity 门控提到函数开头：被抑制级别的日志直接返回，不做 head/body/tail 装配，
-// 也不触发 cnrtGetDevice / getTime 副作用。NDEBUG 下不输出 tail。
+// 流式日志入口（LOG()/LOG_*_STREAM 走这里）：body 单行化后经 logger_ 分发到各
+// sink（屏幕带 head、文件仅 body）。severity 门控在开头，被抑制级别直接返回，
+// 不装配、不触发 cnrtGetDevice / getTime 副作用。有回调时先回调（传原始 severity
+// 和 body）再分发。
 void LogEngine::Emit(Severity severity, const std::string& file, int line,
                      const std::string& message) {
   static std::mutex log_mutex;
 
-  // 提前门控：被抑制级别不输出。
-  if (static_cast<int>(severity) >
-      max_log_level_.load(std::memory_order_relaxed)) {
+  if (!mluop::log::LogEngine::shouldLog(severity)) {
     return;
   }
 
-  // 屏幕/文件均只传 body；head 由 spdlog pattern 装配（时间/模块/%L/pid/Card）。
   std::string body = message;
   clearEnter(&body);
 
   std::lock_guard<std::mutex> lock(log_mutex);
   const auto lvl = cvtSeverityToSpdlog(severity);
   const spdlog::source_loc loc{file.c_str(), line, nullptr};
-  logger_->log(loc, lvl, spdlog::string_view_t(body.data(), body.size()));
-  if (!only_show_.load(std::memory_order_relaxed)) {
-    file_logger_->log(loc, lvl, spdlog::string_view_t(body.data(), body.size()));
+  LogCallback callback = callback_.load(std::memory_order_relaxed);
+  if (MLUOP_PREDICT_FALSE(callback != nullptr)) {
+    callback(static_cast<int>(severity), /*function_name=*/nullptr, body.c_str());
   }
+  logger_->log(loc, lvl, spdlog::string_view_t(body.data(), body.size()));
 }
 }  // namespace log
 }  // namespace mluop
@@ -471,14 +486,14 @@ spdlog::level::level_enum mluop::log::LogEngine::cvtSeverityToSpdlog(mluop::log:
       return spdlog::level::debug;
     }
   }
-  return spdlog::level::trace;
+  return spdlog::level::debug;
 }
 
 
 extern "C" {
 
 mluOpStatus_t MLUOP_WIN_API mluOpSetMaxLogLevel(MluOpLogLevel level) {
-  mluop::log::LogEngine::instance().setMaxLogLevel(static_cast<int>(level));
+  mluop::log::LogEngine::setMaxLogLevel(static_cast<int>(level));
   return MLUOP_STATUS_SUCCESS;
 }
 

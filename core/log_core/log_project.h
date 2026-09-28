@@ -26,19 +26,18 @@
 namespace mluop {
 namespace log {
 
-// 新引擎（spdlog 后端）的项目级配置常量，集中管理环境变量名与展示名，避免
-// 散落在实现文件里的字符串字面量，供 log_engine.h / log_engine.cpp 引用。
+// 项目级配置常量：环境变量名与展示名集中于此，避免散落的字符串字面量。
 
-// 环境变量：允许打印的最高日志级别（取值 0..7 或 ERROR/WARNING/API_TRACE/...）。
+// 环境变量：允许打印的最高日志级别（0..7 或 ERROR/WARNING/... 名称）。
 inline constexpr const char* kEnvMaxLogLevel = "CNNL_MAX_LOG_LEVEL";
 // 环境变量：是否只输出到屏幕（不落盘）。
 inline constexpr const char* kEnvOnlyShow = "MLUOP_LOG_ONLY_SHOW";
 // 环境变量：是否彩色打印。
 inline constexpr const char* kEnvColorPrint = "MLUOP_LOG_COLOR_PRINT";
 
-// 日志头展示名。
+// 日志 head 展示名。
 inline constexpr const char* kProjectDisplayName = "MLU-OPS";
-// 日志落盘文件名（非 only_show 模式下）。
+// 默认落盘文件名（非 only_show 时）。
 inline constexpr const char* kLogFileName = "mlu_op_auto_log";
 
 }  // namespace log
