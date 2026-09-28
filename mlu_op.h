@@ -14556,8 +14556,9 @@ mluOpLgamma(mluOpHandle_t handle,
 /*!
  * \brief 新日志引擎（spdlog 后端）配置 API。
  *
- * 实现见 core/log_core/log_engine.cpp 的 extern "C" 块。除 mluOpSetLogFile
- * 仅更新文件名、不重开日志流外，其余接口调用后立即生效。
+ * 实现见 core/log_core/log_engine.cpp 的 extern "C" 块。各接口调用后立即生效。
+ * 落盘的启动默认值由环境变量 MLUOP_LOG_ONLY_SHOW 决定（默认仅屏幕不落盘）；
+ * 运行时经 mluOpSetLogFile 启用 / 关闭 / 切换。
  */
 
 // 新引擎日志等级整数值：值越小越基础/越严重，值越大日志越丰富（0..7）。
@@ -14572,21 +14573,17 @@ typedef enum {
   MLUOP_LOG_LEVEL_DEBUG4 = 7
 } MluOpLogLevel;
 
-// 日志回调：level 为 MluOpLogLevel 整数值，functionName 为当前执行的公共 API 名
-//（**暂固定传空指针**，栈回溯解析方案暂缓，保留参数以对齐 CUDA 系回调语义、
-// 便于日后按 API 维度过滤），message 为已格式化的完整日志串。
-//（不携带 user_data 透传参数：内部两独立状态的成对撕裂难以彻底消除、且当前无
-// 调用方需要，2026-09-09 决策删除。）
+// 日志回调：level 为 MluOpLogLevel 整数值；functionName 暂固定传空指针（栈回溯
+// 解析未实现），保留该参数以对齐 CUDA 系回调语义；message 为格式化后的消息正文
+//（body，无日志头）。
 typedef void (*MluOpLogCallback)(int level, const char *functionName,
                                  const char *message);
 
 // 设置允许打印的最高日志级别（MAX 语义：level <= 阈值时打印）。
 mluOpStatus_t MLUOP_WIN_API mluOpSetMaxLogLevel(MluOpLogLevel level);
-// 设置是否仅输出到屏幕（不落盘）。
-mluOpStatus_t MLUOP_WIN_API mluOpSetLogOnlyShow(int only_show);
 // 设置是否彩色打印。
 mluOpStatus_t MLUOP_WIN_API mluOpSetLogColorPrint(int color);
-// 设置落盘日志文件名；file_name 为空返回 MLUOP_STATUS_BAD_PARAM。
+// 设置落盘日志文件名并启用落盘；file_name 为空指针则关闭落盘。
 mluOpStatus_t MLUOP_WIN_API mluOpSetLogFile(const char *file_name);
 // 设置用户自定义日志回调。
 mluOpStatus_t MLUOP_WIN_API mluOpSetLogCallback(MluOpLogCallback callback);

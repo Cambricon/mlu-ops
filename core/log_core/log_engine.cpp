@@ -260,35 +260,27 @@ class FileSink final : public spdlog::sinks::base_sink<std::mutex> {
                        std::memory_order_relaxed);
   }
 
-  bool enabled() const {
-    return this->level_.load(std::memory_order_relaxed) != spdlog::level::off;
-  }
-
-  // only_show 开关：true 停写（level=off，分发跳过），false 恢复（level=trace）。
-  void setEnabled(bool enabled) {
-    std::lock_guard<std::mutex> lock(this->mutex_);
-    if (enabled && !stream_.is_open()) {
-      reopen();
-    }
-    this->level_.store(enabled ? spdlog::level::trace : spdlog::level::off,
-                       std::memory_order_relaxed);
-  }
-
   std::string logFile() {
     std::lock_guard<std::mutex> lock(this->mutex_);
     return file_name_;
   }
 
+  // 启用落盘并切换到 file_name（同名已开则仅恢复启用，不 reopen、不 trunc）。
   void setLogFile(std::string file_name) {
     std::lock_guard<std::mutex> lock(this->mutex_);
     if (stream_.is_open() && isSameFilePath(file_name_, file_name)) {
-      return;  // 同一文件已开（含不同路径写法）：跳过 reopen，避免 trunc 清空。
+      enableLocked();  // 同名：仅恢复启用（可能刚 disable 过），避免 trunc 清空。
+      return;
     }
     file_name_ = std::move(file_name);
-    // 流开着才换文件；禁用且未开时只记名字，等 setEnabled(true) 时再 reopen。
-    if (stream_.is_open()) {
-      reopen();
-    }
+    reopen();
+    enableLocked();
+  }
+
+  // 关闭落盘（不关流，再次 setLogFile 恢复时不丢已写内容）。
+  void disable() {
+    std::lock_guard<std::mutex> lock(this->mutex_);
+    this->level_.store(spdlog::level::off, std::memory_order_relaxed);
   }
 
  protected:
@@ -309,6 +301,14 @@ class FileSink final : public spdlog::sinks::base_sink<std::mutex> {
   }
 
  private:
+  // 启用落盘：流未开则先 reopen，再放开 level。调用方须持 mutex_。
+  void enableLocked() {
+    if (!stream_.is_open()) {
+      reopen();
+    }
+    this->level_.store(spdlog::level::trace, std::memory_order_relaxed);
+  }
+
   void reopen() {
     stream_.close();
     stream_.open(file_name_, std::ios::out | std::ios::trunc);
@@ -359,17 +359,6 @@ LogEngine::~LogEngine() {
   g_log_engine_alive_flag.store(0, std::memory_order_relaxed);
 }
 
-bool LogEngine::onlyShow() const {
-  // only_show 语义与 FileSink 开关相反：only_show=true → 不落盘。
-  return file_sink_ == nullptr || !file_sink_->enabled();
-}
-
-void LogEngine::setOnlyShow(bool only_show) {
-  if (file_sink_ != nullptr) {
-    file_sink_->setEnabled(!only_show);
-  }
-}
-
 bool LogEngine::colorPrint() const {
   return color_print_.load(std::memory_order_relaxed);
 }
@@ -385,6 +374,12 @@ std::string LogEngine::logFile() const {
 void LogEngine::setLogFile(const std::string& file_name) {
   if (file_sink_ != nullptr) {
     file_sink_->setLogFile(file_name);
+  }
+}
+
+void LogEngine::disableLogFile() {
+  if (file_sink_ != nullptr) {
+    file_sink_->disable();
   }
 }
 
@@ -497,11 +492,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetMaxLogLevel(MluOpLogLevel level) {
   return MLUOP_STATUS_SUCCESS;
 }
 
-mluOpStatus_t MLUOP_WIN_API mluOpSetLogOnlyShow(int only_show) {
-  mluop::log::LogEngine::instance().setOnlyShow(only_show != 0);
-  return MLUOP_STATUS_SUCCESS;
-}
-
 mluOpStatus_t MLUOP_WIN_API mluOpSetLogColorPrint(int color) {
   mluop::log::LogEngine::instance().setColorPrint(color != 0);
   return MLUOP_STATUS_SUCCESS;
@@ -509,7 +499,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetLogColorPrint(int color) {
 
 mluOpStatus_t MLUOP_WIN_API mluOpSetLogFile(const char* file_name) {
   if (file_name == nullptr) {
-    return MLUOP_STATUS_BAD_PARAM;
+    // 空指针：关闭日志落盘。
+    mluop::log::LogEngine::instance().disableLogFile();
+    return MLUOP_STATUS_SUCCESS;
   }
   mluop::log::LogEngine::instance().setLogFile(std::string(file_name));
   return MLUOP_STATUS_SUCCESS;

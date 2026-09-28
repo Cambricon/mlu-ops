@@ -168,14 +168,14 @@ public:
     logger_->log(loc, lvl, fmt, args...);
   }
 
-  bool onlyShow() const;
-  void setOnlyShow(bool only_show);
-
   bool colorPrint() const;
   void setColorPrint(bool color_print);
 
   std::string logFile() const;
+  // 启用落盘并切换到 file_name。
   void setLogFile(const std::string &file_name);
+  // 关闭落盘（再次 setLogFile 可恢复）。
+  void disableLogFile();
 
   void setLogCallback(LogCallback callback);
 
