@@ -92,7 +92,7 @@ private:
   std::stringstream stream_;
 };
 
-// 日志门面单例：承载阈值/落盘/颜色/回调状态，日志经 Emit / EmitFmt 输出。
+// 日志引擎单例：承载阈值/落盘/颜色/回调状态，日志经 Emit / EmitFmt 输出。
 class LogEngine {
 public:
   static LogEngine &instance();
@@ -129,9 +129,7 @@ public:
     return severityEnabled(static_cast<int>(severity), maxLogLevel());
   }
 
-  // 流式日志入口（LOG()/LOG_*_STREAM 走这里）：body 经 clearEnter 单行化后经
-  // logger_ 分发，head 由各 sink 的 pattern formatter 装配。severity 在开头门控，
-  // 被抑制级别直接返回，不装配、不输出。
+  // 流式日志入口（LOG()/LOG_*_STREAM 走这里）
   void Emit(Severity severity, const std::string &file, int line,
             const std::string &message);
 
@@ -163,8 +161,7 @@ public:
                    spdlog::string_view_t(body.data(), body.size()));
       return;
     }
-    // 无回调（主路径）：参数以裸左值传递（不 std::forward），fmt 的
-    // make_format_args 恒以引用 / string_view 借用、不移动参数。
+    // 无回调（主路径）：参数以裸左值传递（不 std::forward）
     logger_->log(loc, lvl, fmt, args...);
   }
 
@@ -179,8 +176,8 @@ public:
 
   void setLogCallback(LogCallback callback);
 
-  // 解析 max-level 环境变量的值（0..7 或 ERROR/WARNING/... 名称）；非法值回落
-  // default_para。
+  // 解析 max-level 环境变量的值（0..7 或 ERROR/WARNING/... 名称）；
+  // 非法值回落default_para。
   static int parseMaxLogLevelValue(const std::string &value, int default_para);
 
 private:

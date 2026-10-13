@@ -61,8 +61,7 @@ namespace log {
 
 namespace {
 
-// 引擎存活标志：默认存活，仅 ~LogEngine 置 0。LogMessage 析构据此在引擎已销毁时
-// 跳过发射（不触碰 instance()），避免退出期后台线程/全局析构打日志的 use-after-free。
+// 引擎存活标志
 constexpr int kLogEngineAliveMagic = 1;
 std::atomic<int> g_log_engine_alive_flag = kLogEngineAliveMagic;
 
@@ -84,8 +83,6 @@ void clearEnter(std::string* ss) {
   }
 }
 
-// 判两个路径是否指向同一文件：字符串快比较优先，不同则用 weakly_canonical
-// 规范化（解析相对/绝对、.、..、多余分隔符及存在部分的符号链接）再比。
 bool isSameFilePath(const std::string& a, const std::string& b) {
   if (a == b) {
     return true;
@@ -334,9 +331,7 @@ LogEngine::LogEngine()
     color_print_.store(isPrintToScreen(), std::memory_order_relaxed);
   }
 
-  // 单 logger_ 挂 Console/File 两 sink，各自独立 formatter；Callback sink 在首次
-  // setLogCallback 时才惰性挂载。级别门控已在 shouldLog / Emit 开头完成，logger_
-  // 仅 set_level(trace) 放行全部；FileSink 例外——它的 level 承载 only_show 开关。
+  // 单 logger_ 挂 Console/File 两 sink，各自独立 formatter；
   auto console_sink = std::make_shared<ConsoleSink>();
   auto file_sink = std::make_shared<FileSink>(kLogFileName, !only_show);
   file_sink_ = file_sink;
@@ -346,7 +341,6 @@ LogEngine::LogEngine()
   logger_->set_level(spdlog::level::trace);
 
   // 逐 sink 设 formatter：logger_->set_formatter 会把同一实例 clone 给所有 sink，
-  // 覆盖文件的无 head pattern。
   console_sink->set_formatter(makeConsoleFormatter());
   file_sink->set_formatter(std::make_unique<spdlog::pattern_formatter>("%v"));
 
@@ -422,7 +416,6 @@ LogMessage::LogMessage(std::string file, int line, Severity severity)
     : file_(file), line_(line), severity_(severity) {}
 
 LogMessage::~LogMessage() {
-  // 引擎未构造完成或已析构时不发射，避免访问已销毁单例。
   if (g_log_engine_alive_flag.load(std::memory_order_relaxed) !=
       kLogEngineAliveMagic) {
     return;
@@ -432,10 +425,7 @@ LogMessage::~LogMessage() {
 
 std::stringstream& LogMessage::stream() { return stream_; }
 
-// 流式日志入口（LOG()/LOG_*_STREAM 走这里）：body 单行化后经 logger_ 分发到各
-// sink（屏幕带 head、文件仅 body）。severity 门控在开头，被抑制级别直接返回，
-// 不装配、不触发 cnrtGetDevice / getTime 副作用。有回调时先回调（传原始 severity
-// 和 body）再分发。
+// 流式日志入口（LOG()/LOG_*_STREAM 走这里）
 void LogEngine::Emit(Severity severity, const std::string& file, int line,
                      const std::string& message) {
   static std::mutex log_mutex;
