@@ -83,8 +83,11 @@
   mluop::log::LogMessage(__FILE__, __LINE__, mluop::log::Severity::kError).stream()
 
 
+// shouldLog 先短路：过滤路径不查 alive；alive 仅挡退出期对已析构单例的输出。
   #define LOG_GATED_FMT(sev, fmt_str, ...) \
-  (mluop::log::LogEngine::shouldLog(mluop::log::Severity::sev) \
+  (MLUOP_PREDICT_FALSE( \
+       mluop::log::LogEngine::shouldLog(mluop::log::Severity::sev)) && \
+       MLUOP_PREDICT_TRUE(mluop::log::logEngineAlive()) \
      ? mluop::log::LogEngine::instance().EmitFmt( \
            mluop::log::Severity::sev, __FILE__, __LINE__, fmt_str, \
            ##__VA_ARGS__) \
@@ -92,7 +95,8 @@
 
 #define LOG_GATED_FMT_UNLIKELY(sev, fmt_str, ...) \
   (MLUOP_PREDICT_FALSE( \
-       mluop::log::LogEngine::shouldLog(mluop::log::Severity::sev)) \
+       mluop::log::LogEngine::shouldLog(mluop::log::Severity::sev)) && \
+       MLUOP_PREDICT_TRUE(mluop::log::logEngineAlive()) \
      ? mluop::log::LogEngine::instance().EmitFmt( \
            mluop::log::Severity::sev, __FILE__, __LINE__, fmt_str, \
            ##__VA_ARGS__) \
@@ -114,9 +118,11 @@
   LOG_GATED_FMT(kCnpapi, fmt_str, ##__VA_ARGS__)
 
 #define LOG_ERROR_FMT(fmt_str, ...) \
-  mluop::log::LogEngine::instance().EmitFmt(mluop::log::Severity::kError, \
-                                            __FILE__, __LINE__, fmt_str, \
-                                            ##__VA_ARGS__)
+  (MLUOP_PREDICT_TRUE(mluop::log::logEngineAlive()) \
+     ? mluop::log::LogEngine::instance().EmitFmt(mluop::log::Severity::kError, \
+                                                 __FILE__, __LINE__, fmt_str, \
+                                                 ##__VA_ARGS__) \
+     : (void)0)
 
 #define TOKENPASTE(x, y, z) x##y##z
 #define TOKENPASTE2(x, y, z) TOKENPASTE(x, y, z)

@@ -70,10 +70,19 @@ constexpr bool severityEnabled(int severity, int max_level) {
 inline constexpr int kMaxLogLevelUnset = -1;
 inline std::atomic<int> g_max_log_level{kMaxLogLevelUnset};
 
+// 引擎存活标志：~LogEngine 时置 0，此后各日志入口不再发射。
+inline constexpr int kLogEngineAliveMagic = 1;
+inline std::atomic<int> g_log_engine_alive_flag{kLogEngineAliveMagic};
+
+inline bool logEngineAlive() {
+  return g_log_engine_alive_flag.load(std::memory_order_relaxed) ==
+         kLogEngineAliveMagic;
+}
+
 // 用户回调签名：`severity` 为原始 Severity 数值；`function_name` 暂固定传空指针；
 // `message` 为格式化后的消息正文（body，无 head）。与 C API 的 MluOpLogCallback
 // 布局一致（void(int,const char*,const char*) 函数指针），可安全 reinterpret_cast
-// 互转。
+// 互转。约定：回调内不得调用 log_core 日志接口（会死锁/递归）。
 using LogCallback = void (*)(int severity, const char* function_name,
                              const char* message);
 
@@ -140,6 +149,10 @@ public:
   template <typename... Args>
   void EmitFmt(Severity severity, const char *file, int line,
                fmt::string_view fmt, Args &&... args) {
+    // 引擎已析构（退出期）时不发射，避免访问已销毁单例成员。
+    if (MLUOP_PREDICT_FALSE(!logEngineAlive())) {
+      return;
+    }
     if (!mluop::log::LogEngine::shouldLog(severity)) {
       return;
     }

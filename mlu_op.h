@@ -14583,9 +14583,11 @@ typedef void (*MluOpLogCallback)(int level, const char *functionName,
 mluOpStatus_t MLUOP_WIN_API mluOpSetMaxLogLevel(MluOpLogLevel level);
 // 设置是否彩色打印。
 mluOpStatus_t MLUOP_WIN_API mluOpSetLogColorPrint(int color);
-// 设置落盘日志文件名并启用落盘；file_name 为空指针则关闭落盘。
+// 设置落盘日志文件名并启用落盘：总是关闭旧流、以 trunc 重写目标文件（同名文件
+// 也会被清空）；file_name 为空指针则关闭落盘并释放文件句柄。
 mluOpStatus_t MLUOP_WIN_API mluOpSetLogFile(const char *file_name);
-// 设置用户自定义日志回调。
+// 设置用户自定义日志回调。约定：回调内不得调用 log_core 日志接口（LOG/LOG_*_FMT/
+// LOG_*_STREAM），否则流式路径会自死锁、FMT 路径会无限递归。
 mluOpStatus_t MLUOP_WIN_API mluOpSetLogCallback(MluOpLogCallback callback);
 
 #if defined(__cplusplus)

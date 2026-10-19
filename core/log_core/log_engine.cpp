@@ -27,7 +27,6 @@
 #include <cctype>
 #include <chrono>
 #include <cstdlib>
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -61,10 +60,6 @@ namespace log {
 
 namespace {
 
-// 引擎存活标志
-constexpr int kLogEngineAliveMagic = 1;
-std::atomic<int> g_log_engine_alive_flag = kLogEngineAliveMagic;
-
 int maxLogLevelFromEnv(const char* env_name, int default_para) {
   const char* raw = std::getenv(env_name);
   if (raw == nullptr) {
@@ -80,18 +75,6 @@ void clearEnter(std::string* ss) {
     if (*it == '\n') {
       *it = ' ';
     }
-  }
-}
-
-bool isSameFilePath(const std::string& a, const std::string& b) {
-  if (a == b) {
-    return true;
-  }
-  try {
-    return std::filesystem::weakly_canonical(a) ==
-           std::filesystem::weakly_canonical(b);
-  } catch (...) {
-    return false;  // 规范化失败（无效路径）按不同处理，交由 reopen 报错。
   }
 }
 
@@ -222,7 +205,7 @@ class LevelFlag final : public spdlog::custom_flag_formatter {
   }
 };
 
-// 屏幕 / 回调共用的带 head pattern formatter（时间/模块/等级/pid/Card，Debug 下
+// 屏幕用的带 head pattern formatter（时间/模块/等级/pid/Card，Debug 下
 // 追加 file:line tail）。
 std::unique_ptr<spdlog::pattern_formatter> makeConsoleFormatter() {
   auto formatter = std::make_unique<spdlog::pattern_formatter>();
@@ -242,16 +225,16 @@ std::unique_ptr<spdlog::pattern_formatter> makeConsoleFormatter() {
 }  // namespace
 
 // 文件 sink：pattern 为 %v（无 head），写到自己持有的 ofstream。
-// - 自管流与文件名：setLogFile 在锁内关旧流、开新流（trunc），运行期切换生效。
+// - 自管流与文件名：setLogFile 在锁内关旧开新，总是 trunc 重写。
 // - only_show 映射到 sink level（off/trace）：off 时 logger 分发直接跳过，零落盘
-//   开销；禁用不关流，重新启用不丢已写内容。
-// - sink_it_ 在 base_sink::log 的 mutex_ 内执行，与 setEnabled/setLogFile 互斥。
+//   开销；disable 关流释放文件句柄。
+// - sink_it_ 在 base_sink::log 的 mutex_ 内执行，与 setLogFile/disable 互斥。
 class FileSink final : public spdlog::sinks::base_sink<std::mutex> {
  public:
   explicit FileSink(std::string file_name, bool enabled)
       : file_name_(std::move(file_name)) {
     if (enabled) {
-      reopen();
+      reopen();  // 启动打开默认文件：trunc
     }
     this->level_.store(enabled ? spdlog::level::trace : spdlog::level::off,
                        std::memory_order_relaxed);
@@ -262,22 +245,19 @@ class FileSink final : public spdlog::sinks::base_sink<std::mutex> {
     return file_name_;
   }
 
-  // 启用落盘并切换到 file_name（同名已开则仅恢复启用，不 reopen、不 trunc）。
+  // 启用落盘并切换到 file_name：总是关旧流、trunc 开新流。
   void setLogFile(std::string file_name) {
     std::lock_guard<std::mutex> lock(this->mutex_);
-    if (stream_.is_open() && isSameFilePath(file_name_, file_name)) {
-      enableLocked();  // 同名：仅恢复启用（可能刚 disable 过），避免 trunc 清空。
-      return;
-    }
     file_name_ = std::move(file_name);
     reopen();
-    enableLocked();
+    this->level_.store(spdlog::level::trace, std::memory_order_relaxed);
   }
 
-  // 关闭落盘（不关流，再次 setLogFile 恢复时不丢已写内容）。
+  // 关闭落盘并关流（释放句柄）。
   void disable() {
     std::lock_guard<std::mutex> lock(this->mutex_);
     this->level_.store(spdlog::level::off, std::memory_order_relaxed);
+    stream_.close();
   }
 
  protected:
@@ -298,14 +278,6 @@ class FileSink final : public spdlog::sinks::base_sink<std::mutex> {
   }
 
  private:
-  // 启用落盘：流未开则先 reopen，再放开 level。调用方须持 mutex_。
-  void enableLocked() {
-    if (!stream_.is_open()) {
-      reopen();
-    }
-    this->level_.store(spdlog::level::trace, std::memory_order_relaxed);
-  }
-
   void reopen() {
     stream_.close();
     stream_.open(file_name_, std::ios::out | std::ios::trunc);
@@ -331,7 +303,7 @@ LogEngine::LogEngine()
     color_print_.store(isPrintToScreen(), std::memory_order_relaxed);
   }
 
-  // 单 logger_ 挂 Console/File 两 sink，各自独立 formatter；
+  // 单 logger_ 挂 Console/File 两 sink，各自独立 formatter。
   auto console_sink = std::make_shared<ConsoleSink>();
   auto file_sink = std::make_shared<FileSink>(kLogFileName, !only_show);
   file_sink_ = file_sink;
@@ -340,7 +312,7 @@ LogEngine::LogEngine()
       spdlog::sinks_init_list{console_sink, file_sink});
   logger_->set_level(spdlog::level::trace);
 
-  // 逐 sink 设 formatter：logger_->set_formatter 会把同一实例 clone 给所有 sink，
+  // 逐 sink 设 formatter（logger_->set_formatter 会把同一实例 clone 给所有 sink）。
   console_sink->set_formatter(makeConsoleFormatter());
   file_sink->set_formatter(std::make_unique<spdlog::pattern_formatter>("%v"));
 
