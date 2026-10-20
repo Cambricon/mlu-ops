@@ -14578,7 +14578,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetMaxLogLevel(MluOpLogLevel level);
 mluOpStatus_t MLUOP_WIN_API mluOpSetLogColorPrint(int color);
 
 // 设置落盘日志文件名并启用落盘：总是关闭旧流、以 trunc 重写目标文件
-// file_name 为空指针则关闭落盘并释放文件句柄。
+// file_name 为空指针则关闭落盘并释放文件句柄；为空串则返回 MLUOP_STATUS_BAD_PARAM。
 mluOpStatus_t MLUOP_WIN_API mluOpSetLogFile(const char *file_name);
 
 // 设置用户自定义日志回调。约定：回调内不得调用 mluops 的日志接口，否则会死锁

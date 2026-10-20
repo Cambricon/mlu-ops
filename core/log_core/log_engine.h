@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2026] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -39,10 +39,10 @@ class logger;
 
 BEGIN_LOG_NAMESPACE
 
-// 文件 sink 定义在 log_engine.cpp（自管日志流/文件名/开关），此处仅前向声明。
+
 class FileSink;
 
-// 日志等级：值越小越严重，越大越丰富（0..7）。kVlog 为 kDebug1 的旧名别名。
+// 日志等级：值越小越严重，越大越丰富（0..7）。
 enum class Severity : int {
   kError = 0,
   kWarning = 1,
@@ -84,8 +84,6 @@ inline bool logEngineAlive() {
 using LogCallback = void (*)(int severity, const char* function_name,
                              const char* message);
 
-// 日志消息 RAII：构造记录 file/line/severity，析构经 LogEngine::Emit 输出。
-// `LOG(severity)` 宏映射到 `LogMessage(__FILE__, __LINE__, SEV_##severity).stream()`。
 class LogMessage {
 public:
   LogMessage(std::string file, int line, Severity severity);
@@ -99,7 +97,7 @@ private:
   std::stringstream stream_;
 };
 
-// 日志引擎单例：承载阈值/落盘/颜色/回调状态，日志经 Emit / EmitFmt 输出。
+// 日志引擎单例
 class LogEngine {
 public:
   static LogEngine &instance();
@@ -172,7 +170,7 @@ public:
                    spdlog::string_view_t(body.data(), body.size()));
       return;
     }
-    // 无回调（主路径）：参数以裸左值传递（不 std::forward）
+    // 无回调：参数以裸左值传递（不 std::forward）
     logger_->log(loc, lvl, fmt, args...);
   }
 
@@ -180,15 +178,11 @@ public:
   void setColorPrint(bool color_print);
 
   std::string logFile() const;
-  // 启用落盘并切换到 file_name。
   void setLogFile(const std::string &file_name);
-  // 关闭落盘（再次 setLogFile 可恢复）。
   void disableLogFile();
 
   void setLogCallback(LogCallback callback);
 
-  // 解析 max-level 环境变量的值（0..7 或 ERROR/WARNING/... 名称）；
-  // 非法值回落default_para。
   static int parseMaxLogLevelValue(const std::string &value, int default_para);
 
 private:
@@ -198,8 +192,6 @@ private:
   // severity -> spdlog level（仅 spdlog 语义用，显示不走 %L）。
   static spdlog::level::level_enum cvtSeverityToSpdlog(Severity severity);
 
-  // 颜色开关供 ConsoleSink 的 Module/Level flag 查询；文件状态整体在 FileSink 内；
-  // 回调以原子函数指针存储，零锁、无 sinks() 修改。
   std::atomic<bool> color_print_;
   std::shared_ptr<spdlog::logger> logger_;
   std::shared_ptr<FileSink> file_sink_;

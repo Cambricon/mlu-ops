@@ -125,7 +125,7 @@ if(NOT "${_cncc_version}" VERSION_LESS "4.1.0")
 endif()
 
 if(NOT TARGET fmt::fmt)
-  # fmt vendored at open_mlu_ops/third_party/fmt (11.2.0). Prefer an existing
+  # fmt vendored at third_party/fmt. Prefer an existing
   # fmt::fmt / fmt::fmt-header-only; otherwise build the vendored source directly.
   set(FMT_INSTALL OFF CACHE BOOL "" FORCE)
   set(FMT_TEST OFF CACHE BOOL "" FORCE)

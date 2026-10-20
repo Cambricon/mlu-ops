@@ -44,8 +44,7 @@
 #define LARGE_TENSOR_SIZE ((uint64_t)2147483648)
 
 // SEV_ 映射表：旧宏层等级 token（ERROR/WARNING/CNPAPI/INFO/DEBUG1..4/FATAL/VLOG）
-// 到新枚举 Severity 常量（kError..kDebug4 / kFatal / kVlog）的显式映射。数值 1:1
-// 恒等，但显式落表便于日后 CNPAPI/API_TRACE 统一时单点修改。
+// 到新枚举 Severity 常量（kError..kDebug4 / kFatal / kVlog）的显式映射。
 #define SEV_ERROR kError
 #define SEV_WARNING kWarning
 #define SEV_CNPAPI kCnpapi

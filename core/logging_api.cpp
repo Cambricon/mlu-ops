@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright (C) [2022] by Cambricon, Inc.
+ * Copyright (C) [2026] by Cambricon, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -20,8 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-// mlu-ops 项目的日志 C API：只做类型转换并转发到项目无关的 LogEngine 核心
-//（core/log_core/*）。迁移项目时按该项目的公开头与调用约定重写本文件。
+
 #include "mlu_op.h"
 
 #include <string>
@@ -45,6 +44,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetLogFile(const char* file_name) {
     // 空指针：关闭日志落盘。
     mluop::log::LogEngine::instance().disableLogFile();
     return MLUOP_STATUS_SUCCESS;
+  }
+  if (file_name[0] == '\0') {
+    // 空串：非法参数。
+    return MLUOP_STATUS_BAD_PARAM;
   }
   mluop::log::LogEngine::instance().setLogFile(std::string(file_name));
   return MLUOP_STATUS_SUCCESS;
