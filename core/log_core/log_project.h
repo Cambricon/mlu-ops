@@ -23,13 +23,24 @@
 #ifndef CORE_LOG_CORE_LOG_PROJECT_H_
 #define CORE_LOG_CORE_LOG_PROJECT_H_
 
-namespace mluop {
-namespace log {
+#include "core/macros.h"
 
-// 项目级配置常量：环境变量名与展示名集中于此，避免散落的字符串字面量。
+// 分支预测提示：log_core 内部统一用 LOG_PREDICT_*，此处转发到项目层
+// core/macros.h 的宏；迁移项目时改本文件的映射即可。
+#define LOG_PREDICT_TRUE(x) MLUOP_PREDICT_TRUE(x)
+#define LOG_PREDICT_FALSE(x) MLUOP_PREDICT_FALSE(x)
+
+// 命名空间：log_core 一律用 BEGIN/END_LOG_NAMESPACE 包裹；迁移项目时改这里
+// 即整体切换（log_core 其他文件不得再出现项目限定的 namespace 字样）。
+#define BEGIN_LOG_NAMESPACE namespace mluop { namespace log {
+#define END_LOG_NAMESPACE } }  // namespace mluop::log
+
+BEGIN_LOG_NAMESPACE
+
+// 项目级配置：log_core 唯一的项目适配点。迁移项目时只需改本文件。
 
 // 环境变量：允许打印的最高日志级别（0..7 或 ERROR/WARNING/... 名称）。
-inline constexpr const char* kEnvMaxLogLevel = "CNNL_MAX_LOG_LEVEL";
+inline constexpr const char* kEnvMaxLogLevel = "MLUOP_LOG_MAX_LEVEL";
 // 环境变量：是否只输出到屏幕（不落盘）。
 inline constexpr const char* kEnvOnlyShow = "MLUOP_LOG_ONLY_SHOW";
 // 环境变量：是否彩色打印。
@@ -40,7 +51,6 @@ inline constexpr const char* kProjectDisplayName = "MLU-OPS";
 // 默认落盘文件名（非 only_show 时）。
 inline constexpr const char* kLogFileName = "mlu_op_auto_log";
 
-}  // namespace log
-}  // namespace mluop
+END_LOG_NAMESPACE
 
 #endif  // CORE_LOG_CORE_LOG_PROJECT_H_

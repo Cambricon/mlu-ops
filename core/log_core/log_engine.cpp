@@ -35,7 +35,6 @@
 #include <string>
 
 #include "core/tool.h"
-#include "mlu_op.h"
 
 #if defined(WINDOWS) || defined(WIN32)  // used in windows
 #include <windows.h>
@@ -55,8 +54,7 @@
 #include <iterator>
 #include <spdlog/spdlog.h>
 
-namespace mluop {
-namespace log {
+BEGIN_LOG_NAMESPACE
 
 namespace {
 
@@ -112,7 +110,7 @@ class ModuleFlag final : public spdlog::custom_flag_formatter {
   void format(const spdlog::details::log_msg&, const std::tm&,
               spdlog::memory_buf_t& dest) override {
     const char* module = kProjectDisplayName;
-    if (mluop::log::LogEngine::instance().colorPrint()) {
+    if (LogEngine::instance().colorPrint()) {
       // memory_buf_t 属 bundled fmt，外层 fmt 写不进去：先在栈 buffer 格式化再拷贝。
       fmt::memory_buffer tmp;
       fmt::format_to(std::back_inserter(tmp), "{}",
@@ -165,7 +163,7 @@ class LevelFlag final : public spdlog::custom_flag_formatter {
         break;
       }
     }
-    if (mluop::log::LogEngine::instance().colorPrint()) {
+    if (LogEngine::instance().colorPrint()) {
       auto color = fmt::terminal_color::white;
       switch (msg.level) {
         case spdlog::level::err: {
@@ -297,8 +295,8 @@ LogEngine& LogEngine::instance() {
 }
 
 LogEngine::LogEngine()
-    : color_print_(mluop::getBoolEnvVar(kEnvColorPrint, true)) {
-  const bool only_show = mluop::getBoolEnvVar(kEnvOnlyShow, true);
+    : color_print_(getBoolEnvVar(kEnvColorPrint, true)) {
+  const bool only_show = getBoolEnvVar(kEnvOnlyShow, true);
   if (color_print_.load(std::memory_order_relaxed)) {
     color_print_.store(isPrintToScreen(), std::memory_order_relaxed);
   }
@@ -402,7 +400,7 @@ void LogEngine::Emit(Severity severity, const std::string& file, int line,
                      const std::string& message) {
   static std::mutex log_mutex;
 
-  if (!mluop::log::LogEngine::shouldLog(severity)) {
+  if (!LogEngine::shouldLog(severity)) {
     return;
   }
 
@@ -413,66 +411,36 @@ void LogEngine::Emit(Severity severity, const std::string& file, int line,
   const auto lvl = cvtSeverityToSpdlog(severity);
   const spdlog::source_loc loc{file.c_str(), line, nullptr};
   LogCallback callback = callback_.load(std::memory_order_relaxed);
-  if (MLUOP_PREDICT_FALSE(callback != nullptr)) {
+  if (LOG_PREDICT_FALSE(callback != nullptr)) {
     callback(static_cast<int>(severity), /*function_name=*/nullptr, body.c_str());
   }
   logger_->log(loc, lvl, spdlog::string_view_t(body.data(), body.size()));
 }
-}  // namespace log
-}  // namespace mluop
+END_LOG_NAMESPACE
 
 // severity -> spdlog level。显示不走 %L（head 里已有名字），仅 spdlog 语义用。
-spdlog::level::level_enum mluop::log::LogEngine::cvtSeverityToSpdlog(mluop::log::Severity severity) {
+BEGIN_LOG_NAMESPACE
+spdlog::level::level_enum LogEngine::cvtSeverityToSpdlog(Severity severity) {
   switch (severity) {
-    case mluop::log::Severity::kError: {
+    case Severity::kError: {
       return spdlog::level::err;
     }
-    case mluop::log::Severity::kWarning: {
+    case Severity::kWarning: {
       return spdlog::level::warn;
     }
-    case mluop::log::Severity::kCnpapi: {
+    case Severity::kCnpapi: {
       return spdlog::level::trace;
     }
-    case mluop::log::Severity::kInfo: {
+    case Severity::kInfo: {
       return spdlog::level::info;
     }
-    case mluop::log::Severity::kDebug1:
-    case mluop::log::Severity::kDebug2:
-    case mluop::log::Severity::kDebug3:
-    case mluop::log::Severity::kDebug4: {
+    case Severity::kDebug1:
+    case Severity::kDebug2:
+    case Severity::kDebug3:
+    case Severity::kDebug4: {
       return spdlog::level::debug;
     }
   }
   return spdlog::level::debug;
 }
-
-
-extern "C" {
-
-mluOpStatus_t MLUOP_WIN_API mluOpSetMaxLogLevel(MluOpLogLevel level) {
-  mluop::log::LogEngine::setMaxLogLevel(static_cast<int>(level));
-  return MLUOP_STATUS_SUCCESS;
-}
-
-mluOpStatus_t MLUOP_WIN_API mluOpSetLogColorPrint(int color) {
-  mluop::log::LogEngine::instance().setColorPrint(color != 0);
-  return MLUOP_STATUS_SUCCESS;
-}
-
-mluOpStatus_t MLUOP_WIN_API mluOpSetLogFile(const char* file_name) {
-  if (file_name == nullptr) {
-    // 空指针：关闭日志落盘。
-    mluop::log::LogEngine::instance().disableLogFile();
-    return MLUOP_STATUS_SUCCESS;
-  }
-  mluop::log::LogEngine::instance().setLogFile(std::string(file_name));
-  return MLUOP_STATUS_SUCCESS;
-}
-
-mluOpStatus_t MLUOP_WIN_API mluOpSetLogCallback(MluOpLogCallback callback) {
-  mluop::log::LogEngine::instance().setLogCallback(
-      reinterpret_cast<mluop::log::LogCallback>(callback));
-  return MLUOP_STATUS_SUCCESS;
-}
-
-}  // extern "C"
+END_LOG_NAMESPACE

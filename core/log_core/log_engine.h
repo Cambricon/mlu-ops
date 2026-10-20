@@ -32,14 +32,12 @@
 #include <utility>
 
 #include "core/log_core/log_project.h"
-#include "core/macros.h"
 
 namespace spdlog {
 class logger;
 }
 
-namespace mluop {
-namespace log {
+BEGIN_LOG_NAMESPACE
 
 // 文件 sink 定义在 log_engine.cpp（自管日志流/文件名/开关），此处仅前向声明。
 class FileSink;
@@ -110,7 +108,7 @@ public:
   LogEngine &operator=(const LogEngine &) = delete;
 
   static inline void initMaxLogLevel() {
-    if (MLUOP_PREDICT_TRUE(g_max_log_level.load(std::memory_order_relaxed) !=
+    if (LOG_PREDICT_TRUE(g_max_log_level.load(std::memory_order_relaxed) !=
                            kMaxLogLevelUnset)) {
       return;
     }
@@ -126,9 +124,9 @@ public:
   }
 
   static inline void setMaxLogLevel(int level) {
-    if (MLUOP_PREDICT_FALSE(level < kMinSeverity)) {
+    if (LOG_PREDICT_FALSE(level < kMinSeverity)) {
       level = kMinSeverity;
-    } else if (MLUOP_PREDICT_FALSE(level > kMaxSeverity)) {
+    } else if (LOG_PREDICT_FALSE(level > kMaxSeverity)) {
       level = kMaxSeverity;
     }
     g_max_log_level.store(level, std::memory_order_relaxed);
@@ -150,16 +148,16 @@ public:
   void EmitFmt(Severity severity, const char *file, int line,
                fmt::string_view fmt, Args &&... args) {
     // 引擎已析构（退出期）时不发射，避免访问已销毁单例成员。
-    if (MLUOP_PREDICT_FALSE(!logEngineAlive())) {
+    if (LOG_PREDICT_FALSE(!logEngineAlive())) {
       return;
     }
-    if (!mluop::log::LogEngine::shouldLog(severity)) {
+    if (!LogEngine::shouldLog(severity)) {
       return;
     }
     const spdlog::source_loc loc{file, line, nullptr};
     const auto lvl = cvtSeverityToSpdlog(severity);
     LogCallback callback = callback_.load(std::memory_order_relaxed);
-    if (MLUOP_PREDICT_FALSE(callback != nullptr)) {
+    if (LOG_PREDICT_FALSE(callback != nullptr)) {
       // 有回调：body 手动格式化一次，既给回调又给 spdlog（string 版不重格式化）。
       // fmt::format 包 try/catch 防坏格式串跨 C ABI 逃逸。
       std::string body;
@@ -208,7 +206,6 @@ private:
   std::atomic<LogCallback> callback_{nullptr};
 };
 
-} // namespace log
-} // namespace mluop
+END_LOG_NAMESPACE
 
 #endif // CORE_LOG_CORE_LOG_ENGINE_H_
