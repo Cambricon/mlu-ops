@@ -62,28 +62,8 @@
 
 
                          
-#define MLUOP_LOG_GATED(sev) \
-  MLUOP_PREDICT_TRUE(!mluop::log::LogEngine::instance().shouldLog( \
-      mluop::log::Severity::sev)) \
-  ? (void)0 \
-  : ::mluop::internal::Voidifier() & \
-        mluop::log::LogMessage(__FILE__, __LINE__, \
-                               mluop::log::Severity::sev).stream()
-
-#define LOG_DEBUG1_STREAM    MLUOP_LOG_GATED(kDebug1)
-#define LOG_DEBUG2_STREAM    MLUOP_LOG_GATED(kDebug2)
-#define LOG_DEBUG3_STREAM    MLUOP_LOG_GATED(kDebug3)
-#define LOG_DEBUG4_STREAM    MLUOP_LOG_GATED(kDebug4)
-#define LOG_INFO_STREAM    MLUOP_LOG_GATED(kInfo)
-#define LOG_WARNING_STREAM    MLUOP_LOG_GATED(kWarning)
-#define LOG_CNPAPI_STREAM    MLUOP_LOG_GATED(kCnpapi)
-
-#define LOG_ERROR_STREAM \
-  mluop::log::LogMessage(__FILE__, __LINE__, mluop::log::Severity::kError).stream()
-
-
 // shouldLog 先短路：过滤路径不查 alive；alive 仅挡退出期对已析构单例的输出。
-  #define LOG_GATED_FMT(sev, fmt_str, ...) \
+#define LOG_GATED_UNLIKELY(sev, fmt_str, ...) \
   (MLUOP_PREDICT_FALSE( \
        mluop::log::LogEngine::shouldLog(mluop::log::Severity::sev)) && \
        MLUOP_PREDICT_TRUE(mluop::log::logEngineAlive()) \
@@ -92,31 +72,22 @@
            ##__VA_ARGS__) \
      : (void)0)
 
-#define LOG_GATED_FMT_UNLIKELY(sev, fmt_str, ...) \
-  (MLUOP_PREDICT_FALSE( \
-       mluop::log::LogEngine::shouldLog(mluop::log::Severity::sev)) && \
-       MLUOP_PREDICT_TRUE(mluop::log::logEngineAlive()) \
-     ? mluop::log::LogEngine::instance().EmitFmt( \
-           mluop::log::Severity::sev, __FILE__, __LINE__, fmt_str, \
-           ##__VA_ARGS__) \
-     : (void)0)
+#define LOG_DEBUG1(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kDebug1, fmt_str, ##__VA_ARGS__)
+#define LOG_DEBUG2(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kDebug2, fmt_str, ##__VA_ARGS__)
+#define LOG_DEBUG3(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kDebug3, fmt_str, ##__VA_ARGS__)
+#define LOG_DEBUG4(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kDebug4, fmt_str, ##__VA_ARGS__)
+#define LOG_INFO(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kInfo, fmt_str, ##__VA_ARGS__)
+#define LOG_WARNING(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kWarning, fmt_str, ##__VA_ARGS__)
+#define LOG_APICALL(fmt_str, ...) \
+  LOG_GATED_UNLIKELY(kCnpapi, fmt_str, ##__VA_ARGS__)
 
-#define LOG_DEBUG1_FMT(fmt_str, ...) \
-  LOG_GATED_FMT_UNLIKELY(kDebug1, fmt_str, ##__VA_ARGS__)
-#define LOG_DEBUG2_FMT(fmt_str, ...) \
-  LOG_GATED_FMT_UNLIKELY(kDebug2, fmt_str, ##__VA_ARGS__)
-#define LOG_DEBUG3_FMT(fmt_str, ...) \
-  LOG_GATED_FMT_UNLIKELY(kDebug3, fmt_str, ##__VA_ARGS__)
-#define LOG_DEBUG4_FMT(fmt_str, ...) \
-  LOG_GATED_FMT_UNLIKELY(kDebug4, fmt_str, ##__VA_ARGS__)
-#define LOG_INFO_FMT(fmt_str, ...) \
-  LOG_GATED_FMT(kInfo, fmt_str, ##__VA_ARGS__)
-#define LOG_WARNING_FMT(fmt_str, ...) \
-  LOG_GATED_FMT(kWarning, fmt_str, ##__VA_ARGS__)
-#define LOG_CNPAPI_FMT(fmt_str, ...) \
-  LOG_GATED_FMT(kCnpapi, fmt_str, ##__VA_ARGS__)
-
-#define LOG_ERROR_FMT(fmt_str, ...) \
+#define LOG_ERROR(fmt_str, ...) \
   (MLUOP_PREDICT_TRUE(mluop::log::logEngineAlive()) \
      ? mluop::log::LogEngine::instance().EmitFmt(mluop::log::Severity::kError, \
                                                  __FILE__, __LINE__, fmt_str, \

@@ -395,7 +395,7 @@ LogMessage::~LogMessage() {
 
 std::stringstream& LogMessage::stream() { return stream_; }
 
-// 流式日志入口（LOG()/LOG_*_STREAM 走这里）
+// 流式日志入口（LOG()/VLOG() 走这里）
 void LogEngine::Emit(Severity severity, const std::string& file, int line,
                      const std::string& message) {
   static std::mutex log_mutex;

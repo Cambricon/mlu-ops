@@ -134,11 +134,11 @@ public:
     return severityEnabled(static_cast<int>(severity), maxLogLevel());
   }
 
-  // 流式日志入口（LOG()/LOG_*_STREAM 走这里）
+  // 流式日志入口（LOG()/VLOG() 走这里）
   void Emit(Severity severity, const std::string &file, int line,
             const std::string &message);
 
-  // 函数式门控日志（LOG_*_FMT 走这里）：门控后把 fmt+args 直交 spdlog，由 spdlog
+  // 函数式门控日志（LOG_* 系列走这里）：门控后把 fmt+args 直交 spdlog，由 spdlog
   // 内部 fmt 格式化 body（仅一次），head 由各 sink 的 pattern formatter 装配。
   // 被过滤时不构造、不格式化、不输出。有回调时，body 格式化一次后回调（传原始
   // severity）并复用交 spdlog。

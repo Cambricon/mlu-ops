@@ -26,5 +26,6 @@
 
 1. 下载新版本 release tarball，整体替换对应目录（保留本文件）；
 2. 更新上表版本号；
-3. 重新构建，跑 cpu_bench 回归（smoke_log / verify_logfile / verify_exit_fmt）；
+3. 重新构建，跑 `test/logging/` 功能回归（smoke_log / verify_logfile /
+   verify_exit_fmt，构建运行方式见其 README.md）；
 4. 检查上游 CMake 变更（target 名、`SPDLOG_FMT_EXTERNAL_HO` 等宏语义）。
