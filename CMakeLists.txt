@@ -124,7 +124,15 @@ if(NOT "${_cncc_version}" VERSION_LESS "4.1.0")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -mllvm --fmlu-addrspace-warning")
 endif()
 
-find_package(fmt REQUIRED)
+if(NOT TARGET fmt::fmt)
+  # fmt vendored at third_party/fmt. Prefer an existing
+  # fmt::fmt / fmt::fmt-header-only; otherwise build the vendored source directly.
+  set(FMT_INSTALL OFF CACHE BOOL "" FORCE)
+  set(FMT_TEST OFF CACHE BOOL "" FORCE)
+  set(FMT_DOC OFF CACHE BOOL "" FORCE)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/fmt
+                   ${CMAKE_BINARY_DIR}/fmt)
+endif()
 # setup cncc flags
 set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Werror -Wdeprecated-declarations -Wall -std=c++17 -fPIC -pthread --neuware-path=${NEUWARE_HOME}")
 if(${_CMAKE_BUILD_TYPE_LOWER} MATCHES "debug")
@@ -158,6 +166,8 @@ endif()
 
 # resolve kernel dependency in MLUOP_BUILD_SPECIFIC_OP
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/mluop_kernel_depends.cmake)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/log_setup.cmake)
 # populate_op is provided by mluop_kernel_depends.cmake
 if (MLUOP_BUILD_SPECIFIC_OP)
   populate_op(MLUOP_BUILD_SPECIFIC_OP SPECIFIC_OP ${MLUOP_BUILD_SPECIFIC_OP})
@@ -231,14 +241,25 @@ target_link_libraries(mluopscore cnnl cnrt cndrv)
 if (TARGET fmt::fmt-header-only)
   target_link_libraries(mluopscore fmt::fmt-header-only)
 endif()
+if (TARGET spdlog::spdlog)
+  target_link_libraries(mluopscore spdlog::spdlog)
+endif()
 
 bang_add_library(mluops SHARED ${src_files} ${src_helper_files})
+
+target_include_directories(mluops PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/spdlog/include)
 
 if(${MLUOP_BUILD_STATIC} MATCHES "ON")
   message("-- Build MLUOP static")
   bang_add_library(mluops_static STATIC ${src_files} ${src_helper_files} ${core_src_files})
+  target_include_directories(mluops_static PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/spdlog/include)
   if (TARGET fmt::fmt-header-only)
     target_link_libraries(mluops_static fmt::fmt-header-only)
+  endif()
+  if (TARGET spdlog::spdlog)
+    target_link_libraries(mluops_static spdlog::spdlog)
   endif()
 endif()
 
