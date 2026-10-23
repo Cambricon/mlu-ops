@@ -117,7 +117,7 @@ public:
   }
 
   static inline int maxLogLevel() {
-    static bool inited = (initMaxLogLevel(), true);
+    [[maybe_unused]] static bool inited = (initMaxLogLevel(), true);
     return g_max_log_level.load(std::memory_order_relaxed);
   }
 

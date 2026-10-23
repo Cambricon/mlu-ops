@@ -154,7 +154,9 @@ include_directories("${MLUOP_GTEST_INCLUDE}")
 file(GLOB_RECURSE gtest_mlu_files FOLLOW_SYMLINKS "${CMAKE_CURRENT_LIST_DIR}/pb_gtest/src/internal_kernel/*")
 list(APPEND BANG_CNCC_INCLUDE_ARGS -I${CMAKE_CURRENT_SOURCE_DIR}/pb_gtest/src)
 bang_add_library(mluop_gtest_kernels STATIC "${gtest_mlu_files}")
-target_include_directories(mluop_gtest_kernels PRIVATE ${MLUOP_PB_GTEST_INCLUDE})
+target_include_directories(mluop_gtest_kernels PRIVATE ${MLUOP_PB_GTEST_INCLUDE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/spdlog/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/fmt/include)
 
 file(GLOB SRC_DIR "${GOOGLETEST_SRC}/*.cc")
 #add_library(gtest_shared SHARED ${SRC_DIR})
