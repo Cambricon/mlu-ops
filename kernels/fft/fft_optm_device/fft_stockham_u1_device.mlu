@@ -555,19 +555,27 @@ __mlu_func__ void computeMutiLayerOnchip(
       (fft_flag == RFFT || (fft_flag == FFT_IFFT && direction != FFT_INVERSE))
           ? -1
           : 1;
-  // When RFFT, using conjugate symmetry, do "BatchMatmulBcast" only on half of
-  // the data, so the input n also becames half. int in_n       = fft_flag ==
-  // RFFT ? int(PAD_UP(L, L_sub)/2 + 1) * pow_2_m : n;
-  int in_n = fft_flag == RFFT ? int(PAD_UP(L / 2, L_sub) + 1) * pow_2_m : n;
-  in_n = L <= L_sub ? n : in_n;
-  // The obtain of out_n is the same as in_n, the difference is that no
-  // alignment is performed.
-  int out_n = fft_flag == RFFT ? n / 2 + 1 : n;
   // Input_size = batch * L * powf(2, m), NRAM can deal at least one "powf(2,
   // m)" at a time. Split "batch" and "L" between multi-core. "batch" processes
   // one at a time. Addording to the limit of NRAM size, "L" can be splitted
   // into "part_num" parts.
   int part_num = (L / L_sub) + (L % L_sub > 0 ? 1 : 0);
+  // When RFFT and L > L_sub, using conjugate symmetry, "BatchMatmulBcast"
+  // only computes the rows that load() may read: the first half parts read
+  // rows [0, half_part_num * L_sub) directly, and the second half parts read
+  // the mirrored rows [1, L - half_part_num * L_sub] and take conjugate.
+  // So in_n = max(half_part_num * L_sub, L - half_part_num * L_sub + 1) *
+  // pow_2_m, and it is used as the batch stride and the offset from the cos
+  // block to the sin block of the matmul result.
+  int in_n = n;
+  if (fft_flag == RFFT && L > L_sub) {
+    int half_part_num = part_num / 2;
+    in_n = std::max(half_part_num * L_sub, L - half_part_num * L_sub + 1) *
+           pow_2_m;
+  }
+  // The obtain of out_n is the same as in_n, the difference is that no
+  // alignment is performed.
+  int out_n = fft_flag == RFFT ? n / 2 + 1 : n;
   // "total_num" blocks need to be processed.
   int total_num = part_num * batch;
   int repeat_num = total_num / taskDim;

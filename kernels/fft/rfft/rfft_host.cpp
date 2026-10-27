@@ -25,6 +25,16 @@
 #include <algorithm>
 #include <string>
 
+static inline int stockhamRFFTDataRowNum(const int L, const int L_sub) {
+  if (L <= L_sub) {
+    return L;
+  }
+  const int part_num = L / L_sub + (L % L_sub > 0 ? 1 : 0);
+  const int half_part_num = part_num / 2;
+  return std::max(half_part_num * L_sub,
+                  L - half_part_num * L_sub + 1);
+}
+
 static mluOpStatus_t selectRFFT1dStrategy(mluOpHandle_t handle,
                                           mluOpFFTPlan_t fft_plan) {
   const std::string make_plan_api = "[selectRFFT1dStrategy]";
@@ -258,9 +268,7 @@ mluOpStatus_t makeRFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
                      matmul_workspace_size);
       } else {
         status = fftGetBatchMatMulBcastWorkspaceSize(
-            handle,
-            L <= fft_plan->L_sub ? (2 * L)
-                                 : (2 * (PAD_UP(L / 2, fft_plan->L_sub) + 1)),
+            handle, 2 * stockhamRFFTDataRowNum(L, fft_plan->L_sub),
             L, m, batch, fft_plan->matmul_addrs.dft_re_matrix_addr,
             fft_plan->matmul_addrs.input_pad_addr,
             fft_plan->matmul_addrs.matmul_re_mul_re_addr, false, false, 1.0,
@@ -461,8 +469,7 @@ mluOpStatus_t setRFFT1dReserveArea(mluOpHandle_t handle,
       case CNFFT_FUNC_STOCKHAM: {
         // Matmul Matrix : 2 * [L, L]
         int L = fft_plan->L;
-        int row =
-            L <= fft_plan->L_sub ? L : (PAD_UP(L / 2, fft_plan->L_sub) + 1);
+        int row = stockhamRFFTDataRowNum(L, fft_plan->L_sub);
         int dft_mat_times = COMPLEX;
         int dft_mat_num = dft_mat_times * L * L;
         VLOG(5) << "CNFFT_FUNC_STOCKHAM generateRFFTFullDFTMatrix";
@@ -867,9 +874,7 @@ static mluOpStatus_t computeRFFT1dMatmulResult(mluOpHandle_t handle,
     //         in_trans[batch, 2^m, L] * W_imag[L, L] -> IN_imag[batch, 2^m, L]
     // update: W[c*L, L] * in[batch, L, 2^m] -> out[batch, c*L, 2^m]
     status = fftBatchMatMulBcast(
-        handle,
-        L <= fft_plan->L_sub ? (2 * L)
-                             : (2 * (PAD_UP(L / 2, fft_plan->L_sub) + 1)),
+        handle, 2 * stockhamRFFTDataRowNum(L, fft_plan->L_sub),
         L, m, batch, fft_plan->matmul_addrs.dft_re_matrix_addr,
         fft_plan->matmul_addrs.input_pad_addr,
         fft_plan->matmul_addrs.matmul_re_mul_re_addr, false, false,

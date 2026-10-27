@@ -184,12 +184,12 @@ mluOpStatus_t MLUOP_WIN_API kernelRFFT2dButterflyColumn(
 mluOpStatus_t MLUOP_WIN_API kernelIRFFT2dButterflyColumn(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpFFTPlan_t fft_plan, FFTFlag flag) {
-  VLOG(5) << "Launch Kernel kernelFFT1dButterflyRow <<Union"
+  VLOG(5) << "Launch Kernel kernelFFT1dButterflyCol <<Union"
           << k_type / CORE_DIM << ", " << k_dim.x << ", " << k_dim.y << ", "
           << k_dim.z << ">>>";
 
   KERNEL_CHECK((MLUKernelFFT1dButterflyColumn<<<k_dim, k_type, queue>>>(
-      fft_plan->mlu_addrs.input, fft_plan->mlu_addrs.input,
+      fft_plan->mlu_addrs.input, fft_plan->mlu_addrs.buffer_out,
       fft_plan->mlu_addrs.factors_2d, fft_plan->mlu_addrs.twiddles_inv_2d,
       fft_plan->mlu_addrs.twiddles_inv_2d_end,
       fft_plan->mlu_addrs.idft_matrix_2d, fft_plan->mlu_addrs.buffer_buf,
