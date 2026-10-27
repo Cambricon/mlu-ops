@@ -256,6 +256,38 @@ set_target_properties(mluop_api_gtest
 )
 set(targets_mluop_api_gtest mluop_api_gtest)
 
+# 新引擎（spdlog 后端）gtest：直接调用 mluop::log::LogEngine 的纯逻辑单测
+#（Severity 取值 / MAX 阈值 / env 解析 / set-get / 钳制 / 回调 functionName）。
+add_executable(log_core_test
+  ${CMAKE_CURRENT_SOURCE_DIR}/logging/log_core_test.cpp)
+target_link_libraries(log_core_test mluopscore)
+if (TARGET spdlog::spdlog)
+  target_link_libraries(log_core_test spdlog::spdlog)
+endif()
+target_link_libraries(log_core_test cnnl cnrt cndev cndrv pthread gtest_shared stdc++ m dl)
+if (TARGET fmt::fmt)
+  target_link_libraries(log_core_test fmt::fmt)
+elseif (TARGET fmt::fmt-header-only)
+  target_link_libraries(log_core_test fmt::fmt-header-only)
+endif()
+set(targets_log_core_test log_core_test)
+
+# golden 快照单测：验证新引擎（spdlog 后端）屏幕输出逐字节复现冻结基线
+# （可变字段归一化为哨兵）。需要 cnrt 初始化（head 无条件调用 cnrtGetDevice）。
+add_executable(log_engine_diff_test
+  ${CMAKE_CURRENT_SOURCE_DIR}/logging/log_engine_diff_test.cpp)
+target_link_libraries(log_engine_diff_test mluopscore)
+if (TARGET spdlog::spdlog)
+  target_link_libraries(log_engine_diff_test spdlog::spdlog)
+endif()
+target_link_libraries(log_engine_diff_test cnnl cnrt cndev cndrv pthread gtest_shared stdc++ m dl)
+if (TARGET fmt::fmt)
+  target_link_libraries(log_engine_diff_test fmt::fmt)
+elseif (TARGET fmt::fmt-header-only)
+  target_link_libraries(log_engine_diff_test fmt::fmt-header-only)
+endif()
+set(targets_log_engine_diff_test log_engine_diff_test)
+
 # pb to prototxt tool
 add_executable(pb2prototxt ${CMAKE_CURRENT_SOURCE_DIR}/tools/pb2prototxt.cpp)
 add_executable(prototxt2pb ${CMAKE_CURRENT_SOURCE_DIR}/tools/prototxt2pb.cpp)
@@ -276,6 +308,20 @@ install(TARGETS ${targets_mluop_gtest}
 )
 
 install(TARGETS ${targets_mluop_api_gtest}
+  COMPONENT mluop_gtest
+  RUNTIME DESTINATION build/test
+  ARCHIVE DESTINATION lib${LIB_SUFFIX}
+  LIBRARY DESTINATION lib${LIB_SUFFIX}
+)
+
+install(TARGETS ${targets_log_core_test}
+  COMPONENT mluop_gtest
+  RUNTIME DESTINATION build/test
+  ARCHIVE DESTINATION lib${LIB_SUFFIX}
+  LIBRARY DESTINATION lib${LIB_SUFFIX}
+)
+
+install(TARGETS ${targets_log_engine_diff_test}
   COMPONENT mluop_gtest
   RUNTIME DESTINATION build/test
   ARCHIVE DESTINATION lib${LIB_SUFFIX}
