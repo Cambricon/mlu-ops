@@ -1,0 +1,151 @@
+# One negative coordinate; two valid points share one voxel. Exact output
+# capacity M=1. Expected max feature=3, map=[0,0,-1], count=2.
+device: CPU
+op_name: "dynamic_point_to_voxel_forward"
+input {
+  id: "input0"
+  shape {
+    dims: 3
+    dims: 15
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 1.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+  value_f: 5.0
+}
+input {
+  id: "input1"
+  shape {
+    dims: 3
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 0
+  value_i: 0
+  value_i: 0
+  value_i: 0
+  value_i: 0
+  value_i: 0
+  value_i: 0
+  value_i: -1
+  value_i: 0
+}
+output {
+  id: "output0"
+  shape {
+    dims: 1
+    dims: 15
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+  value_f: 3.0
+}
+output {
+  id: "output1"
+  shape {
+    dims: 1
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 0
+  value_i: 0
+  value_i: 0
+}
+output {
+  id: "output2"
+  shape {
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 0
+  value_i: 0
+  value_i: -1
+}
+output {
+  id: "output3"
+  shape {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 2
+}
+output {
+  id: "output4"
+  shape {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 1
+}
+evaluation_criterion: DIFF1
+evaluation_criterion: DIFF2
+evaluation_threshold: 0.003
+evaluation_threshold: 0.003
+dynamic_point_to_voxel_forward_param {
+  reduce_type: REDUCE_MODE_MAX
+}
+handle_param {
+  round_mode: ROUND_OFF_ZERO
+}
