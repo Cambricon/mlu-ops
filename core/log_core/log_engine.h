@@ -26,7 +26,20 @@
 #include <atomic>
 #include <cstdlib>
 #include <memory>
+
+#include "core/log_core/fmt_config.h"
+
 #include <spdlog/logger.h>
+
+// 单一 fmt 来源护栏：经本头的 TU 必须命中 third_party/fmt（FMT_VERSION 与
+// fmt_config.h 的 MLUOP_EXPECTED_FMT_VERSION 一致）。编译命令漏配
+// third_party/fmt/include 时会静默漂到系统 fmt（版本可能不同），在此编译期
+// 报错，而不是留到链期弱符号混链。
+static_assert(FMT_VERSION == MLUOP_EXPECTED_FMT_VERSION,
+              "fmt version mismatch with third_party/fmt: check that "
+              "-I third_party/fmt/include is present, or update "
+              "MLUOP_EXPECTED_FMT_VERSION in core/log_core/fmt_config.h "
+              "after upgrading third_party/fmt");
 #include <sstream>
 #include <string>
 #include <utility>

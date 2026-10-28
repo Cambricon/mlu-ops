@@ -47,6 +47,7 @@
 #include <unistd.h>
 #endif
 
+#include "core/log_core/fmt_config.h"  // 须先于下方 fmt/spdlog 头（经 log_engine.h 已含，此处显式声明依赖）
 #include <fmt/chrono.h>
 #include <fmt/color.h>
 #include <spdlog/sinks/base_sink.h>

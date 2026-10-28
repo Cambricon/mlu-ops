@@ -248,12 +248,14 @@ endif()
 bang_add_library(mluops SHARED ${src_files} ${src_helper_files})
 
 target_include_directories(mluops PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/fmt/include
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/spdlog/include)
 
 if(${MLUOP_BUILD_STATIC} MATCHES "ON")
   message("-- Build MLUOP static")
   bang_add_library(mluops_static STATIC ${src_files} ${src_helper_files} ${core_src_files})
   target_include_directories(mluops_static PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/fmt/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/spdlog/include)
   if (TARGET fmt::fmt-header-only)
     target_link_libraries(mluops_static fmt::fmt-header-only)

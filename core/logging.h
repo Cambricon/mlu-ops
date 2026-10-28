@@ -30,6 +30,7 @@
 #include <limits>
 #include <sstream>
 
+#include "core/log_core/fmt_config.h"
 #include "core/log_core/log_engine.h"
 #include "core/macros.h"
 #include "core/util.h"
@@ -37,7 +38,6 @@
 #include "type.h"
 #include "preprocessor.h"
 #include <algorithm>
-#include <fmt/ostream.h>
 
 
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
