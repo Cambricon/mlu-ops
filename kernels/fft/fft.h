@@ -415,11 +415,9 @@ mluOpStatus_t MLUOP_WIN_API kernelIRFFT2dButterflyRow(cnrtDim3_t k_dim,
                                                       mluOpFFTPlan_t fft_plan,
                                                       FFTFlag flag);
 
-mluOpStatus_t MLUOP_WIN_API kernelIRFFT2dButterflyRowBuffer(cnrtDim3_t k_dim,
-                                                      cnrtFunctionType_t k_type,
-                                                      cnrtQueue_t queue,
-                                                      mluOpFFTPlan_t fft_plan,
-                                                      FFTFlag flag);
+mluOpStatus_t MLUOP_WIN_API kernelIRFFT2dButterflyRowBuffer(
+    cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
+    mluOpFFTPlan_t fft_plan, FFTFlag flag);
 
 // Executes the complex-to-complex FFT/DFT matrix kernel with the specified
 // dimensions, function type, queue, FFT plan, input real data type, and size.

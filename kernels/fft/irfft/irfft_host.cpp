@@ -578,7 +578,7 @@ static void configureIRFFT1dMatmulWorkspaceAddrs(mluOpHandle_t handle,
   size_t per_matmul_output_size = 0;
   int per_matmul_output_num = batch * n;
   if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY ||
-             fft_plan->fft_strategy == CNFFT_FUNC_STOCKHAM) {
+      fft_plan->fft_strategy == CNFFT_FUNC_STOCKHAM) {
     per_matmul_output_size = in_r_dtype_size * per_matmul_output_num;
     workspace_cur_offset_to_end += per_matmul_output_size;
     fft_plan->matmul_addrs.matmul_im_mul_im_addr =
@@ -1835,8 +1835,9 @@ mluOpStatus_t execIRFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
                                                dims, strides);
         CHECK_RETURN(api, status);
 
-        status = mluOpContiguous(handle, input_desc, fft_plan->mlu_addrs.buffer_out,
-                                 fft_plan->mlu_addrs.output);
+        status =
+            mluOpContiguous(handle, input_desc, fft_plan->mlu_addrs.buffer_out,
+                            fft_plan->mlu_addrs.output);
         CHECK_RETURN(api, status);
 
         status = mluOpDestroyTensorDescriptor(input_desc);
