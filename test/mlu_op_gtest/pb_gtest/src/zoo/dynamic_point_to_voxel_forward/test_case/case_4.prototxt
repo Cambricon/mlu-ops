@@ -1,0 +1,89 @@
+# All coordinates valid; C=400001 exercises feature tiling. Positive seeded
+# features make an omitted voxel reduction observable.
+device: CPU
+op_name: "dynamic_point_to_voxel_forward"
+input {
+  id: "input0"
+  shape {
+    dims: 3
+    dims: 400001
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data {
+    seed: 23
+    lower_bound: 1.0
+    upper_bound: 5.0
+    distribution: UNIFORM
+  }
+}
+input {
+  id: "input1"
+  shape {
+    dims: 3
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+  value_i: 0
+  value_i: 0
+  value_i: 0
+  value_i: 0
+  value_i: 0
+  value_i: 0
+  value_i: 0
+  value_i: 0
+  value_i: 0
+}
+output {
+  id: "output0"
+  shape {
+    dims: 1
+    dims: 400001
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+}
+output {
+  id: "output1"
+  shape {
+    dims: 1
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+output {
+  id: "output2"
+  shape {
+    dims: 3
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+output {
+  id: "output3"
+  shape {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+output {
+  id: "output4"
+  shape {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT32
+}
+evaluation_criterion: DIFF1
+evaluation_criterion: DIFF2
+evaluation_threshold: 0.003
+evaluation_threshold: 0.003
+dynamic_point_to_voxel_forward_param {
+  reduce_type: REDUCE_MODE_MEAN
+}
+handle_param {
+  round_mode: ROUND_OFF_ZERO
+}

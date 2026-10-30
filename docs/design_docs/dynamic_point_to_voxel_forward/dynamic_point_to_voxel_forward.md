@@ -603,7 +603,7 @@ if (reduce_mode == REDUCE_MEAN){
 | NRAM            | 参考 3.1.2节                                                                  |
 | WRAM            | 未使用                                                                        |
 | SRAM            | 未使用                                                                        |
-| DRAM(workspace) | 未使用，只在依赖算子 unique 中需要（不作为主要讨论内容）                      |
+| DRAM(workspace) | Unique 内部工作空间，加上临时坐标与计数输出（共约 16*N 字节，两者分别按 128B 对齐），避免无效体素行写出最终输出容量及原地搬移重叠 |
 
 - 流水设计
 

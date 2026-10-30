@@ -32,7 +32,8 @@ KernelMaskFillCoorsForward(cnrtDim3_t k_dim, cnrtFunctionType_t k_type,
 mluOpStatus_t MLUOP_WIN_API KernelDynamicPointToVoxelForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpReduceMode_t reduce_mode, const void *feats, int32_t num_points,
-    int32_t num_voxel, void *voxel_coors, void *voxel_num,
+    int32_t num_feats, const void *unique_coors,
+    const void *unique_points_count, void *voxel_coors, void *voxel_num,
     void *point2voxel_map, void *voxel_points_count, void *voxel_feats);
 
 #endif  // KERNELS_DYNAMIC_POINT_TO_VOXEL_FORWARD_DYNAMIC_

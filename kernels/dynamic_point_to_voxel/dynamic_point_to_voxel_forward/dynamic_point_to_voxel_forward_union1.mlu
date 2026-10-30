@@ -146,28 +146,29 @@ __mlu_func__ void lcsFunc(float *base_input_addr, int *base_points_count,
 
 __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
     mluOpReduceMode_t reduce_mode, const float *feats, int32_t num_points,
-    int32_t num_feats, int32_t *voxel_coors, int32_t *voxel_num,
-    int *point2voxel_map, int32_t *voxel_points_count, float *voxel_feats) {
+    int32_t num_feats, const int32_t *unique_coors,
+    const int32_t *unique_points_count, int32_t *voxel_coors,
+    int32_t *voxel_num, int *point2voxel_map, int32_t *voxel_points_count,
+    float *voxel_feats) {
   if (__is_mpu()) {
     return;
   }
-  bool reduce_map = false;
-  if (voxel_coors[0] == -1) {
-    reduce_map = true;
-  }
-  __sync_all_ipu();
-  if (reduce_map) {
-    if (taskId == 0) {
-      int32_t num_voxel = voxel_num[0] - 1;
+  const bool reduce_map = unique_coors[0] == -1;
+  if (taskId == 0) {
+    const int32_t num_voxel = voxel_num[0] - static_cast<int32_t>(reduce_map);
+    if (reduce_map) {
       __gdramset(voxel_num, 1, num_voxel);
-      __memcpy_async(voxel_coors, voxel_coors + COORS_XYZ,
-                     (num_voxel + 1) * COORS_XYZ * sizeof(int32_t),
-                     GDRAM2GDRAM);
-      __memcpy_async(voxel_points_count, voxel_points_count + COORS_IDX,
-                     (num_voxel + 1) * COORS_IDX * sizeof(int32_t),
-                     GDRAM2GDRAM);
-      __sync();
     }
+    // Copy only valid rows from separate buffers; an in-place DMA shift
+    // overlaps its source and may also access beyond the user output tensors.
+    if (num_voxel > 0) {
+      __memcpy_async(voxel_coors, unique_coors + reduce_map * COORS_XYZ,
+                     num_voxel * COORS_XYZ * sizeof(int32_t), GDRAM2GDRAM);
+      __memcpy_async(voxel_points_count,
+                     unique_points_count + reduce_map * COORS_IDX,
+                     num_voxel * COORS_IDX * sizeof(int32_t), GDRAM2GDRAM);
+    }
+    __sync();
   }
   __sync_all_ipu();
 
@@ -208,7 +209,7 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
     int32_t *base_map_addr = base_map + deal_map_offset;
     // load map
     __memcpy(nram_map, base_map_addr, deal_p_num * sizeof(int32_t), GDRAM2NRAM);
-    if (num_feats > max_deal_h) {
+    if (reduce_map && num_feats > max_deal_h) {
       __bang_add_scalar(nram_map, nram_map, -1, deal_p_num);
     }
     __sync();
@@ -359,10 +360,12 @@ __mlu_global__ void MLUKernelDynamicPointToVoxelForward(
 mluOpStatus_t MLUOP_WIN_API KernelDynamicPointToVoxelForward(
     cnrtDim3_t k_dim, cnrtFunctionType_t k_type, cnrtQueue_t queue,
     mluOpReduceMode_t reduce_mode, const void *feats, int32_t num_points,
-    int32_t num_feats, void *voxel_coors, void *voxel_num,
+    int32_t num_feats, const void *unique_coors,
+    const void *unique_points_count, void *voxel_coors, void *voxel_num,
     void *point2voxel_map, void *voxel_points_count, void *voxel_feats) {
   KERNEL_CHECK(MLUKernelDynamicPointToVoxelForward<<<k_dim, k_type, queue>>>(
       reduce_mode, (float *)feats, num_points, num_feats,
+      (const int32_t *)unique_coors, (const int32_t *)unique_points_count,
       (int32_t *)voxel_coors, (int32_t *)voxel_num, (int *)point2voxel_map,
       (int32_t *)voxel_points_count, (float *)voxel_feats));
   return MLUOP_STATUS_SUCCESS;

@@ -32,6 +32,16 @@
 #include "core/type.h"
 #include "kernels/kernel.h"
 
+// Unique also emits the invalid-coordinate row. Keep its outputs in workspace
+// until that row has been removed, since user outputs only hold valid voxels.
+static size_t uniqueCoorsWorkspaceSize(const size_t num_points) {
+  return PAD_UP(num_points * 3 * sizeof(int32_t), 128);
+}
+
+static size_t uniqueCountsWorkspaceSize(const size_t num_points) {
+  return PAD_UP(num_points * sizeof(int32_t), 128);
+}
+
 // policy function
 static void policyFuncDynamicPointToVoxelForward(const mluOpHandle_t handle,
                                                  cnrtDim3_t *k_dim,
@@ -225,6 +235,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDynamicPointToVoxelForwardWorkspaceSize(
     CALL_CNNL(cnnlDestroyUniqueDescriptor(unique_desc));
   }
 
+  const size_t num_points = coors_desc->getDimIndex(0);
+  *workspace_size += uniqueCoorsWorkspaceSize(num_points) +
+                     uniqueCountsWorkspaceSize(num_points);
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -281,6 +294,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
 
   const int num_points = feats_desc->getDimIndex(0);
   const int num_feats = feats_desc->getDimIndex(1);
+  const size_t unique_coors_size = uniqueCoorsWorkspaceSize(num_points);
+  const size_t unique_counts_size = uniqueCountsWorkspaceSize(num_points);
+  void *unique_coors = workspace;
+  void *unique_counts = static_cast<char *>(workspace) + unique_coors_size;
+  void *unique_workspace =
+      static_cast<char *>(unique_counts) + unique_counts_size;
+  const size_t unique_workspace_size =
+      workspace_size - unique_coors_size - unique_counts_size;
   cnrtDim3_t k_dim;
   cnrtFunctionType_t k_type;
   policyFuncDynamicPointToVoxelForward(handle, &k_dim, &k_type, num_points);
@@ -310,11 +331,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
     DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(voxel_points_count_desc,
                                                  cnnl_counts_desc);
 
+    int unique_coors_dims[] = {num_points, 3};
+    int unique_counts_dims[] = {num_points};
+    CALL_CNNL(cnnlSetTensorDescriptor(cnnl_output_desc, CNNL_LAYOUT_ARRAY,
+                                     CNNL_DTYPE_INT32, 2, unique_coors_dims));
+    CALL_CNNL(cnnlSetTensorDescriptor(cnnl_counts_desc, CNNL_LAYOUT_ARRAY,
+                                     CNNL_DTYPE_INT32, 1, unique_counts_dims));
     CALL_CNNL(cnnlUnique_v2(cnnl_handle, unique_desc, cnnl_input_desc, coors,
-                            workspace, workspace_size, (int *)voxel_num,
-                            cnnl_output_desc, voxel_coors, cnnl_indices_desc,
-                            point2voxel_map, cnnl_counts_desc,
-                            voxel_points_count));
+                            unique_workspace, unique_workspace_size,
+                            (int *)voxel_num, cnnl_output_desc, unique_coors,
+                            cnnl_indices_desc, point2voxel_map,
+                            cnnl_counts_desc, unique_counts));
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
@@ -347,8 +374,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
   CHECK_RETURN("[mluOpDynamicPointToVoxelForward]",
                KernelDynamicPointToVoxelForward(
                    k_dim, k_type, handle->queue, reduce_type, feats, num_points,
-                   num_feats, voxel_coors, voxel_num, point2voxel_map,
-                   voxel_points_count, voxel_feats));
+                   num_feats, unique_coors, unique_counts, voxel_coors,
+                   voxel_num, point2voxel_map, voxel_points_count,
+                   voxel_feats));
   VLOG(5) << api << " launch KernelDynamicPointToVoxelForward end.";
 
   GEN_CASE_END();
