@@ -296,8 +296,6 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
   const int num_feats = feats_desc->getDimIndex(1);
   const size_t unique_coors_size = uniqueCoorsWorkspaceSize(num_points);
   const size_t unique_counts_size = uniqueCountsWorkspaceSize(num_points);
-  PARAM_CHECK(api, workspace != NULL);
-  PARAM_CHECK(api, workspace_size >= unique_coors_size + unique_counts_size);
   void *unique_coors = workspace;
   void *unique_counts = static_cast<char *>(workspace) + unique_coors_size;
   void *unique_workspace =
