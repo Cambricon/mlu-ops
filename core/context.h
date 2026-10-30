@@ -146,13 +146,17 @@ struct mluOpContext {
   int32_t job_num[6] = {0};
 };
 
+// Whether a version-dependency violation should fail as a Warning or an Error.
+// NOTE: these values are semantic labels only and are NOT tied to the log
+// severity macros (LOG_WARNING / LOG_ERROR); the mapping to an actual log
+// severity happens at the call site.
 typedef enum {
-  WARNING = 1,
-  ERROR = 2,
-} DepCheckLevel;  // related to core/cnlog.hpp
+  FAIL_AS_WARNING = 1,
+  FAIL_AS_ERROR = 2,
+} DepCheckLevel;
 
 mluOpStatus_t mluOpCheckDependency(bool need_check_min = true,
                                    bool need_check_max = false,
-                                   DepCheckLevel level = WARNING);
+                                   DepCheckLevel level = FAIL_AS_WARNING);
 
 #endif  // CORE_CONTEXT_H_
