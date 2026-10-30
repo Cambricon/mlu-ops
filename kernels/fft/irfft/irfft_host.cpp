@@ -578,7 +578,7 @@ static void configureIRFFT1dMatmulWorkspaceAddrs(mluOpHandle_t handle,
   size_t per_matmul_output_size = 0;
   int per_matmul_output_num = batch * n;
   if (fft_plan->fft_strategy == CNFFT_FUNC_COOLEY_TUKEY ||
-             fft_plan->fft_strategy == CNFFT_FUNC_STOCKHAM) {
+      fft_plan->fft_strategy == CNFFT_FUNC_STOCKHAM) {
     per_matmul_output_size = in_r_dtype_size * per_matmul_output_num;
     workspace_cur_offset_to_end += per_matmul_output_size;
     fft_plan->matmul_addrs.matmul_im_mul_im_addr =
@@ -1419,6 +1419,9 @@ static void configureIRFFT2dWorkspaceAddrs(mluOpHandle_t handle,
       fft_plan->mlu_addrs.output = (uint8_t *)workspace + offset;
       offset += batch * in_c_dtype_size * n0_ori * n1_ori;
     }
+
+    fft_plan->mlu_addrs.buffer_out = (uint8_t *)workspace + offset;
+    offset += batch * in_c_dtype_size * n0_ori * n1_ori;
   }
 
   if (fft_plan->n[0] > fft_plan->inembed[0] ||
@@ -1809,15 +1812,15 @@ mluOpStatus_t execIRFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
 
           fft_plan->mlu_addrs.input =
               (void *)((uint64_t)(fft_plan->mlu_addrs.input) + idist);
-          fft_plan->mlu_addrs.output =
-              (void *)((uint64_t)(fft_plan->mlu_addrs.output) + odist);
+          fft_plan->mlu_addrs.buffer_out =
+              (void *)((uint64_t)(fft_plan->mlu_addrs.buffer_out) + idist);
         }
         fft_plan->mlu_addrs.input =
             (void *)((uint64_t)(fft_plan->mlu_addrs.input) -
                      fft_plan->batch * idist);
-        fft_plan->mlu_addrs.output =
-            (void *)((uint64_t)(fft_plan->mlu_addrs.output) -
-                     fft_plan->batch * odist);
+        fft_plan->mlu_addrs.buffer_out =
+            (void *)((uint64_t)(fft_plan->mlu_addrs.buffer_out) -
+                     fft_plan->batch * idist);
 
         mluOpTensorDescriptor_t input_desc;
         status = mluOpCreateTensorDescriptor(&input_desc);
@@ -1832,8 +1835,9 @@ mluOpStatus_t execIRFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
                                                dims, strides);
         CHECK_RETURN(api, status);
 
-        status = mluOpContiguous(handle, input_desc, fft_plan->mlu_addrs.input,
-                                 fft_plan->mlu_addrs.output);
+        status =
+            mluOpContiguous(handle, input_desc, fft_plan->mlu_addrs.buffer_out,
+                            fft_plan->mlu_addrs.output);
         CHECK_RETURN(api, status);
 
         status = mluOpDestroyTensorDescriptor(input_desc);
@@ -1843,9 +1847,6 @@ mluOpStatus_t execIRFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
           status = kernelIRFFT2dButterflyRow(k_dim, k_type, handle->queue,
                                              fft_plan, FFT_IFFT);
 
-          CHECK_RETURN(api, status);
-          status = kernelIRFFT2dButterflyRow(k_dim, k_type, handle->queue,
-                                             fft_plan, FFT_IFFT);
           CHECK_RETURN(api, status);
 
           fft_plan->mlu_addrs.input =
@@ -1866,17 +1867,22 @@ mluOpStatus_t execIRFFT2d(mluOpHandle_t handle, const mluOpFFTPlan_t fft_plan,
                                               fft_plan, FFT_IFFT);
 
         CHECK_RETURN(api, status);
-        status = kernelIRFFT2dButterflyRow(k_dim, k_type, handle->queue,
-                                           fft_plan, FFT_IFFT);
+        status = kernelIRFFT2dButterflyRowBuffer(k_dim, k_type, handle->queue,
+                                                 fft_plan, FFT_IFFT);
         CHECK_RETURN(api, status);
 
         fft_plan->mlu_addrs.input =
             (void *)((uint64_t)(fft_plan->mlu_addrs.input) + idist);
+        fft_plan->mlu_addrs.buffer_out =
+            (void *)((uint64_t)(fft_plan->mlu_addrs.buffer_out) + idist);
         fft_plan->mlu_addrs.output =
             (void *)((uint64_t)(fft_plan->mlu_addrs.output) + odist);
       }
       fft_plan->mlu_addrs.input =
           (void *)((uint64_t)(fft_plan->mlu_addrs.input) -
+                   fft_plan->batch * idist);
+      fft_plan->mlu_addrs.buffer_out =
+          (void *)((uint64_t)(fft_plan->mlu_addrs.buffer_out) -
                    fft_plan->batch * idist);
       fft_plan->mlu_addrs.output =
           (void *)((uint64_t)(fft_plan->mlu_addrs.output) -
