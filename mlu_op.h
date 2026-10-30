@@ -14645,7 +14645,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetLogColorPrint(int color);
 // file_name 为空指针则关闭落盘并释放文件句柄；为空串则返回 MLUOP_STATUS_BAD_PARAM。
 mluOpStatus_t MLUOP_WIN_API mluOpSetLogFile(const char *file_name);
 
-// 设置用户自定义日志回调。约定：回调内不得调用 mluops 的日志接口，否则会死锁
+// 设置用户自定义日志回调。回调内可再调日志接口：重入的日志直接输出（屏幕/落盘），
+// 不再触发回调，不会死锁或递归。
 mluOpStatus_t MLUOP_WIN_API mluOpSetLogCallback(MluOpLogCallback callback);
 
 #if defined(__cplusplus)

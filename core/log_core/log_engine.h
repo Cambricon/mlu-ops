@@ -85,6 +85,20 @@ inline std::atomic<int> g_max_log_level{kMaxLogLevelUnset};
 inline constexpr int kLogEngineAliveMagic = 1;
 inline std::atomic<int> g_log_engine_alive_flag{kLogEngineAliveMagic};
 
+// callback 重入守卫：callback 所在线程的深度计数。重入（>0）时发射入口跳过
+// callback 再调用，防 callback 内调日志接口递归（FMT 无限递归 / 流式自死锁）。
+inline int& callbackDepth() {
+  static thread_local int depth = 0;
+  return depth;
+}
+inline bool inCallback() { return callbackDepth() > 0; }
+struct CallbackDepthGuard {
+  CallbackDepthGuard() { ++callbackDepth(); }
+  ~CallbackDepthGuard() { --callbackDepth(); }
+  CallbackDepthGuard(const CallbackDepthGuard&) = delete;
+  CallbackDepthGuard& operator=(const CallbackDepthGuard&) = delete;
+};
+
 inline bool logEngineAlive() {
   return g_log_engine_alive_flag.load(std::memory_order_relaxed) ==
          kLogEngineAliveMagic;
@@ -93,7 +107,7 @@ inline bool logEngineAlive() {
 // 用户回调签名：`severity` 为原始 Severity 数值；`function_name` 暂固定传空指针；
 // `message` 为格式化后的消息正文（body，无 head）。与 C API 的 MluOpLogCallback
 // 布局一致（void(int,const char*,const char*) 函数指针），可安全 reinterpret_cast
-// 互转。约定：回调内不得调用 log_core 日志接口（会死锁/递归）。
+// 互转。回调内可再调日志接口：重入的日志直接交 sink，不再回调（无死锁/递归）。
 using LogCallback = void (*)(int severity, const char* function_name,
                              const char* message);
 
@@ -177,8 +191,12 @@ public:
       } catch (...) {
         return;
       }
-      callback(static_cast<int>(severity), /*function_name=*/nullptr,
-               body.c_str());
+      // 重入（callback 内又打日志）时跳过 callback，日志仍交 sink。
+      if (!inCallback()) {
+        CallbackDepthGuard guard;
+        callback(static_cast<int>(severity), /*function_name=*/nullptr,
+                 body.c_str());
+      }
       logger_->log(loc, lvl,
                    spdlog::string_view_t(body.data(), body.size()));
       return;

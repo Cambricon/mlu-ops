@@ -408,11 +408,19 @@ void LogEngine::Emit(Severity severity, const std::string& file, int line,
   std::string body = message;
   clearEnter(&body);
 
-  std::lock_guard<std::mutex> lock(log_mutex);
   const auto lvl = cvtSeverityToSpdlog(severity);
   const spdlog::source_loc loc{file.c_str(), line, nullptr};
+
+  // 重入（callback 内又打日志）：不取锁、不调 callback，直接交 sink。
+  if (inCallback()) {
+    logger_->log(loc, lvl, spdlog::string_view_t(body.data(), body.size()));
+    return;
+  }
+
+  std::lock_guard<std::mutex> lock(log_mutex);
   LogCallback callback = callback_.load(std::memory_order_relaxed);
   if (LOG_PREDICT_FALSE(callback != nullptr)) {
+    CallbackDepthGuard guard;
     callback(static_cast<int>(severity), /*function_name=*/nullptr, body.c_str());
   }
   logger_->log(loc, lvl, spdlog::string_view_t(body.data(), body.size()));
