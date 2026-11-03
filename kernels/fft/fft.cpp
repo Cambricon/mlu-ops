@@ -419,14 +419,14 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateDftMatrixKernel(DT *dft_matrix,
                                                        const int radix,
                                                        const int dir) {
   int j, k;
-  DT phase;
+  double phase;
   const int K_num = 64 / sizeof(DT);
   const int align_K = K_num * ((radix + K_num - 1) / K_num);
   const int sign = (dir == FFT_FORWARD) ? -1 : 1;
   for (k = 0; k < radix; k++) {
     for (j = 0; j < align_K; j++) {
       if (j < radix) {
-        phase = sign * 2 * (DT)FFT_PI * k * j / radix;
+        phase = sign * 2 * FFT_PI * k * j / radix;
         dft_matrix[align_K * k + j] = (DT)cos(phase);                    // r
         dft_matrix[align_K * k + j + align_K * radix] = (DT)sin(phase);  // i
       } else {
@@ -443,12 +443,12 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateDftMatrixKernelNoPad(DT *dft_matrix,
                                                             const int radix,
                                                             const int dir) {
   int j, k;
-  DT phase;
+  double phase;
 
   const int sign = (dir == FFT_FORWARD) ? -1 : 1;
   for (k = 0; k < radix; k++) {
     for (j = 0; j < radix; j++) {
-      phase = sign * 2 * (DT)FFT_PI * k * j / radix;
+      phase = sign * 2 * FFT_PI * k * j / radix;
       dft_matrix[radix * k + j] = (DT)cos(phase);                  // r
       dft_matrix[radix * k + j + radix * radix] = (DT)sin(phase);  // i
     }                                                              // radix
@@ -460,12 +460,12 @@ template <typename DT>
 mluOpStatus_t MLUOP_WIN_API
 fftGenerateC2RDftMatrixKernelNoPad(DT *dft_matrix, const int radix) {
   int j, k;
-  DT phase;
+  double phase;
   int half = (radix / 2 + 1);
   const int sign = 1;  // backward
   for (k = 0; k < radix; k++) {
     for (j = 0; j < half; j++) {
-      phase = sign * 2 * (DT)FFT_PI * k * j / radix;
+      phase = sign * 2 * FFT_PI * k * j / radix;
       if (j == 0 || j == half - 1) {
         dft_matrix[2 * half * k + j] = (DT)cos(phase);          // r
         dft_matrix[2 * half * k + j + half] = -(DT)sin(phase);  // i neg
@@ -483,12 +483,12 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateHalfDftMatrixKernelNoPad(DT *dft_matrix,
                                                                 const int radix,
                                                                 const int dir) {
   int j, k;
-  DT phase;
+  double phase;
   int rows = radix / 2 + 1;
   const int sign = (dir == FFT_FORWARD) ? -1 : 1;
   for (k = 0; k < rows; k++) {
     for (j = 0; j < radix; j++) {
-      phase = sign * 2 * (DT)FFT_PI * k * j / radix;
+      phase = sign * 2 * FFT_PI * k * j / radix;
       dft_matrix[radix * k + j] = (DT)cos(phase);                 // r
       dft_matrix[radix * k + j + radix * rows] = (DT)sin(phase);  // i
     }                                                             // radix
@@ -1896,6 +1896,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpAllocateIRFFT2D(
                           ? 0
                           : buffer_size;
     workspace_size += (fft_plan->is_output_contiguous) ? 0 : buffer_size;
+    workspace_size += buffer_size;
   }
 
   if (fft_plan->n[0] != fft_plan->inembed[0] ||
