@@ -14618,6 +14618,37 @@ mluOpBoxOverlapBev(mluOpHandle_t handle,
                    const mluOpTensorDescriptor_t overlaps_desc,
                    void *overlaps);
 
+// 日志等级整数值：值越小越基础/越严重，值越大日志越丰富（0..7）。
+typedef enum {
+  MLUOP_LOG_LEVEL_ERROR = 0,
+  MLUOP_LOG_LEVEL_WARNING = 1,
+  MLUOP_LOG_LEVEL_APICALL = 2,
+  MLUOP_LOG_LEVEL_INFO = 3,
+  MLUOP_LOG_LEVEL_DEBUG1 = 4,
+  MLUOP_LOG_LEVEL_DEBUG2 = 5,
+  MLUOP_LOG_LEVEL_DEBUG3 = 6,
+  MLUOP_LOG_LEVEL_DEBUG4 = 7
+} MluOpLogLevel;
+
+// 日志回调：level 为 MluOpLogLevel 整数值；functionName 暂固定传空指针；
+// message 为格式化后的消息正文（body，无日志头）。
+typedef void (*MluOpLogCallback)(int level, const char *functionName,
+                                 const char *message);
+
+// 设置允许打印的最高日志级别（MAX 语义：level <= 阈值时打印）。
+mluOpStatus_t MLUOP_WIN_API mluOpSetMaxLogLevel(MluOpLogLevel level);
+
+// 设置是否彩色打印。
+mluOpStatus_t MLUOP_WIN_API mluOpSetLogColorPrint(int color);
+
+// 设置落盘日志文件名并启用落盘：总是关闭旧流、以 trunc 重写目标文件
+// file_name 为空指针则关闭落盘并释放文件句柄；为空串则返回 MLUOP_STATUS_BAD_PARAM。
+mluOpStatus_t MLUOP_WIN_API mluOpSetLogFile(const char *file_name);
+
+// 设置用户自定义日志回调。回调内可再调日志接口：重入的日志直接输出（屏幕/落盘），
+// 不再触发回调，不会死锁或递归。
+mluOpStatus_t MLUOP_WIN_API mluOpSetLogCallback(MluOpLogCallback callback);
+
 #if defined(__cplusplus)
 }
 #endif

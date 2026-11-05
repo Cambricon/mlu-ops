@@ -29,10 +29,10 @@
 #include "core/tool.h"
 #include "kernels/kernel.h"
 
-#define DEP_CHECK_LOG(level)                                                \
-  mluop::logging::LogMessage(__FILE__, __LINE__, 4, level, "MLU-OPS", true, \
-                             true, true, true)                              \
-      .stream()
+// Map the semantic DepCheckLevel to the actual LOG severity: an ERROR check
+// prints via LOG(ERROR), anything else via LOG(WARNING).
+#define DEP_CHECK_LOG(level) \
+  ((level) == FAIL_AS_ERROR ? LOG(ERROR) : LOG(WARNING))
 
 namespace mluop {
 // see cnrt_function.c deviceCoreVersion for more info.
@@ -116,7 +116,7 @@ mluOpStatus_t mluOpCheckDependency(bool need_check_min, bool need_check_max,
           << "please check the dependency rules in "
              "Cambricon-MLUOP-Release-Notes.";
     }
-    if (((!cnrt_min_check) || (!cndrv_min_check)) && level == ERROR) {
+    if (((!cnrt_min_check) || (!cndrv_min_check)) && level == FAIL_AS_ERROR) {
       return MLUOP_STATUS_NOT_INITIALIZED;
     }
   }
@@ -148,7 +148,7 @@ mluOpStatus_t mluOpCheckDependency(bool need_check_min, bool need_check_max,
           << "please check the dependency rules in "
              "Cambricon-MLUOP-Release-Notes.";
     }
-    if (((!cnrt_max_check) || (!cndrv_max_check)) && level == ERROR) {
+    if (((!cnrt_max_check) || (!cndrv_max_check)) && level == FAIL_AS_ERROR) {
       return MLUOP_STATUS_NOT_INITIALIZED;
     }
   }
@@ -158,7 +158,7 @@ mluOpStatus_t mluOpCheckDependency(bool need_check_min, bool need_check_max,
 mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
   PARAM_CHECK("[mluOpCreate]", handle != NULL);
 
-  if (MLUOP_STATUS_SUCCESS != mluOpCheckDependency(true, false, ERROR)) {
+  if (MLUOP_STATUS_SUCCESS != mluOpCheckDependency(true, false, FAIL_AS_ERROR)) {
     LOG(ERROR)
         << "Check version dependency failed in mluOpCreate function. "
         << "If don't want this check, set env MLUOP_CHECK_DEP_VERSION to 0, "
