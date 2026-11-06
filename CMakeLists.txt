@@ -120,10 +120,6 @@ if (NOT "${_cncc_version}" VERSION_LESS "4.15.0")
   set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -mllvm --fmlu-memintr-warning=true")
 endif()
 
-if(NOT "${_cncc_version}" VERSION_LESS "4.1.0")
-  set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -mllvm --fmlu-addrspace-warning")
-endif()
-
 find_package(fmt REQUIRED)
 # setup cncc flags
 set(BANG_CNCC_FLAGS "${BANG_CNCC_FLAGS} -Werror -Wdeprecated-declarations -Wall -std=c++17 -fPIC -pthread --neuware-path=${NEUWARE_HOME}")
