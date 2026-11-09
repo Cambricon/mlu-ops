@@ -69,26 +69,47 @@ MLUOP_GEN_CASE_DIR
 
 - 在程序运行过程中也可以调用 ``mluOpSetGenCaseDirectory()`` 和 ``mluOpGetGenCaseDirectory()`` 来动态设置和获取此环境变量的值。更多内容，参见《Cambricon MLU-OPS Developer Guide》。
 
-.. _MLUOP_MIN_VLOG_LEVEL:
- 
-MLUOP_MIN_VLOG_LEVEL
-######################
+.. _MLUOP_LOG_MAX_LEVEL:
+
+MLUOP_LOG_MAX_LEVEL
+####################
 
 **功能描述**
 
-设置外部LOG()宏的最小打印级别，屏蔽不需要级别的日志信息。
+设置允许输出的最高日志级别。仅当日志级别满足 ``severity <= max_level`` 时输出。
 
 **使用方法**
 
-- export MLUOP_MIN_VLOG_LEVEL=0：显示FATAL、ERROR、WARNING、INFO级别的日志。
+- export MLUOP_LOG_MAX_LEVEL=0：只显示 ERROR 级别日志。
 
-- export MLUOP_MIN_VLOG_LEVEL=1：显示FATAL、ERROR、WARNING级别的日志。
+- export MLUOP_LOG_MAX_LEVEL=1：显示 ERROR 和 WARNING 级别日志。
 
-- export MLUOP_MIN_VLOG_LEVEL=2：显示ERROR和WARNING级别的日志。
+- export MLUOP_LOG_MAX_LEVEL=2：显示 ERROR、WARNING 和 APICALL 级别日志。
 
-- export MLUOP_MIN_VLOG_LEVEL=3：显示FATAL级别LOG。
+- export MLUOP_LOG_MAX_LEVEL=3：显示 ERROR、WARNING、APICALL 和 INFO 级别日志。
 
-默认值为0。
+- export MLUOP_LOG_MAX_LEVEL=4/5/6/7：在上述级别基础上依次显示 DEBUG1/DEBUG2/DEBUG3/DEBUG4。
+
+也支持使用 ``ERROR``、``WARNING``、``API_TRACE``、``INFO``、``DEBUG1`` 到 ``DEBUG4`` 等名称，名称不区分大小写。未设置或设置非法值时默认为 0（ERROR）。
+
+旧的 ``MLUOP_MIN_LOG_LEVEL`` 和 ``MLUOP_LOG_PRINT`` 已废弃，不再生效；``MLUOP_MIN_VLOG_LEVEL`` 仍用于兼容现有 ``VLOG(n)`` 日志语句。
+
+.. _MLUOP_MIN_VLOG_LEVEL:
+
+MLUOP_MIN_VLOG_LEVEL
+####################
+
+**功能描述**
+
+控制当前仍在使用的旧式 ``VLOG(n) << ...`` 调试日志。对于 ``VLOG(n)``，当 ``n <= MLUOP_MIN_VLOG_LEVEL`` 时输出。
+
+**使用方法**
+
+- export MLUOP_MIN_VLOG_LEVEL=0：不输出 VLOG 调试日志。
+- export MLUOP_MIN_VLOG_LEVEL=2：输出 VLOG(1) 和 VLOG(2)。
+- export MLUOP_MIN_VLOG_LEVEL=7：输出 VLOG(1) 到 VLOG(7)。
+
+默认值为 0。该变量用于兼容现有 VLOG 语句；VLOG 实际输出还会受到 :ref:`MLUOP_LOG_MAX_LEVEL` 的日志引擎等级过滤。新增日志代码应优先使用 ``LOG_ERROR``、``LOG_WARNING``、``LOG_INFO`` 和 ``LOG_DEBUG1`` 等 fmt 风格宏，并通过 :ref:`MLUOP_LOG_MAX_LEVEL` 控制输出。
 
 .. _MLUOP_LOG_ONLY_SHOW:
 
@@ -105,7 +126,7 @@ MLUOP_LOG_ONLY_SHOW
 
 - export MLUOP_LOG_ONLY_SHOW=OFF：打印日志信息到屏幕上并且生成日志文件。日志文件名为 ``mluop_auto_log`` ，默认保存在程序运行目录下。不支持更改文件存放路径。
 
-默认值为ON。
+默认值为ON。也可以通过 ``mluOpSetLogFile()`` 在运行时启用、切换或关闭日志文件。
 
 .. _MLUOP_LOG_COLOR_PRINT:
 
@@ -122,7 +143,7 @@ MLUOP_LOG_COLOR_PRINT
 
 - export MLUOP_LOG_COLOR_PRINT=OFF：打印日志时不开启颜色字体特效。
 
-默认值为ON。
+默认值为ON。也可以通过 ``mluOpSetLogColorPrint()`` 在运行时修改。
 
 
 .. _MLUOP_BUILD_ASAN_CHECK:
