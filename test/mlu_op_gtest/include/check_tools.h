@@ -30,25 +30,27 @@
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
 namespace {  // NOLINT
-std::string fmt() { return ""; }
+std::string GtestFormat() { return ""; }
 template <typename lhs, typename... T>
-std::string fmt(lhs first, T... args) {
+std::string GtestFormat(lhs first, T... args) {
   std::ostringstream oss;
-  oss << first << fmt(args...);
+  oss << first << GtestFormat(args...);
   return oss.str();
 }
 }  // namespace
 
 #define GTEST_CHECK(condition, ...)                                          \
   if (unlikely(!(condition))) {                                              \
-    ADD_FAILURE() << fmt("Check failed: ", #condition, ". ", ##__VA_ARGS__); \
+    ADD_FAILURE() << GtestFormat("Check failed: ", #condition, ". ",         \
+                                 ##__VA_ARGS__);                             \
     throw std::invalid_argument(std::string(__FILE__) + " +" +               \
                                 std::to_string(__LINE__));                   \
   }
 
 #define GTEST_WARNING(condition, ...)                                     \
   if (unlikely(!(condition))) {                                           \
-    LOG(WARNING) << "Check failed: " #condition ". " << fmt(__VA_ARGS__); \
+    LOG(WARNING) << "Check failed: " #condition ". "                      \
+                 << GtestFormat(__VA_ARGS__);                             \
   }
 
 #endif  // TEST_MLU_OP_GTEST_INCLUDE_CHECK_TOOLS_H_
