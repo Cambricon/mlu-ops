@@ -24,6 +24,7 @@
 #include <set>
 #include <algorithm>
 #include <vector>
+#include <fstream>
 #include "case_collector.h"
 
 extern mluoptest::GlobalVar mluoptest::global_var;

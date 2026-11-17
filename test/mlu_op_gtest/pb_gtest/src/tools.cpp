@@ -29,6 +29,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <fstream>
 
 #ifdef _OPENMP
 #include <omp.h>

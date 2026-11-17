@@ -24,6 +24,7 @@
 #include "perf_test.h"
 #include "core/logging.h"
 #include "json.h"
+#include <fstream>
 
 // baseline default threshold
 #define DEFAULT_SCALE_BOUND (100)

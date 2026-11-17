@@ -30,6 +30,7 @@
 #include <set>
 #include <stdexcept>
 #include <utility>
+#include <fstream>
 #include "mlu_op_gtest.h"
 #include "op_register.h"
 #include "internal_perf.h"

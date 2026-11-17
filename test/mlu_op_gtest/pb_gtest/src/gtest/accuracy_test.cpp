@@ -23,6 +23,7 @@
 #include "accuracy_test.h"
 #include "core/logging.h"
 #include "json.h"
+#include <fstream>
 
 #define DEFAULT_THRESHOLD (0.00)
 

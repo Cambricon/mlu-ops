@@ -25,6 +25,7 @@
 
 #include <memory>
 #include <string>
+#include <fstream>
 #include "gtest/gtest.h"
 #include "parser.h"
 

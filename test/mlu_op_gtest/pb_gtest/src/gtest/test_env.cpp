@@ -28,6 +28,7 @@
 #include <unistd.h>   // open, write
 #include <algorithm>  // sort
 #include <utility>    // std::pair
+#include <fstream>
 #include "cndev.h"    // cndevGetProcessInfo
 #include "hardware_monitor.h"
 

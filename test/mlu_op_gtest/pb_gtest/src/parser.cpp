@@ -35,6 +35,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <fstream>
 
 #include "file_reader.h"
 #include "socket_creator.h"
