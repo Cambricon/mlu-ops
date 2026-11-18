@@ -399,8 +399,6 @@ std::stringstream& LogMessage::stream() { return stream_; }
 // 流式日志入口（LOG()/VLOG() 走这里）
 void LogEngine::Emit(Severity severity, const std::string& file, int line,
                      const std::string& message) {
-  static std::mutex log_mutex;
-
   if (!LogEngine::shouldLog(severity)) {
     return;
   }
@@ -417,11 +415,18 @@ void LogEngine::Emit(Severity severity, const std::string& file, int line,
     return;
   }
 
-  std::lock_guard<std::mutex> lock(log_mutex);
   LogCallback callback = callback_.load(std::memory_order_relaxed);
   if (LOG_PREDICT_FALSE(callback != nullptr)) {
     CallbackDepthGuard guard;
-    callback(static_cast<int>(severity), /*function_name=*/nullptr, body.c_str());
+    try {
+      callback(static_cast<int>(severity), /*function_name=*/nullptr,
+               body.c_str());
+    } catch (const std::exception& e) {
+      std::cerr << "[MLU-OPS][ERROR] log callback threw an exception: "
+                << e.what() << '\n';
+    } catch (...) {
+      std::cerr << "[MLU-OPS][ERROR] log callback threw an unknown exception\n";
+    }
   }
   logger_->log(loc, lvl, spdlog::string_view_t(body.data(), body.size()));
 }

@@ -245,7 +245,11 @@ if (TARGET spdlog::spdlog)
   target_link_libraries(mluopscore spdlog::spdlog)
 endif()
 
-bang_add_library(mluops SHARED ${src_files} ${src_helper_files})
+# logging_api.cpp defines public C APIs that are not referenced by the
+# implementation itself.  Keep it as an explicit shared-library source so the
+# linker cannot discard it while extracting objects from mluopscore.
+set(mluops_api_src ${CMAKE_CURRENT_SOURCE_DIR}/core/logging_api.cpp)
+bang_add_library(mluops SHARED ${src_files} ${src_helper_files} ${mluops_api_src})
 
 target_include_directories(mluops PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/fmt/include

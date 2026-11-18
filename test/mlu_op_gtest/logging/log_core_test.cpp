@@ -32,6 +32,7 @@
 // cnrtGetDevice），无设备初始化时其返回 dev=0，安全，无需初始化。
 //
 #include <cstdio>
+#include <stdexcept>
 #include <string>
 
 #include "core/log_core/log_engine.h"
@@ -48,6 +49,11 @@ void CaptureCallback(int /*severity*/, const char* function_name,
                      const char* /*message*/) {
   snprintf(g_captured_function_name, sizeof(g_captured_function_name), "%s",
            function_name != nullptr ? function_name : "");
+}
+
+void ThrowingCallback(int /*severity*/, const char* /*function_name*/,
+                      const char* /*message*/) {
+  throw std::runtime_error("callback failure");
 }
 
 TEST(LogEngineTest, SeverityValues) {
@@ -137,6 +143,25 @@ TEST(LogEngineTest, CallbackFunctionName) {
   // functionName 暂固定传空指针（栈回溯解析暂缓，见 §12.17），回调收到空串。
   EXPECT_STREQ(g_captured_function_name, "")
       << "actual functionName=[" << g_captured_function_name << "]";
+}
+
+TEST(LogEngineTest, CallbackExceptionsAreContained) {
+  LogEngine& engine = LogEngine::instance();
+  engine.setMaxLogLevel(static_cast<int>(Severity::kError));
+  engine.setLogCallback(ThrowingCallback);
+
+  testing::internal::CaptureStderr();
+  EXPECT_NO_THROW({
+    LogMessage(__FILE__, __LINE__, Severity::kError).stream()
+        << "stream callback exception probe";
+  });
+  EXPECT_NO_THROW(
+      engine.EmitFmt(Severity::kError, __FILE__, __LINE__,
+                     "fmt callback exception probe"));
+  const std::string error_output = testing::internal::GetCapturedStderr();
+  EXPECT_NE(error_output.find("callback failure"), std::string::npos);
+
+  engine.setLogCallback(nullptr);
 }
 
 }  // namespace

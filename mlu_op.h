@@ -14642,6 +14642,7 @@ typedef enum {
  *
  * \p functionName is currently always NULL. \p message contains the formatted
  * message body without the log header.
+ * Exceptions thrown by the callback are caught and reported.
  */
 typedef void (*MluOpLogCallback)(int level, const char *functionName,
                                  const char *message);

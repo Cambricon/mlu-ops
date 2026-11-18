@@ -25,6 +25,8 @@
 
 #include <atomic>
 #include <cstdlib>
+#include <exception>
+#include <iostream>
 #include <memory>
 
 #include "core/log_core/fmt_config.h"
@@ -194,8 +196,16 @@ public:
       // 重入（callback 内又打日志）时跳过 callback，日志仍交 sink。
       if (!inCallback()) {
         CallbackDepthGuard guard;
-        callback(static_cast<int>(severity), /*function_name=*/nullptr,
-                 body.c_str());
+        try {
+          callback(static_cast<int>(severity), /*function_name=*/nullptr,
+                   body.c_str());
+        } catch (const std::exception& e) {
+          std::cerr << "[MLU-OPS][ERROR] log callback threw an exception: "
+                    << e.what() << '\n';
+        } catch (...) {
+          std::cerr
+              << "[MLU-OPS][ERROR] log callback threw an unknown exception\n";
+        }
       }
       logger_->log(loc, lvl,
                    spdlog::string_view_t(body.data(), body.size()));
