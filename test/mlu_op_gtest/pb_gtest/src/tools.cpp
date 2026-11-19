@@ -1165,7 +1165,7 @@ int float_add_up_down(int in_a, int in_b, int float_16or32, int round_mode,
            }
         */
         return temp;
-      }       // ieee754 fp16 add
+      }  // ieee754 fp16 add
     } else {  // not ieee754 fp16 add
       if ((float_number_is_nan_inf(16, in_a) != 0) &&
           (float_number_is_nan_inf(16, in_b) != 0)) {

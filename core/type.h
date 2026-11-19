@@ -38,8 +38,9 @@ namespace mluop {
 template <typename T>
 static mluOpStatus_t getLowAndHighValueFrom64Bits(T value, uint32_t* high,
                                                   uint32_t* low) {
-  static_assert(sizeof(T) == sizeof(int64_t),
-                "getLowAndHighValueFrom64Bits() only supports 64 bits data type.");
+  static_assert(
+      sizeof(T) == sizeof(int64_t),
+      "getLowAndHighValueFrom64Bits() only supports 64 bits data type.");
   uint64_t temp = *(uint64_t*)&value;
   // get the high 32bit value
   *high = temp >> 32;
@@ -81,7 +82,8 @@ static inline size_t MLUOP_WIN_API getSizeOfDataType(mluOpDataType_t dtype) {
 }
 
 std::string MLUOP_WIN_API getNameOfDataType(mluOpDataType_t dtype);  // NOLINT
-std::string MLUOP_WIN_API getNameOfTensorLayout(mluOpTensorLayout_t layout);  // NOLINT
+std::string MLUOP_WIN_API
+getNameOfTensorLayout(mluOpTensorLayout_t layout);  // NOLINT
 
 }  // namespace mluop
 

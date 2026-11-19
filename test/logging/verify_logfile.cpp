@@ -1,4 +1,5 @@
-// 落盘场景回归（MLUOP_LOG_ONLY_SHOW=0）。setLogFile 语义：总是关旧流、trunc 开新流。
+// 落盘场景回归（MLUOP_LOG_ONLY_SHOW=0）。setLogFile 语义：总是关旧流、trunc
+// 开新流。
 //  1. setLogFile 新文件 → trunc 落盘
 //  2. 同名重设 → 也 trunc（旧内容清空）
 //  3. 改名切换 → 新文件 trunc
@@ -34,7 +35,10 @@ static bool fd_open(const char* path) {
     ssize_t n = readlink(link, target, sizeof(target) - 1);
     if (n > 0) {
       target[n] = '\0';
-      if (std::strstr(target, path) != nullptr) { found = true; break; }
+      if (std::strstr(target, path) != nullptr) {
+        found = true;
+        break;
+      }
     }
   }
   closedir(d);
@@ -42,7 +46,7 @@ static bool fd_open(const char* path) {
 }
 
 static int g_fails = 0;
-#define CHECK_ITEM(what, cond)                                         \
+#define CHECK_ITEM(what, cond)                                    \
   do {                                                            \
     bool ok = (cond);                                             \
     std::fprintf(stderr, "%s: %s\n", ok ? "PASS" : "FAIL", what); \
@@ -59,7 +63,8 @@ int main() {
   mluOpSetLogFile("/tmp/ghost.txt");
   LOG_ERROR("to-ghost");
   std::fflush(stdout);
-  CHECK_ITEM("1 新文件 setLogFile 落盘", file_contains("/tmp/ghost.txt", "to-ghost"));
+  CHECK_ITEM("1 新文件 setLogFile 落盘",
+             file_contains("/tmp/ghost.txt", "to-ghost"));
 
   // 2. 同名重设 → trunc（旧内容清空）
   mluOpSetLogFile("/tmp/same.txt");
@@ -68,9 +73,9 @@ int main() {
   LOG_ERROR("line2-after-reset");
   std::fflush(stdout);
   CHECK_ITEM("2 同名重设 trunc（line1 清空）",
-        !file_contains("/tmp/same.txt", "line1-before-reset"));
+             !file_contains("/tmp/same.txt", "line1-before-reset"));
   CHECK_ITEM("2 同名重设 trunc（line2 写入）",
-        file_contains("/tmp/same.txt", "line2-after-reset"));
+             file_contains("/tmp/same.txt", "line2-after-reset"));
 
   // 3. 改名切换 → 新文件 trunc
   mluOpSetLogFile("/tmp/other.txt");
@@ -91,11 +96,11 @@ int main() {
   LOG_ERROR("toggle-after-enable");
   std::fflush(stdout);
   CHECK_ITEM("4 re-enable trunc（before 清空）",
-        !file_contains("/tmp/toggle.txt", "toggle-before-disable"));
+             !file_contains("/tmp/toggle.txt", "toggle-before-disable"));
   CHECK_ITEM("4 re-enable trunc（after 写入）",
-        file_contains("/tmp/toggle.txt", "toggle-after-enable"));
+             file_contains("/tmp/toggle.txt", "toggle-after-enable"));
   CHECK_ITEM("4 disable 期间不落盘",
-        !file_contains("/tmp/toggle.txt", "toggle-while-disabled"));
+             !file_contains("/tmp/toggle.txt", "toggle-while-disabled"));
 
   // 5. 默认文件 → 同样 trunc（切走再切回，旧内容清空）
   mluOpSetLogFile("mlu_op_auto_log");
@@ -106,16 +111,17 @@ int main() {
   LOG_ERROR("default-line-2");
   std::fflush(stdout);
   CHECK_ITEM("5 默认文件 trunc（旧内容清空）",
-        !file_contains("mlu_op_auto_log", "default-line-1"));
+             !file_contains("mlu_op_auto_log", "default-line-1"));
   CHECK_ITEM("5 默认文件 trunc（新内容写入）",
-        file_contains("mlu_op_auto_log", "default-line-2"));
+             file_contains("mlu_op_auto_log", "default-line-2"));
 
   // 6. 空串 → BAD_PARAM，落盘状态不变（仍写当前文件）
-  CHECK_ITEM("6 空串返回 BAD_PARAM", mluOpSetLogFile("") == MLUOP_STATUS_BAD_PARAM);
+  CHECK_ITEM("6 空串返回 BAD_PARAM",
+             mluOpSetLogFile("") == MLUOP_STATUS_BAD_PARAM);
   LOG_ERROR("after-empty-string");
   std::fflush(stdout);
   CHECK_ITEM("6 空串后落盘不受影响",
-        file_contains("mlu_op_auto_log", "after-empty-string"));
+             file_contains("mlu_op_auto_log", "after-empty-string"));
 
   std::fprintf(stderr, "%s\n", g_fails == 0 ? "ALL PASS" : "SOME FAIL");
   return g_fails;

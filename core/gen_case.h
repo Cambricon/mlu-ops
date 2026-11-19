@@ -28,7 +28,7 @@
 #include <string>
 #include <limits>
 #include <utility>
-#include <fstream> 
+#include <fstream>
 
 #include "mlu_op.h"
 #include "core/tensor.h"

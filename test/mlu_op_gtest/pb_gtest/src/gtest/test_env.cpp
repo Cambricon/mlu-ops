@@ -29,7 +29,7 @@
 #include <algorithm>  // sort
 #include <utility>    // std::pair
 #include <fstream>
-#include "cndev.h"    // cndevGetProcessInfo
+#include "cndev.h"  // cndevGetProcessInfo
 #include "hardware_monitor.h"
 
 using mluoptest::global_var;

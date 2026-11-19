@@ -1,10 +1,10 @@
 // 退出期日志路径 alive-flag 验证：
-// 全局对象 g_early 在 main 前构造（比 LogEngine 单例早），其析构在 LogEngine 析构
-// 之后运行（atexit LIFO）。析构里打 LOG_* 系列日志 —— 此时 LogEngine 已析构、
-// g_log_engine_alive_flag=0，宏层 logEngineAlive() 检查应把日志拦下（不调
-// instance()，不悬垂、不 UB），程序正常退出。
-// 通过标准：exit==0 且 stdout 无 "exit-period"。未修复时 instance() 返回悬垂引用
-// → UB（可能崩溃 exit!=0，或悬垂调用碰巧跑出 "exit-period"）。
+// 全局对象 g_early 在 main 前构造（比 LogEngine 单例早），其析构在 LogEngine
+// 析构 之后运行（atexit LIFO）。析构里打 LOG_* 系列日志 —— 此时 LogEngine
+// 已析构、 g_log_engine_alive_flag=0，宏层 logEngineAlive()
+// 检查应把日志拦下（不调 instance()，不悬垂、不 UB），程序正常退出。
+// 通过标准：exit==0 且 stdout 无 "exit-period"。未修复时 instance()
+// 返回悬垂引用 → UB（可能崩溃 exit!=0，或悬垂调用碰巧跑出 "exit-period"）。
 #include "core/logging.h"
 #include <cstdio>
 

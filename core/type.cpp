@@ -78,11 +78,13 @@ mluOpGetNameOfTensorLayout(mluOpTensorLayout_t layout) {
 
 namespace mluop {
 
-std::string MLUOP_WIN_API MLUOP_ATTRIBUTE_FLATTEN getNameOfDataType(mluOpDataType_t dtype) {  // NOLINT
+std::string MLUOP_WIN_API MLUOP_ATTRIBUTE_FLATTEN
+getNameOfDataType(mluOpDataType_t dtype) {  // NOLINT
   return mluOpGetNameOfDataType(dtype);
 }
 
-std::string MLUOP_WIN_API MLUOP_ATTRIBUTE_FLATTEN getNameOfTensorLayout(mluOpTensorLayout_t layout) {  // NOLINT
+std::string MLUOP_WIN_API MLUOP_ATTRIBUTE_FLATTEN
+getNameOfTensorLayout(mluOpTensorLayout_t layout) {  // NOLINT
   return mluOpGetNameOfTensorLayout(layout);
 }
 

@@ -39,18 +39,18 @@ std::string GtestFormat(lhs first, T... args) {
 }
 }  // namespace
 
-#define GTEST_CHECK(condition, ...)                                          \
-  if (unlikely(!(condition))) {                                              \
-    ADD_FAILURE() << GtestFormat("Check failed: ", #condition, ". ",         \
-                                 ##__VA_ARGS__);                             \
-    throw std::invalid_argument(std::string(__FILE__) + " +" +               \
-                                std::to_string(__LINE__));                   \
+#define GTEST_CHECK(condition, ...)                                  \
+  if (unlikely(!(condition))) {                                      \
+    ADD_FAILURE() << GtestFormat("Check failed: ", #condition, ". ", \
+                                 ##__VA_ARGS__);                     \
+    throw std::invalid_argument(std::string(__FILE__) + " +" +       \
+                                std::to_string(__LINE__));           \
   }
 
-#define GTEST_WARNING(condition, ...)                                     \
-  if (unlikely(!(condition))) {                                           \
-    LOG(WARNING) << "Check failed: " #condition ". "                      \
-                 << GtestFormat(__VA_ARGS__);                             \
+#define GTEST_WARNING(condition, ...)                \
+  if (unlikely(!(condition))) {                      \
+    LOG(WARNING) << "Check failed: " #condition ". " \
+                 << GtestFormat(__VA_ARGS__);        \
   }
 
 #endif  // TEST_MLU_OP_GTEST_INCLUDE_CHECK_TOOLS_H_

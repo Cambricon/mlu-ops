@@ -28,8 +28,10 @@
 //
 // 实现要点：
 //  1. 只 include 新引擎头 core/log_core/log_engine.h。
-//  2. 行首时间戳 [YYYY-MM-DD HH:MM:SS.ffffff] 归一化为 <TS>；pid/card/tail 同理。
-//  3. NDEBUG（release）下无 tail（NDEBUG 不输出 tail），golden 用 #ifndef NDEBUG
+//  2. 行首时间戳 [YYYY-MM-DD HH:MM:SS.ffffff] 归一化为 <TS>；pid/card/tail
+//  同理。
+//  3. NDEBUG（release）下无 tail（NDEBUG 不输出 tail），golden 用 #ifndef
+//  NDEBUG
 //     区分 debug/release 两种基线。
 //  4. 测试前 setenv MLUOP_LOG_COLOR_PRINT=0 强制无色（颜色缓存于单例首次构造，
 //     必须先于任何日志）；MLUOP_LOG_ONLY_SHOW=1 保证不落盘。
@@ -57,8 +59,8 @@ const std::regex& TimestampRegex() {
 }
 
 // 归一化（顺序与实现一致）：先剥离行尾 '\n'（endl 写入），再替换行首
-// [datetime]-><TS>、[pid]->[<PID>]、Card:N->Card:<CARD>、tail pid:NNN->pid:<TID>。
-// 行首非时间戳则原样返回（后续比较必不等，便于定位）。
+// [datetime]-><TS>、[pid]->[<PID>]、Card:N->Card:<CARD>、tail
+// pid:NNN->pid:<TID>。 行首非时间戳则原样返回（后续比较必不等，便于定位）。
 std::string NormalizeGolden(const std::string& s) {
   std::string out = s;
   if (!out.empty() && out.back() == '\n') {
@@ -86,8 +88,9 @@ bool HasLeadingTimestamp(const std::string& s) {
 }
 
 // golden 基线：冻结的期望输出，经 NormalizeGolden 归一化。release（NDEBUG）下
-// 无 tail；debug 下有 tail（file:line pid）。severity 名按塌缩后 spdlog level 显示
-// ERROR/WARNING/TRACE/INFO/DEBUG（kCnpapi→TRACE，DEBUG1..4 同显 DEBUG，设计意图）。
+// 无 tail；debug 下有 tail（file:line pid）。severity 名按塌缩后 spdlog level
+// 显示 ERROR/WARNING/TRACE/INFO/DEBUG（kCnpapi→TRACE，DEBUG1..4 同显
+// DEBUG，设计意图）。
 #if defined(NDEBUG)
 constexpr const char* kGolden[8] = {
     "<TS>[MLU-OPS][ERROR][<PID>][Card:<CARD>]: diff_msg_sev=0",
@@ -101,14 +104,22 @@ constexpr const char* kGolden[8] = {
 };
 #else
 constexpr const char* kGolden[8] = {
-    "<TS>[MLU-OPS][ERROR][<PID>][Card:<CARD>]: diff_msg_sev=0  [ log_engine_diff_test.cpp:42  pid:<TID>]",
-    "<TS>[MLU-OPS][WARNING][<PID>][Card:<CARD>]: diff_msg_sev=1  [ log_engine_diff_test.cpp:42  pid:<TID>]",
-    "<TS>[MLU-OPS][TRACE][<PID>][Card:<CARD>]: diff_msg_sev=2  [ log_engine_diff_test.cpp:42  pid:<TID>]",
-    "<TS>[MLU-OPS][INFO][<PID>][Card:<CARD>]: diff_msg_sev=3  [ log_engine_diff_test.cpp:42  pid:<TID>]",
-    "<TS>[MLU-OPS][DEBUG][<PID>][Card:<CARD>]: diff_msg_sev=4  [ log_engine_diff_test.cpp:42  pid:<TID>]",
-    "<TS>[MLU-OPS][DEBUG][<PID>][Card:<CARD>]: diff_msg_sev=5  [ log_engine_diff_test.cpp:42  pid:<TID>]",
-    "<TS>[MLU-OPS][DEBUG][<PID>][Card:<CARD>]: diff_msg_sev=6  [ log_engine_diff_test.cpp:42  pid:<TID>]",
-    "<TS>[MLU-OPS][DEBUG][<PID>][Card:<CARD>]: diff_msg_sev=7  [ log_engine_diff_test.cpp:42  pid:<TID>]",
+    "<TS>[MLU-OPS][ERROR][<PID>][Card:<CARD>]: diff_msg_sev=0  [ "
+    "log_engine_diff_test.cpp:42  pid:<TID>]",
+    "<TS>[MLU-OPS][WARNING][<PID>][Card:<CARD>]: diff_msg_sev=1  [ "
+    "log_engine_diff_test.cpp:42  pid:<TID>]",
+    "<TS>[MLU-OPS][TRACE][<PID>][Card:<CARD>]: diff_msg_sev=2  [ "
+    "log_engine_diff_test.cpp:42  pid:<TID>]",
+    "<TS>[MLU-OPS][INFO][<PID>][Card:<CARD>]: diff_msg_sev=3  [ "
+    "log_engine_diff_test.cpp:42  pid:<TID>]",
+    "<TS>[MLU-OPS][DEBUG][<PID>][Card:<CARD>]: diff_msg_sev=4  [ "
+    "log_engine_diff_test.cpp:42  pid:<TID>]",
+    "<TS>[MLU-OPS][DEBUG][<PID>][Card:<CARD>]: diff_msg_sev=5  [ "
+    "log_engine_diff_test.cpp:42  pid:<TID>]",
+    "<TS>[MLU-OPS][DEBUG][<PID>][Card:<CARD>]: diff_msg_sev=6  [ "
+    "log_engine_diff_test.cpp:42  pid:<TID>]",
+    "<TS>[MLU-OPS][DEBUG][<PID>][Card:<CARD>]: diff_msg_sev=7  [ "
+    "log_engine_diff_test.cpp:42  pid:<TID>]",
 };
 #endif
 
@@ -123,8 +134,7 @@ TEST(LogEngineGolden, ByteForByteBaseline) {
     const std::string msg = "diff_msg_sev=" + std::to_string(sev);
 
     testing::internal::CaptureStdout();
-    mluop::log::LogMessage(kFile, kLine,
-                           static_cast<mluop::log::Severity>(sev))
+    mluop::log::LogMessage(kFile, kLine, static_cast<mluop::log::Severity>(sev))
             .stream()
         << msg;
     const std::string new_out = testing::internal::GetCapturedStdout();

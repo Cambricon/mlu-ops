@@ -158,7 +158,8 @@ mluOpStatus_t mluOpCheckDependency(bool need_check_min, bool need_check_max,
 mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
   PARAM_CHECK("[mluOpCreate]", handle != NULL);
 
-  if (MLUOP_STATUS_SUCCESS != mluOpCheckDependency(true, false, FAIL_AS_ERROR)) {
+  if (MLUOP_STATUS_SUCCESS !=
+      mluOpCheckDependency(true, false, FAIL_AS_ERROR)) {
     LOG(ERROR)
         << "Check version dependency failed in mluOpCreate function. "
         << "If don't want this check, set env MLUOP_CHECK_DEP_VERSION to 0, "

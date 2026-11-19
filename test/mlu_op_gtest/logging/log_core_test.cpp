@@ -65,8 +65,10 @@ TEST(LogEngineTest, SeverityValues) {
   EXPECT_EQ(static_cast<int>(Severity::kDebug2), 5);
   EXPECT_EQ(static_cast<int>(Severity::kDebug3), 6);
   EXPECT_EQ(static_cast<int>(Severity::kDebug4), 7);
-  // EXPECT_EQ(static_cast<int>(Severity::kFatal), static_cast<int>(Severity::kError));
-  EXPECT_EQ(static_cast<int>(Severity::kVlog), static_cast<int>(Severity::kDebug1));
+  // EXPECT_EQ(static_cast<int>(Severity::kFatal),
+  // static_cast<int>(Severity::kError));
+  EXPECT_EQ(static_cast<int>(Severity::kVlog),
+            static_cast<int>(Severity::kDebug1));
 }
 
 TEST(LogEngineTest, SeverityEnabledFiltering) {
@@ -88,7 +90,8 @@ TEST(LogEngineTest, ParseMaxLogLevelValue) {
   EXPECT_EQ(LogEngine::parseMaxLogLevelValue("5", -1), 5);
   EXPECT_EQ(LogEngine::parseMaxLogLevelValue("6", -1), 6);
   EXPECT_EQ(LogEngine::parseMaxLogLevelValue("7", -1), 7);
-  // 命名映射（大小写不敏感；DEBUG 别名：DEBUG=DEBUG1，DEBUG-n/DEBUG_n 与 DEBUGn 同义）。
+  // 命名映射（大小写不敏感；DEBUG 别名：DEBUG=DEBUG1，DEBUG-n/DEBUG_n 与 DEBUGn
+  // 同义）。
   EXPECT_EQ(LogEngine::parseMaxLogLevelValue("error", -1), 0);
   EXPECT_EQ(LogEngine::parseMaxLogLevelValue("WARNING", -1), 1);
   EXPECT_EQ(LogEngine::parseMaxLogLevelValue("api_trace", -1), 2);
@@ -155,9 +158,8 @@ TEST(LogEngineTest, CallbackExceptionsAreContained) {
     LogMessage(__FILE__, __LINE__, Severity::kError).stream()
         << "stream callback exception probe";
   });
-  EXPECT_NO_THROW(
-      engine.EmitFmt(Severity::kError, __FILE__, __LINE__,
-                     "fmt callback exception probe"));
+  EXPECT_NO_THROW(engine.EmitFmt(Severity::kError, __FILE__, __LINE__,
+                                 "fmt callback exception probe"));
   const std::string error_output = testing::internal::GetCapturedStderr();
   EXPECT_NE(error_output.find("callback failure"), std::string::npos);
 
