@@ -54,7 +54,6 @@ class logger;
 
 BEGIN_LOG_NAMESPACE
 
-
 class FileSink;
 
 // 日志等级：值越小越严重，越大越丰富（0..7）。
@@ -89,7 +88,7 @@ inline std::atomic<int> g_log_engine_alive_flag{kLogEngineAliveMagic};
 
 // callback 重入守卫：callback 所在线程的深度计数。重入（>0）时发射入口跳过
 // callback 再调用，防 callback 内调日志接口递归（FMT 无限递归 / 流式自死锁）。
-inline int& callbackDepth() {
+inline int &callbackDepth() {
   static thread_local int depth = 0;
   return depth;
 }
@@ -97,8 +96,8 @@ inline bool inCallback() { return callbackDepth() > 0; }
 struct CallbackDepthGuard {
   CallbackDepthGuard() { ++callbackDepth(); }
   ~CallbackDepthGuard() { --callbackDepth(); }
-  CallbackDepthGuard(const CallbackDepthGuard&) = delete;
-  CallbackDepthGuard& operator=(const CallbackDepthGuard&) = delete;
+  CallbackDepthGuard(const CallbackDepthGuard &) = delete;
+  CallbackDepthGuard &operator=(const CallbackDepthGuard &) = delete;
 };
 
 inline bool logEngineAlive() {
@@ -106,20 +105,21 @@ inline bool logEngineAlive() {
          kLogEngineAliveMagic;
 }
 
-// 用户回调签名：`severity` 为原始 Severity 数值；`function_name` 暂固定传空指针；
-// `message` 为格式化后的消息正文（body，无 head）。与 C API 的 MluOpLogCallback
-// 布局一致（void(int,const char*,const char*) 函数指针），可安全 reinterpret_cast
+// 用户回调签名：`severity` 为原始 Severity 数值；`function_name`
+// 暂固定传空指针； `message` 为格式化后的消息正文（body，无 head）。与 C API 的
+// MluOpLogCallback 布局一致（void(int,const char*,const char*)
+// 函数指针），可安全 reinterpret_cast
 // 互转。回调内可再调日志接口：重入的日志直接交 sink，不再回调（无死锁/递归）。
-using LogCallback = void (*)(int severity, const char* function_name,
-                             const char* message);
+using LogCallback = void (*)(int severity, const char *function_name,
+                             const char *message);
 
 class LogMessage {
-public:
+ public:
   LogMessage(std::string file, int line, Severity severity);
   ~LogMessage();
   std::stringstream &stream();
 
-private:
+ private:
   std::string file_;
   int line_;
   Severity severity_;
@@ -128,7 +128,7 @@ private:
 
 // 日志引擎单例
 class LogEngine {
-public:
+ public:
   static LogEngine &instance();
 
   LogEngine(const LogEngine &) = delete;
@@ -136,7 +136,7 @@ public:
 
   static inline void initMaxLogLevel() {
     if (LOG_PREDICT_TRUE(g_max_log_level.load(std::memory_order_relaxed) !=
-                           kMaxLogLevelUnset)) {
+                         kMaxLogLevelUnset)) {
       return;
     }
     const char *env_raw_ptr = std::getenv(kEnvMaxLogLevel);
@@ -167,13 +167,13 @@ public:
   void Emit(Severity severity, const std::string &file, int line,
             const std::string &message);
 
-  // 函数式门控日志（LOG_* 系列走这里）：门控后把 fmt+args 直交 spdlog，由 spdlog
-  // 内部 fmt 格式化 body（仅一次），head 由各 sink 的 pattern formatter 装配。
-  // 被过滤时不构造、不格式化、不输出。有回调时，body 格式化一次后回调（传原始
-  // severity）并复用交 spdlog。
+  // 函数式门控日志（LOG_* 系列走这里）：门控后把 fmt+args 直交 spdlog，由
+  // spdlog 内部 fmt 格式化 body（仅一次），head 由各 sink 的 pattern formatter
+  // 装配。 被过滤时不构造、不格式化、不输出。有回调时，body
+  // 格式化一次后回调（传原始 severity）并复用交 spdlog。
   template <typename... Args>
   void EmitFmt(Severity severity, const char *file, int line,
-               fmt::string_view fmt, Args &&... args) {
+               fmt::string_view fmt, Args &&...args) {
     // 引擎已析构（退出期）时不发射，避免访问已销毁单例成员。
     if (LOG_PREDICT_FALSE(!logEngineAlive())) {
       return;
@@ -185,8 +185,8 @@ public:
     const auto lvl = cvtSeverityToSpdlog(severity);
     LogCallback callback = callback_.load(std::memory_order_relaxed);
     if (LOG_PREDICT_FALSE(callback != nullptr)) {
-      // 有回调：body 手动格式化一次，既给回调又给 spdlog（string 版不重格式化）。
-      // fmt::format 包 try/catch 防坏格式串跨 C ABI 逃逸。
+      // 有回调：body 手动格式化一次，既给回调又给 spdlog（string
+      // 版不重格式化）。 fmt::format 包 try/catch 防坏格式串跨 C ABI 逃逸。
       std::string body;
       try {
         body = fmt::format(fmt, args...);
@@ -199,7 +199,7 @@ public:
         try {
           callback(static_cast<int>(severity), /*function_name=*/nullptr,
                    body.c_str());
-        } catch (const std::exception& e) {
+        } catch (const std::exception &e) {
           std::cerr << "[MLU-OPS][ERROR] log callback threw an exception: "
                     << e.what() << '\n';
         } catch (...) {
@@ -207,8 +207,7 @@ public:
               << "[MLU-OPS][ERROR] log callback threw an unknown exception\n";
         }
       }
-      logger_->log(loc, lvl,
-                   spdlog::string_view_t(body.data(), body.size()));
+      logger_->log(loc, lvl, spdlog::string_view_t(body.data(), body.size()));
       return;
     }
     // 无回调：参数以裸左值传递（不 std::forward）
@@ -226,7 +225,7 @@ public:
 
   static int parseMaxLogLevelValue(const std::string &value, int default_para);
 
-private:
+ private:
   LogEngine();
   ~LogEngine();
 
@@ -241,4 +240,4 @@ private:
 
 END_LOG_NAMESPACE
 
-#endif // CORE_LOG_CORE_LOG_ENGINE_H_
+#endif  // CORE_LOG_CORE_LOG_ENGINE_H_

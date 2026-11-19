@@ -7,6 +7,7 @@
 set(SPDLOG_FMT_EXTERNAL_HO ON CACHE BOOL "Use external fmt header-only" FORCE)
 
 # 只构建静态库；关闭示例 / 测试 / 基准 / 安装，避免引入多余目标。
+set(SPDLOG_BUILD_SHARED OFF CACHE BOOL "Build spdlog as a shared library" FORCE)
 set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_EXAMPLE_HO OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)

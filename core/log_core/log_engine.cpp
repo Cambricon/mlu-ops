@@ -105,18 +105,21 @@ class CardFlag final : public spdlog::custom_flag_formatter {
   }
 };
 
-// 自定义 pattern flag %K：模块名（kProjectDisplayName），color_print_ 时加粗黄。
+// 自定义 pattern flag %K：模块名（kProjectDisplayName），color_print_
+// 时加粗黄。
 class ModuleFlag final : public spdlog::custom_flag_formatter {
  public:
   void format(const spdlog::details::log_msg&, const std::tm&,
               spdlog::memory_buf_t& dest) override {
     const char* module = kProjectDisplayName;
     if (LogEngine::instance().colorPrint()) {
-      // memory_buf_t 属 bundled fmt，外层 fmt 写不进去：先在栈 buffer 格式化再拷贝。
+      // memory_buf_t 属 bundled fmt，外层 fmt 写不进去：先在栈 buffer
+      // 格式化再拷贝。
       fmt::memory_buffer tmp;
-      fmt::format_to(std::back_inserter(tmp), "{}",
-                     fmt::styled(module, fmt::emphasis::bold |
-                                              fmt::fg(fmt::terminal_color::yellow)));
+      fmt::format_to(
+          std::back_inserter(tmp), "{}",
+          fmt::styled(module, fmt::emphasis::bold |
+                                  fmt::fg(fmt::terminal_color::yellow)));
       dest.append(tmp.data(), tmp.data() + tmp.size());
     } else {
       dest.append(module, module + strlen(module));
@@ -212,8 +215,7 @@ std::unique_ptr<spdlog::pattern_formatter> makeConsoleFormatter() {
   formatter->add_flag<ModuleFlag>('K');
   formatter->add_flag<LevelFlag>('c');
 #ifdef NDEBUG
-  formatter->set_pattern(
-      "[%Y-%m-%d %H:%M:%S.%f][%K][%c][%P][Card:%k]: %v");
+  formatter->set_pattern("[%Y-%m-%d %H:%M:%S.%f][%K][%c][%P][Card:%k]: %v");
 #else
   formatter->set_pattern(
       "[%Y-%m-%d %H:%M:%S.%f][%K][%c][%P][Card:%k]: %v  [%s:%#  pid:%P]");
@@ -225,7 +227,8 @@ std::unique_ptr<spdlog::pattern_formatter> makeConsoleFormatter() {
 
 // 文件 sink：pattern 为 %v（无 head），写到自己持有的 ofstream。
 // - 自管流与文件名：setLogFile 在锁内关旧开新，总是 trunc 重写。
-// - only_show 映射到 sink level（off/trace）：off 时 logger 分发直接跳过，零落盘
+// - only_show 映射到 sink level（off/trace）：off 时 logger
+// 分发直接跳过，零落盘
 //   开销；disable 关流释放文件句柄。
 // - sink_it_ 在 base_sink::log 的 mutex_ 内执行，与 setLogFile/disable 互斥。
 class FileSink final : public spdlog::sinks::base_sink<std::mutex> {
@@ -295,8 +298,7 @@ LogEngine& LogEngine::instance() {
   return engine;
 }
 
-LogEngine::LogEngine()
-    : color_print_(getBoolEnvVar(kEnvColorPrint, true)) {
+LogEngine::LogEngine() : color_print_(getBoolEnvVar(kEnvColorPrint, true)) {
   const bool only_show = getBoolEnvVar(kEnvOnlyShow, true);
   if (color_print_.load(std::memory_order_relaxed)) {
     color_print_.store(isPrintToScreen(), std::memory_order_relaxed);
@@ -307,16 +309,17 @@ LogEngine::LogEngine()
   auto file_sink = std::make_shared<FileSink>(kLogFileName, !only_show);
   file_sink_ = file_sink;
   logger_ = std::make_shared<spdlog::logger>(
-      kProjectDisplayName,
-      spdlog::sinks_init_list{console_sink, file_sink});
+      kProjectDisplayName, spdlog::sinks_init_list{console_sink, file_sink});
   logger_->set_level(spdlog::level::trace);
 
-  // 逐 sink 设 formatter（logger_->set_formatter 会把同一实例 clone 给所有 sink）。
+  // 逐 sink 设 formatter（logger_->set_formatter 会把同一实例 clone 给所有
+  // sink）。
   console_sink->set_formatter(makeConsoleFormatter());
   file_sink->set_formatter(std::make_unique<spdlog::pattern_formatter>("%v"));
 
   // 构造完成，置存活标志，允许日志发射。
-  g_log_engine_alive_flag.store(kLogEngineAliveMagic, std::memory_order_relaxed);
+  g_log_engine_alive_flag.store(kLogEngineAliveMagic,
+                                std::memory_order_relaxed);
 }
 
 LogEngine::~LogEngine() {
@@ -357,8 +360,9 @@ int LogEngine::parseMaxLogLevelValue(const std::string& value,
                                      int default_para) {
   std::string env_var = value;
   // 转大写后匹配。
-  std::transform(env_var.begin(), env_var.end(), env_var.begin(),
-                 [](unsigned char c) { return static_cast<char>(::toupper(c)); });
+  std::transform(
+      env_var.begin(), env_var.end(), env_var.begin(),
+      [](unsigned char c) { return static_cast<char>(::toupper(c)); });
   if (env_var == "0" || env_var == "ERROR") {
     return 0;
   } else if (env_var == "1" || env_var == "WARNING") {

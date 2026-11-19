@@ -14627,14 +14627,14 @@ mluOpBoxOverlapBev(mluOpHandle_t handle,
  * level is less than or equal to the configured maximum level.
  */
 typedef enum {
-  MLUOP_LOG_LEVEL_ERROR = 0,
+  MLUOP_LOG_LEVEL_ERROR   = 0,
   MLUOP_LOG_LEVEL_WARNING = 1,
   MLUOP_LOG_LEVEL_APICALL = 2,
-  MLUOP_LOG_LEVEL_INFO = 3,
-  MLUOP_LOG_LEVEL_DEBUG1 = 4,
-  MLUOP_LOG_LEVEL_DEBUG2 = 5,
-  MLUOP_LOG_LEVEL_DEBUG3 = 6,
-  MLUOP_LOG_LEVEL_DEBUG4 = 7
+  MLUOP_LOG_LEVEL_INFO    = 3,
+  MLUOP_LOG_LEVEL_DEBUG1  = 4,
+  MLUOP_LOG_LEVEL_DEBUG2  = 5,
+  MLUOP_LOG_LEVEL_DEBUG3  = 6,
+  MLUOP_LOG_LEVEL_DEBUG4  = 7
 } MluOpLogLevel;
 
 /*!
@@ -14644,8 +14644,7 @@ typedef enum {
  * message body without the log header.
  * Exceptions thrown by the callback are caught and reported.
  */
-typedef void (*MluOpLogCallback)(int level, const char *functionName,
-                                 const char *message);
+typedef void (*MluOpLogCallback)(int level, const char *functionName, const char *message);
 
 /*!
  * @brief Sets the maximum log level.
@@ -14658,7 +14657,8 @@ typedef void (*MluOpLogCallback)(int level, const char *functionName,
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS
  */
-mluOpStatus_t MLUOP_WIN_API mluOpSetMaxLogLevel(MluOpLogLevel level);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetMaxLogLevel(MluOpLogLevel level);
 
 /*!
  * @brief Enables or disables colored console output.
@@ -14669,7 +14669,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetMaxLogLevel(MluOpLogLevel level);
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS
  */
-mluOpStatus_t MLUOP_WIN_API mluOpSetLogColorPrint(int color);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetLogColorPrint(int color);
 
 /*!
  * @brief Sets the log file and enables file output.
@@ -14680,7 +14681,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetLogColorPrint(int color);
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
  */
-mluOpStatus_t MLUOP_WIN_API mluOpSetLogFile(const char *file_name);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetLogFile(const char *file_name);
 
 /*!
  * @brief Sets the user-defined log callback.
@@ -14694,7 +14696,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetLogFile(const char *file_name);
  * @par Return
  * - ::MLUOP_STATUS_SUCCESS
  */
-mluOpStatus_t MLUOP_WIN_API mluOpSetLogCallback(MluOpLogCallback callback);
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetLogCallback(MluOpLogCallback callback);
 
 #if defined(__cplusplus)
 }

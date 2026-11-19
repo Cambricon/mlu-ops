@@ -14,7 +14,6 @@
   不参与编译。
 - 外部 fmt 是全库唯一 fmt 实体；`core/logging.h`、`core/log_core/log_engine.*`
   直接 `#include <fmt/...>`。
-- 外部 bench（cpu_bench）等价方式：`-DFMT_HEADER_ONLY` + 两个 include 路径。
 
 ## 版本注意
 

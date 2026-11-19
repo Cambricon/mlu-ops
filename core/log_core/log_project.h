@@ -32,8 +32,12 @@
 
 // 命名空间：log_core 一律用 BEGIN/END_LOG_NAMESPACE 包裹；迁移项目时改这里
 // 即整体切换（log_core 其他文件不得再出现项目限定的 namespace 字样）。
-#define BEGIN_LOG_NAMESPACE namespace mluop { namespace log {
-#define END_LOG_NAMESPACE } }  // namespace mluop::log
+#define BEGIN_LOG_NAMESPACE \
+  namespace mluop {         \
+  namespace log {
+#define END_LOG_NAMESPACE \
+  }                       \
+  }  // namespace mluop::log
 
 BEGIN_LOG_NAMESPACE
 

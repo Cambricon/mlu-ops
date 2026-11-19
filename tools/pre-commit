@@ -6,16 +6,16 @@ mlu_op_h="mlu_op.h"
 kernels_dir='kernels/'
 gtest_json_file="jsoncppDist/"
 
-exclude_list=${gtest_json_file}
+exclude_list="${gtest_json_file}|^third_party/"
 
 if [[ $# -eq 1 ]]; then
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T  --name-only ${1} \
-    | grep -v ${exclude_list})
+    | grep -Ev "${exclude_list}")
 else
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T --cached --name-only \
-    | grep -v ${exclude_list})
+    | grep -Ev "${exclude_list}")
 fi
 
 ret=0
