@@ -22,6 +22,7 @@
  *************************************************************************/
 #include <chrono>  // NOLINT
 #include <sstream>
+#include <fstream>
 #include "cndev.h"
 #include "hardware_monitor.h"
 #include "variable.h"

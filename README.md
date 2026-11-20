@@ -56,7 +56,8 @@ MLU-OPS™提供了以下功能：
 - 寒武纪 MLU 驱动：
   - 运行时依赖驱动 v6.0.3 或更高版本
 - 外部链接库：
-  - libxml2-dev、libprotobuf-dev、protobuf-compiler、llvm-6.0-dev、libfmt-dev>=11.0.2、libeigen3-dev>=3.4
+  - libxml2-dev、libprotobuf-dev、protobuf-compiler、llvm-6.0-dev、libeigen3-dev>=3.4
+  - 日志依赖 fmt 11.2.0 和 spdlog 1.15.3 已内置于 `third_party` 目录，构建时自动使用，无需单独安装
 - Python环境：
   - 依赖Python-3版本（默认版本 python 3.8.0，最低要求 python 3.6.0）
 
@@ -99,19 +100,6 @@ MLU-OPS™提供了以下功能：
   sudo apt-get update
   sudo apt-get install protobuf-compiler libxml2-dev libprotobuf-dev llvm-6.0-dev
   ```
-  - 源码编译fmtlib
-  ```sh
-  git clone --branch 11.0.2 https://github.com/fmtlib/fmt.git --depth=1
-  cd fmt
-  mkdir build && cd build
-  cmake ..
-  make -j32
-  make install
-  # 验证是否安装成功
-  pkg-config --modversion fmt
-  # 若输出 11.0.2，表示fmt安装成功
-  ```
-
 ## 获取关于 BANG 语言基础和开发相关工具介绍的文档
 可查看最新版 [开发者文档](https://developer.cambricon.com/index/document/index/classid/3.html)
 - [BANG C/C++ 编程指南](https://www.cambricon.com/docs/sdk_1.13.0/cntoolkit_3.5.2/programming_guide_1.5.0/index.html)

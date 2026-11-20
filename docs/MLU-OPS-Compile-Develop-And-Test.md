@@ -147,18 +147,24 @@ mlu-ops$ source env_gencase_set.sh on
 mlu-ops$ source env_gencase_set.sh off
 ```
 
+日志配置中，`MLUOP_LOG_MAX_LEVEL` 控制新日志引擎的统一输出阈值；仓库中尚有大量
+`VLOG(n) << ...` 形式的旧式日志语句，因此 `MLUOP_MIN_VLOG_LEVEL` 当前仍然有效，
+用于控制这些语句的 VLOG 级别。只有 `MLUOP_MIN_LOG_LEVEL` 和 `MLUOP_LOG_PRINT`
+已废弃。
+
 |      | 环境变量                             | 功能说明                                                     | 使用方法                                                     | 备注                                                         |
 | ---- | ------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | 1    | MLUOP_BUILD_GTEST                    | 编译MLU-OPS™ 的GTEST                                         | ON时使能，其他情况不使能                                     | 在build脚本中默认设为ON                                      |
 | 2    | MLUOP_GTEST_DUMP_DATA                | 将MLU-OPS™ 的GTEST的输入输出数据打印至文件中                 | ON: 保存 GTEST 测试过程中用到的输入输出数据                  | 不使用此环境变量时需要unset环境变量                          |
 | 3    | MLUOP_GEN_CASE                       | 运行前设置，设置gen_case工具功能等级                         | 0: 关闭 gen_case 模块功能;<br>1: 生成 prototxt，输入输出只保留 shape 等信息（GEN_CASE_DATA_REAL 将无效）;<br>2: 生成 prototxt,并保留输入真实值;<br>3: 不生成 prototxt,只在屏幕上打印输入输出的 shape 等信息;<br> 详情见: [Gencase-User-Guide-zh.md](./Gencase-User-Guide-zh.md) |                                                              |
-| 4    | MLUOP_MIN_LOG_LEVEL                  | 设置外部LOG()宏的最小打印级别，用来让外部用户屏蔽不需要的LOG | 0: enable INFO/WARNING/ERROR/FATAL;<br>1: enable WARNING/ERROR/FATAL;<br>2: enable ERROR/FATAL;<br>3: enable FATAL | 默认为0                                                      |
-| 5    | MLUOP_MIN_VLOG_LEVEL                 | 设置内部VLOG()宏的最小打印级别，用来控制软件内部不同层级调试需要的LOG | 0: enable VLOG(0);<br>1: enable VLOG(0)-VLOG(1);<br>2: enable VLOG(0)-VLOG(2);<br>3: enable VLOG(0)-VLOG(3);<br>4: enable VLOG(0)-VLOG(4);<br>5: enable VLOG(0)-VLOG(5);<br>6: enable VLOG(0)-VLOG(6);<br>7: enable VLOG(0)-VLOG(7); | 默认为0                                                      |
-| 6    | MLUOP_LOG_ONLY_SHOW                  | 是否之展示LOG 而不生成mluop_auto_log 文件                    | =ON时，表示不会生产mluop_auto_log文件;<br>=OFF时，表示会生成mluop_auto_log文件 | 默认为ON                                                     |
-| 7    | MLUOP_LOG_COLOR_PRINT                | 决定打印LOG是否开启颜色字体特效                              | =ON时，表示打印带颜色的字体加粗等特效;<br>=OFF时，表示关闭打印字体特效 | 默认为ON,但重定向到文件时，不会带颜色字体特效                |
-| 8    | MLUOP_BUILD_ASAN_CHECK               | 在编译的时候设置是否打开ASAN内存检查                         | =ON时，表示编译ASAN内存检查;<br>！=ON时，表示不编译ASAN内存检查 | 1.默认不开启 <br>2.该工具仅在Ubuntu上与Debian上有效。无论环境变量如何设置，Centos上都不会编译该工具。<br>3.如果没有检测到内存问题，运行算子case时将不会输出任何内容; 若检测到内存问题，运行算子case时将输出错误内容。 |
-| 9    | MLUOP_SET_JOB_LIMIT_CAPABILITY       | 设置最大JOB限制数量，默认不设置。                            | =1 CN_KERNEL_CLASS_UNION<br>=2 CN_KERNEL_CLASS_UNION2<br>=3 CN_KERNEL_CLASS_UNION4<br>=4 CN_KERNEL_CLASS_UNION8<br>=5 CN_KERNEL_CLASS_UNION16<br>=6 CN_KERNEL_CLASS_BLOCK不使用<br>=7 CN_KERNEL_CLASS_NONE不使用<br> | JOB_LIMIT和CLUSTER_LIMIT需要同时设置来保证合法性             |
-| 10   | MLUOP_SET_CLUSTER_LIMIT_CAPABILITY | 设置最大cluster限制数量，默认不设置                          | =1 1cluster<br>=3 2cluster<br>=7 3cluster<br>=15 4cluster<br>...<br>从右往左，每多一个连续的1表示1个cluster | JOB_LIMIT 和CLUSTER_LIMIT 需要同时设置来保证合法性<br>原理是：<br>1的二进制是0000,0001: 1号cluster可用<br>3的二进制是0000,0011: 1号和2好cluster可用<br>...<br>如果有特殊需求，如只想用2号cluster:设置为2: 0000,0010 |
-| 11   | MLUOP_GTEST_SET_GDRAM                | 作用是在GDRAM前后刷NAN/INF                                   | NAN/INF  在GDRAM前后刷NAN/INF                                | 若不设置则根据日期，偶数天刷NAN，奇数天刷INF                 |
-| 12   | MLUOP_GTEST_UNALIGNED_ADDRESS_RANDOM | 设置在GDRAM上申请的空间地址是非64 bytes对齐的，偏移量为1~63的随机值 | ON/OFF                                                       |                                                              |
-| 13   | MLUOP_GTEST_UNALIGNED_ADDRESS_SET    | 设置在GDRAM上申请的空间地址是64 bytes对齐的                  | = NUM                                                        |                                                              |
+| 4    | MLUOP_LOG_MAX_LEVEL                  | 设置允许输出的最高日志级别；仅当日志级别 `severity <= max_level` 时输出 | 0: ERROR；1: WARNING；2: API_TRACE（`LOG_APICALL`）；3: INFO；4: DEBUG1；5: DEBUG2；6: DEBUG3；7: DEBUG4 | 未设置或非法值时默认为0（ERROR） |
+| 5    | MLUOP_LOG_ONLY_SHOW                  | 是否只在屏幕显示日志而不落盘                              | =ON时只输出到屏幕；=OFF时初始化时同时输出到 `mlu_op_auto_log` | 默认为ON |
+| 6    | MLUOP_LOG_COLOR_PRINT                | 决定打印日志是否开启颜色字体特效                          | =ON时开启颜色；=OFF时关闭颜色 | 默认为ON；重定向到非终端时自动关闭颜色 |
+| 7    | MLUOP_MIN_VLOG_LEVEL                 | 设置旧式 `VLOG(n)` 日志的调试级别阈值；当 `n <= MLUOP_MIN_VLOG_LEVEL` 时允许输出，实际输出还受 `MLUOP_LOG_MAX_LEVEL` 过滤 | 例如：0 不输出 VLOG；2 允许 VLOG(1) 和 VLOG(2) | 默认为0 |
+| 8    | 已废弃：MLUOP_MIN_LOG_LEVEL、MLUOP_LOG_PRINT | 旧日志等级和模块开关变量，不再生效 | 请使用 `MLUOP_LOG_MAX_LEVEL` | — |
+| 9    | MLUOP_BUILD_ASAN_CHECK               | 在编译的时候设置是否打开ASAN内存检查                         | =ON时，表示编译ASAN内存检查;<br>！=ON时，表示不编译ASAN内存检查 | 1.默认不开启 <br>2.该工具仅在Ubuntu上与Debian上有效。无论环境变量如何设置，Centos上都不会编译该工具。<br>3.如果没有检测到内存问题，运行算子case时将不会输出任何内容; 若检测到内存问题，运行算子case时将输出错误内容。 |
+| 10   | MLUOP_SET_JOB_LIMIT_CAPABILITY       | 设置最大JOB限制数量，默认不设置。                            | =1 CN_KERNEL_CLASS_UNION<br>=2 CN_KERNEL_CLASS_UNION2<br>=3 CN_KERNEL_CLASS_UNION4<br>=4 CN_KERNEL_CLASS_UNION8<br>=5 CN_KERNEL_CLASS_UNION16<br>=6 CN_KERNEL_CLASS_BLOCK不使用<br>=7 CN_KERNEL_CLASS_NONE不使用<br> | JOB_LIMIT和CLUSTER_LIMIT需要同时设置来保证合法性             |
+| 11   | MLUOP_SET_CLUSTER_LIMIT_CAPABILITY | 设置最大cluster限制数量，默认不设置                          | =1 1cluster<br>=3 2cluster<br>=7 3cluster<br>=15 4cluster<br>...<br>从右往左，每多一个连续的1表示1个cluster | JOB_LIMIT 和CLUSTER_LIMIT 需要同时设置来保证合法性<br>原理是：<br>1的二进制是0000,0001: 1号cluster可用<br>3的二进制是0000,0011: 1号和2号cluster可用<br>...<br>如果有特殊需求，如只想用2号cluster:设置为2: 0000,0010 |
+| 12   | MLUOP_GTEST_SET_GDRAM                | 作用是在GDRAM前后刷NAN/INF                                   | NAN/INF  在GDRAM前后刷NAN/INF                                | 若不设置则根据日期，偶数天刷NAN，奇数天刷INF                 |
+| 13   | MLUOP_GTEST_UNALIGNED_ADDRESS_RANDOM | 设置在GDRAM上申请的空间地址是非64 bytes对齐的，偏移量为1~63的随机值 | ON/OFF                                                       |                                                              |
+| 14   | MLUOP_GTEST_UNALIGNED_ADDRESS_SET    | 设置在GDRAM上申请的空间地址是64 bytes对齐的                  | = NUM                                                        |                                                              |

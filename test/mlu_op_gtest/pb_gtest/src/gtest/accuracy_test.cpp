@@ -21,6 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 #include "accuracy_test.h"
+#include <fstream>
+#include <string>
+#include <vector>
+
 #include "core/logging.h"
 #include "json.h"
 

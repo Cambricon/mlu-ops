@@ -20,8 +20,10 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
-#include <string>
 #include "perf_test.h"
+#include <fstream>
+#include <string>
+
 #include "core/logging.h"
 #include "json.h"
 

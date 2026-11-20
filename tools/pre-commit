@@ -6,16 +6,16 @@ mlu_op_h="mlu_op.h"
 kernels_dir='kernels/'
 gtest_json_file="jsoncppDist/"
 
-exclude_list=${gtest_json_file}
+exclude_list="${gtest_json_file}|^third_party/"
 
 if [[ $# -eq 1 ]]; then
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T  --name-only ${1} \
-    | grep -v ${exclude_list})
+    | grep -Ev "${exclude_list}")
 else
   filenames=$(git diff --diff-filter=A --diff-filter=C --diff-filter=M \
     --diff-filter=R --diff-filter=T --cached --name-only \
-    | grep -v ${exclude_list})
+    | grep -Ev "${exclude_list}")
 fi
 
 ret=0
@@ -65,7 +65,8 @@ echo "-- [pre-commit] Check __bang_printf or printf or std::cout or \
 assert() in kernel code..."
 for i in ${filenames} ; do
   include_mlu=$(echo $i | grep -E ".mlu|.cpp")
-  check_dir=$(echo $i | grep -E "^core\/|^kernels\/" | grep -v "^core/cnlog.cpp$")
+  check_dir=$(echo $i | grep -E "^core\/|^kernels\/" \
+    | grep -v -E "^core/(cnlog.cpp|log_core/log_engine.cpp)$")
   #not_in_tools=$(echo $i | sed -r "s/^tools.*//")
   if [[ -n "${include_mlu}" ]] && [[ -n "${check_dir}" ]]; then
     printf_log=$(sed -n -e '/\<printf\>/=' -e \

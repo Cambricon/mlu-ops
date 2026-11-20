@@ -14618,6 +14618,87 @@ mluOpBoxOverlapBev(mluOpHandle_t handle,
                    const mluOpTensorDescriptor_t overlaps_desc,
                    void *overlaps);
 
+// Group: Common Interface
+// Subgroup: Logging
+/*!
+ * @brief Describes MLU-OPS log levels.
+ *
+ * Lower values represent more severe messages. A message is emitted when its
+ * level is less than or equal to the configured maximum level.
+ */
+typedef enum {
+  MLUOP_LOG_LEVEL_ERROR   = 0,
+  MLUOP_LOG_LEVEL_WARNING = 1,
+  MLUOP_LOG_LEVEL_APICALL = 2,
+  MLUOP_LOG_LEVEL_INFO    = 3,
+  MLUOP_LOG_LEVEL_DEBUG1  = 4,
+  MLUOP_LOG_LEVEL_DEBUG2  = 5,
+  MLUOP_LOG_LEVEL_DEBUG3  = 6,
+  MLUOP_LOG_LEVEL_DEBUG4  = 7
+} MluOpLogLevel;
+
+/*!
+ * @brief Defines the callback used to receive MLU-OPS log messages.
+ *
+ * \p functionName is currently always NULL. \p message contains the formatted
+ * message body without the log header.
+ * Exceptions thrown by the callback are caught and reported.
+ */
+typedef void (*MluOpLogCallback)(int level, const char *functionName, const char *message);
+
+/*!
+ * @brief Sets the maximum log level.
+ *
+ * Messages with a level less than or equal to \p level are emitted.
+ *
+ * @param[in] level
+ * The maximum log level.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetMaxLogLevel(MluOpLogLevel level);
+
+/*!
+ * @brief Enables or disables colored console output.
+ *
+ * @param[in] color
+ * Nonzero to enable colored output; zero to disable it.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetLogColorPrint(int color);
+
+/*!
+ * @brief Sets the log file and enables file output.
+ *
+ * @param[in] file_name
+ * The log file name. Pass NULL to disable file output. An empty string is invalid.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS, ::MLUOP_STATUS_BAD_PARAM
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetLogFile(const char *file_name);
+
+/*!
+ * @brief Sets the user-defined log callback.
+ *
+ * Pass NULL to disable the callback. Logging APIs may be called from the callback.
+ * Reentrant messages bypass the callback.
+ *
+ * @param[in] callback
+ * The log callback.
+ *
+ * @par Return
+ * - ::MLUOP_STATUS_SUCCESS
+ */
+mluOpStatus_t MLUOP_WIN_API
+mluOpSetLogCallback(MluOpLogCallback callback);
+
 #if defined(__cplusplus)
 }
 #endif

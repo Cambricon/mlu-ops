@@ -207,7 +207,7 @@ void GlobalVar::validate() {
     kernel_trace_policy_ = "cnpapi";
   }
   if (!kernelTracingCtx::is_method_available(kernel_trace_policy_)) {
-    LOG(FATAL) << "INVALID kernel tracing policy: " << kernel_trace_policy_
+    LOG(ERROR) << "INVALID kernel tracing policy: " << kernel_trace_policy_
                << ". Supported: "
                << kernelTracingCtx::getSupportedMethodNames();
     throw std::runtime_error(
