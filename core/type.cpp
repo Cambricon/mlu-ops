@@ -20,6 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
+#include <string>
+
 #include "core/macros.h"
 #include "logging.h"
 #include "core/preprocessor.h"
@@ -55,7 +57,9 @@
 const char* MLUOP_WIN_API mluOpGetErrorString(mluOpStatus_t status) {
   CHECK_GE(status, 0);
 
-  switch (status) { MLUOP_PP_MAP(ENUM_CASE_HANDLE, (MLUOP_STATUS_ENUM_LIST)); }
+  switch (status) {  // NOLINT(whitespace/newline)
+    MLUOP_PP_MAP(ENUM_CASE_HANDLE, (MLUOP_STATUS_ENUM_LIST));
+  }
   return "MLUOP_STATUS_UNKNOWN";
 }
 
@@ -78,12 +82,12 @@ mluOpGetNameOfTensorLayout(mluOpTensorLayout_t layout) {
 
 namespace mluop {
 
-std::string MLUOP_WIN_API MLUOP_ATTRIBUTE_FLATTEN
-getNameOfDataType(mluOpDataType_t dtype) {  // NOLINT
+std::string MLUOP_WIN_API MLUOP_ATTRIBUTE_FLATTEN  // NOLINT(runtime/string)
+getNameOfDataType(mluOpDataType_t dtype) {         // NOLINT
   return mluOpGetNameOfDataType(dtype);
 }
 
-std::string MLUOP_WIN_API MLUOP_ATTRIBUTE_FLATTEN
+std::string MLUOP_WIN_API MLUOP_ATTRIBUTE_FLATTEN    // NOLINT(runtime/string)
 getNameOfTensorLayout(mluOpTensorLayout_t layout) {  // NOLINT
   return mluOpGetNameOfTensorLayout(layout);
 }

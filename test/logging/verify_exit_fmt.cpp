@@ -1,3 +1,25 @@
+/*************************************************************************
+ * Copyright (C) [2026] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the
+ * following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
 // 退出期日志路径 alive-flag 验证：
 // 全局对象 g_early 在 main 前构造（比 LogEngine 单例早），其析构在 LogEngine
 // 析构 之后运行（atexit LIFO）。析构里打 LOG_* 系列日志 —— 此时 LogEngine
@@ -5,8 +27,9 @@
 // 检查应把日志拦下（不调 instance()，不悬垂、不 UB），程序正常退出。
 // 通过标准：exit==0 且 stdout 无 "exit-period"。未修复时 instance()
 // 返回悬垂引用 → UB（可能崩溃 exit!=0，或悬垂调用碰巧跑出 "exit-period"）。
-#include "core/logging.h"
 #include <cstdio>
+
+#include "core/logging.h"
 
 struct EarlyLogger {
   ~EarlyLogger() {

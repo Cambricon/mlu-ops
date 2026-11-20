@@ -24,11 +24,12 @@
 #ifndef CORE_LOGGING_H_
 #define CORE_LOGGING_H_
 
-#include <type_traits>
-#include <utility>
-#include <string>
+#include <algorithm>
 #include <limits>
 #include <sstream>
+#include <string>
+#include <type_traits>
+#include <utility>
 
 #include "core/log_core/fmt_config.h"
 #include "core/log_core/log_engine.h"
@@ -37,7 +38,6 @@
 #include "mlu_op.h"
 #include "type.h"
 #include "preprocessor.h"
-#include <algorithm>
 
 #define LARGE_TENSOR_NUM ((uint64_t)2147483648)
 #define LARGE_TENSOR_SIZE ((uint64_t)2147483648)
@@ -417,20 +417,19 @@ constexpr void assert_va_args_nonempty(Ts...) {
 #define TENSOR_NUM_CHECK(api, num, max_num, reason, ...)                      \
   if (!(num < max_num)) {                                                     \
     LOG(ERROR) << api << " overflow max supported tensor num " << max_num - 1 \
-               << ", "                                                        \
-               << "now tensor's total num is " << num << ". " << reason;      \
+               << ", " << "now tensor's total num is " << num << ". "         \
+               << reason;                                                     \
     return MLUOP_STATUS_NOT_SUPPORTED;                                        \
   }
 
-#define TENSOR_DIM_SIZE_CHECK(api, desc, max_num, reason, ...)        \
-  for (int i = 0; i < desc->getDim(); i++) {                          \
-    if (!(desc->getDimIndex(i) < max_num)) {                          \
-      LOG(ERROR) << api << " overflow max supported tensor dim size " \
-                 << max_num - 1 << ", "                               \
-                 << "now tensor's dims[" << i << "] is "              \
-                 << desc->getDimIndex(i) << ". " << reason;           \
-      return MLUOP_STATUS_NOT_SUPPORTED;                              \
-    }                                                                 \
+#define TENSOR_DIM_SIZE_CHECK(api, desc, max_num, reason, ...)         \
+  for (int i = 0; i < desc->getDim(); i++) {                           \
+    if (!(desc->getDimIndex(i) < max_num)) {                           \
+      LOG(ERROR) << api << " overflow max supported tensor dim size "  \
+                 << max_num - 1 << ", " << "now tensor's dims[" << i   \
+                 << "] is " << desc->getDimIndex(i) << ". " << reason; \
+      return MLUOP_STATUS_NOT_SUPPORTED;                               \
+    }                                                                  \
   }
 
 extern bool mluop_check_large_tensor_dim_size_;
@@ -444,12 +443,12 @@ extern bool mluop_check_large_tensor_dim_size_;
     }                                                                         \
   }
 
-#define TENSOR_SIZE_CHECK(api, size, max_size, reason, ...)                \
-  if (!(size < max_size)) {                                                \
-    LOG(ERROR) << api << " overflow max supported tensor size "            \
-               << max_size - 1 << "B, "                                    \
-               << "now tensor's total size is " << size << "B." << reason; \
-    return MLUOP_STATUS_NOT_SUPPORTED;                                     \
+#define TENSOR_SIZE_CHECK(api, size, max_size, reason, ...)              \
+  if (!(size < max_size)) {                                              \
+    LOG(ERROR) << api << " overflow max supported tensor size "          \
+               << max_size - 1 << "B, " << "now tensor's total size is " \
+               << size << "B." << reason;                                \
+    return MLUOP_STATUS_NOT_SUPPORTED;                                   \
   }
 
 #define STRIDE_TENSOR_CHECK(api, desc, reason)                            \
@@ -685,8 +684,8 @@ inline unsigned long GetReferenceableValue(unsigned long t) {  // NOLINT
 inline long long GetReferenceableValue(long long t) {  // NOLINT
   return t;
 }
-inline unsigned long long GetReferenceableValue(
-    unsigned long long t) {  // NOLINT
+inline unsigned long long GetReferenceableValue(  // NOLINT(runtime/int)
+    unsigned long long t) {                       // NOLINT
   return t;
 }
 

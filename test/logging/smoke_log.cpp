@@ -1,10 +1,34 @@
+/*************************************************************************
+ * Copyright (C) [2026] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the
+ * following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
 // 综合冒烟（默认 only_show=true、只屏幕，不落盘）：屏幕打印、callback（body +
 // 原始 severity）、only_show=true 时 setLogFile 不创建文件。exit 非 0
 // 表示失败。 落盘场景的回归见 verify_logfile（env 控制落盘）。
-#include "core/logging.h"
+#include <sys/stat.h>
 #include <cstdio>
 #include <cstring>
-#include <sys/stat.h>
+#include <string>
+
+#include "core/logging.h"
 
 static bool exists(const char* p) {
   struct stat st;

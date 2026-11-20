@@ -1,3 +1,25 @@
+/*************************************************************************
+ * Copyright (C) [2026] by Cambricon, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the
+ * following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *************************************************************************/
 // 落盘场景回归（MLUOP_LOG_ONLY_SHOW=0）。setLogFile 语义：总是关旧流、trunc
 // 开新流。
 //  1. setLogFile 新文件 → trunc 落盘
@@ -6,13 +28,14 @@
 //  4. disable 关流 → 释放文件句柄（/proc/self/fd 验证）；re-enable → trunc 重开
 //  5. 默认文件 → 同样 trunc（切走再切回，旧内容清空）
 // exit 非 0 表示有失败。
-#include "core/logging.h"
+#include <dirent.h>
+#include <unistd.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include <dirent.h>
-#include <unistd.h>
+
+#include "core/logging.h"
 
 static bool file_contains(const char* p, const char* needle) {
   FILE* f = std::fopen(p, "r");

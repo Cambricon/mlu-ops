@@ -22,20 +22,6 @@
  *************************************************************************/
 #include "core/log_core/log_engine.h"
 
-#include <algorithm>
-#include <atomic>
-#include <cctype>
-#include <chrono>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <mutex>
-#include <sstream>
-#include <string>
-
-#include "core/tool.h"
-
 #if defined(WINDOWS) || defined(WIN32)  // used in windows
 #include <windows.h>
 #include <process.h>
@@ -47,13 +33,27 @@
 #include <unistd.h>
 #endif
 
-#include "core/log_core/fmt_config.h"  // 须先于下方 fmt/spdlog 头（经 log_engine.h 已含，此处显式声明依赖）
 #include <fmt/chrono.h>
 #include <fmt/color.h>
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/pattern_formatter.h>
-#include <iterator>
 #include <spdlog/spdlog.h>
+
+#include <algorithm>
+#include <atomic>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <memory>
+#include <mutex>  // NOLINT(build/c++11)
+#include <sstream>
+#include <string>
+#include <utility>
+
+#include "core/tool.h"
 
 BEGIN_LOG_NAMESPACE
 

@@ -21,10 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *************************************************************************/
 
-#include "mlu_op.h"
-
 #include <string>
 
+#include "mlu_op.h"
 #include "core/log_core/log_engine.h"
 
 extern "C" {

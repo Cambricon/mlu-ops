@@ -36,8 +36,8 @@
   namespace mluop {         \
   namespace log {
 #define END_LOG_NAMESPACE \
-  }                       \
-  }  // namespace mluop::log
+  }  /* namespace log */ \
+  }  // namespace mluop
 
 BEGIN_LOG_NAMESPACE
 

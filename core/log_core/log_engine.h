@@ -28,10 +28,15 @@
 #include <exception>
 #include <iostream>
 #include <memory>
+#include <sstream>
+#include <string>
+#include <utility>
 
 #include "core/log_core/fmt_config.h"
 
-#include <spdlog/logger.h>
+#include <spdlog/logger.h>  // NOLINT(build/include_order)
+
+#include "core/log_core/log_project.h"
 
 // 单一 fmt 来源护栏：经本头的 TU 必须命中 third_party/fmt（FMT_VERSION 与
 // fmt_config.h 的 MLUOP_EXPECTED_FMT_VERSION 一致）。编译命令漏配
@@ -42,11 +47,6 @@ static_assert(FMT_VERSION == MLUOP_EXPECTED_FMT_VERSION,
               "-I third_party/fmt/include is present, or update "
               "MLUOP_EXPECTED_FMT_VERSION in core/log_core/fmt_config.h "
               "after upgrading third_party/fmt");
-#include <sstream>
-#include <string>
-#include <utility>
-
-#include "core/log_core/log_project.h"
 
 namespace spdlog {
 class logger;

@@ -38,7 +38,7 @@
 //  5. 新引擎 head 无条件调用 cnrtGetDevice，故 main 里先做 cnrt 初始化。
 //
 #include <cstdlib>
-#include <regex>
+#include <regex>  // NOLINT(build/c++11)
 #include <string>
 
 #include "cnrt.h"
