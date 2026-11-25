@@ -57,7 +57,7 @@ mluOpLossReduction_t FocalLossSigmoidForwardExecutor::getLossReduction() {
 
 void FocalLossSigmoidForwardExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_focal_loss_sigmoid_forward_param()) {
-    LOG(ERROR) << "Missing has_focal_loss_sigmoid_forward param. ";
+    LOG_ERROR("Missing has_focal_loss_sigmoid_forward param. ");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
@@ -233,7 +233,7 @@ void FocalLossSigmoidForwardExecutor::cpuCompute() {
             gamma, output);
       }; break;
       default:
-        LOG(ERROR) << "[focalLossSigmoidForwardCpu] not Implemented.";
+        LOG_ERROR("[focalLossSigmoidForwardCpu] not Implemented.");
     }
   }
 }

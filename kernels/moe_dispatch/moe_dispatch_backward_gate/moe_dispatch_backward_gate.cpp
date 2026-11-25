@@ -52,9 +52,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMoeDispatchBackwardGateWorkspaceSize(
   PARAM_CHECK("[mluOpMoeDispatchBackwardGate]", handle != NULL);
   // platform check
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << "[mluOpMoeDispatchBackwardGate] Only mlu300 and above "
-                  "devices are supported. "
-               << "Please check the device version!";
+    LOG_ERROR(
+        "[mluOpMoeDispatchBackwardGate] Only mlu300 and above "
+        "devices are supported. Please check the device version!");
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
   PARAM_CHECK("[mluOpMoeDispatchBackwardGate]", input_desc != NULL);
@@ -88,8 +88,10 @@ static mluOpStatus_t moeDispatchBackwardGateParamCheck(
   PARAM_CHECK(op_name, handle != NULL);
   // platform check
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << op_name << "Only mlu300 and above devices are supported. "
-               << "Please check the device version!";
+    LOG_ERROR(
+        "{}Only mlu300 and above devices are supported. "
+        "Please check the device version!",
+        op_name);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 

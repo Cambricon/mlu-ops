@@ -28,10 +28,10 @@ namespace mluoptest {
 
 void AdamWExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_adamw_param()) {
-    LOG(ERROR) << "Lose AdamW param. ";
+    LOG_ERROR("Lose AdamW param. ");
   }
   if (parser_->getInputNum() != 5) {
-    LOG(ERROR) << "AdamW input number is wrong. ";
+    LOG_ERROR("AdamW input number is wrong. ");
   }
   // set flag
   flag_input_reuse_ = true;
@@ -73,15 +73,14 @@ void AdamWExecutor::compute() {
                                     &fp32_scale, sizeof(fp32_scale)));
   MLUOP_CHECK(mluOpSetAdamWDescAttr(adamw_desc, MLUOP_ADAMW_USE_NESTEROV,
                                     &use_nesterov, sizeof(use_nesterov)));
-  MLUOP_CHECK(
-      mluOpSetAdamWDescAttr(adamw_desc, MLUOP_ADAMW_NEED_REMOVE_NAN,
-                            &need_remove_nan, sizeof(need_remove_nan)));
+  MLUOP_CHECK(mluOpSetAdamWDescAttr(adamw_desc, MLUOP_ADAMW_NEED_REMOVE_NAN,
+                                    &need_remove_nan, sizeof(need_remove_nan)));
   interface_timer_.start();
   MLUOP_CHECK(mluOpAdamW(handle_, adamw_desc, desc_param, dev_param,
-                          desc_paramh, dev_paramh, desc_momentum, dev_momentum,
-                          desc_velocity, dev_velocity, desc_grad, dev_grad,
-                          fp32_lr, fp32_beta1, fp32_beta2, fp32_bias1,
-                          fp32_bias2, fp32_epsilon));
+                         desc_paramh, dev_paramh, desc_momentum, dev_momentum,
+                         desc_velocity, dev_velocity, desc_grad, dev_grad,
+                         fp32_lr, fp32_beta1, fp32_beta2, fp32_bias1,
+                         fp32_bias2, fp32_epsilon));
   interface_timer_.stop();
   MLUOP_CHECK(mluOpDestroyAdamWDescriptor(adamw_desc));
 }
@@ -105,8 +104,7 @@ void AdamWExecutor::cpuCompute() {
   float fp32_weight_decay =
       parser_->getProtoNode()->adamw_param().weight_decay();
   float fp32_scale = parser_->getProtoNode()->adamw_param().scale();
-  float use_nesterov =
-      parser_->getProtoNode()->adamw_param().use_nesterov();
+  float use_nesterov = parser_->getProtoNode()->adamw_param().use_nesterov();
   bool need_remove_nan =
       parser_->getProtoNode()->adamw_param().need_remove_nan();
 
@@ -167,13 +165,12 @@ void AdamWExecutor::cpuCompute() {
     }
 
     // remove nan
-    if (need_remove_nan &&
-        ((std::isnan(cpu_tensor_momentum_output[i])
-          || std::isinf(cpu_tensor_momentum_output[i]))
-         && (std::isnan(cpu_tensor_velocity_output[i])
-             || std::isinf(cpu_tensor_velocity_output[i]))
-         && (std::isnan(cpu_tensor_param_output[i])
-             || std::isinf(cpu_tensor_param_output[i])))) {
+    if (need_remove_nan && ((std::isnan(cpu_tensor_momentum_output[i]) ||
+                             std::isinf(cpu_tensor_momentum_output[i])) &&
+                            (std::isnan(cpu_tensor_velocity_output[i]) ||
+                             std::isinf(cpu_tensor_velocity_output[i])) &&
+                            (std::isnan(cpu_tensor_param_output[i]) ||
+                             std::isinf(cpu_tensor_param_output[i])))) {
       cpu_tensor_momentum_output[i] = cpu_tensor_momentum[i];
       cpu_tensor_velocity_output[i] = cpu_tensor_velocity[i];
       cpu_tensor_param_output[i] = cpu_tensor_param[i];
@@ -185,8 +182,7 @@ void AdamWExecutor::cpuCompute() {
   if (need_remove_nan) {
     cpu_tensor_paramh_output[0] = cpu_tensor_paramh[0] + 1;
     if (std::isinf(cpu_tensor_paramh_output[0])) {
-      cpu_tensor_paramh_output[0] =
-          std::numeric_limits<float>::max();
+      cpu_tensor_paramh_output[0] = std::numeric_limits<float>::max();
     }
   }
 }

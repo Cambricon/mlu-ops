@@ -33,7 +33,7 @@ std::set<Evaluator::Formula> CarafeForwardExecutor::getCriterionsUse() const {
 
 void CarafeForwardExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_carafe_param()) {
-    LOG(ERROR) << "Missing carafe param. ";
+    LOG_ERROR("Missing carafe param. ");
   }
 }
 
@@ -158,9 +158,9 @@ void CarafeForwardExecutor::cpuCompute() {
         host_output[index1_output] +=
             host_input[index1_input] * host_mask[index1_mask];
         theory_ops_ += 2;  // one is multiply, the other is addition
-      }                    // kernel_width
-    }                      // kernel_height
-  }                        // each output element
+      }  // kernel_width
+    }  // kernel_height
+  }  // each output element
 }
 
 int64_t CarafeForwardExecutor::getTheoryOps() {

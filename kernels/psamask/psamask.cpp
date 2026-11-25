@@ -140,9 +140,10 @@ mluOpStatus_t findLimit(mluOpHandle_t handle, const int shape_core_n,
         limit_h_seg = 1;
         limit_n_seg = 1;
       } else {
-        LOG(ERROR) << api
-                   << " Check failed: Psamask mode: the size of input channel "
-                      "is too large.";
+        LOG_ERROR(
+            "{} Check failed: Psamask mode: the size of input channel "
+            "is too large.",
+            api);
         return MLUOP_STATUS_NOT_SUPPORTED;
       }
     }
@@ -168,39 +169,39 @@ mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
   getNHWC(output_desc, &y_n, &y_h, &y_w, &y_c);
   if (input_desc->getLayout() != MLUOP_LAYOUT_NHWC ||
       output_desc->getLayout() != MLUOP_LAYOUT_NHWC) {
-    LOG(ERROR) << api
-               << " Check failed: Only support MLUOP_LAYOUT_NHWC input and "
-                  "output, but now input is "
-               << mluOpGetNameOfTensorLayout(input_desc->getLayout())
-               << ", and output is "
-               << mluOpGetNameOfTensorLayout(output_desc->getLayout()) << ".";
+    LOG_ERROR(
+        "{} Check failed: Only support MLUOP_LAYOUT_NHWC input and "
+        "output, but now input is {}, and output is {}.",
+        api, mluOpGetNameOfTensorLayout(input_desc->getLayout()),
+        mluOpGetNameOfTensorLayout(output_desc->getLayout()));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_desc->getDtype() != output_desc->getDtype() ||
       input_desc->getDtype() != MLUOP_DTYPE_FLOAT) {
-    LOG(ERROR)
-        << api
-        << " Check failed: The data type of input and output should be float.";
+    LOG_ERROR(
+        "{} Check failed: The data type of input and output should be float.",
+        api);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (x_n != y_n || x_h != y_h || x_w != y_w) {
-    LOG(ERROR) << api
-               << " Check failed: The size of input and output should be the "
-                  "same, except channel.";
+    LOG_ERROR(
+        "{} Check failed: The size of input and output should be the "
+        "same, except channel.",
+        api);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (h_mask * w_mask != x_c) {
-    LOG(ERROR) << api
-               << " Check failed: The size of input channel is wrong, it needs "
-                  "to be the "
-                  "same as the h_mask * w_mask.";
+    LOG_ERROR(
+        "{} Check failed: The size of input channel is wrong, it needs "
+        "to be the same as the h_mask * w_mask.",
+        api);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (y_h * y_w != y_c) {
-    LOG(ERROR) << api
-               << " Check failed: The size of output channel is wrong, it "
-                  "needs to be the "
-                  "same as the h_feature * w_feature.";
+    LOG_ERROR(
+        "{} Check failed: The size of output channel is wrong, it "
+        "needs to be the same as the h_feature * w_feature.",
+        api);
     return MLUOP_STATUS_BAD_PARAM;
   }
   // check stride
@@ -210,8 +211,10 @@ mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
   // check large tensor
   if ((mluOpGetTensorElementNum(input_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(output_desc) >= LARGE_TENSOR_NUM)) {
-    LOG(ERROR) << api << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    LOG_ERROR(
+        "{} Overflow max tensor num. Currently, MLU-OPS supports "
+        "tensor num smaller than 2^31.",
+        api);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 

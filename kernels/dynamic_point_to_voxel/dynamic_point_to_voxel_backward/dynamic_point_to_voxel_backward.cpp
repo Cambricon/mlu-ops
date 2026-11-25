@@ -51,9 +51,10 @@ static mluOpStatus_t DynamicPointToVoxelBackwardParamCheck(
   PARAM_CHECK(interface_name, handle != NULL);
   // platform check
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << interface_name
-               << "Only mlu300 and above devices are supported. "
-               << "Please check the device version!";
+    LOG_ERROR(
+        "{}Only mlu300 and above devices are supported. "
+        "Please check the device version!",
+        interface_name);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
   // check desc
@@ -127,8 +128,8 @@ static mluOpStatus_t DynamicPointToVoxelBackwardParamCheck(
 
   // param check
   if (reduce_type != MLUOP_REDUCE_DMAX) {
-    LOG(ERROR) << interface_name
-               << " only supports max reduce in current version. ";
+    LOG_ERROR("{} only supports max reduce in current version. ",
+              interface_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -150,15 +151,12 @@ static mluOpStatus_t DynamicPointToVoxelBackwardParamCheck(
           idx_dtype_bytes >
       handle->nram_size) {
     // float + int
-    LOG(ERROR)
-        << interface_name
-        << " The feats dtype is float, point2voxel_map dtype is int. The feats "
-           "shape is ["
-        << N << ", " << C << "]"
-        << ", should meet constraint : "
-           "5*feats_desc->getDimIndex(0)+20*feats_desc->getDimIndex(1)+sizeof("
-           "int) <= "
-        << handle->nram_size;
+    LOG_ERROR(
+        "{} The feats dtype is float, point2voxel_map dtype is int. The "
+        "feats shape is [{}, {}], should meet constraint : "
+        "5*feats_desc->getDimIndex(0)+20*feats_desc->getDimIndex(1)+sizeof("
+        "int) <= {}",
+        interface_name, N, C, handle->nram_size);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -210,9 +208,9 @@ static void policyFunc(const mluOpHandle_t handle, cnrtDim3_t *k_dim,
       k_dim->x = core_num * 16;
       *k_type = cnrtFuncTypeUnion16;
     } else {
-      LOG(ERROR)
-          << "[mluOpDynamicPointToVoxelBackward]: failed to choose kernel "
-             "to launch";
+      LOG_ERROR(
+          "[mluOpDynamicPointToVoxelBackward]: failed to choose "
+          "kernel to launch");
       return;
     }
   }
@@ -367,9 +365,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDynamicPointToVoxelBackwardWorkspaceSize(
       "[mluOpGetDynamicPointToVoxelBackwardWorkspaceSize]";
   PARAM_CHECK(interface_name, handle != NULL);
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << interface_name
-               << "Only mlu300 and above devices are supported. "
-               << "Please check the device version!";
+    LOG_ERROR(
+        "{}Only mlu300 and above devices are supported. "
+        "Please check the device version!",
+        interface_name);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 

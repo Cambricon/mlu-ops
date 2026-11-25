@@ -28,8 +28,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignBackward(
     const void *grads, const mluOpTensorDescriptor_t boxes_desc,
     const void *boxes, const mluOpTensorDescriptor_t grads_image_desc,
     void *grads_image) {
-  LOG(ERROR) << "[mluOpRoiAlignBackward] This API is deprecated. Use "
-             << "mluOpRoiAlignBackward_v2 instead.";
+  LOG_ERROR(
+      "[mluOpRoiAlignBackward] This API is deprecated. Use "
+      "mluOpRoiAlignBackward_v2 instead.");
   return MLUOP_STATUS_NOT_SUPPORTED;
 }
 

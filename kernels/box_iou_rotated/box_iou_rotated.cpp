@@ -100,9 +100,10 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
 
   // param check
   if (mode != 0 && mode != 1) {
-    LOG(ERROR)
-        << "[mluOpBoxIouRotated]: mode should set to 0(IOU) or 1(IOF), but "
-        << mode << " found.";
+    LOG_ERROR(
+        "[mluOpBoxIouRotated]: mode should set to 0(IOU) or 1(IOF), "
+        "but {} found.",
+        mode);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -111,71 +112,74 @@ mluOpBoxIouRotated(mluOpHandle_t handle, const int mode, const bool aligned,
   PARAM_CHECK_EQ("[mluOpBoxIouRotated]", box2_desc->getDim(), 2);
   if (box1_desc->getDimIndex(box1_desc->getDim() - 1) != SINGLE_BOX_DIM &&
       box1_desc->getDimIndex(0) != 0) {
-    LOG(ERROR)
-        << "[mluOpBoxIouRotated] Check failed: The Boxes' last dimenstion "
-           "should be 5 or "
-        << "the first dimension should be 0. But now box1's last dimension is "
-        << box1_desc->getDimIndex(box1_desc->getDim() - 1)
-        << ", box1's first dimension is " << box1_desc->getDimIndex(0) << ".";
+    LOG_ERROR(
+        "[mluOpBoxIouRotated] Check failed: The Boxes' last dimenstion "
+        "should be 5 or the first dimension should be 0. But now box1's "
+        "last dimension is {}, box1's first dimension is {}.",
+        box1_desc->getDimIndex(box1_desc->getDim() - 1),
+        box1_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (box2_desc->getDimIndex(box2_desc->getDim() - 1) != SINGLE_BOX_DIM &&
       box2_desc->getDimIndex(0) != 0) {
-    LOG(ERROR)
-        << "[mluOpBoxIouRotated] Check failed: The Boxes' last dimenstion "
-           "should be 5 or "
-        << "the first dimension should be 0. But now box2's last dimension is "
-        << box2_desc->getDimIndex(box2_desc->getDim() - 1)
-        << ", box2's first dimension is " << box2_desc->getDimIndex(0) << ".";
+    LOG_ERROR(
+        "[mluOpBoxIouRotated] Check failed: The Boxes' last dimenstion "
+        "should be 5 or the first dimension should be 0. But now box2's "
+        "last dimension is {}, box2's first dimension is {}.",
+        box2_desc->getDimIndex(box2_desc->getDim() - 1),
+        box2_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (ious_desc->getDimIndex(0) != box1_desc->getDimIndex(0)) {
-    LOG(ERROR)
-        << "[mluOpBoxIouRotated] Check failed: Whether it is aligned or not,"
-        << "ious_desc->getDimIndex(0) should equal to "
-           "box1_desc->getDimIndex(0). But now "
-        << "ious_desc->getDimIndex(0) is " << ious_desc->getDimIndex(0)
-        << ", box1_desc->getDimIndex(0) is " << box1_desc->getDimIndex(0)
-        << ".";
+    LOG_ERROR(
+        "[mluOpBoxIouRotated] Check failed: Whether it is aligned or "
+        "not,ious_desc->getDimIndex(0) should equal to "
+        "box1_desc->getDimIndex(0). But now "
+        "ious_desc->getDimIndex(0) is {}, "
+        "box1_desc->getDimIndex(0) is {}.",
+        ious_desc->getDimIndex(0), box1_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (aligned) {
     if (ious_desc->getDim() != 1) {
-      LOG(ERROR) << "[mluOpBoxIouRotated] Check failed: If it is aligned mode, "
-                 << "ious_desc->getDim() should equal to 1. But now is "
-                 << ious_desc->getDim() << ".";
+      LOG_ERROR(
+          "[mluOpBoxIouRotated] Check failed: If it is aligned mode, "
+          "ious_desc->getDim() should equal to 1. But now is {}.",
+          ious_desc->getDim());
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (box1_desc->getDimIndex(0) != box2_desc->getDimIndex(0)) {
-      LOG(ERROR) << "[mluOpBoxIouRotated] Check failed: If it is aligned mode, "
-                 << "box1_desc->getDimIndex(0) should equal to "
-                    "box2_desc->getDimIndex(0). But now "
-                 << "box1_desc->getDimIndex(0) is " << box1_desc->getDimIndex(0)
-                 << ", box2_desc->getDimIndex(0) is "
-                 << box2_desc->getDimIndex(0) << ".";
+      LOG_ERROR(
+          "[mluOpBoxIouRotated] Check failed: If it is aligned mode, "
+          "box1_desc->getDimIndex(0) should equal to "
+          "box2_desc->getDimIndex(0). But now "
+          "box1_desc->getDimIndex(0) is {}, "
+          "box2_desc->getDimIndex(0) is {}.",
+          box1_desc->getDimIndex(0), box2_desc->getDimIndex(0));
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (handle->arch < 592 && box1_desc->getDimIndex(0) > MAX_BOX_NUM) {
-      LOG(ERROR)
-          << "[mluOpBoxIouRotated] Check failed: If it is aligned mode, "
-          << "on MLU300 box1_desc->getDimIndex(0) should less than or equal to "
-          << "10,000,000 . But now is " << box1_desc->getDimIndex(0) << ".";
+      LOG_ERROR(
+          "[mluOpBoxIouRotated] Check failed: If it is aligned mode, "
+          "on MLU300 box1_desc->getDimIndex(0) should less than or "
+          "equal to 10,000,000 . But now is {}.",
+          box1_desc->getDimIndex(0));
       return MLUOP_STATUS_NOT_SUPPORTED;
     }
   } else {
     if (ious_desc->getDim() != 2) {
-      LOG(ERROR)
-          << "[mluOpBoxIouRotated] Check failed: If it is non-aligned mode, "
-          << "ious_desc->getDim() should equal to 2. But now is "
-          << ious_desc->getDim() << ".";
+      LOG_ERROR(
+          "[mluOpBoxIouRotated] Check failed: If it is non-aligned "
+          "mode, ious_desc->getDim() should equal to 2. But now is {}.",
+          ious_desc->getDim());
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (ious_desc->getDimIndex(1) != box2_desc->getDimIndex(0)) {
-      LOG(ERROR)
-          << "[mluOpBoxIouRotated] Check failed: If it is non-aligned mode, "
-          << "ious_desc's last dim should equal to box2_desc's first dim "
-          << box2_desc->getDimIndex(0) << ", But now ious_desc's last dim is "
-          << ious_desc->getDimIndex(1) << ".";
+      LOG_ERROR(
+          "[mluOpBoxIouRotated] Check failed: If it is non-aligned "
+          "mode, ious_desc's last dim should equal to box2_desc's "
+          "first dim {}, But now ious_desc's last dim is {}.",
+          box2_desc->getDimIndex(0), ious_desc->getDimIndex(1));
       return MLUOP_STATUS_BAD_PARAM;
     }
   }

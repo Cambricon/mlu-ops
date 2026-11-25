@@ -26,7 +26,7 @@ namespace mluoptest {
 
 void MoeDispatchForwardExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_moe_dispatch_forward_param()) {
-    LOG(ERROR) << "Lose moe_dispatch_forward_param.";
+    LOG_ERROR("Lose moe_dispatch_forward_param.");
   }
   GTEST_CHECK(parser_->inputs().size() == 5,
               "[MoeDispatchForwardExecutor] tensor input number is wrong.");

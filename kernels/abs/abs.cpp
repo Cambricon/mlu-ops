@@ -58,7 +58,7 @@ static mluOpStatus_t mluOpAbsParamCheck(mluOpHandle_t handle,
                                        MLUOP_DTYPE_FLOAT, MLUOP_DTYPE_INT32,
                                        MLUOP_DTYPE_COMPLEX_FLOAT};
     if (!isAbsSupportType(x_desc->getDtype(), support_type, 5)) {
-      LOG(ERROR) << op_name << ":x_desc's data type is not supported.";
+      LOG_ERROR("{}:x_desc's data type is not supported.", op_name);
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {
@@ -66,7 +66,7 @@ static mluOpStatus_t mluOpAbsParamCheck(mluOpHandle_t handle,
                                        MLUOP_DTYPE_INT32,
                                        MLUOP_DTYPE_COMPLEX_FLOAT};
     if (!isAbsSupportType(x_desc->getDtype(), support_type, 4)) {
-      LOG(ERROR) << op_name << ":x_desc's data type is not supported.";
+      LOG_ERROR("{}:x_desc's data type is not supported.", op_name);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -75,10 +75,10 @@ static mluOpStatus_t mluOpAbsParamCheck(mluOpHandle_t handle,
   PARAM_CHECK_GT(op_name, y_desc->getDim(), 0);
   for (int i = 0; i < x_desc->getDim(); i++) {
     if (x_desc->getDimIndex(i) != y_desc->getDimIndex(i)) {
-      LOG(ERROR) << op_name << ":The shape of x should be equal to y"
-                 << ". But now x_desc's shape[" << i << "] is "
-                 << x_desc->getDimIndex(i) << ", y_desc's shape[" << i
-                 << "] is " << y_desc->getDimIndex(i) << ".";
+      LOG_ERROR(
+          "{}:The shape of x should be equal to y. But now x_desc's "
+          "shape[{}] is {}, y_desc's shape[{}] is {}.",
+          op_name, i, x_desc->getDimIndex(i), i, y_desc->getDimIndex(i));
       return MLUOP_STATUS_BAD_PARAM;
     }
   }

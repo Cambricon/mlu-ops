@@ -56,80 +56,77 @@ static mluOpStatus_t checkFocalLossSigmoidForwardValidation(
 
   // check shape
   if (input_desc->getDim() != 2) {
-    LOG(ERROR) << interface_name << "Dimension num of input should be 2. "
-               << "But now it is " << input_desc->getDim() << ".";
+    LOG_ERROR("{}Dimension num of input should be 2. But now it is {}.",
+              interface_name, input_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (target_desc->getDim() != 1) {
-    LOG(ERROR) << interface_name << "Dimension num of target should be 1. "
-               << "But now it is " << target_desc->getDim() << ".";
+    LOG_ERROR("{}Dimension num of target should be 1. But now it is {}.",
+              interface_name, target_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (target_desc->getDimIndex(0) != input_desc->getDimIndex(0)) {
-    LOG(ERROR) << interface_name << "Element num of target should be "
-               << input_desc->getDimIndex(0) << ", But now it is "
-               << target_desc->getDimIndex(0) << ".";
+    LOG_ERROR("{}Element num of target should be {}, But now it is {}.",
+              interface_name, input_desc->getDimIndex(0),
+              target_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (output_desc->getDim() != 2) {
-    LOG(ERROR) << interface_name << "Dimension num of output should be 2. "
-               << "But now it is " << output_desc->getDim() << ".";
+    LOG_ERROR("{}Dimension num of output should be 2. But now it is {}.",
+              interface_name, output_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (output_desc->getDimIndex(0) != input_desc->getDimIndex(0) ||
       output_desc->getDimIndex(1) != input_desc->getDimIndex(1)) {
-    LOG(ERROR) << interface_name << "Shape of output and input must be euqal. "
-               << "But now output.shape is [" << output_desc->getDimIndex(0)
-               << ", " << output_desc->getDimIndex(1) << "], "
-               << "and input.shape is [" << input_desc->getDimIndex(0) << ", "
-               << input_desc->getDimIndex(1) << "]. ";
+    LOG_ERROR(
+        "{}Shape of output and input must be euqal. "
+        "But now output.shape is [{}, {}], "
+        "and input.shape is [{}, {}]. ",
+        interface_name, output_desc->getDimIndex(0),
+        output_desc->getDimIndex(1), input_desc->getDimIndex(0),
+        input_desc->getDimIndex(1));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // check dtype
   if (input_dtype != MLUOP_DTYPE_FLOAT && input_dtype != MLUOP_DTYPE_HALF) {
-    LOG(ERROR) << interface_name
-               << "Data type of input should be HALF or FLOAT. "
-               << "But now it is " << mluOpGetNameOfDataType(input_dtype)
-               << ".";
+    LOG_ERROR("{}Data type of input should be HALF or FLOAT. But now it is {}.",
+              interface_name, mluOpGetNameOfDataType(input_dtype));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (target_dtype != MLUOP_DTYPE_INT32) {
-    LOG(ERROR) << interface_name << "Data type of target should be INT32. "
-               << "But now it is " << mluOpGetNameOfDataType(target_dtype)
-               << ".";
+    LOG_ERROR("{}Data type of target should be INT32. But now it is {}.",
+              interface_name, mluOpGetNameOfDataType(target_dtype));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (output_dtype != input_dtype) {
-    LOG(ERROR) << interface_name
-               << "Both data types of input and output should be equal. "
-               << "But now input_dtype is "
-               << mluOpGetNameOfDataType(input_dtype) << ", "
-               << "output_dtype is " << mluOpGetNameOfDataType(output_dtype)
-               << ".";
+    LOG_ERROR(
+        "{}Both data types of input and output should be equal. "
+        "But now input_dtype is {}, output_dtype is {}.",
+        interface_name, mluOpGetNameOfDataType(input_dtype),
+        mluOpGetNameOfDataType(output_dtype));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // check weight
   if (weight_desc != NULL && mluOpGetTensorElementNum(weight_desc) != 0) {
     if (weight_desc->getDtype() != input_dtype) {
-      LOG(ERROR) << interface_name
-                 << "Both data types of weight and input should be equal. "
-                 << "But now input_dtype is "
-                 << mluOpGetNameOfDataType(input_dtype) << ", "
-                 << "weight_dtype is "
-                 << mluOpGetNameOfDataType(weight_desc->getDtype()) << ".";
+      LOG_ERROR(
+          "{}Both data types of weight and input should be equal. "
+          "But now input_dtype is {}, weight_dtype is {}.",
+          interface_name, mluOpGetNameOfDataType(input_dtype),
+          mluOpGetNameOfDataType(weight_desc->getDtype()));
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (weight_desc->getDim() != 1) {
-      LOG(ERROR) << interface_name << "Dimension num of weight should be 1. "
-                 << "But now it is " << weight_desc->getDim() << ".";
+      LOG_ERROR("{}Dimension num of weight should be 1. But now it is {}.",
+                interface_name, weight_desc->getDim());
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (weight_desc->getDimIndex(0) != input_desc->getDimIndex(1)) {
-      LOG(ERROR) << interface_name << "Element num of weight should be "
-                 << input_desc->getDimIndex(1) << ", But now it is "
-                 << weight_desc->getDimIndex(0) << ".";
+      LOG_ERROR("{}Element num of weight should be {}, But now it is {}.",
+                interface_name, input_desc->getDimIndex(1),
+                weight_desc->getDimIndex(0));
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {
@@ -160,19 +157,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidForward(
   // params check
   if (prefer ==
       mluOpComputationPreference_t::MLUOP_COMPUTATION_ULTRAHIGH_PRECISION) {
-    LOG(ERROR)
-        << interface_name
-        << "does not support MLUOP_COMPUTATION_ULTRAHIGH_PRECISION currently.";
+    LOG_ERROR(
+        "{}does not support MLUOP_COMPUTATION_ULTRAHIGH_PRECISION "
+        "currently.",
+        interface_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (reduction != mluOpLossReduction_t::MLUOP_LOSS_REDUCTION_NONE) {
-    LOG(ERROR) << interface_name << "only support REDUCTION_NONE currently.";
+    LOG_ERROR("{}only support REDUCTION_NONE currently.", interface_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (gamma < 0) {
-    LOG(ERROR) << interface_name
-               << "gamma should be greater than or equal to 0."
-               << "But now gamma is " << gamma << ".";
+    LOG_ERROR(
+        "{}gamma should be greater than or equal to 0."
+        "But now gamma is {}.",
+        interface_name, gamma);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (MLUOP_STATUS_SUCCESS !=
@@ -329,37 +328,39 @@ static mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
   // check shape
   PARAM_CHECK(interface_name, input_desc->getDim() == output_desc->getDim());
   if (input_desc->getDim() != 2) {
-    LOG(ERROR) << interface_name << "input_desc->getDim() shoule be 2"
-               << "but now input_desc->getDim() is " << input_desc->getDim()
-               << ".";
+    LOG_ERROR(
+        "{}input_desc->getDim() shoule be 2"
+        "but now input_desc->getDim() is {}.",
+        interface_name, input_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (target_desc->getDim() != 1) {
-    LOG(ERROR) << interface_name << "target_desc->getDim() shoule be 1"
-               << "but now target_desc->getDim() is " << target_desc->getDim()
-               << ".";
+    LOG_ERROR(
+        "{}target_desc->getDim() shoule be 1"
+        "but now target_desc->getDim() is {}.",
+        interface_name, target_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   for (int i = 0; i < input_desc->getDim(); ++i) {
     if (input_desc->getDimIndex(i) != output_desc->getDimIndex(i)) {
-      LOG(ERROR) << interface_name << "input_desc->dims[" << i
-                 << "] should be equal to "
-                 << "output_desc->getDimIndex(" << i << "). But now "
-                 << "input_desc->getDimIndex(" << i << ") is "
-                 << input_desc->getDimIndex(i) << ", "
-                 << "output_desc->getDimIndex(" << i << ") is "
-                 << output_desc->getDimIndex(i) << ".";
+      LOG_ERROR(
+          "{}input_desc->dims[{}] should be equal to "
+          "output_desc->getDimIndex({}). But now "
+          "input_desc->getDimIndex({}) is {}, "
+          "output_desc->getDimIndex({}) is {}.",
+          interface_name, i, i, i, input_desc->getDimIndex(i), i,
+          output_desc->getDimIndex(i));
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   if (input_desc->getDimIndex(0) != target_desc->getDimIndex(0)) {
-    LOG(ERROR) << interface_name
-               << "input_desc->getDimIndex(0) should be equal to "
-               << "target_desc->getDim()[0]. But now "
-               << "input_desc->getDimIndex(0) is " << input_desc->getDimIndex(0)
-               << ", "
-               << "target_desc->getDimIndex(0) is "
-               << target_desc->getDimIndex(0) << ".";
+    LOG_ERROR(
+        "{}input_desc->getDimIndex(0) should be equal to "
+        "target_desc->getDim()[0]. But now "
+        "input_desc->getDimIndex(0) is {}, "
+        "target_desc->getDimIndex(0) is {}.",
+        interface_name, input_desc->getDimIndex(0),
+        target_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -381,43 +382,45 @@ static mluOpStatus_t checkParams(const mluOpTensorDescriptor_t input_desc,
   PARAM_CHECK(interface_name,
               input_desc->getDtype() == output_desc->getDtype());
   if (input_dtype != MLUOP_DTYPE_FLOAT && input_dtype != MLUOP_DTYPE_HALF) {
-    LOG(ERROR) << interface_name << "Types of input should be HALF or FLOAT. "
-               << "But now input_dtype is "
-               << mluOpGetNameOfDataType(input_dtype) << ".";
+    LOG_ERROR(
+        "{}Types of input should be HALF or FLOAT. "
+        "But now input_dtype is {}.",
+        interface_name, mluOpGetNameOfDataType(input_dtype));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (target_desc->getDtype() != MLUOP_DTYPE_INT32) {
-    LOG(ERROR) << interface_name << "The data type of target should be int32, "
-               << "but now target dtype is "
-               << mluOpGetNameOfDataType(target_dtype) << ".";
+    LOG_ERROR(
+        "{}The data type of target should be int32, "
+        "but now target dtype is {}.",
+        interface_name, mluOpGetNameOfDataType(target_dtype));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // check weight
   if (weight_desc != NULL && mluOpGetTensorElementNum(weight_desc) != 0) {
     if (weight_desc->getDim() != 1) {
-      LOG(ERROR) << interface_name << "weight_desc->getDim() shoule be 1"
-                 << "but now weight_desc->getDim() is " << weight_desc->getDim()
-                 << ".";
+      LOG_ERROR(
+          "{}weight_desc->getDim() shoule be 1"
+          "but now weight_desc->getDim() is {}.",
+          interface_name, weight_desc->getDim());
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (input_desc->getDimIndex(1) != weight_desc->getDimIndex(0)) {
-      LOG(ERROR) << interface_name
-                 << "input_desc->getDimIndex(1) should be equal to "
-                 << "weight_desc->getDimIndex(0). But now "
-                 << "input_desc->getDimIndex(1) is "
-                 << input_desc->getDimIndex(1) << ", "
-                 << "weight_desc->getDimIndex(0) is "
-                 << weight_desc->getDimIndex(0) << ".";
+      LOG_ERROR(
+          "{}input_desc->getDimIndex(1) should be equal to "
+          "weight_desc->getDimIndex(0). But now "
+          "input_desc->getDimIndex(1) is {}, "
+          "weight_desc->getDimIndex(0) is {}.",
+          interface_name, input_desc->getDimIndex(1),
+          weight_desc->getDimIndex(0));
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (weight_desc->getDtype() != input_dtype) {
-      LOG(ERROR) << interface_name
-                 << "Both types of weight and output should be equal. "
-                 << "But now input_dtype is "
-                 << mluOpGetNameOfDataType(input_dtype) << ", "
-                 << "weight_dtype is "
-                 << mluOpGetNameOfDataType(weight_desc->getDtype()) << ".";
+      LOG_ERROR(
+          "{}Both types of weight and output should be equal. "
+          "But now input_dtype is {}, weight_dtype is {}.",
+          interface_name, mluOpGetNameOfDataType(input_dtype),
+          mluOpGetNameOfDataType(weight_desc->getDtype()));
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {
@@ -448,18 +451,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   }
   if (prefer !=
       mluOpComputationPreference_t::MLUOP_COMPUTATION_HIGH_PRECISION) {
-    LOG(ERROR) << interface_name << "only surpport HIGH_PRECISION currently.";
+    LOG_ERROR("{}only surpport HIGH_PRECISION currently.", interface_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (reduction != mluOpLossReduction_t::MLUOP_LOSS_REDUCTION_NONE) {
-    LOG(ERROR) << interface_name << "only surpport REDUCTION_NONE currently.";
+    LOG_ERROR("{}only surpport REDUCTION_NONE currently.", interface_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   if (gamma < 0 || gamma > 10000) {
-    LOG(ERROR) << interface_name
-               << "gamma should be in the range of [0, 10000]. "
-               << "But now gamma is " << gamma << ".";
+    LOG_ERROR(
+        "{}gamma should be in the range of [0, 10000]. "
+        "But now gamma is {}.",
+        interface_name, gamma);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -493,10 +497,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpFocalLossSigmoidBackward(
   VLOG(5) << interface_name << "deal_n: " << deal_n;
   // check C
   if (dim_c > threshold_c) {
-    LOG(ERROR) << interface_name
-               << " input_desc->getDimIndex(1) should be in the range of "
-               << "[0, " << threshold_c << "]. "
-               << "but now input_desc->getDimIndex(1) is " << dim_c;
+    LOG_ERROR(
+        "{} input_desc->getDimIndex(1) should be in the range of "
+        "[0, {}]. but now input_desc->getDimIndex(1) is {}",
+        interface_name, threshold_c, dim_c);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 

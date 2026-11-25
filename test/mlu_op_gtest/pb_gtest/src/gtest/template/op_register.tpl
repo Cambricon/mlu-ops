@@ -38,7 +38,7 @@ std::shared_ptr<mluoptest::Executor> getOpExecutor(std::string op_name) {
     return new mluoptest::convbpfilter_executor();
 // AUTO GENERATE END
   } else {
-    LOG(ERROR) << "UnKnown op: " << op_name;
+    LOG_ERROR("UnKnown op: {}", op_name);
     exit(1);
   }
 }

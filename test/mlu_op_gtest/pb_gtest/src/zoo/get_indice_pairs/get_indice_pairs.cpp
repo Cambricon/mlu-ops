@@ -44,10 +44,10 @@ GetIndicePairsExecutor::~GetIndicePairsExecutor() {
 
 void GetIndicePairsExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_get_indice_pairs_param()) {
-    LOG(ERROR) << op_name_ << "::get indice pairs missing.";
+    LOG_ERROR("{}::get indice pairs missing.", op_name_);
   }
   if (parser_->getInputNum() != 1 || parser_->getOutputNum() != 3) {
-    LOG(ERROR) << op_name_ << ":: input or output number is wrong. ";
+    LOG_ERROR("{}:: input or output number is wrong. ", op_name_);
   }
 }
 
@@ -353,11 +353,11 @@ void GetIndicePairsExecutor::cpuGetIndicePairs(
               spatail_volume * batchIdx;
       if (sub_m) {
         if (grid_out[index] > -1) {
-          int32_t  oldNum = indice_num[offset];
+          int32_t oldNum = indice_num[offset];
           indice_num[offset]++;
           indice_pairs[offset * 2 * num_act_in + oldNum] = j;
-          indice_pairs[offset * 2 * num_act_in + num_act_in +
-                       oldNum] = grid_out[index];
+          indice_pairs[offset * 2 * num_act_in + num_act_in + oldNum] =
+              grid_out[index];
         }
       } else {
         int32_t oldNum = indice_num[offset];
@@ -366,8 +366,8 @@ void GetIndicePairsExecutor::cpuGetIndicePairs(
         indice_pairs[offset * 2 * num_act_in + num_act_in + oldNum] = index;
         indicePairUnqie[offset * num_act_in + oldNum] = index;
       }  //  sub_m
-    }    // num_valid_points
-  }      //  num_act_in(L)
+    }  // num_valid_points
+  }  //  num_act_in(L)
 
   if (!sub_m) {
     std::vector<int> indice_unique;

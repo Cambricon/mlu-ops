@@ -106,17 +106,17 @@ static mluOpStatus_t DeformRoiPoolForwardPreCheck(
                      LARGE_TENSOR_NUM, "");
   }
   if (rois_desc->getDimIndex(0) != output_desc->getDimIndex(0)) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolForward] rois number = "
-               << rois_desc->getDimIndex(0)
-               << ", output batch = " << output_desc->getDimIndex(0)
-               << ", they should be equal.";
+    LOG_ERROR(
+        "[mluOpDeformRoiPoolForward] rois number = {}, "
+        "output batch = {}, they should be equal.",
+        rois_desc->getDimIndex(0), output_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_desc->getDimIndex(3) != output_desc->getDimIndex(3)) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolForward] input channel = "
-               << input_desc->getDimIndex(3)
-               << ", output channel = " << output_desc->getDimIndex(3)
-               << ", they should be equal.";
+    LOG_ERROR(
+        "[mluOpDeformRoiPoolForward] input channel = {}, "
+        "output channel = {}, they should be equal.",
+        input_desc->getDimIndex(3), output_desc->getDimIndex(3));
     return MLUOP_STATUS_BAD_PARAM;
   }
   const size_t input_element_num = mluOpGetTensorElementNum(input_desc);
@@ -181,52 +181,57 @@ static mluOpStatus_t DeformRoiPoolBackwardPreCheck(
 
   for (int i = 0; i < input_desc->getDim(); ++i) {
     if (input_desc->getDimIndex(i) != grad_input_desc->getDimIndex(i)) {
-      LOG(ERROR) << "[mluOpDeformRoiPoolBackward] input's shape is ["
-                 << input_desc->getDimIndex(0) << " "
-                 << input_desc->getDimIndex(1) << " "
-                 << input_desc->getDimIndex(2) << " "
-                 << input_desc->getDimIndex(3) << "], grad_input's shape is ["
-                 << grad_input_desc->getDimIndex(0) << " "
-                 << grad_input_desc->getDimIndex(1) << " "
-                 << grad_input_desc->getDimIndex(2) << " "
-                 << grad_input_desc->getDimIndex(3)
-                 << "]. They should be the same.";
+      LOG_ERROR(
+          "[mluOpDeformRoiPoolBackward] input's shape is "
+          "[{} {} {} {}], grad_input's shape is [{} {} {} {}]. "
+          "They should be the same.",
+          input_desc->getDimIndex(0), input_desc->getDimIndex(1),
+          input_desc->getDimIndex(2), input_desc->getDimIndex(3),
+          grad_input_desc->getDimIndex(0), grad_input_desc->getDimIndex(1),
+          grad_input_desc->getDimIndex(2), grad_input_desc->getDimIndex(3));
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   if (offset_desc == NULL && offset != NULL) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolBackward] offset_desc is NULL, but "
-                  "offset is not NULL.";
+    LOG_ERROR(
+        "[mluOpDeformRoiPoolBackward] offset_desc is NULL, but "
+        "offset is not NULL.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (offset_desc != NULL && offset == NULL) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolBackward] offset_desc is not NULL, but "
-                  "offset is NULL.";
+    LOG_ERROR(
+        "[mluOpDeformRoiPoolBackward] offset_desc is not NULL, but "
+        "offset is NULL.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (grad_offset_desc == NULL && grad_offset != NULL) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolBackward] grad_offset_desc is NULL, but "
-                  "grad_offset is not NULL.";
+    LOG_ERROR(
+        "[mluOpDeformRoiPoolBackward] grad_offset_desc is NULL, but "
+        "grad_offset is not NULL.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (grad_offset_desc != NULL && grad_offset == NULL) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolBackward] grad_offset_desc is not NULL, "
-                  "but grad_offset is NULL.";
+    LOG_ERROR(
+        "[mluOpDeformRoiPoolBackward] grad_offset_desc is not NULL, "
+        "but grad_offset is NULL.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (offset != NULL && grad_offset == NULL) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolBackward] offset is not NULL, but "
-                  "grad_offset is NULL.";
+    LOG_ERROR(
+        "[mluOpDeformRoiPoolBackward] offset is not NULL, but "
+        "grad_offset is NULL.");
     return MLUOP_STATUS_BAD_PARAM;
   } else if (offset == NULL && grad_offset != NULL) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolBackward] offset is NULL, but "
-                  "grad_offset is not NULL.";
+    LOG_ERROR(
+        "[mluOpDeformRoiPoolBackward] offset is NULL, but "
+        "grad_offset is not NULL.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (offset_desc != NULL) {
     if (grad_offset_desc == NULL) {
-      LOG(ERROR) << "[mluOpDeformRoiPoolBackward] offset_desc is not NULL, but "
-                    "grad_offset_desc is NULL.";
+      LOG_ERROR(
+          "[mluOpDeformRoiPoolBackward] offset_desc is not NULL, but "
+          "grad_offset_desc is NULL.");
       return MLUOP_STATUS_BAD_PARAM;
     }
     PARAM_CHECK("[mluOpDeformRoiPoolBackward]",
@@ -261,23 +266,24 @@ static mluOpStatus_t DeformRoiPoolBackwardPreCheck(
                      LARGE_TENSOR_NUM, "");
   } else {
     if (grad_offset_desc != NULL) {
-      LOG(ERROR) << "[mluOpDeformRoiPoolBackward] offset_desc is NULL, but "
-                    "grad_offset_desc is not NULL.";
+      LOG_ERROR(
+          "[mluOpDeformRoiPoolBackward] offset_desc is NULL, but "
+          "grad_offset_desc is not NULL.");
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   if (rois_desc->getDimIndex(0) != grad_output_desc->getDimIndex(0)) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolBackward] rois number = "
-               << rois_desc->getDimIndex(0)
-               << ", grad_output batch = " << grad_output_desc->getDimIndex(0)
-               << ", they should be equal.";
+    LOG_ERROR(
+        "[mluOpDeformRoiPoolBackward] rois number = {}, "
+        "grad_output batch = {}, they should be equal.",
+        rois_desc->getDimIndex(0), grad_output_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_desc->getDimIndex(3) != grad_output_desc->getDimIndex(3)) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolBackward] input channel = "
-               << input_desc->getDimIndex(3)
-               << ", output channel = " << grad_output_desc->getDimIndex(3)
-               << ", they should be equal.";
+    LOG_ERROR(
+        "[mluOpDeformRoiPoolBackward] input channel = {}, "
+        "output channel = {}, they should be equal.",
+        input_desc->getDimIndex(3), grad_output_desc->getDimIndex(3));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -319,19 +325,21 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolForward(
     return status;
   }
   if (offset_desc == NULL && offset != NULL) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolForward] offset_desc is NULL, but offset "
-                  "is not NULL.";
+    LOG_ERROR(
+        "[mluOpDeformRoiPoolForward] offset_desc is NULL, but offset "
+        "is not NULL.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (offset_desc != NULL && offset == NULL) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolForward] offset_desc is not NULL, but "
-                  "offset is NULL.";
+    LOG_ERROR(
+        "[mluOpDeformRoiPoolForward] offset_desc is not NULL, but "
+        "offset is NULL.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_desc->getDimIndex(0) == 0 ||
       mluOpGetTensorElementNum(rois_desc) == 0 ||
       mluOpGetTensorElementNum(output_desc) == 0) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolForward] Zero element tensor failure";
+    LOG_ERROR("[mluOpDeformRoiPoolForward] Zero element tensor failure");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (mluOpGetTensorElementNum(input_desc) == 0 ||
@@ -417,7 +425,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDeformRoiPoolBackward(
   if (mluOpGetTensorElementNum(grad_output_desc) == 0 ||
       input_desc->getDimIndex(0) == 0 ||
       mluOpGetTensorElementNum(rois_desc) == 0) {
-    LOG(ERROR) << "[mluOpDeformRoiPoolBackward] Zero element tensor failure";
+    LOG_ERROR("[mluOpDeformRoiPoolBackward] Zero element tensor failure");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (mluOpGetTensorElementNum(input_desc) == 0) {

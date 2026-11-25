@@ -164,8 +164,9 @@ void RoiawarePool3dBackwardExecutor::paramCheck() {
   GTEST_CHECK(parser_->getInputNum() == 3);
   GTEST_CHECK(parser_->getOutputNum() == 1);
   if (!parser_->getProtoNode()->has_roiaware_pool3d_backward_param()) {
-    LOG(ERROR) << "[GTEST_ROIAWARE_POOL3D_BACKWARD] Missing "
-                  "roiaware_pool3d_backward param.";
+    LOG_ERROR(
+        "[GTEST_ROIAWARE_POOL3D_BACKWARD] Missing "
+        "roiaware_pool3d_backward param.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }

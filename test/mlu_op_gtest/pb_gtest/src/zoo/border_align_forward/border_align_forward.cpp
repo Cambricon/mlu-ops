@@ -28,13 +28,13 @@ namespace mluoptest {
 
 void BorderAlignForwardExecutor::paramCheck() {
   if (parser_->getInputNum() != 2) {
-    LOG(ERROR) << "mluOpBorderAlignForward: tensor input number is wrong.";
+    LOG_ERROR("mluOpBorderAlignForward: tensor input number is wrong.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   if (parser_->getOutputNum() != 2) {
-    LOG(ERROR) << "output number is" << parser_->getOutputNum();
-    LOG(ERROR) << "mluOpBorderAlignForward: tensor output number is wrong.";
+    LOG_ERROR("output number is{}", parser_->getOutputNum());
+    LOG_ERROR("mluOpBorderAlignForward: tensor output number is wrong.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }

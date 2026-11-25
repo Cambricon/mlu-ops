@@ -26,7 +26,7 @@ namespace mluoptest {
 
 void SqrtBackwardExecutor::paramCheck() {
   if (parser_->getInputNum() != 2) {
-    LOG(ERROR) << "input number is wrong. ";
+    LOG_ERROR("input number is wrong. ");
   }
 }
 

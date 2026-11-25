@@ -26,13 +26,13 @@ namespace mluoptest {
 
 void RoiPoolingBackwardExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_roi_pooling_backward_param()) {
-    LOG(ERROR) << "mluOpRoiPoolingBackward: lose param.";
+    LOG_ERROR("mluOpRoiPoolingBackward: lose param.");
   }
   if (parser_->getInputNum() != 3) {
-    LOG(ERROR) << "mluOpRoiPoolingBackward: tensor grads number is wrong.";
+    LOG_ERROR("mluOpRoiPoolingBackward: tensor grads number is wrong.");
   }
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "mluOpRoiPoolingBackward: grads_image number is wrong.";
+    LOG_ERROR("mluOpRoiPoolingBackward: grads_image number is wrong.");
   }
 }
 
@@ -105,7 +105,7 @@ void RoiPoolingBackwardExecutor::cpuCompute() {
                        TensorLayout new_order, int n, int c, int d, int h,
                        int w) {
     if (old_data == nullptr || new_data == nullptr) {
-      LOG(ERROR) << "data address do not malloc in cpu compute.";
+      LOG_ERROR("data address do not malloc in cpu compute.");
       return;
     }
 

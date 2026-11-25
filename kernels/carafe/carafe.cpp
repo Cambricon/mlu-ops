@@ -307,18 +307,18 @@ mluOpStatus_t CarafeForwardParamCheck(
           << carafe_desc->scale_factor << ".");
   // kernel_size <= 45
   if (carafe_desc->kernel_size > 45) {
-    LOG(ERROR) << CARAFE_FORWARD_API
-               << "kernel_size > 45 is not supported! "
-                  "The input is "
-               << carafe_desc->kernel_size << ".";
+    LOG_ERROR(CARAFE_FORWARD_API
+              "kernel_size > 45 is not supported! "
+              "The input is {}.",
+              carafe_desc->kernel_size);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   // scale_factor <= 5
   if (carafe_desc->scale_factor > 5) {
-    LOG(ERROR) << CARAFE_FORWARD_API
-               << "scale_factor > 5 is not supported! "
-                  "The input is "
-               << carafe_desc->scale_factor << ".";
+    LOG_ERROR(CARAFE_FORWARD_API
+              "scale_factor > 5 is not supported! "
+              "The input is {}.",
+              carafe_desc->scale_factor);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   /*
@@ -528,12 +528,14 @@ mluOpStatus_t CarafeBackwardParamCheck(
   n_check_invalid = n_check_invalid || (input_n != grad_mask_n);
   n_check_invalid = n_check_invalid || (input_n != grad_output_n);
   if (n_check_invalid) {
-    LOG(ERROR) << CARAFE_BACKWARD_API << "batch size mismatch. "
-               << "The input batch is: " << input_n
-               << ", the mask batch is: " << mask_n
-               << ", the grad input batch is: " << grad_input_n
-               << ", the grad mask batch is: " << grad_mask_n
-               << ", the grad output batch is: " << grad_output_n;
+    LOG_ERROR(CARAFE_BACKWARD_API
+              "batch size mismatch. "
+              "The input batch is: {}, "
+              "the mask batch is: {}, "
+              "the grad input batch is: {}, "
+              "the grad mask batch is: {}, "
+              "the grad output batch is: {}",
+              input_n, mask_n, grad_input_n, grad_mask_n, grad_output_n);
     return MLUOP_STATUS_BAD_PARAM;
   }
   VLOG(5) << CARAFE_BACKWARD_API << "batch check end.";
@@ -547,12 +549,11 @@ mluOpStatus_t CarafeBackwardParamCheck(
   int grad_input_w = mluOpGetTensordimW(input_desc);
 
   if (input_h != grad_input_h || input_w != grad_input_w) {
-    LOG(ERROR) << CARAFE_BACKWARD_API
-               << "The hw shapes of input and grad input mismatch. "
-               << "The shape of input is (" << input_h << ", " << input_w
-               << "), "
-               << "the shape of grad input is (" << grad_input_h << ", "
-               << grad_input_w << ").";
+    LOG_ERROR(CARAFE_BACKWARD_API
+              "The hw shapes of input and grad input mismatch. "
+              "The shape of input is ({}, {}), "
+              "the shape of grad input is ({}, {}).",
+              input_h, input_w, grad_input_h, grad_input_w);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -562,11 +563,11 @@ mluOpStatus_t CarafeBackwardParamCheck(
   int grad_mask_w = mluOpGetTensordimW(grad_mask_desc);
 
   if (mask_h != grad_mask_h || mask_w != grad_mask_w) {
-    LOG(ERROR) << CARAFE_BACKWARD_API
-               << "The hw shapes of mask and grad mask mismatch. "
-               << "The shape of mask is (" << mask_h << ", " << mask_w << "), "
-               << "the shape of grad mask is (" << grad_mask_h << ", "
-               << grad_mask_w << ").";
+    LOG_ERROR(CARAFE_BACKWARD_API
+              "The hw shapes of mask and grad mask mismatch. "
+              "The shape of mask is ({}, {}), "
+              "the shape of grad mask is ({}, {}).",
+              mask_h, mask_w, grad_mask_h, grad_mask_w);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -581,24 +582,24 @@ mluOpStatus_t CarafeBackwardParamCheck(
   howo_invalid = howo_invalid || (grad_output_w != mask_w);
 
   if (howo_invalid) {
-    LOG(ERROR) << CARAFE_BACKWARD_API
-               << "The hw shapes of grad output, mask, grad mask mismatch. "
-               << "The shape of grad output is (" << grad_output_h << ", "
-               << grad_output_w << "), "
-               << "the shape of mask is (" << mask_h << ", " << mask_w << "), "
-               << "the shape of grad offset is (" << grad_mask_h << ", "
-               << grad_mask_w << "), ";
+    LOG_ERROR(CARAFE_BACKWARD_API
+              "The hw shapes of grad output, mask, grad mask mismatch. "
+              "The shape of grad output is ({}, {}), "
+              "the shape of mask is ({}, {}), "
+              "the shape of grad offset is ({}, {}), ",
+              grad_output_h, grad_output_w, mask_h, mask_w, grad_mask_h,
+              grad_mask_w);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   if (grad_output_h != derived_ho || grad_output_w != derived_wo) {
-    LOG(ERROR)
-        << CARAFE_BACKWARD_API
-        << "The hw shape of output mismatch. The desired output hw shape is"
-        << "(" << derived_ho << ", " << derived_wo
-        << "), whereas the output shape is "
-        << "(" << grad_output_h << ", " << grad_output_w << "). "
-        << "the hw shape of input is (" << input_h << ", " << input_w << ").";
+    LOG_ERROR(CARAFE_BACKWARD_API
+              "The hw shape of output mismatch. "
+              "The desired output hw shape is({}, {}), "
+              "whereas the output shape is ({}, {}). "
+              "the hw shape of input is ({}, {}).",
+              derived_ho, derived_wo, grad_output_h, grad_output_w, input_h,
+              input_w);
     return MLUOP_STATUS_BAD_PARAM;
   }
   VLOG(5) << CARAFE_BACKWARD_API << "hw check end.";
@@ -611,19 +612,19 @@ mluOpStatus_t CarafeBackwardParamCheck(
   int grad_output_co = mluOpGetTensordimC(grad_output_desc);
 
   if (input_ci % carafe_desc->group_size != 0) {
-    LOG(ERROR) << CARAFE_BACKWARD_API
-               << "input channel should be divisible by group_size, "
-               << "now input channel is:" << input_ci
-               << ", group size is:" << carafe_desc->group_size << ".";
+    LOG_ERROR(CARAFE_BACKWARD_API
+              "input channel should be divisible by group_size, "
+              "now input channel is:{}, group size is:{}.",
+              input_ci, carafe_desc->group_size);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   if (input_ci != grad_input_ci || input_ci != grad_output_co) {
-    LOG(ERROR) << CARAFE_BACKWARD_API
-               << "input channel, grad input channel and grad_output channel "
-               << "mismatch. The input channel is " << input_ci
-               << ", the grad input channel is " << grad_input_ci
-               << ", and grad output channel is " << grad_output_co << ".";
+    LOG_ERROR(CARAFE_BACKWARD_API
+              "input channel, grad input channel and grad_output channel "
+              "mismatch. The input channel is {}, "
+              "the grad input channel is {}, and grad output channel is {}.",
+              input_ci, grad_input_ci, grad_output_co);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -632,11 +633,11 @@ mluOpStatus_t CarafeBackwardParamCheck(
   int derived_mask_ci = carafe_desc->kernel_size * carafe_desc->kernel_size *
                         carafe_desc->group_size;
   if (mask_ci != derived_mask_ci || grad_mask_ci != derived_mask_ci) {
-    LOG(ERROR) << CARAFE_BACKWARD_API
-               << "mask channel, grad mask channel and derived mask channel "
-               << "mismatch. The mask channel is " << mask_ci
-               << ", the grad mask channel is " << grad_mask_ci
-               << ", and derived mask channel is " << derived_mask_ci << ".";
+    LOG_ERROR(CARAFE_BACKWARD_API
+              "mask channel, grad mask channel and derived mask channel "
+              "mismatch. The mask channel is {}, "
+              "the grad mask channel is {}, and derived mask channel is {}.",
+              mask_ci, grad_mask_ci, derived_mask_ci);
     return MLUOP_STATUS_BAD_PARAM;
   }
   VLOG(5) << CARAFE_BACKWARD_API << "channel check end.";
@@ -649,8 +650,8 @@ mluOpStatus_t CarafeBackwardParamCheck(
       dtype_is_invalid || (input_desc->getDtype() != MLUOP_DTYPE_HALF &&
                            input_desc->getDtype() != MLUOP_DTYPE_FLOAT);
   if (dtype_is_invalid) {
-    LOG(ERROR) << CARAFE_BACKWARD_API
-               << "the data type of input only support half and float";
+    LOG_ERROR(CARAFE_BACKWARD_API
+              "the data type of input only support half and float");
     return MLUOP_STATUS_BAD_PARAM;
   }
   dtype_is_invalid =
@@ -663,19 +664,19 @@ mluOpStatus_t CarafeBackwardParamCheck(
                      (input_desc->getDtype() != grad_mask_desc->getDtype());
 
   if (dtype_is_invalid) {
-    LOG(ERROR) << CARAFE_BACKWARD_API
-               << "the data type of input, mask, grad_output, "
-                  "grad_input, grad_mask should be the same. "
-               << "The data type of input is: "
-               << mluOpGetNameOfDataType(input_desc->getDtype()) << ", "
-               << "The data type of mask is: "
-               << mluOpGetNameOfDataType(mask_desc->getDtype()) << ", "
-               << "The data type of grad output is: "
-               << mluOpGetNameOfDataType(grad_output_desc->getDtype()) << ", "
-               << "The data type of grad input is: "
-               << mluOpGetNameOfDataType(grad_input_desc->getDtype()) << ", "
-               << "The data type of grad mask is: "
-               << mluOpGetNameOfDataType(grad_mask_desc->getDtype()) << ".";
+    LOG_ERROR(CARAFE_BACKWARD_API
+              "the data type of input, mask, grad_output, "
+              "grad_input, grad_mask should be the same. "
+              "The data type of input is: {}, "
+              "The data type of mask is: {}, "
+              "The data type of grad output is: {}, "
+              "The data type of grad input is: {}, "
+              "The data type of grad mask is: {}.",
+              mluOpGetNameOfDataType(input_desc->getDtype()),
+              mluOpGetNameOfDataType(mask_desc->getDtype()),
+              mluOpGetNameOfDataType(grad_output_desc->getDtype()),
+              mluOpGetNameOfDataType(grad_input_desc->getDtype()),
+              mluOpGetNameOfDataType(grad_mask_desc->getDtype()));
     return MLUOP_STATUS_BAD_PARAM;
   }
   VLOG(5) << CARAFE_BACKWARD_API << "offchip data type check end.";
@@ -684,26 +685,23 @@ mluOpStatus_t CarafeBackwardParamCheck(
    * tensor contiguous check
    */
   if (mluop::ifNeedTensorStrideProcess(input_desc)) {
-    LOG(ERROR) << CARAFE_BACKWARD_API << "The input tensor is not contiguous.";
+    LOG_ERROR(CARAFE_BACKWARD_API "The input tensor is not contiguous.");
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (mluop::ifNeedTensorStrideProcess(mask_desc)) {
-    LOG(ERROR) << CARAFE_BACKWARD_API << "The mask tensor is not contiguous.";
+    LOG_ERROR(CARAFE_BACKWARD_API "The mask tensor is not contiguous.");
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (mluop::ifNeedTensorStrideProcess(grad_output_desc)) {
-    LOG(ERROR) << CARAFE_BACKWARD_API
-               << "The grad output tensor is not contiguous.";
+    LOG_ERROR(CARAFE_BACKWARD_API "The grad output tensor is not contiguous.");
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (mluop::ifNeedTensorStrideProcess(grad_input_desc)) {
-    LOG(ERROR) << CARAFE_BACKWARD_API
-               << "The grad input tensor is not contiguous.";
+    LOG_ERROR(CARAFE_BACKWARD_API "The grad input tensor is not contiguous.");
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (mluop::ifNeedTensorStrideProcess(grad_mask_desc)) {
-    LOG(ERROR) << CARAFE_BACKWARD_API
-               << "The grad mask tensor is not contiguous.";
+    LOG_ERROR(CARAFE_BACKWARD_API "The grad mask tensor is not contiguous.");
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   VLOG(5) << CARAFE_BACKWARD_API << "contiguous check end.";
@@ -738,10 +736,10 @@ mluOpStatus_t CarafeBackwardParamCheck(
    * k_up and scale check
    */
   if (carafe_desc->kernel_size > 137) {
-    LOG(ERROR) << CARAFE_BACKWARD_API
-               << "the kernel_size should less than or equal to 137, "
-               << "but the kernel_size is: " << carafe_desc->kernel_size
-               << ", ";
+    LOG_ERROR(CARAFE_BACKWARD_API
+              "the kernel_size should less than or equal to 137, "
+              "but the kernel_size is: {}, ",
+              carafe_desc->kernel_size);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 

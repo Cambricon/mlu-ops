@@ -72,9 +72,10 @@ mluOpStatus_t makeRFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
   switch (fft_plan->fft_strategy) {
     case CNFFT_FUNC_MATMUL: {
       if (n > FFT_L_LIMIT_MATMUL) {
-        LOG(ERROR)
-            << "[mluOpMakeFFTPlanMany]: FFT1d CNFFT_FUNC_MATMUL length > "
-            << FFT_L_LIMIT_MATMUL << " is not supported currently.";
+        LOG_ERROR(
+            "[mluOpMakeFFTPlanMany]: FFT1d CNFFT_FUNC_MATMUL length > "
+            "{} is not supported currently.",
+            FFT_L_LIMIT_MATMUL);
         return MLUOP_STATUS_NOT_SUPPORTED;
       }
 
@@ -162,8 +163,9 @@ mluOpStatus_t makeRFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
       int L = fft_plan->L;
       int m = (1 << fft_plan->m);
       if (L > FFT_L_LIMIT) {
-        LOG(ERROR) << "[mluOpMakeFFTPlanMany]: RFFT1d CNFFT_FUNC_COOLEY_TUKEY "
-                   << "n = L * 2^m and L > 4096 is not supported currently.";
+        LOG_ERROR(
+            "[mluOpMakeFFTPlanMany]: RFFT1d CNFFT_FUNC_COOLEY_TUKEY "
+            "n = L * 2^m and L > 4096 is not supported currently.");
         return MLUOP_STATUS_NOT_SUPPORTED;
       }
 

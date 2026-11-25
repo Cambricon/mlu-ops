@@ -247,15 +247,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
      Maximum y- or z-dimension of a grid of thread blocks
      should be less than 65536 in cuda. */
   if (boxes_num >= THRESHOLD_OF_BOXES_NUM_AND_CHANNELS) {
-    LOG(ERROR) << API << " Check failed: "
-               << "boxes_num should be less than "
-               << THRESHOLD_OF_BOXES_NUM_AND_CHANNELS << ".";
+    LOG_ERROR("{} Check failed: boxes_num should be less than {}.", API,
+              THRESHOLD_OF_BOXES_NUM_AND_CHANNELS);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (channels >= THRESHOLD_OF_BOXES_NUM_AND_CHANNELS) {
-    LOG(ERROR) << API << " Check failed: "
-               << "pts_num should be less than "
-               << THRESHOLD_OF_BOXES_NUM_AND_CHANNELS << ".";
+    LOG_ERROR("{} Check failed: pts_num should be less than {}.", API,
+              THRESHOLD_OF_BOXES_NUM_AND_CHANNELS);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -263,18 +261,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
      so it's limited by the size of NRAM memory space. */
   if (rois_desc->getDtype() == MLUOP_DTYPE_FLOAT) {
     if (max_pts_each_voxel > THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD) {
-      LOG(ERROR) << API << " Check failed: "
-                 << "When the data type is float, "
-                    "max_pts_each_voxel cannot be greater than "
-                 << THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD << ".";
+      LOG_ERROR(
+          "{} Check failed: When the data type is float, "
+          "max_pts_each_voxel cannot be greater than {}.",
+          API, THRESHOLD_OF_MAX_PTS_EACH_VOXEL_FLOAT_FORWARD);
       return MLUOP_STATUS_NOT_SUPPORTED;
     }
   } else {
     if (max_pts_each_voxel > THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD) {
-      LOG(ERROR) << API << " Check failed: "
-                 << "When the data type is half, "
-                    "max_pts_each_voxel cannot be greater than "
-                 << THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD << ".";
+      LOG_ERROR(
+          "{} Check failed: When the data type is half, "
+          "max_pts_each_voxel cannot be greater than {}.",
+          API, THRESHOLD_OF_MAX_PTS_EACH_VOXEL_HALF_FORWARD);
       return MLUOP_STATUS_NOT_SUPPORTED;
     }
   }
@@ -298,15 +296,19 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
   // product of boxes_num and pts_num < 2^31
   size_t product_boxesNum_ptsNum = (size_t)boxes_num * (size_t)pts_num;
   if (product_boxesNum_ptsNum > (size_t)INT32_MAX) {
-    LOG(ERROR) << API << " Check failed: "
-               << "product of boxes_num and pts_num should be less than 2^31.";
+    LOG_ERROR(
+        "{} Check failed: product of boxes_num and pts_num should be "
+        "less than 2^31.",
+        API);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   // check workspace
   if (workspace_size > 0 && workspace == NULL) {
-    LOG(ERROR) << API << " Check failed: "
-               << "workspace shouldn't be null when workspace_size > 0.";
+    LOG_ERROR(
+        "{} Check failed: workspace shouldn't be null when "
+        "workspace_size > 0.",
+        API);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -335,8 +337,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dForward(
 
   // check arch
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << API
-               << " The operator does not match the current architecture.";
+    LOG_ERROR("{} The operator does not match the current architecture.", API);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
@@ -599,24 +600,23 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dBackward(
      Maximum y- or z-dimension of a grid of thread blocks
      should be less than 65536 in cuda. */
   if (boxes_num >= THRESHOLD_OF_BOXES_NUM_AND_CHANNELS) {
-    LOG(ERROR) << API << " Check failed: "
-               << "boxes_num should be less than "
-               << THRESHOLD_OF_BOXES_NUM_AND_CHANNELS << ".";
+    LOG_ERROR("{} Check failed: boxes_num should be less than {}.", API,
+              THRESHOLD_OF_BOXES_NUM_AND_CHANNELS);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (channels >= THRESHOLD_OF_BOXES_NUM_AND_CHANNELS) {
-    LOG(ERROR) << API << " Check failed: "
-               << "pts_num should be less than "
-               << THRESHOLD_OF_BOXES_NUM_AND_CHANNELS << ".";
+    LOG_ERROR("{} Check failed: pts_num should be less than {}.", API,
+              THRESHOLD_OF_BOXES_NUM_AND_CHANNELS);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   /* max_pts_each_voxel affects the allocation of NRAM memory space,
      so it's limited by the size of NRAM memory space. */
   if (max_pts_each_voxel > THRESHOLD_OF_MAX_PTS_EACH_VOXEL_BACKWARD) {
-    LOG(ERROR) << API << " Check failed: "
-               << "max_pts_each_voxel cannot be greater than "
-               << THRESHOLD_OF_MAX_PTS_EACH_VOXEL_BACKWARD << ".";
+    LOG_ERROR(
+        "{} Check failed: max_pts_each_voxel cannot be greater than "
+        "{}.",
+        API, THRESHOLD_OF_MAX_PTS_EACH_VOXEL_BACKWARD);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -643,8 +643,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAwarePool3dBackward(
 
   // check arch
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << API << " Check failed: "
-               << " The operator does not match the current architecture.";
+    LOG_ERROR(
+        "{} Check failed:  The operator does not match the current "
+        "architecture.",
+        API);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 

@@ -95,8 +95,10 @@ static mluOpStatus_t DynamicPointToVoxelForwardParamCheck(
   PARAM_CHECK(api, handle != NULL);
   // platform check
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << api << "Only mlu300 and above devices are supported. "
-               << "Please check the device version!";
+    LOG_ERROR(
+        "{}Only mlu300 and above devices are supported. "
+        "Please check the device version!",
+        api);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
   PARAM_CHECK(api, feats_desc != NULL);
@@ -150,8 +152,7 @@ static mluOpStatus_t DynamicPointToVoxelForwardParamCheck(
               voxel_num_desc->getDtype() == point2voxel_map_desc->getDtype());
 
   if (reduce_type != MLUOP_REDUCE_DMAX && reduce_type != MLUOP_REDUCE_DMEAN) {
-    LOG(ERROR) << api << "Only support max and mean. "
-               << "Please check reduce_type!";
+    LOG_ERROR("{}Only support max and mean. Please check reduce_type!", api);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -207,10 +208,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetDynamicPointToVoxelForwardWorkspaceSize(
   PARAM_CHECK(api, handle != NULL);
   // platform check
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << "[mluOpGetDynamicPointToVoxelForwardWorkspaceSize] Only "
-                  "mlu300 and above "
-                  "devices are supported. "
-               << "Please check the device version!";
+    LOG_ERROR(
+        "[mluOpGetDynamicPointToVoxelForwardWorkspaceSize] Only mlu300 "
+        "and above devices are supported. Please check the device "
+        "version!");
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
@@ -264,8 +265,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
       &zero_element);
 
   if (ret != MLUOP_STATUS_SUCCESS) {
-    LOG(ERROR) << api
-               << " Error found during element verification, please check.";
+    LOG_ERROR("{} Error found during element verification, please check.", api);
     return ret;
   }
   // check zero element
@@ -334,14 +334,13 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
     int unique_coors_dims[] = {num_points, 3};
     int unique_counts_dims[] = {num_points};
     CALL_CNNL(cnnlSetTensorDescriptor(cnnl_output_desc, CNNL_LAYOUT_ARRAY,
-                                     CNNL_DTYPE_INT32, 2, unique_coors_dims));
+                                      CNNL_DTYPE_INT32, 2, unique_coors_dims));
     CALL_CNNL(cnnlSetTensorDescriptor(cnnl_counts_desc, CNNL_LAYOUT_ARRAY,
-                                     CNNL_DTYPE_INT32, 1, unique_counts_dims));
-    CALL_CNNL(cnnlUnique_v2(cnnl_handle, unique_desc, cnnl_input_desc, coors,
-                            unique_workspace, unique_workspace_size,
-                            (int *)voxel_num, cnnl_output_desc, unique_coors,
-                            cnnl_indices_desc, point2voxel_map,
-                            cnnl_counts_desc, unique_counts));
+                                      CNNL_DTYPE_INT32, 1, unique_counts_dims));
+    CALL_CNNL(cnnlUnique_v2(
+        cnnl_handle, unique_desc, cnnl_input_desc, coors, unique_workspace,
+        unique_workspace_size, (int *)voxel_num, cnnl_output_desc, unique_coors,
+        cnnl_indices_desc, point2voxel_map, cnnl_counts_desc, unique_counts));
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_input_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
     DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
@@ -371,12 +370,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpDynamicPointToVoxelForward(
   VLOG(5) << "cnnlFill_v3 min value end.";
 
   VLOG(5) << api << " launch KernelDynamicPointToVoxelForward start.";
-  CHECK_RETURN("[mluOpDynamicPointToVoxelForward]",
-               KernelDynamicPointToVoxelForward(
-                   k_dim, k_type, handle->queue, reduce_type, feats, num_points,
-                   num_feats, unique_coors, unique_counts, voxel_coors,
-                   voxel_num, point2voxel_map, voxel_points_count,
-                   voxel_feats));
+  CHECK_RETURN(
+      "[mluOpDynamicPointToVoxelForward]",
+      KernelDynamicPointToVoxelForward(
+          k_dim, k_type, handle->queue, reduce_type, feats, num_points,
+          num_feats, unique_coors, unique_counts, voxel_coors, voxel_num,
+          point2voxel_map, voxel_points_count, voxel_feats));
   VLOG(5) << api << " launch KernelDynamicPointToVoxelForward end.";
 
   GEN_CASE_END();

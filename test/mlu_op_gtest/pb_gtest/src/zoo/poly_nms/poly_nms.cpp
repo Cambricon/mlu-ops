@@ -32,7 +32,7 @@ using namespace PNMS;  // NOLINT
 namespace mluoptest {
 void PolyNmsExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_poly_nms_param()) {
-    LOG(ERROR) << "Lose poly_nms_param. ";
+    LOG_ERROR("Lose poly_nms_param. ");
   }
   GTEST_CHECK(parser_->inputs().size() == 1,
               "[PolyNmsExecutor] input number is wrong. ");

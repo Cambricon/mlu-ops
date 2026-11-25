@@ -104,8 +104,10 @@ mluOpStatus_t VoxelPoolingForwardParamCheck(
       (mluOpGetTensorElementNum(input_features_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(output_features_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(pos_memo_desc) >= LARGE_TENSOR_NUM)) {
-    LOG(ERROR) << op_name << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    LOG_ERROR(
+        "{} Overflow max tensor num. Currently, MLU-OPS supports "
+        "tensor num smaller than 2^31.",
+        op_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   // check ptr
@@ -115,8 +117,8 @@ mluOpStatus_t VoxelPoolingForwardParamCheck(
   PARAM_CHECK(op_name, pos_memo != NULL);
   // check arch
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << op_name
-               << " The operator does not match the current architecture.";
+    LOG_ERROR("{} The operator does not match the current architecture.",
+              op_name);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
   return MLUOP_STATUS_SUCCESS;

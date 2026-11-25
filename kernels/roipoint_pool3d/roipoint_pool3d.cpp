@@ -171,7 +171,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetRoiPointPool3dWorkspaceSize(
   if (points_element_num == 0 || point_features_element_num == 0 ||
       boxes3d_element_num == 0 || pooled_features_element_num == 0 ||
       pooled_empty_flag_num == 0) {
-    LOG(ERROR) << "[mluOpRoiPointPool3d] Check failed: element num zero.";
+    LOG_ERROR("[mluOpRoiPointPool3d] Check failed: element num zero.");
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -256,7 +256,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiPointPool3d(
   if (points_element_num == 0 || point_features_element_num == 0 ||
       boxes3d_element_num == 0 || pooled_features_element_num == 0 ||
       pooled_empty_flag_num == 0) {
-    LOG(ERROR) << "[mluOpRoiPointPool3d] Check failed: element num zero.";
+    LOG_ERROR("[mluOpRoiPointPool3d] Check failed: element num zero.");
     return MLUOP_STATUS_BAD_PARAM;
   }
 

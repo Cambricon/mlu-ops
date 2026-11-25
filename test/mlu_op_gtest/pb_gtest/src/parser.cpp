@@ -234,8 +234,9 @@ void Parser::parse(const std::string &file) {
     }
     if (mt->is_cpu_scalar) {
       if (mt->shape.size() != 0) {
-        LOG(ERROR) << "Parser: is_cpu_scalar is true but tensor shape size is "
-                      "not zero";
+        LOG_ERROR(
+            "Parser: is_cpu_scalar is true but tensor shape size is "
+            "not zero");
         throw std::invalid_argument(std::string(__FILE__) + " +" +
                                     std::to_string(__LINE__));
       }
@@ -255,14 +256,16 @@ void Parser::parse(const std::string &file) {
         // At present, if pointer_mode is POINTER_MODE_HOST, is_cpu_scalar must
         // be true that is, only support scalar when 'tensor' is on cpu
         if (!pt->is_cpu_scalar()) {
-          LOG(ERROR) << "Parser: pointer_mode has been set to "
-                        "POINTER_MODE_HOST but is_cpu_scalar is false in "
-                        "proto, set to true forcely";  // NOLINT
+          LOG_ERROR(
+              "Parser: pointer_mode has been set to "
+              "POINTER_MODE_HOST but is_cpu_scalar is false in "
+              "proto, set to true forcely");  // NOLINT
         }
         mt->is_cpu_scalar = true;
       } else {
-        LOG(ERROR) << "Parser: pointer_mode is POINTER_MODE_HOST but it is not "
-                      "scalar, skip this info";  // NOLINT
+        LOG_ERROR(
+            "Parser: pointer_mode is POINTER_MODE_HOST but it is not "
+            "scalar, skip this info");  // NOLINT
       }
     }
 
@@ -824,12 +827,11 @@ void Parser::getTensorValueByFile(mluoptest::Tensor *pt, void *data,
   auto actual_tensor_size = file_reader->read(data, tensor_length, cur_pb_path);
   VLOG(2) << "file reader tensor size = " << actual_tensor_size;
   if (tensor_length != actual_tensor_size) {
-    LOG(ERROR)
-        << "The number of data calculated by shape and stride in pb/prototxt ("
-        << tensor_length << " bytes)"
-        << " is not equal to the number of true values actually saved("
-        << actual_tensor_size << " bytes), "
-        << "please check whether pb/prototxt is valid.";
+    LOG_ERROR(
+        "The number of data calculated by shape and stride in pb/prototxt "
+        "({} bytes) is not equal to the number of true values actually "
+        "saved({} bytes), please check whether pb/prototxt is valid.",
+        tensor_length, actual_tensor_size);
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
@@ -1058,14 +1060,14 @@ bool Parser::readMessageFromFile(const std::string &filename, Node *proto) {
   struct stat file_stat;
   int fd = open(filename.c_str(), O_RDONLY);
   if (fd == -1) {
-    LOG(ERROR) << "File open failed: " << filename << ". Reason: " << errno
-               << "-" << strerror(errno);
+    LOG_ERROR("File open failed: {}. Reason: {}-{}", filename, errno,
+              strerror(errno));
     return false;
   }
   int ret_stat = fstat(fd, &file_stat);
   if (ret_stat == -1) {
-    LOG(ERROR) << "File stat failed: " << filename << ". Reason: " << errno
-               << "-" << strerror(errno);
+    LOG_ERROR("File stat failed: {}. Reason: {}-{}", filename, errno,
+              strerror(errno));
     return false;
   }
 
@@ -1089,7 +1091,7 @@ bool Parser::readMessageFromFile(const std::string &filename, Node *proto) {
   } else if (strEndsWith(filename, ".prototxt")) {
     status = google::protobuf::TextFormat::Parse(&input, proto);
   } else {
-    LOG(ERROR) << "Unsupported file extension";
+    LOG_ERROR("Unsupported file extension");
   }
 
   close(fd);
@@ -1143,7 +1145,7 @@ Evaluator::Formula Parser::cvtProtoEvaluationCriterion(EvaluationCriterion f) {
     case DIFF_KL:
       return Evaluator::Formula::DIFF_KL;
     default:
-      LOG(ERROR) << "NOT support this evaluation critertion yet";
+      LOG_ERROR("NOT support this evaluation critertion yet");
       throw std::invalid_argument(std::string(__FILE__) + " +" +
                                   std::to_string(__LINE__));
   }
@@ -1255,7 +1257,7 @@ MetaTensor &Parser::getMetaTensor(const std::string &name) {
       return *it;
     }
   }
-  LOG(ERROR) << "Miss tensor: " << name << " in prototxt.";
+  LOG_ERROR("Miss tensor: {} in prototxt.", name);
   throw std::invalid_argument(std::string(__FILE__) + " +" +
                               std::to_string(__LINE__));
 }

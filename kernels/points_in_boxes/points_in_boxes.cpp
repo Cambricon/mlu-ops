@@ -38,82 +38,85 @@ static mluOpStatus_t pointsInBoxesPreCheck(
     const mluOpTensorDescriptor_t points_indices_desc) {
   // tensor dim check
   if (points_desc->getDim() != 3 || boxes_desc->getDim() != 3) {
-    LOG(ERROR) << "[mluOpPointsInBoxes] The dim size of the points and boxes"
-               << " tensor must be 3."
-               << " points dim size is " << points_desc->getDim()
-               << ", boxes dim size is " << boxes_desc->getDim();
+    LOG_ERROR(
+        "[mluOpPointsInBoxes] The dim size of the points and boxes"
+        " tensor must be 3. points dim size is {}, boxes dim size is {}",
+        points_desc->getDim(), boxes_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (points_indices_desc->getDim() != 2) {
-    LOG(ERROR) << "[mluOpPointsInBoxes] The dim size of the points_indices"
-               << " tensor must be 2."
-               << " points_indices dim size is "
-               << points_indices_desc->getDim();
+    LOG_ERROR(
+        "[mluOpPointsInBoxes] The dim size of the points_indices"
+        " tensor must be 2. points_indices dim size is {}",
+        points_indices_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // input tensor datatype check
   if (points_desc->getDtype() != MLUOP_DTYPE_FLOAT ||
       boxes_desc->getDtype() != MLUOP_DTYPE_FLOAT) {
-    LOG(ERROR) << "[mluOpPointsInBoxes] The data type of the points and boxes"
-               << " tensor must be MLUOP_DTYPE_FLOAT.";
+    LOG_ERROR(
+        "[mluOpPointsInBoxes] The data type of the points and boxes"
+        " tensor must be MLUOP_DTYPE_FLOAT.");
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // output tensor datatype check
   if (points_indices_desc->getDtype() != MLUOP_DTYPE_INT32) {
-    LOG(ERROR) << "[mluOpPointsInBoxes] The data type of the points_indices"
-               << " tensor must be MLUOP_DTYPE_INT32.";
+    LOG_ERROR(
+        "[mluOpPointsInBoxes] The data type of the points_indices"
+        " tensor must be MLUOP_DTYPE_INT32.");
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // input tensor layout check
   if (points_desc->getLayout() != MLUOP_LAYOUT_ARRAY ||
       boxes_desc->getLayout() != MLUOP_LAYOUT_ARRAY) {
-    LOG(ERROR) << "[mluOpPointsInBoxes] The layout of the points and boxes"
-               << " tensor must be MLUOP_LAYOUT_ARRAY.";
+    LOG_ERROR(
+        "[mluOpPointsInBoxes] The layout of the points and boxes"
+        " tensor must be MLUOP_LAYOUT_ARRAY.");
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // output tensor layout check
   if (points_indices_desc->getLayout() != MLUOP_LAYOUT_ARRAY) {
-    LOG(ERROR) << "[mluOpPointsInBoxes] The layout of the points_indices"
-               << " tensor must be MLUOP_LAYOUT_ARRAY.";
+    LOG_ERROR(
+        "[mluOpPointsInBoxes] The layout of the points_indices"
+        " tensor must be MLUOP_LAYOUT_ARRAY.");
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // tensor shape check
   if ((points_desc->getDimIndex(0) != boxes_desc->getDimIndex(0)) ||
       (points_desc->getDimIndex(0) != points_indices_desc->getDimIndex(0))) {
-    LOG(ERROR) << "[mluOpPointsInBoxes] The batch size of the points, boxes, "
-                  "points_indices "
-               << "tensor must be same."
-               << " points batch size is " << points_desc->getDimIndex(0)
-               << ", boxes batch size is " << boxes_desc->getDimIndex(0)
-               << ", points_indices batch size is "
-               << points_indices_desc->getDimIndex(0);
+    LOG_ERROR(
+        "[mluOpPointsInBoxes] The batch size of the points, boxes, "
+        "points_indices tensor must be same. points batch size is {}, "
+        "boxes batch size is {}, points_indices batch size is {}",
+        points_desc->getDimIndex(0), boxes_desc->getDimIndex(0),
+        points_indices_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (points_desc->getDimIndex(1) != points_indices_desc->getDimIndex(1)) {
-    LOG(ERROR) << "[mluOpPointsInBoxes] The points num of the points and "
-                  "points_indices"
-               << " tensor must be same."
-               << " num of the points is " << points_desc->getDimIndex(1)
-               << ", num of the points_indices is "
-               << points_indices_desc->getDimIndex(1);
+    LOG_ERROR(
+        "[mluOpPointsInBoxes] The points num of the points and "
+        "points_indices tensor must be same. num of the points is {}, "
+        "num of the points_indices is {}",
+        points_desc->getDimIndex(1), points_indices_desc->getDimIndex(1));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (points_desc->getDimIndex(2) != 3) {
-    LOG(ERROR) << "[mluOpPointsInBoxes] The points "
-               << "must be 3D Coordinate System ie [x, y, z]. vs "
-               << points_desc->getDimIndex(2);
+    LOG_ERROR(
+        "[mluOpPointsInBoxes] The points must be 3D Coordinate System "
+        "ie [x, y, z]. vs {}",
+        points_desc->getDimIndex(2));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (boxes_desc->getDimIndex(2) != 7) {
-    LOG(ERROR)
-        << "[mluOpPointsInBoxes] The boxes "
-        << "must be 3D Coordinate System ie [x, y, z, dx, dy, dz, heading]. vs "
-        << boxes_desc->getDimIndex(2);
+    LOG_ERROR(
+        "[mluOpPointsInBoxes] The boxes must be 3D Coordinate System "
+        "ie [x, y, z, dx, dy, dz, heading]. vs {}",
+        boxes_desc->getDimIndex(2));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -211,9 +214,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpPointsInBoxes(
   pointsInBoxesTSI points_in_boxes_info;
   if (!isPointsInBoxes(handle, k_dim, k_type, points_desc, boxes_desc,
                        points_indices_desc, points_in_boxes_info)) {
-    LOG(ERROR) << "[mluOpPointsInBoxes] The boxes "
-               << "must be not exceed 23404 on MLU370 or 14042 on MLU590. vs "
-               << boxes_desc->getDimIndex(1) << ".";
+    LOG_ERROR(
+        "[mluOpPointsInBoxes] The boxes must be not exceed 23404 on "
+        "MLU370 or 14042 on MLU590. vs {}.",
+        boxes_desc->getDimIndex(1));
     return MLUOP_STATUS_BAD_PARAM;
   }
   // generate points_in_boxes prototxt start!

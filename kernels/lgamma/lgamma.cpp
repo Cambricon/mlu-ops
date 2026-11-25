@@ -66,7 +66,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpLgamma(mluOpHandle_t handle,
 
   size_t element_num = mluOpGetTensorElementNum(x_desc);
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << "[mluOpLgamma] now only support ARCH >= <MLU370>\n";
+    LOG_ERROR("[mluOpLgamma] now only support ARCH >= <MLU370>\n");
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 

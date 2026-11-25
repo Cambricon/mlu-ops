@@ -99,7 +99,7 @@ void MsDeformAttnBackwardExecutor::paramCheck() {
   GTEST_CHECK(parser_->getOutputNum() == 3);
 
   if (!parser_->getProtoNode()->has_ms_deform_attn_backward_param()) {
-    LOG(ERROR) << "[GTEST_MSDEFORMATTN] Missing ms_deform_attn param.";
+    LOG_ERROR("[GTEST_MSDEFORMATTN] Missing ms_deform_attn param.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }

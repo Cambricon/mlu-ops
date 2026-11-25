@@ -178,7 +178,7 @@ std::string genCaseConfig::replacePlaceholder(std::string pathStr) {
     int dev_index = -1;
     cnrtRet_t ret = cnrtGetDevice(&dev_index);
     if (ret != cnrtSuccess || dev_index < 0) {
-      LOG(ERROR) << "get device ID failed.";
+      LOG_ERROR("get device ID failed.");
     }
     pathStr.replace(pos, 10, "deviceid" + std::to_string(dev_index));
   }
@@ -370,8 +370,8 @@ void genCaseHandle(PbNode *node, mluOpHandle_t handle) {
 
 void genCaseHandleParam(PbNode *node) {
   if (node->handle_param.params.empty()) {
-    LOG(ERROR)
-        << "[gen_case] HandleParam generation failed, please set handle first!";
+    LOG_ERROR(
+        "[gen_case] HandleParam generation failed, please set handle first!");
   } else {
     node->handle_param.name = "handle_param";
   }
@@ -441,7 +441,8 @@ void PbNode::getHandleParam() {
       round_mode_str = "ROUND_OFF_ZERO";
       break;
     default:
-      LOG(ERROR) << "[gen_case]: unsupportted round mode: " << round_mode_enum;
+      LOG_ERROR("[gen_case]: unsupportted round mode: {}",
+                static_cast<int>(round_mode_enum));
   }
   this->handle_param.params.push_back({"round_mode", round_mode_str});
 }
@@ -482,8 +483,8 @@ std::string PbNode::getFolderName() {
   } else {
     char current_dir[PATH_MAX];
     if (getcwd(current_dir, sizeof(current_dir)) == NULL) {
-      LOG(ERROR) << "[gen_case]: get current directory failed! (" << errno
-                 << ": " << strerror(errno) << ")";
+      LOG_ERROR("[gen_case]: get current directory failed! ({}: {})", errno,
+                strerror(errno));
       return "NULL";
     }
     folder_name = current_dir;
@@ -539,7 +540,7 @@ void PbNode::dumpDataFile(std::string file_name, std::string folder_name,
   cnrtQueue_t queue;
   mluOpGetQueue(handle, &queue);
   if (cnrtSuccess != cnrtQueueSync(queue)) {
-    LOG(ERROR) << "[gen_case] syncQueue failed";
+    LOG_ERROR("[gen_case] syncQueue failed");
   }
 
   uint64_t total_num = getTensorSize(index);
@@ -613,7 +614,7 @@ void PbNode::dumpOutputFile() {
         cnrtQueue_t queue;
         mluOpGetQueue(handle, &queue);
         if (cnrtSuccess != cnrtQueueSync(queue)) {
-          LOG(ERROR) << "[gen_case] syncQueue failed!";
+          LOG_ERROR("[gen_case] syncQueue failed!");
         } else {
           // TO DO : should consider malloc failure
           std::string folder_name = getFolderName();
@@ -646,8 +647,8 @@ void PbNode::dumpToFile(bool valueDump) {
   int error_number = mkdir();
   // use lock to ensure mkdir not conflict
   if (error_number != 0 && error_number != 17) {
-    LOG(ERROR) << "[gen_case]: mkdir folder failed for " << folder_name
-               << " ! (" << errno << ": " << strerror(errno) << ")";
+    LOG_ERROR("[gen_case]: mkdir folder failed for {} ! ({}: {})", folder_name,
+              errno, strerror(errno));
     return;
   }
   std::string file_name = "";
@@ -836,15 +837,16 @@ const char MLUOP_WIN_API *mluOpGetGenCaseDirectory(char *buffer,
                                                    mluOpStatus_t *status) {
   std::string ret = mluop::gen_case::genCaseConfig::getDirectory();
   if (ret == "") {
-    LOG(ERROR) << "[mluOpGetGenCaseDirectory] getting directory failed!";
+    LOG_ERROR("[mluOpGetGenCaseDirectory] getting directory failed!");
     mluop::gen_case::genCaseConfig::setValue(pathLen, (size_t)0);
     mluop::gen_case::genCaseConfig::setValue(status,
                                              MLUOP_STATUS_INTERNAL_ERROR);
     return nullptr;
   }
   if (ret.size() >= bufferSize && buffer != nullptr) {
-    LOG(ERROR) << "[mluOpGetGenCaseDirectory] buffer size is too small to "
-                  "store the gen case directory.";
+    LOG_ERROR(
+        "[mluOpGetGenCaseDirectory] buffer size is too small to "
+        "store the gen case directory.");
     mluop::gen_case::genCaseConfig::setValue(pathLen, (size_t)0);
     mluop::gen_case::genCaseConfig::setValue(status, MLUOP_STATUS_BAD_PARAM);
     return buffer;
@@ -852,7 +854,7 @@ const char MLUOP_WIN_API *mluOpGetGenCaseDirectory(char *buffer,
   if (buffer == nullptr) {
     char *newBuffer = (char *)malloc(ret.size() + 1);
     if (newBuffer == nullptr) {
-      LOG(ERROR) << "[mluOpGetGenCaseDirectory] malloc failed.";
+      LOG_ERROR("[mluOpGetGenCaseDirectory] malloc failed.");
       mluop::gen_case::genCaseConfig::setValue(pathLen, (size_t)0);
       mluop::gen_case::genCaseConfig::setValue(status,
                                                MLUOP_STATUS_ALLOC_FAILED);

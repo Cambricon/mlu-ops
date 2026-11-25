@@ -78,36 +78,41 @@ mluOpStatus_t RoiCropForwardParamCheck(
 
   for (int i = 0; i < output_desc->getDim() - 1; ++i) {
     if (output_desc->getDimIndex(i) != grid_desc->getDimIndex(i)) {
-      LOG(ERROR) << op_name << " Check failed: output_desc->dims[" << i
-                 << "] should be equal to grid_desc->getDimIndex(" << i << ").";
+      LOG_ERROR(
+          "{} Check failed: output_desc->dims[{}] should be equal to "
+          "grid_desc->getDimIndex({}).",
+          op_name, i, i);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   if (output_desc->getDimIndex(3) != input_desc->getDimIndex(3)) {
-    LOG(ERROR) << op_name
-               << " Check failed: output_desc->getDimIndex(3) should be "
-                  "equal to input_desc->getDimIndex(3).";
+    LOG_ERROR(
+        "{} Check failed: output_desc->getDimIndex(3) should be "
+        "equal to input_desc->getDimIndex(3).",
+        op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (grid_desc->getDimIndex(3) != 2) {
-    LOG(ERROR)
-        << op_name
-        << " Check failed: grid_desc->getDimIndex(3) should be equal to 2.";
+    LOG_ERROR(
+        "{} Check failed: grid_desc->getDimIndex(3) should be equal to 2.",
+        op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   const size_t max_input_num = 2147483648;  // 2^31, 2G num
   if ((mluOpGetTensorElementNum(input_desc) >= max_input_num) ||
       (mluOpGetTensorElementNum(grid_desc) >= max_input_num) ||
       (mluOpGetTensorElementNum(output_desc) >= max_input_num)) {
-    LOG(ERROR) << op_name << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    LOG_ERROR(
+        "{} Overflow max tensor num. Currently, MLU-OPS supports "
+        "tensor num smaller than 2^31.",
+        op_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   // check zero element
   if ((mluOpGetTensorElementNum(input_desc) == 0) ||
       (mluOpGetTensorElementNum(grid_desc) == 0) ||
       (mluOpGetTensorElementNum(output_desc) == 0)) {
-    LOG(ERROR) << op_name << " Zero element tensor failure.";
+    LOG_ERROR("{} Zero element tensor failure.", op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   PARAM_CHECK(op_name, input != NULL);
@@ -146,36 +151,41 @@ mluOpStatus_t RoiCropBackwardParamCheck(
 
   for (int i = 0; i < grad_output_desc->getDim() - 1; ++i) {
     if (grad_output_desc->getDimIndex(i) != grid_desc->getDimIndex(i)) {
-      LOG(ERROR) << op_name << " Check failed: grad_output_desc->dims[" << i
-                 << "] should be equal to grid_desc->getDimIndex(" << i << ").";
+      LOG_ERROR(
+          "{} Check failed: grad_output_desc->dims[{}] should be "
+          "equal to grid_desc->getDimIndex({}).",
+          op_name, i, i);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   if (grad_output_desc->getDimIndex(3) != grad_input_desc->getDimIndex(3)) {
-    LOG(ERROR) << op_name
-               << " Check failed: grad_output_desc->getDimIndex(3) should be "
-                  "equal to grad_input_desc->getDimIndex(3).";
+    LOG_ERROR(
+        "{} Check failed: grad_output_desc->getDimIndex(3) should "
+        "be equal to grad_input_desc->getDimIndex(3).",
+        op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (grid_desc->getDimIndex(3) != 2) {
-    LOG(ERROR)
-        << op_name
-        << " Check failed: grid_desc->getDimIndex(3) should be equal to 2.";
+    LOG_ERROR(
+        "{} Check failed: grid_desc->getDimIndex(3) should be equal to 2.",
+        op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   const size_t max_input_num = 2147483648;  // 2^31 2G num
   if ((mluOpGetTensorElementNum(grad_output_desc) >= max_input_num) ||
       (mluOpGetTensorElementNum(grid_desc) >= max_input_num) ||
       (mluOpGetTensorElementNum(grad_input_desc) >= max_input_num)) {
-    LOG(ERROR) << op_name << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    LOG_ERROR(
+        "{} Overflow max tensor num. Currently, MLU-OPS supports "
+        "tensor num smaller than 2^31.",
+        op_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   // check zero element
   if ((mluOpGetTensorElementNum(grad_input_desc) == 0) ||
       (mluOpGetTensorElementNum(grid_desc) == 0) ||
       (mluOpGetTensorElementNum(grad_output_desc) == 0)) {
-    LOG(ERROR) << op_name << " Zero element tensor failure.";
+    LOG_ERROR("{} Zero element tensor failure.", op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   PARAM_CHECK(op_name, grad_output != NULL);

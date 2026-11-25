@@ -71,12 +71,12 @@ void DeformRoiPoolForwardExecutor::initData() {
 
 void DeformRoiPoolForwardExecutor::paramCheck() {
   if (parser_->getInputNum() > 3 || parser_->getInputNum() < 2) {
-    LOG(ERROR) << "DeformRoiPoolForward input number is wrong. ";
+    LOG_ERROR("DeformRoiPoolForward input number is wrong. ");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "DeformRoiPoolForward output number is wrong. ";
+    LOG_ERROR("DeformRoiPoolForward output number is wrong. ");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }

@@ -53,7 +53,7 @@ int DcnForwardExecutor::getCoefficientOfLT2CT() {
 void DcnForwardExecutor::paramCheck() {
   if (parser_->getInputNum() != 3 && parser_->getInputNum() != 4 &&
       parser_->getInputNum() != 5) {
-    LOG(ERROR) << "DCN_Forward tensor input number is wrong.";
+    LOG_ERROR("DCN_Forward tensor input number is wrong.");
   }
 
   auto dtype =
@@ -72,15 +72,15 @@ void DcnForwardExecutor::paramCheck() {
   }
 
   if (!parser_->getProtoNode()->has_dcn_param()) {
-    LOG(ERROR) << "Missing dcn param. ";
+    LOG_ERROR("Missing dcn param. ");
   }
 
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "DCN_Forward tensor output number is wrong.";
+    LOG_ERROR("DCN_Forward tensor output number is wrong.");
   }
   TensorLayout input_order = parser_->getProtoNode()->input(0).layout();
   if (input_order != LAYOUT_NHWC) {
-    LOG(ERROR) << "DCN_Forward input tensor layout should be NHWC.";
+    LOG_ERROR("DCN_Forward input tensor layout should be NHWC.");
   }
 
   int N = parser_->getProtoNode()->input(0).shape().dims(0);
@@ -109,23 +109,23 @@ void DcnForwardExecutor::paramCheck() {
   }
 
   if (dimnb != 4) {
-    LOG(ERROR) << "[DCN_Forward]: dimnb should be 4.";
+    LOG_ERROR("[DCN_Forward]: dimnb should be 4.");
   }
 
   if (ci % dg) {
-    LOG(ERROR) << "[DCN_Forward]: deformable_group is wrong.";
+    LOG_ERROR("[DCN_Forward]: deformable_group is wrong.");
   }
 
   if (ci % g) {
-    LOG(ERROR) << "[DCN_Forward]: conv_group is wrong.";
+    LOG_ERROR("[DCN_Forward]: conv_group is wrong.");
   }
 
   if (co % g) {
-    LOG(ERROR) << "[DCN_Forward]: conv_group is wrong.";
+    LOG_ERROR("[DCN_Forward]: conv_group is wrong.");
   }
 
   if (N % im2col_step) {
-    LOG(ERROR) << "[DCN_Forward]: im2col_step is wrong.";
+    LOG_ERROR("[DCN_Forward]: im2col_step is wrong.");
   }
 }
 
@@ -360,11 +360,13 @@ void DcnForwardExecutor::transpose(float *input, float *output,
   int64_t dim_desc = dim_num;
   std::vector<int> permute_desc;
   if (dim_desc > 8 || dim_desc <= 0) {
-    LOG(ERROR) << "dim_desc is " << dim_desc
-               << ", it shoule less than 8 and greater than 0";
+    LOG_ERROR("dim_desc is {}, it shoule less than 8 and greater than 0",
+              dim_desc);
     return;
   }
-  { std::vector<int>().swap(permute_desc); }
+  {
+    std::vector<int>().swap(permute_desc);
+  }
   for (int i = 0; i < dim_num; i++) {
     permute_desc.push_back(permute[i]);
   }
@@ -626,7 +628,7 @@ void DcnForwardExecutor::cpuCompute() {
   float *buffer = nullptr;
   buffer = (float *)cpu_runtime_.allocate(cpu_buffer_size);
   if (buffer == nullptr) {
-    LOG(ERROR) << "dcn_forward: allocate buffer failed.";
+    LOG_ERROR("dcn_forward: allocate buffer failed.");
   }
   theory_ops = 0;
   computeDCNForwardCPU(dg, g, im2col_step, input_desc, cpu_input, offset_desc,

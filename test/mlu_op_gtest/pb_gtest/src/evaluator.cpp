@@ -180,8 +180,9 @@ void Evaluator::computeDiff(void *baseline_result, void *mlu_result,
                             const mluOpDataType_t dtype) {
   if (0 == criterions.size()) {
     criterion_matching_ = false;
-    LOG(ERROR) << "Error func in mluop_gtest and pb/pt may mismatch,"
-               << " now no error func is used, please check.";
+    LOG_ERROR(
+        "Error func in mluop_gtest and pb/pt may mismatch,"
+        " now no error func is used, please check.");
   }
   init(baseline_result, mlu_result, count, criterions, name, dtype);
   selectFuncPtr();

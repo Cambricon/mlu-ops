@@ -32,13 +32,13 @@ namespace mluoptest {
 
 void FocalLossSigmoidBackwardExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_focal_loss_sigmoid_backward_param()) {
-    LOG(ERROR) << "Lose focal_loss_sigmoid_backward param.";
+    LOG_ERROR("Lose focal_loss_sigmoid_backward param.");
   }
   if (parser_->getInputNum() != 3 && parser_->getInputNum() != 2) {
-    LOG(ERROR) << "focal_loss_sigmoid_backward input number is wrong.";
+    LOG_ERROR("focal_loss_sigmoid_backward input number is wrong.");
   }
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "focal_loss_sigmoid_backward output number is wrong.";
+    LOG_ERROR("focal_loss_sigmoid_backward output number is wrong.");
   }
 }
 
@@ -67,8 +67,8 @@ void FocalLossSigmoidBackwardExecutor::compute() {
     interface_timer_.start();
     MLUOP_CHECK(mluOpFocalLossSigmoidBackward(
         handle_, prefer, reduction, input_desc, input_mlu, target_desc,
-        target_mlu, weight_desc, weight_mlu,
-        alpha, gamma, grad_input_desc, grad_input_mlu));
+        target_mlu, weight_desc, weight_mlu, alpha, gamma, grad_input_desc,
+        grad_input_mlu));
     interface_timer_.stop();
   } else {
     auto grad_input_desc = tensor_desc_[2].tensor;
@@ -76,8 +76,7 @@ void FocalLossSigmoidBackwardExecutor::compute() {
     interface_timer_.start();
     MLUOP_CHECK(mluOpFocalLossSigmoidBackward(
         handle_, prefer, reduction, input_desc, input_mlu, target_desc,
-        target_mlu, NULL, NULL, alpha, gamma,
-        grad_input_desc, grad_input_mlu));
+        target_mlu, NULL, NULL, alpha, gamma, grad_input_desc, grad_input_mlu));
     interface_timer_.stop();
   }
 }

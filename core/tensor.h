@@ -207,31 +207,31 @@ struct alignas(64) mluOpTensorStruct {
   mluOpStatus_t getTensorDescriptorOnchipDataType(
       mluOpDataType_t *onchip_dtype);
 
-
   mluOpStatus_t getTensorDescriptorPointerMode(
       mluOpPointerMode_t *pointer_mode);
 
   uint64_t getTensorElementNum() { return this->total_element_num; }
-  private:
-    /* Try to pack and align the struct */
-    /*  ------------------- 64 Bytes - 1 -------------------*/
-    int64_t normal_dims[MLUOP_DIM_MAX];
 
-    /*  ------------------- 64 Bytes - 2 -------------------*/
-    int64_t normal_strides[MLUOP_DIM_MAX];
+ private:
+  /* Try to pack and align the struct */
+  /*  ------------------- 64 Bytes - 1 -------------------*/
+  int64_t normal_dims[MLUOP_DIM_MAX];
 
-    /*  ------------------- 64 Bytes - 3 -------------------*/
-    /* Offset - 0 */
-    uint64_t total_element_num = 0;
-    uint64_t total_tensor_size = 0;
-    int64_t *dims = normal_dims;        // point the normal dims as default
-    int64_t *strides = normal_strides;  // point the normal strides as default
-    /* Offset - 32 */
-    int dim = 0;
-    mluOpDataType_t dtype = MLUOP_DTYPE_FLOAT;
-    mluOpDataType_t onchip_dtype = MLUOP_DTYPE_INVALID;
-    mluOpTensorLayout_t layout = MLUOP_LAYOUT_ARRAY;
-    mluOpPointerMode_t pointer_mode = MLUOP_POINTER_MODE_DEVICE;
+  /*  ------------------- 64 Bytes - 2 -------------------*/
+  int64_t normal_strides[MLUOP_DIM_MAX];
+
+  /*  ------------------- 64 Bytes - 3 -------------------*/
+  /* Offset - 0 */
+  uint64_t total_element_num = 0;
+  uint64_t total_tensor_size = 0;
+  int64_t *dims = normal_dims;        // point the normal dims as default
+  int64_t *strides = normal_strides;  // point the normal strides as default
+  /* Offset - 32 */
+  int dim = 0;
+  mluOpDataType_t dtype = MLUOP_DTYPE_FLOAT;
+  mluOpDataType_t onchip_dtype = MLUOP_DTYPE_INVALID;
+  mluOpTensorLayout_t layout = MLUOP_LAYOUT_ARRAY;
+  mluOpPointerMode_t pointer_mode = MLUOP_POINTER_MODE_DEVICE;
 };
 
 // dim_set(rnn)     [layer_num, direction, cap_of_cell]
@@ -298,8 +298,7 @@ struct mluOpTensorSetStruct {
     auto data_offset_array = data_offset.size();
     for (int i = 0; i < data_offset_array; i++) {
       if (i != 0 && data_offset[i] == 0) {
-        LOG(ERROR) << "tensorSet's data not set, index:" << i << " of "
-                   << tensor_num;
+        LOG_ERROR("tensorSet's data not set, index:{} of {}", i, tensor_num);
       }
     }
   }
@@ -399,8 +398,7 @@ inline int64_t mluOpGetTensordimN(const mluOpTensorDescriptor_t desc) {
     case MLUOP_LAYOUT_HWCN:
       return desc->getDimIndex(3);
     default:
-      LOG(ERROR)
-          << "Failed to call dimN, illegal layout in TensorDescriptor.\n";
+      LOG_ERROR("Failed to call dimN, illegal layout in TensorDescriptor.\n");
   }
   return 0;
 }
@@ -412,8 +410,7 @@ inline int64_t mluOpGetTensordimD(const mluOpTensorDescriptor_t desc) {
     case MLUOP_LAYOUT_NCDHW:
       return desc->getDimIndex(2);
     default:
-      LOG(ERROR)
-          << "Failed to call dimD, illegal layout in TensorDescriptor.\n";
+      LOG_ERROR("Failed to call dimD, illegal layout in TensorDescriptor.\n");
   }
   return 0;
 }
@@ -435,8 +432,7 @@ inline int64_t mluOpGetTensordimC(const mluOpTensorDescriptor_t desc) {
     case MLUOP_LAYOUT_NDHWC:
       return desc->getDimIndex(4);
     default:
-      LOG(ERROR)
-          << "Failed to call dimC, illegal layout in TensorDescriptor.\n";
+      LOG_ERROR("Failed to call dimC, illegal layout in TensorDescriptor.\n");
   }
   return 0;
 }
@@ -453,8 +449,7 @@ inline int64_t mluOpGetTensordimH(const mluOpTensorDescriptor_t desc) {
     case MLUOP_LAYOUT_NCDHW:
       return desc->getDimIndex(3);
     default:
-      LOG(ERROR)
-          << "Failed to call dimH, illegal layout in TensorDescriptor.\n";
+      LOG_ERROR("Failed to call dimH, illegal layout in TensorDescriptor.\n");
   }
   return 0;
 }
@@ -471,8 +466,7 @@ inline int64_t mluOpGetTensordimW(const mluOpTensorDescriptor_t desc) {
     case MLUOP_LAYOUT_NCDHW:
       return desc->getDimIndex(4);
     default:
-      LOG(ERROR)
-          << "Failed to call dimW, illegal layout in TensorDescriptor.\n";
+      LOG_ERROR("Failed to call dimW, illegal layout in TensorDescriptor.\n");
   }
   return 0;
 }
@@ -496,8 +490,7 @@ inline int64_t mluOpGetSeqDataDimN(const mluOpSeqDataDescriptor_t desc) {
     case MLUOP_SEQDATA_TBNC:
       return desc->dims[2];
     default:
-      LOG(ERROR)
-          << "Failed to call dimN, illegal layout in SeqDataDescriptor.\n";
+      LOG_ERROR("Failed to call dimN, illegal layout in SeqDataDescriptor.\n");
   }
   return 0;
 }
@@ -514,8 +507,7 @@ inline int64_t mluOpGetSeqDataDimB(const mluOpSeqDataDescriptor_t desc) {
     case MLUOP_SEQDATA_TNBC:
       return desc->dims[2];
     default:
-      LOG(ERROR)
-          << "Failed to call dimB, illegal layout in SeqDataDescriptor.\n";
+      LOG_ERROR("Failed to call dimB, illegal layout in SeqDataDescriptor.\n");
   }
   return 0;
 }
@@ -536,8 +528,7 @@ inline int64_t mluOpGetSeqDataDimT(const mluOpSeqDataDescriptor_t desc) {
     case MLUOP_SEQDATA_BNTC:
       return desc->dims[2];
     default:
-      LOG(ERROR)
-          << "Failed to call dimT, illegal layout in SeqDataDescriptor.\n";
+      LOG_ERROR("Failed to call dimT, illegal layout in SeqDataDescriptor.\n");
   }
   return 0;
 }
@@ -558,8 +549,7 @@ inline int64_t mluOpGetSeqDataDimC(const mluOpSeqDataDescriptor_t desc) {
     case MLUOP_SEQDATA_BTNC:
       return desc->dims[3];
     default:
-      LOG(ERROR)
-          << "Failed to call dimC, illegal layout in SeqDataDescriptor.\n";
+      LOG_ERROR("Failed to call dimC, illegal layout in SeqDataDescriptor.\n");
   }
   return 0;
 }

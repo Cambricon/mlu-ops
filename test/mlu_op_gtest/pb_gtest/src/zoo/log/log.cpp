@@ -26,10 +26,10 @@ namespace mluoptest {
 
 void LogExecutor::paramCheck() {
   if (parser_->getInputNum() != 1) {
-    LOG(ERROR) << "log input number is wrong.";
+    LOG_ERROR("log input number is wrong.");
   }
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "log output number is wrong.";
+    LOG_ERROR("log output number is wrong.");
   }
 }
 
@@ -43,8 +43,10 @@ void LogExecutor::compute() {
   VLOG(4) << "call mluOpLog()";
   mluOpLogBase_t base =
       (mluOpLogBase_t)(parser_->getProtoNode()->log_param().log_base());
-  mluOpComputationPreference_t prefer = (mluOpComputationPreference_t)(
-      parser_->getProtoNode()->log_param().prefer());
+  mluOpComputationPreference_t prefer =
+      (mluOpComputationPreference_t)(parser_->getProtoNode()
+                                         ->log_param()
+                                         .prefer());
   interface_timer_.start();
   MLUOP_CHECK(mluOpLog(handle_, prefer, base, input_tensor, input_dev,
                        output_tensor, output_dev));

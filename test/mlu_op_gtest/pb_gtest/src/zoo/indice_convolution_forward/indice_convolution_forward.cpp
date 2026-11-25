@@ -128,7 +128,7 @@ void IndiceConvolutionForwardExecutor::cpuCompute() {
       stride[1] = 1;
       stride[2] = ci * num_filters;
     } else {
-      LOG(ERROR) << "Unsupported filters layout.";
+      LOG_ERROR("Unsupported filters layout.");
     }
     for (int32_t DHWi = 0; DHWi < num_filters; ++DHWi) {
       for (int32_t cii = 0; cii < ci; ++cii) {

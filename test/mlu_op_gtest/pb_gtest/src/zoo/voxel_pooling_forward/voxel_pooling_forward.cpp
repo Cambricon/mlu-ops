@@ -28,8 +28,7 @@ namespace mluoptest {
 void VoxelPoolingForwardExecutor::paramCheck() {
   VLOG(4) << "VoxelPoolingForwardExecutor call paramCheck begin.";
   if (!parser_->getProtoNode()->has_voxel_pooling_forward_param()) {
-    LOG(ERROR)
-        << "VoxelPoolingForwardExecutor Lose voxel_pooling_forward_param.";
+    LOG_ERROR("VoxelPoolingForwardExecutor Lose voxel_pooling_forward_param.");
   }
   GTEST_CHECK(parser_->getInputNum() == 2);
   GTEST_CHECK(parser_->getOutputNum() == 2);

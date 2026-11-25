@@ -81,58 +81,64 @@ static mluOpStatus_t TinShiftPreCheck(
   int input_dims = input_desc->getDim();
   int output_dims = output_desc->getDim();
   if (input_dims != 4) {
-    LOG(ERROR) << "[mluOpTinShift " + direction +
-                      "] The input dims should be 4. "
-               << "But now the input dims is " << input_dims << ".";
+    LOG_ERROR(
+        "[mluOpTinShift {}] The input dims should be 4. "
+        "But now the input dims is {}.",
+        direction, input_dims);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (shifts_desc->getDim() != 2) {
-    LOG(ERROR) << "[mluOpTinShift " + direction +
-                      "] The shifts dims should be 2. "
-               << "But now the shifts dims is " << shifts_desc->getDim() << ".";
+    LOG_ERROR(
+        "[mluOpTinShift {}] The shifts dims should be 2. "
+        "But now the shifts dims is {}.",
+        direction, shifts_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_dims != output_dims) {
-    LOG(ERROR) << "[mluOpTinShift " + direction + "] "
-               << "The input dims and the output dims should be the same. "
-               << "But now the input dims is " << input_dims
-               << ", and the output dims is " << output_dims << ".";
+    LOG_ERROR(
+        "[mluOpTinShift {}] "
+        "The input dims and the output dims should be the same. "
+        "But now the input dims is {}, and the output dims is {}.",
+        direction, input_dims, output_dims);
     return MLUOP_STATUS_BAD_PARAM;
   }
   const int channel_size = input_desc->getDimIndex(2);
   const int group_size = shifts_desc->getDimIndex(1);
   if (channel_size == 0) {
-    LOG(ERROR) << "[mluOpTinShift " + direction + "] "
-               << "The channel size should not be zero.";
+    LOG_ERROR("[mluOpTinShift {}] The channel size should not be zero.",
+              direction);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (group_size == 0) {
-    LOG(ERROR) << "[mluOpTinShift " + direction + "] "
-               << "The group size should not be zero.";
+    LOG_ERROR("[mluOpTinShift {}] The group size should not be zero.",
+              direction);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (channel_size % group_size != 0) {
-    LOG(ERROR) << "[mluOpTinShift " + direction + "] "
-               << "The channel size should be multiple of group size, "
-               << "But now channel size is " << channel_size
-               << " and group size is " << group_size << ".";
+    LOG_ERROR(
+        "[mluOpTinShift {}] "
+        "The channel size should be multiple of group size, "
+        "But now channel size is {} and group size is {}.",
+        direction, channel_size, group_size);
     return MLUOP_STATUS_BAD_PARAM;
   }
   for (int i = 0; i < input_dims; i++) {
     if (input_desc->getDimIndex(i) != output_desc->getDimIndex(i)) {
-      LOG(ERROR) << "[mluOpTinShift " + direction + "] The size of input dims["
-                 << i << "] is " << input_desc->getDimIndex(i)
-                 << ", and the size of output dims[" << i << "] is "
-                 << output_desc->getDimIndex(i) << ". They should be the same.";
+      LOG_ERROR(
+          "[mluOpTinShift {}] The size of input dims[{}] is {}, "
+          "and the size of output dims[{}] is {}. "
+          "They should be the same.",
+          direction, i, input_desc->getDimIndex(i), i,
+          output_desc->getDimIndex(i));
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   if (input_desc->getDimIndex(0) != shifts_desc->getDimIndex(0)) {
-    LOG(ERROR) << "[mluOpTinShift " + direction + "] "
-               << "The input batch size should be the same as shifts's,"
-               << " input batch size is " << input_desc->getDimIndex(0)
-               << " and shifts batch size is " << shifts_desc->getDimIndex(0)
-               << ".";
+    LOG_ERROR(
+        "[mluOpTinShift {}] "
+        "The input batch size should be the same as shifts's, "
+        "input batch size is {} and shifts batch size is {}.",
+        direction, input_desc->getDimIndex(0), shifts_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
   const std::string api_ = "[mluOpTinShift " + direction + "]:";
@@ -140,35 +146,41 @@ static mluOpStatus_t TinShiftPreCheck(
   STRIDE_TENSOR_CHECK(api_, shifts_desc, "shifts_desc must be contiguous");
   STRIDE_TENSOR_CHECK(api_, output_desc, "output_desc must be contiguous");
   if (shifts_desc->getDtype() != MLUOP_DTYPE_INT32) {
-    LOG(ERROR)
-        << "[mluOpTinShift " + direction + "] "
-        << "The data type of the shift tensor should be MLUOP_DTYPE_INT32. "
-        << "Current data type is "
-        << mluOpGetNameOfDataType(shifts_desc->getDtype());
+    LOG_ERROR(
+        "[mluOpTinShift {}] "
+        "The data type of the shift tensor should be MLUOP_DTYPE_INT32. "
+        "Current data type is {}",
+        direction, mluOpGetNameOfDataType(shifts_desc->getDtype()));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_desc->getDtype() != MLUOP_DTYPE_HALF &&
       input_desc->getDtype() != MLUOP_DTYPE_FLOAT) {
-    LOG(ERROR) << "[mluOpTinShift " + direction + "] "
-               << "The data type of the input tensor should be half or float.";
+    LOG_ERROR(
+        "[mluOpTinShift {}] "
+        "The data type of the input tensor should be half or float.",
+        direction);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_desc->getDtype() != output_desc->getDtype()) {
-    LOG(ERROR) << "[mluOpTinShift " + direction + "] "
-               << "The data type of the input tensor and output tensor should "
-                  "be the same.";
+    LOG_ERROR(
+        "[mluOpTinShift {}] "
+        "The data type of the input tensor and output tensor should "
+        "be the same.",
+        direction);
     return MLUOP_STATUS_BAD_PARAM;
   }
   const int input_batches_size = input_desc->getDimIndex(0);
   const int input_hw_size = input_desc->getDimIndex(3);
   if (input_batches_size == 0) {
-    LOG(ERROR) << "[mluOpTinShift " + direction + "] "
-               << "The input batch size should not be zero.";
+    LOG_ERROR("[mluOpTinShift {}] The input batch size should not be zero.",
+              direction);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_hw_size == 0) {
-    LOG(ERROR) << "[mluOpTinShift " + direction + "] "
-               << "The size of input hw size should not be zero.";
+    LOG_ERROR(
+        "[mluOpTinShift {}] "
+        "The size of input hw size should not be zero.",
+        direction);
     return MLUOP_STATUS_BAD_PARAM;
   }
   const uint64_t input_element_num = mluOpGetTensorElementNum(input_desc);

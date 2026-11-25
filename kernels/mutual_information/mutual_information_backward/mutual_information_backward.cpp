@@ -62,43 +62,46 @@ static mluOpStatus_t checkTensorDim(
     const mluOpTensorDescriptor_t px_grad_desc,
     const mluOpTensorDescriptor_t py_grad_desc) {
   if (3 != px_desc->getDim()) {
-    LOG(ERROR) << API_NAME << " The dim of px must be 3. "
-               << "But now the dim of px is " << px_desc->getDim() << ".";
+    LOG_ERROR("{} The dim of px must be 3. But now the dim of px is {}.",
+              API_NAME, px_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (3 != py_desc->getDim()) {
-    LOG(ERROR) << API_NAME << " The dim of py must be 3. "
-               << "But now the dim of py is " << py_desc->getDim() << ".";
+    LOG_ERROR("{} The dim of py must be 3. But now the dim of py is {}.",
+              API_NAME, py_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (nullptr != opt_boundary_desc && 2 != opt_boundary_desc->getDim()) {
-    LOG(ERROR) << API_NAME
-               << " The dim of opt_boundary must be 2 when opt_boundary is "
-               << "not NULL. But now the dim of opt_boundary is "
-               << opt_boundary_desc->getDim() << ".";
+    LOG_ERROR(
+        "{} The dim of opt_boundary must be 2 when opt_boundary is not "
+        "NULL. But now the dim of opt_boundary is {}.",
+        API_NAME, opt_boundary_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (3 != p_desc->getDim()) {
-    LOG(ERROR) << API_NAME << " The dim of p must be 3. "
-               << "But now the dim of p is " << p_desc->getDim() << ".";
+    LOG_ERROR("{} The dim of p must be 3. But now the dim of p is {}.",
+              API_NAME, p_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (1 != ans_grad_desc->getDim()) {
-    LOG(ERROR) << API_NAME << " The dim of ans_grad must be 1. "
-               << "But now the dim of ans_grad is " << ans_grad_desc->getDim()
-               << ".";
+    LOG_ERROR(
+        "{} The dim of ans_grad must be 1. But now the dim of ans_grad "
+        "is {}.",
+        API_NAME, ans_grad_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (3 != px_grad_desc->getDim()) {
-    LOG(ERROR) << API_NAME << " The dim of px_grad must be 3. "
-               << "But now the dim of px_grad is " << px_grad_desc->getDim()
-               << ".";
+    LOG_ERROR(
+        "{} The dim of px_grad must be 3. But now the dim of px_grad "
+        "is {}.",
+        API_NAME, px_grad_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (3 != py_grad_desc->getDim()) {
-    LOG(ERROR) << API_NAME << " The dim of py_grad must be 3. "
-               << "But now the dim of py_grad is " << py_grad_desc->getDim()
-               << ".";
+    LOG_ERROR(
+        "{} The dim of py_grad must be 3. But now the dim of py_grad "
+        "is {}.",
+        API_NAME, py_grad_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -119,33 +122,34 @@ static mluOpStatus_t checkTensorShape(
   if (B != py_desc->getDimIndex(0) || B != p_desc->getDimIndex(0) ||
       B != ans_grad_desc->getDimIndex(0) || B != px_grad_desc->getDimIndex(0) ||
       B != py_grad_desc->getDimIndex(0)) {
-    LOG(ERROR) << API_NAME
-               << " px.shape[0], py.shape[0], p.shape[0], ans_grad.shape[0], "
-               << "px_grad.shape[0] and py_grad.shape[0] must be same. But now "
-               << "px.shape[0] is " << px_desc->getDimIndex(0)
-               << ", py.shape[0] is " << py_desc->getDimIndex(0)
-               << ", p.shape[0] is " << p_desc->getDimIndex(0)
-               << ", ans_grad.shape[0] is " << ans_grad_desc->getDimIndex(0)
-               << ", px_grad.shape[0] is " << px_grad_desc->getDimIndex(0)
-               << ", py_grad.shape[0] is " << py_grad_desc->getDimIndex(0)
-               << ".";
+    LOG_ERROR(
+        "{} px.shape[0], py.shape[0], p.shape[0], ans_grad.shape[0], "
+        "px_grad.shape[0] and py_grad.shape[0] must be same. But now "
+        "px.shape[0] is {}, py.shape[0] is {}, p.shape[0] is {}, "
+        "ans_grad.shape[0] is {}, px_grad.shape[0] is {}, "
+        "py_grad.shape[0] is {}.",
+        API_NAME, px_desc->getDimIndex(0), py_desc->getDimIndex(0),
+        p_desc->getDimIndex(0), ans_grad_desc->getDimIndex(0),
+        px_grad_desc->getDimIndex(0), py_grad_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // Currently only supports !modified, so the shape of px must be [B, S, T+1]
   if (T + 1 != px_desc->getDimIndex(2)) {
-    LOG(ERROR) << API_NAME << " Currently only supports the case that "
-               << "px.shape[2] must be equal to py.shape[2] + 1. But now "
-               << "px.shape[2] is " << px_desc->getDimIndex(2)
-               << ", py.shape[2] is " << py_desc->getDimIndex(2) << ".";
+    LOG_ERROR(
+        "{} Currently only supports the case that px.shape[2] must be "
+        "equal to py.shape[2] + 1. But now px.shape[2] is {}, "
+        "py.shape[2] is {}.",
+        API_NAME, px_desc->getDimIndex(2), py_desc->getDimIndex(2));
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   // The shape of py must be [B, S+1, T]
   if (S + 1 != py_desc->getDimIndex(1)) {
-    LOG(ERROR) << API_NAME << " py.shape[1] must be equal to px.shape[1] + 1. "
-               << "But now px.shape[1] is " << px_desc->getDimIndex(1)
-               << ", py.shape[1] is " << py_desc->getDimIndex(1) << ".";
+    LOG_ERROR(
+        "{} py.shape[1] must be equal to px.shape[1] + 1. But now "
+        "px.shape[1] is {}, py.shape[1] is {}.",
+        API_NAME, px_desc->getDimIndex(1), py_desc->getDimIndex(1));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -153,36 +157,35 @@ static mluOpStatus_t checkTensorShape(
   if (nullptr != opt_boundary_desc &&
       (B != opt_boundary_desc->getDimIndex(0) ||
        4 != opt_boundary_desc->getDimIndex(1))) {
-    LOG(ERROR) << API_NAME << " When opt_boundary is not NULL, "
-               << "opt_boundary.shape[0] and px.shape[0] must be same, and "
-               << "opt_boundary.shape[1] must be 4. But now "
-               << "px.shape[0] is " << px_desc->getDimIndex(0)
-               << ", opt_boundary.shape[0] is "
-               << opt_boundary_desc->getDimIndex(0)
-               << ", opt_boundary.shape[1] is "
-               << opt_boundary_desc->getDimIndex(1) << ".";
+    LOG_ERROR(
+        "{} When opt_boundary is not NULL, opt_boundary.shape[0] and "
+        "px.shape[0] must be same, and opt_boundary.shape[1] must be "
+        "4. But now px.shape[0] is {}, opt_boundary.shape[0] is {}, "
+        "opt_boundary.shape[1] is {}.",
+        API_NAME, px_desc->getDimIndex(0), opt_boundary_desc->getDimIndex(0),
+        opt_boundary_desc->getDimIndex(1));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // The shape of p must be [B, S+1, T+1]
   if (S + 1 != p_desc->getDimIndex(1) || T + 1 != p_desc->getDimIndex(2)) {
-    LOG(ERROR) << API_NAME << " p.shape[1] and py.shape[1] must be same, and "
-               << "p.shape[2] must be equal to py.shape[2] + 1. "
-               << "But now p.shape[1] is " << p_desc->getDimIndex(1)
-               << ", py.shape[1] is " << py_desc->getDimIndex(1)
-               << ", p.shape[2] is " << p_desc->getDimIndex(2)
-               << ", py.shape[2] is " << py_desc->getDimIndex(2) << ".";
+    LOG_ERROR(
+        "{} p.shape[1] and py.shape[1] must be same, and p.shape[2] "
+        "must be equal to py.shape[2] + 1. But now p.shape[1] is {}, "
+        "py.shape[1] is {}, p.shape[2] is {}, py.shape[2] is {}.",
+        API_NAME, p_desc->getDimIndex(1), py_desc->getDimIndex(1),
+        p_desc->getDimIndex(2), py_desc->getDimIndex(2));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   // The shape of px and px_grad must be same: [B, S, T+1]
   for (int i = 1; i < px_grad_desc->getDim(); ++i) {
     if (px_grad_desc->getDimIndex(i) != px_desc->getDimIndex(i)) {
-      LOG(ERROR) << API_NAME
-                 << " The shape of px and px_grad must be same. But now "
-                 << "px.shape[" << i << "] is " << px_desc->getDimIndex(i)
-                 << ", px_grad.shape[" << i << "] is "
-                 << px_grad_desc->getDimIndex(i) << ".";
+      LOG_ERROR(
+          "{} The shape of px and px_grad must be same. But now "
+          "px.shape[{}] is {}, px_grad.shape[{}] is {}.",
+          API_NAME, i, px_desc->getDimIndex(i), i,
+          px_grad_desc->getDimIndex(i));
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -190,11 +193,11 @@ static mluOpStatus_t checkTensorShape(
   // The shape of py and py_grad must be same: [B, S+1, T]
   for (int i = 1; i < py_grad_desc->getDim(); ++i) {
     if (py_grad_desc->getDimIndex(i) != py_desc->getDimIndex(i)) {
-      LOG(ERROR) << API_NAME
-                 << " The shape of py and py_grad must be same. But now "
-                 << "py.shape[" << i << "] is " << py_desc->getDimIndex(i)
-                 << ", py_grad.shape[" << i << "] is "
-                 << py_grad_desc->getDimIndex(i) << ".";
+      LOG_ERROR(
+          "{} The shape of py and py_grad must be same. But now "
+          "py.shape[{}] is {}, py_grad.shape[{}] is {}.",
+          API_NAME, i, py_desc->getDimIndex(i), i,
+          py_grad_desc->getDimIndex(i));
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -211,53 +214,53 @@ static mluOpStatus_t checkTensorDatatype(
     const mluOpTensorDescriptor_t px_grad_desc,
     const mluOpTensorDescriptor_t py_grad_desc) {
   if (MLUOP_DTYPE_FLOAT != px_desc->getDtype()) {
-    LOG(ERROR) << API_NAME
-               << "The data type of px currently only support float. But now "
-               << "the data type of px is "
-               << mluOpGetNameOfDataType(px_desc->getDtype()) << ".";
+    LOG_ERROR(
+        "{}The data type of px currently only support float. But now "
+        "the data type of px is {}.",
+        API_NAME, mluOpGetNameOfDataType(px_desc->getDtype()));
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (MLUOP_DTYPE_FLOAT != py_desc->getDtype()) {
-    LOG(ERROR) << API_NAME
-               << "The data type of py currently only support float. But now "
-               << "the data type of py is "
-               << mluOpGetNameOfDataType(py_desc->getDtype()) << ".";
+    LOG_ERROR(
+        "{}The data type of py currently only support float. But now "
+        "the data type of py is {}.",
+        API_NAME, mluOpGetNameOfDataType(py_desc->getDtype()));
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (nullptr != opt_boundary_desc &&
       MLUOP_DTYPE_INT64 != opt_boundary_desc->getDtype()) {
-    LOG(ERROR) << API_NAME
-               << "The data type of opt_boundary currently only support int64."
-               << " But now the data type of opt_boundary is "
-               << mluOpGetNameOfDataType(opt_boundary_desc->getDtype()) << ".";
+    LOG_ERROR(
+        "{}The data type of opt_boundary currently only support int64. "
+        "But now the data type of opt_boundary is {}.",
+        API_NAME, mluOpGetNameOfDataType(opt_boundary_desc->getDtype()));
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (MLUOP_DTYPE_FLOAT != p_desc->getDtype()) {
-    LOG(ERROR) << API_NAME
-               << "The data type of p currently only support float. But now "
-               << "the data type of p is "
-               << mluOpGetNameOfDataType(p_desc->getDtype()) << ".";
+    LOG_ERROR(
+        "{}The data type of p currently only support float. But now "
+        "the data type of p is {}.",
+        API_NAME, mluOpGetNameOfDataType(p_desc->getDtype()));
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (MLUOP_DTYPE_FLOAT != ans_grad_desc->getDtype()) {
-    LOG(ERROR) << API_NAME
-               << "The data type of ans_grad currently only support float. "
-               << "But now the data type of ans_grad is "
-               << mluOpGetNameOfDataType(ans_grad_desc->getDtype()) << ".";
+    LOG_ERROR(
+        "{}The data type of ans_grad currently only support float. But "
+        "now the data type of ans_grad is {}.",
+        API_NAME, mluOpGetNameOfDataType(ans_grad_desc->getDtype()));
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (MLUOP_DTYPE_FLOAT != px_grad_desc->getDtype()) {
-    LOG(ERROR) << API_NAME
-               << "The data type of px_grad currently only support float. "
-               << "But now the data type of px_grad is "
-               << mluOpGetNameOfDataType(px_grad_desc->getDtype()) << ".";
+    LOG_ERROR(
+        "{}The data type of px_grad currently only support float. But "
+        "now the data type of px_grad is {}.",
+        API_NAME, mluOpGetNameOfDataType(px_grad_desc->getDtype()));
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (MLUOP_DTYPE_FLOAT != py_grad_desc->getDtype()) {
-    LOG(ERROR) << API_NAME
-               << "The data type of py_grad currently only support float. "
-               << "But now the data type of py_grad is "
-               << mluOpGetNameOfDataType(py_grad_desc->getDtype()) << ".";
+    LOG_ERROR(
+        "{}The data type of py_grad currently only support float. But "
+        "now the data type of py_grad is {}.",
+        API_NAME, mluOpGetNameOfDataType(py_grad_desc->getDtype()));
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -278,8 +281,10 @@ static mluOpStatus_t checkTensorScaleLimit(
       (nullptr != opt_boundary_desc &&
        mluOpGetTensorElementNum(opt_boundary_desc) >= LARGE_TENSOR_NUM) ||
       mluOpGetTensorElementNum(p_desc) >= LARGE_TENSOR_NUM) {
-    LOG(ERROR) << API_NAME << " Overflow max tensor num."
-               << " Current operator supports tensor num smaller than 2^31.";
+    LOG_ERROR(
+        "{} Overflow max tensor num. Current operator supports tensor "
+        "num smaller than 2^31.",
+        API_NAME);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -316,9 +321,10 @@ static mluOpStatus_t checkTensorPtr(
     has_boundary = false;
     VLOG(5) << API_NAME << " opt_boundary is NULL.";
   } else {
-    LOG(ERROR) << API_NAME
-               << " opt_boundary_desc and opt_boundary must both be NULL, "
-               << "or both not be NULL.";
+    LOG_ERROR(
+        "{} opt_boundary_desc and opt_boundary must both be NULL, or "
+        "both not be NULL.",
+        API_NAME);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -348,8 +354,10 @@ static mluOpStatus_t mutualInformationBackwardParamCheck(
 
   // 2. check mlu platform
   if (handle->arch < 372) {
-    LOG(ERROR) << API_NAME << " Only mlu300 and above devices are supported."
-               << " Please check the device version!";
+    LOG_ERROR(
+        "{} Only mlu300 and above devices are supported. Please check "
+        "the device version!",
+        API_NAME);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 

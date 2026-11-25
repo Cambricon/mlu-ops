@@ -115,7 +115,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetMaskedCol2imForwardWorkspaceSize(
     return status;
   }
   if (mluOpGetTensorElementNum(im_desc) == 0 || col_desc->getDimIndex(0) == 0) {
-    LOG(ERROR) << "[mluOpMaskedCol2imForward] Zero element tensor failure.";
+    LOG_ERROR("[mluOpMaskedCol2imForward] Zero element tensor failure.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (mluOpGetTensorElementNum(mask_h_idx_desc) == 0) {
@@ -235,7 +235,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMaskedCol2imForward(
     return status;
   }
   if (mluOpGetTensorElementNum(im_desc) == 0 || col_desc->getDimIndex(0) == 0) {
-    LOG(ERROR) << "[mluOpMaskedCol2imForward] Zero element tensor failure.";
+    LOG_ERROR("[mluOpMaskedCol2imForward] Zero element tensor failure.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (mluOpGetTensorElementNum(mask_h_idx_desc) == 0) {

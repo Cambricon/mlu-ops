@@ -84,16 +84,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedForward(
   PARAM_CHECK_GT(API, rois_desc->getDimIndex(0), 0);
 
   if (output_desc->getDimIndex(0) != rois_desc->getDimIndex(0)) {
-    LOG(ERROR) << API << " rois_desc batch = " << rois_desc->getDimIndex(0)
-               << ", output_desc batch = " << output_desc->getDimIndex(0)
-               << ". They should be the same.";
+    LOG_ERROR(
+        "{} rois_desc batch = {}, output_desc batch = {}. "
+        "They should be the same.",
+        API, rois_desc->getDimIndex(0), output_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (output_desc->getDimIndex(3) != features_desc->getDimIndex(3)) {
-    LOG(ERROR) << API
-               << " features_desc channel = " << features_desc->getDimIndex(3)
-               << ", output_desc channel = " << output_desc->getDimIndex(3)
-               << ". They should be the same.";
+    LOG_ERROR(
+        "{} features_desc channel = {}, output_desc channel = {}. "
+        "They should be the same.",
+        API, features_desc->getDimIndex(3), output_desc->getDimIndex(3));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -218,16 +219,17 @@ mluOpStatus_t MLUOP_WIN_API mluOpRoiAlignRotatedBackward(
   PARAM_CHECK_GT(API, rois_desc->getDimIndex(0), 0);
 
   if (top_grad_desc->getDimIndex(0) != rois_desc->getDimIndex(0)) {
-    LOG(ERROR) << API << " rois_desc batch = " << rois_desc->getDimIndex(0)
-               << ", top_grad_desc batch = " << top_grad_desc->getDimIndex(0)
-               << ". They should be the same.";
+    LOG_ERROR(
+        "{} rois_desc batch = {}, top_grad_desc batch = {}. "
+        "They should be the same.",
+        API, rois_desc->getDimIndex(0), top_grad_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (top_grad_desc->getDimIndex(3) != bottom_grad_desc->getDimIndex(3)) {
-    LOG(ERROR) << API << " bottom_grad_desc channel = "
-               << bottom_grad_desc->getDimIndex(3)
-               << ", top_grad_desc channel = " << top_grad_desc->getDimIndex(3)
-               << ". They should be the same.";
+    LOG_ERROR(
+        "{} bottom_grad_desc channel = {}, top_grad_desc channel = {}. "
+        "They should be the same.",
+        API, bottom_grad_desc->getDimIndex(3), top_grad_desc->getDimIndex(3));
     return MLUOP_STATUS_BAD_PARAM;
   }
 

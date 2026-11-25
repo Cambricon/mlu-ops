@@ -107,23 +107,23 @@ static mluOpStatus_t indiceConvDtypeVaild(
   auto filters_grad_dtype = filters_grad_desc->getDtype();
   auto pairs_dtype = indice_pairs_desc->getDtype();
   if (pairs_dtype != MLUOP_DTYPE_INT32) {
-    LOG(ERROR) << api_name
-               << " indice_pairs_desc only supports data type int32. "
-               << "But now the data type is "
-               << mluOpGetNameOfDataType(pairs_dtype) << ".";
+    LOG_ERROR(
+        "{} indice_pairs_desc only supports data type int32. "
+        "But now the data type is {}.",
+        api_name, mluOpGetNameOfDataType(pairs_dtype));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   if (input_dtype != diffy_dtype || input_dtype != filters_grad_dtype ||
       !isFloatDtype(input_dtype) || !isFloatDtype(diffy_dtype) ||
       !isFloatDtype(filters_grad_dtype)) {
-    LOG(ERROR)
-        << api_name << " The data type of features_desc, output_grad_desc "
-        << "and filters_grad_desc should be the same and the three should "
-        << "be either half or float. But now the data types are "
-        << mluOpGetNameOfDataType(input_dtype) << "-"
-        << mluOpGetNameOfDataType(diffy_dtype) << "-"
-        << mluOpGetNameOfDataType(filters_grad_dtype) << ".";
+    LOG_ERROR(
+        "{} The data type of features_desc, output_grad_desc "
+        "and filters_grad_desc should be the same and the three should "
+        "be either half or float. But now the data types are {}-{}-{}.",
+        api_name, mluOpGetNameOfDataType(input_dtype),
+        mluOpGetNameOfDataType(diffy_dtype),
+        mluOpGetNameOfDataType(filters_grad_dtype));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -137,19 +137,18 @@ static mluOpStatus_t indiceConvDtypeVaild(
        diffy_on_dtype != diffy_dtype) ||
       (MLUOP_DTYPE_INVALID != pairs_on_dtype &&
        pairs_on_dtype != pairs_dtype)) {
-    LOG(ERROR) << api_name
-               << " For features_desc, output_grad_desc and indice_pairs_desc, "
-               << "there is no need to set the on-chip data type, and if so, "
-               << "it needs to be the same as their off-chip data type. "
-               << "But now two data types of features_desc are "
-               << mluOpGetNameOfDataType(input_dtype) << "-"
-               << mluOpGetNameOfDataType(input_on_dtype)
-               << ", output_grad_desc are "
-               << mluOpGetNameOfDataType(diffy_dtype) << "-"
-               << mluOpGetNameOfDataType(diffy_on_dtype)
-               << ", and indice_pairs_desc are "
-               << mluOpGetNameOfDataType(pairs_dtype) << "-"
-               << mluOpGetNameOfDataType(pairs_on_dtype) << ".";
+    LOG_ERROR(
+        "{} For features_desc, output_grad_desc and indice_pairs_desc, "
+        "there is no need to set the on-chip data type, and if so, "
+        "it needs to be the same as their off-chip data type. "
+        "But now two data types of features_desc are {}-{}, "
+        "output_grad_desc are {}-{}, and indice_pairs_desc are {}-{}.",
+        api_name, mluOpGetNameOfDataType(input_dtype),
+        mluOpGetNameOfDataType(input_on_dtype),
+        mluOpGetNameOfDataType(diffy_dtype),
+        mluOpGetNameOfDataType(diffy_on_dtype),
+        mluOpGetNameOfDataType(pairs_dtype),
+        mluOpGetNameOfDataType(pairs_on_dtype));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -157,13 +156,14 @@ static mluOpStatus_t indiceConvDtypeVaild(
        !isFloatDtype(filters_grad_on_dtype)) ||
       (filters_grad_dtype == MLUOP_DTYPE_FLOAT &&
        filters_grad_on_dtype == MLUOP_DTYPE_HALF)) {
-    LOG(ERROR) << api_name << " The on-chip data type of filters_grad_desc "
-               << "may not be set, if it is set, only half or float types are "
-               << "supported, and the bit width of on-chip data type can not "
-               << "be smaller than that of off-chip data type. But now two "
-               << "data types of filters_grad_desc are "
-               << mluOpGetNameOfDataType(filters_grad_dtype) << "-"
-               << mluOpGetNameOfDataType(filters_grad_on_dtype) << ".";
+    LOG_ERROR(
+        "{} The on-chip data type of filters_grad_desc "
+        "may not be set, if it is set, only half or float types are "
+        "supported, and the bit width of on-chip data type can not "
+        "be smaller than that of off-chip data type. But now two "
+        "data types of filters_grad_desc are {}-{}.",
+        api_name, mluOpGetNameOfDataType(filters_grad_dtype),
+        mluOpGetNameOfDataType(filters_grad_on_dtype));
     return MLUOP_STATUS_BAD_PARAM;
   }
   return MLUOP_STATUS_SUCCESS;
@@ -196,8 +196,10 @@ static mluOpStatus_t baseParamCheck(
 
   // check mlu platform
   if (handle->arch < 372) {
-    LOG(ERROR) << api_name << " Only mlu300 and above devices are supported."
-               << " Please check the device version!";
+    LOG_ERROR(
+        "{} Only mlu300 and above devices are supported. "
+        "Please check the device version!",
+        api_name);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
@@ -213,8 +215,10 @@ static mluOpStatus_t baseParamCheck(
       mluOpGetTensorElementNum(output_grad_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(indice_pairs_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(filters_grad_desc) >= LARGE_TENSOR_NUM) {
-    LOG(ERROR) << api_name << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    LOG_ERROR(
+        "{} Overflow max tensor num. Currently, MLU-OPS supports "
+        "tensor num smaller than 2^31.",
+        api_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   bool shape_check = true;
@@ -244,14 +248,14 @@ static mluOpStatus_t baseParamCheck(
                  INDICE_IN_LARGE_TENSOR_NUM);
 
   if (!shape_check) {
-    LOG(ERROR) << api_name << " Shape check failed! "
-               << "Now the shapes are features_desc"
-               << getTensorShapeString(features_desc) << ", output_grad_desc"
-               << getTensorShapeString(output_grad_desc)
-               << ", indice_pairs_desc"
-               << getTensorShapeString(indice_pairs_desc)
-               << ", and filters_grad_desc"
-               << getTensorShapeString(filters_grad_desc) << ".";
+    LOG_ERROR(
+        "{} Shape check failed! Now the shapes are features_desc{}, "
+        "output_grad_desc{}, indice_pairs_desc{}, "
+        "and filters_grad_desc{}.",
+        api_name, getTensorShapeString(features_desc),
+        getTensorShapeString(output_grad_desc),
+        getTensorShapeString(indice_pairs_desc),
+        getTensorShapeString(filters_grad_desc));
     return MLUOP_STATUS_BAD_PARAM;
   }
   return MLUOP_STATUS_SUCCESS;
@@ -468,8 +472,8 @@ static mluOpStatus_t internalIndiceConvBackwardFilter(
         DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_b_desc,
                                                      cnnl_output_desc);
         CALL_CNNL(cnnlGatherNd_v2(cnnl_handle, 0, cnnl_params_desc, output_grad,
-                               cnnl_indices_desc, gather_output_grad,
-                               cnnl_output_desc, diffy_temp));
+                                  cnnl_indices_desc, gather_output_grad,
+                                  cnnl_output_desc, diffy_temp));
         DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_params_desc);
         DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
         DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);

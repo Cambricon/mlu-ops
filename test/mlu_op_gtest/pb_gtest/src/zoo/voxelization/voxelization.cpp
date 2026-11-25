@@ -30,7 +30,7 @@ void VoxelizationExecutor::paramCheck() {
   GTEST_CHECK(parser_->getInputNum() == 3);
   GTEST_CHECK(parser_->getOutputNum() == 4);
   if (!parser_->getProtoNode()->has_voxelization_param()) {
-    LOG(ERROR) << "Missing voxelization param.";
+    LOG_ERROR("Missing voxelization param.");
   }
 }
 

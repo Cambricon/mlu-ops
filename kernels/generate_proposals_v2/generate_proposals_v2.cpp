@@ -385,15 +385,18 @@ mluOpStatus_t MLUOP_WIN_API mluOpGenerateProposalsV2(
   }
 
   if (eta < 1.0) {
-    LOG(ERROR) << API << " Not support adaptive NMS. The attribute 'eta' "
-               << "should not less than 1. But received eta=[" << eta << "]";
+    LOG_ERROR(
+        "{} Not support adaptive NMS. The attribute 'eta' "
+        "should not less than 1. But received eta=[{}]",
+        API, eta);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   if (nms_thresh <= 0) {
-    LOG(ERROR) << API
-               << " nms_thresh should be more than 0. But received nms_thresh=["
-               << nms_thresh << "]";
+    LOG_ERROR(
+        "{} nms_thresh should be more than 0. But received "
+        "nms_thresh=[{}]",
+        API, nms_thresh);
     return MLUOP_STATUS_BAD_PARAM;
   }
 

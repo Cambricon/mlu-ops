@@ -108,18 +108,18 @@ void RoiAlignRotatedForwardExecutor::preCalcForBilinearInterpolate(
 
 void RoiAlignRotatedForwardExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_roi_align_rotated_forward_param()) {
-    LOG(ERROR) << "mluOpRoiAlignRotatedForward: lose roi_align_rotated_param. ";
+    LOG_ERROR("mluOpRoiAlignRotatedForward: lose roi_align_rotated_param. ");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   if (parser_->getInputNum() != 2) {
-    LOG(ERROR) << "mluOpRoiAlignRotatedForward: tensor input number is wrong.";
+    LOG_ERROR("mluOpRoiAlignRotatedForward: tensor input number is wrong.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "output number is" << parser_->getOutputNum();
-    LOG(ERROR) << "mluOpRoiAlignRotatedForward: tensor output number is wrong.";
+    LOG_ERROR("output number is{}", parser_->getOutputNum());
+    LOG_ERROR("mluOpRoiAlignRotatedForward: tensor output number is wrong.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }

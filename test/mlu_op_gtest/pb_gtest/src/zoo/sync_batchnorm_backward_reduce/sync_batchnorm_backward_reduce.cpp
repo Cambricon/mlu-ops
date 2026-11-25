@@ -184,8 +184,9 @@ void cpuGetSyncBnBkwReduceOuput(
     const int len_x, const int len_c, const bool needs_input_grad0,
     const bool needs_input_grad1, const bool needs_input_grad2) {
   if (len_x == 0 || len_c == 0) {
-    LOG(ERROR) << "SyncBnBackwardReduce: the element number of input tensor "
-                  "should not be zero";
+    LOG_ERROR(
+        "SyncBnBackwardReduce: the element number of input tensor "
+        "should not be zero");
     return;
   }
   int len_nhw = len_x / len_c;

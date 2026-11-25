@@ -72,7 +72,7 @@ void *CPURuntime::allocate(size_t num_bytes, std::string name) {
 #endif
     return ptr;
   } else {
-    LOG(ERROR) << "CPURuntime: Failed to allocate " << num_bytes << " bytes.";
+    LOG_ERROR("CPURuntime: Failed to allocate {} bytes.", num_bytes);
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
     return NULL;
@@ -120,25 +120,27 @@ bool MLURuntime::checkOneMemBlock(const struct MemBlock &mem_block) {
                  mem_block.unalign_address_offset;
   GTEST_CHECK(
       cnrtSuccess == cnrtMemcpy((void *)header_check_.get(), header,
-                                     mask_bytes_, cnrtMemcpyDevToHost),
+                                mask_bytes_, cnrtMemcpyDevToHost),
       "MLURuntime: memcpy device to host failed when check overwritten");
   GTEST_CHECK(
       cnrtSuccess == cnrtMemcpy((void *)footer_check_.get(), footer,
-                                     mask_bytes_, cnrtMemcpyDevToHost),
+                                mask_bytes_, cnrtMemcpyDevToHost),
       "MLURuntime: memcpy device to host failed when check overwritten");
 
   if (!check_byte((void *)header_check_.get(), (void *)header_mask_.get(),
                   mask_bytes_)) {
-    LOG(ERROR) << "MLURuntime: Addr " << mlu_addr << "(" << name
-               << ") has been overwritten,"
-               << "you need to fix it whether the result is right or wrong.";
+    LOG_ERROR(
+        "MLURuntime: Addr {}({}) has been overwritten,"
+        "you need to fix it whether the result is right or wrong.",
+        mlu_addr, name);
     check_res = false;
   }
   if (!check_byte((void *)footer_check_.get(), (void *)footer_mask_.get(),
                   mask_bytes_)) {
-    LOG(ERROR) << "MLURuntime: Addr " << mlu_addr << "(" << name
-               << ") has been overwritten."
-               << "you need to fix it whether the result is right or wrong.";
+    LOG_ERROR(
+        "MLURuntime: Addr {}({}) has been overwritten."
+        "you need to fix it whether the result is right or wrong.",
+        mlu_addr, name);
     check_res = false;
   }
   return check_res;
@@ -189,10 +191,11 @@ void *MLURuntime::allocate(size_t num_bytes, std::string name,
   }
   if (global_var.unaligned_mlu_address_random_ &&
       (global_var.unaligned_mlu_address_set_ > 0)) {
-    LOG(ERROR) << "MLURuntime: Failed to allocate. "
-               << "Please check the command or environment variable. "
-               << "Create non-64-type aligned address can only by a may "
-               << "that Fixed offset or random offset " << std::endl;
+    LOG_ERROR(
+        "MLURuntime: Failed to allocate. "
+        "Please check the command or environment variable. "
+        "Create non-64-type aligned address can only by a may "
+        "that Fixed offset or random offset \n");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
     return NULL;
@@ -223,7 +226,7 @@ void *MLURuntime::allocate(size_t num_bytes, std::string name,
   }
   printLinearMemoryMsg(raw_addr, raw_bytes);
   if (raw_addr == NULL || ret != cnrtSuccess) {
-    LOG(ERROR) << "MLURuntime: Failed to allocate " << num_bytes << " bytes.";
+    LOG_ERROR("MLURuntime: Failed to allocate {} bytes.", num_bytes);
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
     return NULL;
@@ -247,8 +250,7 @@ void *MLURuntime::allocate(size_t num_bytes, std::string name,
   ret = cnrtMemcpy(header, (void *)header_mask_.get(), mask_bytes_,
                    cnrtMemcpyHostToDev);
   if (ret != cnrtSuccess) {
-    LOG(ERROR) << "MLURuntime: Failed to copy header " << num_bytes
-               << " bytes.";
+    LOG_ERROR("MLURuntime: Failed to copy header {} bytes.", num_bytes);
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
     return NULL;
@@ -257,8 +259,7 @@ void *MLURuntime::allocate(size_t num_bytes, std::string name,
   ret = cnrtMemcpy(footer, (void *)footer_mask_.get(), mask_bytes_,
                    cnrtMemcpyHostToDev);
   if (ret != cnrtSuccess) {
-    LOG(ERROR) << "MLURuntime: Failed to copy footer " << num_bytes
-               << " bytes.";
+    LOG_ERROR("MLURuntime: Failed to copy footer {} bytes.", num_bytes);
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
     return NULL;
@@ -286,7 +287,7 @@ cnrtRet_t MLURuntime::deallocate(void *mlu_addr) {
   auto it = std::find_if(memory_blocks_.begin(), memory_blocks_.end(),
                          [=](MemBlock b) { return b.header == header; });
   if (it == memory_blocks_.end()) {
-    LOG(ERROR) << "MLURuntime: Failed to deallocate " << mlu_addr;
+    LOG_ERROR("MLURuntime: Failed to deallocate {}", mlu_addr);
     // BUG(zhaolianshui): called inside ~executor, should not throw exception
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));

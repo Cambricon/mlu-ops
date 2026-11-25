@@ -85,66 +85,59 @@ mluOpStatus_t MLUOP_WIN_API mluOpBoxOverlapBev(
   PARAM_CHECK_EQ("[mluOpBoxOverlapBev]", boxes1_desc->getDim(), 2);
   PARAM_CHECK_EQ("[mluOpBoxOverlapBev]", boxes2_desc->getDim(), 2);
   if (boxes1_desc->getDimIndex(0) > MAX_BOX_NUM) {
-    LOG(ERROR)
-        << "[mluOpBoxOverlapBev]: Check failed: "
-        << "the number of boxes must not exceed "
-        << MAX_BOX_NUM << "."
-        << "But now box1's first dimension is "
-        << boxes1_desc->getDimIndex(0) << ".";
+    LOG_ERROR(
+        "[mluOpBoxOverlapBev]: Check failed: the number of boxes must not "
+        "exceed {}.But now box1's first dimension is {}.",
+        MAX_BOX_NUM, boxes1_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (boxes1_desc->getDimIndex(boxes1_desc->getDim() - 1) !=
       PCDET_SINGLE_BOX_DIM) {
-    LOG(ERROR)
-        << "[mluOpBoxOverlapBev]: Check failed: The Boxes' last dimension "
-           "should be 7 ."
-        << "But now box1's last dimension is "
-        << boxes1_desc->getDimIndex(boxes1_desc->getDim() - 1) << ".";
+    LOG_ERROR(
+        "[mluOpBoxOverlapBev]: Check failed: The Boxes' last dimension "
+        "should be 7 .But now box1's last dimension is {}.",
+        boxes1_desc->getDimIndex(boxes1_desc->getDim() - 1));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (boxes2_desc->getDimIndex(0) > MAX_BOX_NUM) {
-    LOG(ERROR)
-        << "[mluOpBoxOverlapBev]: Check failed: "
-        << "the number of boxes must not exceed "
-        << MAX_BOX_NUM << "."
-        << "But now box2's first dimension is "
-        << boxes2_desc->getDimIndex(0) << ".";
+    LOG_ERROR(
+        "[mluOpBoxOverlapBev]: Check failed: the number of boxes must not "
+        "exceed {}.But now box2's first dimension is {}.",
+        MAX_BOX_NUM, boxes2_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (boxes2_desc->getDimIndex(boxes2_desc->getDim() - 1) !=
       PCDET_SINGLE_BOX_DIM) {
-    LOG(ERROR)
-        << "[mluOpBoxOverlapBev]: Check failed: The Boxes' last dimension "
-           "should be 7 ."
-        << "But now box2's last dimension is "
-        << boxes2_desc->getDimIndex(boxes2_desc->getDim() - 1) << ".";
+    LOG_ERROR(
+        "[mluOpBoxOverlapBev]: Check failed: The Boxes' last dimension "
+        "should be 7 .But now box2's last dimension is {}.",
+        boxes2_desc->getDimIndex(boxes2_desc->getDim() - 1));
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (overlaps_desc->getDimIndex(0) != boxes1_desc->getDimIndex(0)) {
-    LOG(ERROR) << "[mluOpBoxOverlapBev] Check failed: "
-               << "overlaps_desc->getDimIndex(0) should equal to "
-                  "boxes1_desc->getDimIndex(0). But now "
-               << "overlaps_desc->getDimIndex(0) is "
-               << overlaps_desc->getDimIndex(0)
-               << ", boxes1_desc->getDimIndex(0) is "
-               << boxes1_desc->getDimIndex(0) << ".";
+    LOG_ERROR(
+        "[mluOpBoxOverlapBev] Check failed: overlaps_desc->getDimIndex(0) "
+        "should equal to boxes1_desc->getDimIndex(0). But now "
+        "overlaps_desc->getDimIndex(0) is {}, boxes1_desc->getDimIndex(0) "
+        "is {}.",
+        overlaps_desc->getDimIndex(0), boxes1_desc->getDimIndex(0));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   if (overlaps_desc->getDim() != 2) {
-    LOG(ERROR) << "[mluOpBoxOverlapBev] Check failed: "
-               << "overlaps_desc->getDim() should equal to 2. But now is "
-               << overlaps_desc->getDim() << ".";
+    LOG_ERROR(
+        "[mluOpBoxOverlapBev] Check failed: overlaps_desc->getDim() "
+        "should equal to 2. But now is {}.",
+        overlaps_desc->getDim());
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   if (overlaps_desc->getDimIndex(1) != boxes2_desc->getDimIndex(0)) {
-    LOG(ERROR)
-        << "[mluOpBoxOverlapBev] Check failed: "
-        << "overlaps_desc's last dim should equal to boxes2_desc's first dim "
-        << boxes2_desc->getDimIndex(0)
-        << ", But now overlaps_desc's last dim is "
-        << overlaps_desc->getDimIndex(1) << ".";
+    LOG_ERROR(
+        "[mluOpBoxOverlapBev] Check failed: overlaps_desc's last dim "
+        "should equal to boxes2_desc's first dim {}, But now "
+        "overlaps_desc's last dim is {}.",
+        boxes2_desc->getDimIndex(0), overlaps_desc->getDimIndex(1));
     return MLUOP_STATUS_BAD_PARAM;
   }
 

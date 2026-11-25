@@ -114,7 +114,7 @@ std::vector<std::string> Collector::read_case(std::string cases_list) {
 std::string Collector::current_dir() {
   char *buffer = NULL;
   if ((buffer = getcwd(NULL, 0)) == NULL) {
-    LOG(ERROR) << "Get current dir failed.";
+    LOG_ERROR("Get current dir failed.");
     return std::string("");  // return empty
   } else {
     std::string current_dir = std::string(buffer);
@@ -155,8 +155,8 @@ void Collector::assertPath(std::string &case_path, caseType case_type,
     case caseType::CASE_LIST: {
       std::ifstream fin(case_path, std::ios::in);
       if (!fin) {
-        LOG(ERROR) << file << ":" << line_num << ":: "
-                   << "Can not open case_path/cases_list " << case_path;
+        LOG_ERROR("{}:{}:: Can not open case_path/cases_list {}", file,
+                  line_num, case_path);
         exit(EXIT_FAILURE_MLUOP);
       }
       path_exist = true;
@@ -164,8 +164,8 @@ void Collector::assertPath(std::string &case_path, caseType case_type,
     case caseType::CASE_DIR: {
       DIR *dp = opendir(case_path.c_str());
       if (!dp) {
-        LOG(ERROR) << file << ":" << line_num << ":: "
-                   << "Can not open cases_dir " << case_path;
+        LOG_ERROR("{}:{}:: Can not open cases_dir {}", file, line_num,
+                  case_path);
         exit(EXIT_FAILURE_MLUOP);
       }
       path_exist = true;

@@ -140,8 +140,8 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
                                          ? MLU500SERIERS_MAX_SUPPORT
                                          : MLU300SERIERS_MAX_SUPPORT;
   if (num_priors > max_support_num_priors) {
-    LOG(ERROR) << api << " Support max num_priors is " << max_support_num_priors
-               << ",but now is " << num_priors;
+    LOG_ERROR("{} Support max num_priors is {},but now is {}", api,
+              max_support_num_priors, num_priors);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -151,8 +151,10 @@ mluOpStatus_t mluOpPriorBoxParamCheck(
       (mluOpGetTensorElementNum(max_sizes_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(output_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(var_desc) >= LARGE_TENSOR_NUM)) {
-    LOG(ERROR) << api << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    LOG_ERROR(
+        "{} Overflow max tensor num. Currently, MLU-OPS supports "
+        "tensor num smaller than 2^31.",
+        api);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   return MLUOP_STATUS_SUCCESS;
@@ -182,7 +184,7 @@ mluOpStatus_t mluOpPriorBox(
   if ((mluOpGetTensorElementNum(min_sizes_desc) == 0) ||
       (mluOpGetTensorElementNum(aspect_ratios_desc) == 0) ||
       (mluOpGetTensorElementNum(variances_desc) == 0)) {
-    LOG(ERROR) << api << " Zero element tensor failure.";
+    LOG_ERROR("{} Zero element tensor failure.", api);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if ((mluOpGetTensorElementNum(output_desc)) == 0 ||
@@ -225,25 +227,30 @@ mluOpStatus_t mluOpPriorBox(
     GEN_CASE_OP_PARAM_SINGLE(5, "prior_box", "step_w", step_w);
     GEN_CASE_OP_PARAM_SINGLE(6, "prior_box", "offset", offset);
     /*
-    The community's prior_box reference link: paddle/phi/kernels/gpu/prior_box_kernel.cu
+    The community's prior_box reference link:
+    paddle/phi/kernels/gpu/prior_box_kernel.cu
 
-    The prior_box community logic includes a flip parameter that modifies the aspect_ratios.
+    The prior_box community logic includes a flip parameter that modifies the
+    aspect_ratios.
 
-    In mluOpPriorBox, the aspect_ratios are already the result after modification
-    (presumably handled by the framework layer),
-    and mluOpPriorBox does not directly handle the flip parameter.
+    In mluOpPriorBox, the aspect_ratios are already the result after
+    modification (presumably handled by the framework layer), and mluOpPriorBox
+    does not directly handle the flip parameter.
 
     However, the generator uses the flip parameter to modify the aspect_ratios.
 
-    Currently, the logic of "framework + mlu-ops" is equivalent to that of the "generator",
-    but the operator's logic is coupled, making it difficult to make lightweight modifications.
+    Currently, the logic of "framework + mlu-ops" is equivalent to that of the
+    "generator", but the operator's logic is coupled, making it difficult to
+    make lightweight modifications.
 
-    A temporary workaround is to uniformly set flip to false during case generation,
-    meaning the generated results do not require further modification.
+    A temporary workaround is to uniformly set flip to false during case
+    generation, meaning the generated results do not require further
+    modification.
 
-    For the true cases dumped by the framework, if the case is regenerated through the generator,
-    the generator code can handle it correctly (aspect_ratios have been processed,
-    and the generator will not reprocess them).
+    For the true cases dumped by the framework, if the case is regenerated
+    through the generator, the generator code can handle it correctly
+    (aspect_ratios have been processed, and the generator will not reprocess
+    them).
     */
     GEN_CASE_OP_PARAM_SINGLE(7, "prior_box", "flip", false);
     GEN_CASE_OP_PARAM_SINGLE(8, "prior_box", "clip", clip);

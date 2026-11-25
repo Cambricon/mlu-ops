@@ -29,14 +29,14 @@ namespace mluoptest {
 
 void RoialignForwardExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_roialign_param()) {
-    LOG(ERROR) << "mluOpRoiAlignForward_v2: lose roialign_param. ";
+    LOG_ERROR("mluOpRoiAlignForward_v2: lose roialign_param. ");
   }
   if (parser_->getInputNum() != 2) {
-    LOG(ERROR) << "mluOpRoiAlignForward_v2: tensor input number is wrong.";
+    LOG_ERROR("mluOpRoiAlignForward_v2: tensor input number is wrong.");
   }
   if (parser_->getOutputNum() != 1 && parser_->getOutputNum() != 3) {
-    LOG(ERROR) << "output number is" << parser_->getOutputNum();
-    LOG(ERROR) << "mluOpRoiAlignForward_v2: tensor output number is wrong.";
+    LOG_ERROR("output number is{}", parser_->getOutputNum());
+    LOG_ERROR("mluOpRoiAlignForward_v2: tensor output number is wrong.");
   }
 }
 
@@ -159,8 +159,9 @@ void RoialignForwardExecutor::cpuCompute() {
     for (int roi_idx = 0; roi_idx < num_rois; roi_idx++) {
       int batch_idx = int(input_rois[roi_idx * roi_offset]);
       if (batch_idx < 0 || batch_idx >= input_n) {
-        LOG(ERROR) << "RoiAlign cpu : batch_id should be in [0," << input_n - 1
-                   << "]. But batch_id is " << batch_idx;
+        LOG_ERROR(
+            "RoiAlign cpu : batch_id should be in [0,{}]. But batch_id is {}",
+            input_n - 1, batch_idx);
       }
       float roi_x1 = input_rois[roi_idx * roi_offset + 1];
       float roi_y1 = input_rois[roi_idx * roi_offset + 2];
@@ -241,16 +242,16 @@ void RoialignForwardExecutor::cpuCompute() {
                   value = w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4;
                 }
                 pooled_value[channel_idx] += value;  // sum
-              }                                      // channels
-            }                                        // roi_bin_grid_w
-          }                                          // roi_bin_grid_h
+              }  // channels
+            }  // roi_bin_grid_w
+          }  // roi_bin_grid_h
           for (channel_idx = 0; channel_idx < channels; channel_idx++) {
             pooled_value[channel_idx] = pooled_value[channel_idx] * count_value;
           }
           memcpy(output_channel_ptr, pooled_value, channels * sizeof(float));
         }  // pw
-      }    // ph
-    }      // roi
+      }  // ph
+    }  // roi
     cpu_runtime_.deallocate(pooled_value);
   } else if (pool_mode == 0) {
     // roialign cpu
@@ -271,8 +272,9 @@ void RoialignForwardExecutor::cpuCompute() {
     for (int roi_idx = 0; roi_idx < num_rois; roi_idx++) {
       int batch_idx = int(input_rois[roi_idx * roi_offset + 0]);
       if (batch_idx < 0 || batch_idx >= input_n) {
-        LOG(ERROR) << "RoiAlign cpu : batch_id should be in [0," << input_n - 1
-                   << "]. But batch_id is " << batch_idx;
+        LOG_ERROR(
+            "RoiAlign cpu : batch_id should be in [0,{}]. But batch_id is {}",
+            input_n - 1, batch_idx);
       }
       float roi_x1 = input_rois[roi_idx * roi_offset + 1];
       float roi_y1 = input_rois[roi_idx * roi_offset + 2];
@@ -357,16 +359,16 @@ void RoialignForwardExecutor::cpuCompute() {
                   argmax_y_value[channel_idx] = y;
                 }
               }  // channels
-            }    // sample w
-          }      // sample h
+            }  // sample w
+          }  // sample h
           memcpy(output_channel_ptr, pooled_value, channels * sizeof(float));
           memcpy(output_argmax_x_channel_ptr, argmax_x_value,
                  channels * sizeof(float));
           memcpy(output_argmax_y_channel_ptr, argmax_y_value,
                  channels * sizeof(float));
         }  // pw
-      }    // ph
-    }      // roi
+      }  // ph
+    }  // roi
     cpu_runtime_.deallocate(pooled_value);
     cpu_runtime_.deallocate(argmax_x_value);
     cpu_runtime_.deallocate(argmax_y_value);
@@ -443,11 +445,11 @@ int64_t RoialignForwardExecutor::getTheoryOps() {
             for (int channel_idx = 0; channel_idx < channels; channel_idx++) {
               theory_ops += 8;
             }  // channels
-          }    // input w
-        }      // input h
-      }        // pw
-    }          // ph
-  }            // roi
+          }  // input w
+        }  // input h
+      }  // pw
+    }  // ph
+  }  // roi
   VLOG(4) << "getTheoryOps: " << theory_ops << " ops";
   cpu_runtime_.deallocate(input_rois);
 
@@ -526,14 +528,14 @@ int64_t RoialignForwardExecutor::getTheoryIoSize() {
             for (int channel_idx = 0; channel_idx < channels; channel_idx++) {
               theory_io_size += 16;
             }  // channels
-          }    // input w
-        }      // input h
+          }  // input w
+        }  // input h
         theory_io_size = pool_mode == 1
                              ? theory_io_size + channels * sizeof(float)
                              : theory_io_size + channels * sizeof(float) * 3;
       }  // pw
-    }    // ph
-  }      // roi
+    }  // ph
+  }  // roi
   VLOG(4) << "theory_io_size: " << theory_io_size << "ops";
   cpu_runtime_.deallocate(input_rois);
 

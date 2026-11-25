@@ -30,9 +30,10 @@
 #include "kernels/kernel.h"
 
 // Map the semantic DepCheckLevel to the actual LOG severity: an ERROR check
-// prints via LOG(ERROR), anything else via LOG(WARNING).
-#define DEP_CHECK_LOG(level) \
-  ((level) == FAIL_AS_ERROR ? LOG(ERROR) : LOG(WARNING))
+// prints via LOG_ERROR, anything else via LOG_WARNING.
+#define DEP_CHECK_LOG(level, fmt_str, ...)                      \
+  ((level) == FAIL_AS_ERROR ? LOG_ERROR(fmt_str, ##__VA_ARGS__) \
+                            : LOG_WARNING(fmt_str, ##__VA_ARGS__))
 
 namespace mluop {
 // see cnrt_function.c deviceCoreVersion for more info.
@@ -92,29 +93,28 @@ mluOpStatus_t mluOpCheckDependency(bool need_check_min, bool need_check_max,
                      (cnrt_major == MLUOP_DEP_CNRT_MIN_MAJOR &&
                       cnrt_minor >= MLUOP_DEP_CNRT_MIN_MINOR);
     if (!cnrt_min_check) {
-      DEP_CHECK_LOG(level) << "Current CNRT version: " << cnrt_major << "."
-                           << cnrt_minor << "." << cnrt_patch;
-      DEP_CHECK_LOG(level) << "CNRT version is too low, please upgrade CNRT to "
-                           << MLUOP_DEP_CNRT_MIN_MAJOR << "."
-                           << MLUOP_DEP_CNRT_MIN_MINOR << "."
-                           << MLUOP_DEP_CNRT_MIN_PATCH
-                           << " or higher. For more details, "
-                           << "please check the dependency rules in "
-                              "Cambricon-MLUOP-Release-Notes.";
+      DEP_CHECK_LOG(level, "Current CNRT version: {}.{}.{}", cnrt_major,
+                    cnrt_minor, cnrt_patch);
+      DEP_CHECK_LOG(level,
+                    "CNRT version is too low, please upgrade CNRT to {}.{}.{} "
+                    "or higher. For more details, please check the dependency "
+                    "rules in Cambricon-MLUOP-Release-Notes.",
+                    MLUOP_DEP_CNRT_MIN_MAJOR, MLUOP_DEP_CNRT_MIN_MINOR,
+                    MLUOP_DEP_CNRT_MIN_PATCH);
     }
     cndrv_min_check = (cndrv_major > MLUOP_DEP_CNDRV_MIN_MAJOR) ||
                       (cndrv_major == MLUOP_DEP_CNDRV_MIN_MAJOR &&
                        cndrv_minor >= MLUOP_DEP_CNDRV_MIN_MINOR);
     if (!cndrv_min_check) {
-      DEP_CHECK_LOG(level) << "Current CNDRV version: " << cndrv_major << "."
-                           << cndrv_minor << "." << cndrv_patch;
-      DEP_CHECK_LOG(level)
-          << "CNDRV version is too low, please upgrade CNDRV to "
-          << MLUOP_DEP_CNDRV_MIN_MAJOR << "." << MLUOP_DEP_CNDRV_MIN_MINOR
-          << "." << MLUOP_DEP_CNDRV_MIN_PATCH
-          << " or higher. For more details, "
-          << "please check the dependency rules in "
-             "Cambricon-MLUOP-Release-Notes.";
+      DEP_CHECK_LOG(level, "Current CNDRV version: {}.{}.{}", cndrv_major,
+                    cndrv_minor, cndrv_patch);
+      DEP_CHECK_LOG(
+          level,
+          "CNDRV version is too low, please upgrade CNDRV to {}.{}.{} "
+          "or higher. For more details, please check the dependency "
+          "rules in Cambricon-MLUOP-Release-Notes.",
+          MLUOP_DEP_CNDRV_MIN_MAJOR, MLUOP_DEP_CNDRV_MIN_MINOR,
+          MLUOP_DEP_CNDRV_MIN_PATCH);
     }
     if (((!cnrt_min_check) || (!cndrv_min_check)) && level == FAIL_AS_ERROR) {
       return MLUOP_STATUS_NOT_INITIALIZED;
@@ -125,28 +125,28 @@ mluOpStatus_t mluOpCheckDependency(bool need_check_min, bool need_check_max,
                      (cnrt_major == MLUOP_DEP_CNRT_MAX_MAJOR &&
                       cnrt_minor <= MLUOP_DEP_CNRT_MAX_MINOR);
     if (!cnrt_max_check) {
-      DEP_CHECK_LOG(level) << "Current CNRT version: " << cnrt_major << "."
-                           << cnrt_minor << "." << cnrt_patch;
-      DEP_CHECK_LOG(level)
-          << "CNRT version is too high, please downgrade CNRT to "
-          << MLUOP_DEP_CNRT_MAX_MAJOR << "." << MLUOP_DEP_CNRT_MAX_MINOR << "."
-          << MLUOP_DEP_CNRT_MAX_PATCH << " or higher. For more details, "
-          << "please check the dependency rules in "
-             "Cambricon-MLUOP-Release-Notes.";
+      DEP_CHECK_LOG(level, "Current CNRT version: {}.{}.{}", cnrt_major,
+                    cnrt_minor, cnrt_patch);
+      DEP_CHECK_LOG(
+          level,
+          "CNRT version is too high, please downgrade CNRT to {}.{}.{} "
+          "or higher. For more details, please check the dependency "
+          "rules in Cambricon-MLUOP-Release-Notes.",
+          MLUOP_DEP_CNRT_MAX_MAJOR, MLUOP_DEP_CNRT_MAX_MINOR,
+          MLUOP_DEP_CNRT_MAX_PATCH);
     }
     cndrv_max_check = (cndrv_major < MLUOP_DEP_CNDRV_MAX_MAJOR) ||
                       (cndrv_major == MLUOP_DEP_CNDRV_MAX_MAJOR &&
                        cndrv_minor <= MLUOP_DEP_CNDRV_MAX_MINOR);
     if (!cndrv_max_check) {
-      DEP_CHECK_LOG(level) << "Current CNDRV version: " << cndrv_major << "."
-                           << cndrv_minor << "." << cndrv_patch;
-      DEP_CHECK_LOG(level)
-          << "CNDRV version is too high, please downgrade CNDRV to "
-          << MLUOP_DEP_CNDRV_MAX_MAJOR << "." << MLUOP_DEP_CNDRV_MAX_MINOR
-          << "." << MLUOP_DEP_CNDRV_MAX_PATCH
-          << " or higher. For more details, "
-          << "please check the dependency rules in "
-             "Cambricon-MLUOP-Release-Notes.";
+      DEP_CHECK_LOG(level, "Current CNDRV version: {}.{}.{}", cndrv_major,
+                    cndrv_minor, cndrv_patch);
+      DEP_CHECK_LOG(level,
+                    "CNDRV version is too high, please downgrade CNDRV to "
+                    "{}.{}.{} or higher. For more details, please check the "
+                    "dependency rules in Cambricon-MLUOP-Release-Notes.",
+                    MLUOP_DEP_CNDRV_MAX_MAJOR, MLUOP_DEP_CNDRV_MAX_MINOR,
+                    MLUOP_DEP_CNDRV_MAX_PATCH);
     }
     if (((!cnrt_max_check) || (!cndrv_max_check)) && level == FAIL_AS_ERROR) {
       return MLUOP_STATUS_NOT_INITIALIZED;
@@ -160,10 +160,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpCreate(mluOpHandle_t *handle) {
 
   if (MLUOP_STATUS_SUCCESS !=
       mluOpCheckDependency(true, false, FAIL_AS_ERROR)) {
-    LOG(ERROR)
-        << "Check version dependency failed in mluOpCreate function. "
-        << "If don't want this check, set env MLUOP_CHECK_DEP_VERSION to 0, "
-        << "but probably cause unexpected errors.";
+    LOG_ERROR(
+        "Check version dependency failed in mluOpCreate function. "
+        "If don't want this check, set env MLUOP_CHECK_DEP_VERSION to 0, "
+        "but probably cause unexpected errors.");
     return MLUOP_STATUS_NOT_INITIALIZED;
   }
 
@@ -399,8 +399,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetQuantizeRoundMode(
                   round_mode == MLUOP_ROUND_HALF_UP);
   if (handle->arch < 372) {
     if (round_mode == MLUOP_ROUND_HALF_TO_EVEN) {
-      LOG(ERROR)
-          << "[mluOpSetQuantizeRoundMode] Unsupported rounding mode on MLU200";
+      LOG_ERROR(
+          "[mluOpSetQuantizeRoundMode] Unsupported rounding mode on MLU200");
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -443,7 +443,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetContextParam(mluOpHandle_t handle,
   } else if (type == CN_CTX_CONFIG_UNION_LIMIT) {
     param->unionLimit = static_cast<KernelClass>(handle->capability_job_limit);
   } else {
-    LOG(ERROR) << "[mluOpGetContextParam] Unsupported type";
+    LOG_ERROR("[mluOpGetContextParam] Unsupported type");
     return MLUOP_STATUS_BAD_PARAM;
   }
   return MLUOP_STATUS_SUCCESS;

@@ -72,9 +72,8 @@ static void assertValidCmdArg(int argc, char **argv, std::string file,
   }
   invalid_arg_ss << "]";
   if (invalid_cmd_arg > 0) {
-    LOG(ERROR) << file << ":" << line_num << ":: "
-               << "The following command line arguments are invalid "
-               << invalid_arg_ss.str();
+    LOG_ERROR("{}:{}:: The following command line arguments are invalid {}",
+              file, line_num, invalid_arg_ss.str());
     exit(EXIT_FAILURE_MLUOP);
   }
 }
@@ -98,7 +97,7 @@ static int __attribute__((unused)) init_asan_stuff = init_asan_process();
 #endif
 }
 
-using namespace mluoptest; // NOLINT
+using namespace mluoptest;  // NOLINT
 
 int main(int argc, char **argv) {
   // XXX(zhaolianshui): do we need a try-catch block?

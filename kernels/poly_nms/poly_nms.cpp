@@ -115,9 +115,11 @@ mluOpPolyNms(mluOpHandle_t handle, const mluOpTensorDescriptor_t boxes_desc,
   int real_width = boxes_desc->getStrideIndex(0);
   auto mask_col_num = getMaskColNum(box_num);
   if ((10 * box_num + mask_col_num * 2) > (MAX_NRAM_SIZE / sizeof(float))) {
-    LOG(ERROR) << API << " Too many input boxes, kernel cannot work."
-               << " The number of input boxes shoule be less than 9770,"
-               << " current input box num is " << box_num << ".";
+    LOG_ERROR(
+        "{} Too many input boxes, kernel cannot work."
+        " The number of input boxes shoule be less than 9770,"
+        " current input box num is {}.",
+        API, box_num);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 

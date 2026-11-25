@@ -91,7 +91,7 @@ void TestEnvironment::convertBaselineXml2Txt() {
   if (std::getenv("MLUOP_BASELINE_XML_FILE") != NULL) {
     xml_file_name = std::getenv("MLUOP_BASELINE_XML_FILE");
   } else {
-    LOG(ERROR) << "convertBaselineXml2Txt: MLUOP_BASELINE_XML_FILE is not set.";
+    LOG_ERROR("convertBaselineXml2Txt: MLUOP_BASELINE_XML_FILE is not set.");
     return;
   }
 
@@ -118,9 +118,10 @@ void TestEnvironment::convertBaselineXml2Txt() {
       end = line.find("value=") - 3;
       if ((line.substr(start, end - start + 1)).compare("hardware_time_base") !=
           0) {
-        LOG(ERROR)
-            << "convertBaselineXml2Txt: expected hardware_time_base, but got "
-            << line.substr(start, end - start + 1) << ".";
+        LOG_ERROR(
+            "convertBaselineXml2Txt: expected hardware_time_base, "
+            "but got {}.",
+            line.substr(start, end - start + 1));
         baseline_perf_txt_file.close();
         xml_file.close();
         break;
@@ -136,9 +137,10 @@ void TestEnvironment::convertBaselineXml2Txt() {
       end = line.find("value=") - 3;
       std::string file_name = line.substr(start, end - start + 1);
       if (case_path_file_name.compare(file_name) != 0) {
-        LOG(ERROR) << "convertBaselineXml2Txt: case file " << file_name
-                   << " does not match the "
-                   << "one in case_path " << case_path << ".";
+        LOG_ERROR(
+            "convertBaselineXml2Txt: case file {} does not match the "
+            "one in case_path {}.",
+            file_name, case_path);
         baseline_perf_txt_file.close();
         xml_file.close();
         break;
@@ -151,9 +153,10 @@ void TestEnvironment::convertBaselineXml2Txt() {
       end = line.find("value=") - 3;
       if ((line.substr(start, end - start + 1)).compare("workspace_size_mlu") !=
           0) {
-        LOG(ERROR)
-            << "convertBaselineXml2Txt: expected workspace_size_mlu, but got "
-            << line.substr(start, end - start + 1) << ".";
+        LOG_ERROR(
+            "convertBaselineXml2Txt: expected workspace_size_mlu, "
+            "but got {}.",
+            line.substr(start, end - start + 1));
         baseline_perf_txt_file.close();
         xml_file.close();
         break;

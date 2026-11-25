@@ -121,13 +121,13 @@ void PsamaskForwardExecutor::psamaskDistributeForwardCPU(
 
 void PsamaskForwardExecutor::paramCheck() {
   if (parser_->getInputNum() != 1) {
-    LOG(ERROR) << "psamask_forward input number is wrong. ";
+    LOG_ERROR("psamask_forward input number is wrong. ");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
 
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "psamask_forward output number is wrong. ";
+    LOG_ERROR("psamask_forward output number is wrong. ");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }

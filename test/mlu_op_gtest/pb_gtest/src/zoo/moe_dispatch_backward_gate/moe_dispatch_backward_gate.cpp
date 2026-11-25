@@ -26,7 +26,7 @@ namespace mluoptest {
 
 void MoeDispatchBackwardGateExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_moe_dispatch_backward_gate_param()) {
-    LOG(ERROR) << "Lose moe_dispatch_backward_gate_param.";
+    LOG_ERROR("Lose moe_dispatch_backward_gate_param.");
   }
   GTEST_CHECK(
       parser_->inputs().size() == 4,

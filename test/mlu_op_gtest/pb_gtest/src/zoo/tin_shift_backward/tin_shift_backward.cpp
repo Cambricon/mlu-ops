@@ -27,12 +27,12 @@
 namespace mluoptest {
 void TinShiftBackwardExecutor::paramCheck() {
   if (parser_->getInputNum() != 2) {
-    LOG(ERROR) << "TinShiftBackward input number is wrong. ";
+    LOG_ERROR("TinShiftBackward input number is wrong. ");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "TinShiftBackward output number is wrong. ";
+    LOG_ERROR("TinShiftBackward output number is wrong. ");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }

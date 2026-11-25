@@ -63,8 +63,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMoeDispatchBackwardData(
   PARAM_CHECK(API, handle != NULL);
   // check arch
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << API
-               << "The operator does not match the current architecture.";
+    LOG_ERROR("{}The operator does not match the current architecture.", API);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
   PARAM_CHECK(API, gates_desc != NULL);

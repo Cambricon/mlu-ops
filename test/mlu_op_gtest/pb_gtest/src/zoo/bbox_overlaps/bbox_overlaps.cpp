@@ -27,11 +27,11 @@ namespace mluoptest {
 
 void BboxOverlapsExecutor::paramCheck() {
   if (parser_->getInputNum() != 2) {
-    LOG(ERROR) << "bbox overlaps input number is wrong. ";
+    LOG_ERROR("bbox overlaps input number is wrong. ");
   }
 
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "bbox overlaps output number is wrong. ";
+    LOG_ERROR("bbox overlaps output number is wrong. ");
   }
 }
 

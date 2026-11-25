@@ -43,8 +43,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchNormStats(
     mluOpHandle_t handle, const mluOpTensorDescriptor_t x_desc, const void *x,
     const float eps, const mluOpTensorDescriptor_t mean_desc, void *mean,
     const mluOpTensorDescriptor_t invstd_desc, void *invstd) {
-  LOG(ERROR) << "[mluOpSyncBatchNormStats] " << "This API is depreated. "
-             << "Please use mluOpSyncBatchNormStats_v2 instead.";
+  LOG_ERROR(
+      "[mluOpSyncBatchNormStats] This API is depreated. "
+      "Please use mluOpSyncBatchNormStats_v2 instead.");
   return MLUOP_STATUS_SUCCESS;
 }
 

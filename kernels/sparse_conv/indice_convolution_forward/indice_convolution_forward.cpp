@@ -51,8 +51,10 @@ static mluOpStatus_t foolProof(
 
   // platform check
   if (handle->arch < 372) {
-    LOG(ERROR) << api_name << "Only mlu300 and above devices are supported."
-               << "Please check the device version!";
+    LOG_ERROR(
+        "{}Only mlu300 and above devices are supported."
+        "Please check the device version!",
+        api_name);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
@@ -72,8 +74,8 @@ static mluOpStatus_t foolProof(
   PARAM_CHECK(api_name, sub_m == 0 || sub_m == 1);
   PARAM_CHECK(api_name, inverse == 0 || inverse == 1);
   if (inverse != 0) {
-    LOG(ERROR) << api_name << "inverse is: " << inverse
-               << ", which is not supported now.";
+    LOG_ERROR("{}inverse is: {}, which is not supported now.", api_name,
+              inverse);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -83,9 +85,8 @@ static mluOpStatus_t foolProof(
   if (filters_desc->getLayout() != MLUOP_LAYOUT_NDHWC &&
       filters_desc->getLayout() != MLUOP_LAYOUT_NCDHW &&
       filters_desc->getLayout() != MLUOP_LAYOUT_ARRAY) {
-    LOG(ERROR) << api_name << "The layout of filters is: "
-               << mluOpGetNameOfTensorLayout(filters_desc->getLayout())
-               << ", which is not supported now.";
+    LOG_ERROR("{}The layout of filters is: {}, which is not supported now.",
+              api_name, mluOpGetNameOfTensorLayout(filters_desc->getLayout()));
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -94,16 +95,17 @@ static mluOpStatus_t foolProof(
   PARAM_CHECK(api_name, indice_pairs_desc->getDim() == 3);
   PARAM_CHECK(api_name, features_out_desc->getDim() == 2);
   if (indice_pairs_desc->getDimIndex(2) > INDICE_IN_LARGE_TENSOR_NUM) {
-    LOG(ERROR) << api_name << " Check failed: "
-               << "indice_pairs_desc->getDimIndex(2) cannot be greater than "
-               << INDICE_IN_LARGE_TENSOR_NUM << ".";
+    LOG_ERROR(
+        "{} Check failed: indice_pairs_desc->getDimIndex(2) cannot be "
+        "greater than {}.",
+        api_name, INDICE_IN_LARGE_TENSOR_NUM);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (filters_desc->getDim() != 5) {
-    LOG(ERROR) << api_name
-               << "The filters dimension number only support 5 currently,"
-               << " but filters dimension number is :" << filters_desc->getDim()
-               << ".";
+    LOG_ERROR(
+        "{}The filters dimension number only support 5 currently, "
+        "but filters dimension number is :{}.",
+        api_name, filters_desc->getDim());
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -122,8 +124,10 @@ static mluOpStatus_t foolProof(
       mluOpGetTensorElementNum(filters_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(indice_pairs_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(features_out_desc) >= LARGE_TENSOR_NUM) {
-    LOG(ERROR) << api_name << "Max tensor number overflow. Currently, "
-               << "MLU-OPS supports tensor elemenets number smaller than 2^31.";
+    LOG_ERROR(
+        "{}Max tensor number overflow. Currently, MLU-OPS supports "
+        "tensor elemenets number smaller than 2^31.",
+        api_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -451,8 +455,8 @@ static mluOpStatus_t mainIndiceConvolutionForward(
         DEFINE_CREATE_AND_SET_CNNL_TENSOR_DESCRIPTOR(matmul_a_desc,
                                                      cnnl_output_desc);
         CALL_CNNL(cnnlGatherNd_v2(cnnl_handle, 0, cnnl_params_desc, features,
-                               cnnl_indices_desc, gatherIndice_buffer,
-                               cnnl_output_desc, gatherResult_ptr));
+                                  cnnl_indices_desc, gatherIndice_buffer,
+                                  cnnl_output_desc, gatherResult_ptr));
         DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_params_desc);
         DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_indices_desc);
         DESTROY_CNNL_TENSOR_DESCRIPTOR(cnnl_output_desc);
