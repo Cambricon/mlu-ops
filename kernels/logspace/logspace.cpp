@@ -66,8 +66,7 @@ mluOpStatus_t LogspaceParamCheck(const mluOpHandle_t &handle, const float start,
   mluOpDataType_t support_type[3] = {MLUOP_DTYPE_FLOAT, MLUOP_DTYPE_HALF,
                                      MLUOP_DTYPE_INT32};
   if (!isSupportType(res_desc->getDtype(), support_type, 3)) {
-    LOG(ERROR) << "[mluOpLogspace]"
-               << ":res_desc's data type is not supported.";
+    LOG_ERROR("[mluOpLogspace]:res_desc's data type is not supported.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   return MLUOP_STATUS_SUCCESS;

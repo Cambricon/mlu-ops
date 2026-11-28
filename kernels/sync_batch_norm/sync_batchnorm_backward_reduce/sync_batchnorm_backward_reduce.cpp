@@ -63,10 +63,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpSyncBatchnormBackwardReduce(
     const mluOpTensorDescriptor_t desc_sum_dy_xmu, void *sum_dy_xmu,
     const bool needs_input_grad0, const bool needs_input_grad1,
     const bool needs_input_grad2) {
-  LOG(ERROR)
-      << "[mluOpSyncBatchnormBackwardReduce] is deprecated and"
-      << " will be removed in the future release, please use "
-      << "[mluOpSyncBatchNormBackwardReduce] instead.";
+  LOG_ERROR(
+      "[mluOpSyncBatchnormBackwardReduce] is deprecated and"
+      " will be removed in the future release, please use "
+      "[mluOpSyncBatchNormBackwardReduce] instead.");
   return MLUOP_STATUS_NOT_SUPPORTED;
 }
 

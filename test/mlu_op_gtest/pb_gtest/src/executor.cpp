@@ -380,8 +380,7 @@ void Executor::setupForPerfIter(int repeat, int iter, int iter_start) {
           if (perfUseOriginData()) {
             void *src_data = getPerfSrcData(db);
             GTEST_CHECK(cnrtMemcpy(db->device_perf_ptr, src_data, db->size,
-                                   cnrtMemcpyDevToDev) ==
-                        cnrtSuccess);
+                                   cnrtMemcpyDevToDev) == cnrtSuccess);
             oss << "copy data from " << src_data;
           } else {
             oss << "random data is fed to MLU kernel, if it should be real "
@@ -529,11 +528,9 @@ std::tuple<size_t, float> Executor::callBackKernelSyncAndGetTime(
   float hwtime = 0;
   cnrtNotifier_t n_start = notifier->n_start;
   cnrtNotifier_t n_stop = notifier->n_stop;
-  GTEST_CHECK(cnrtSuccess ==
-              cnrtPlaceNotifier(n_start, exe_context_->queue));
+  GTEST_CHECK(cnrtSuccess == cnrtPlaceNotifier(n_start, exe_context_->queue));
   launch_kernel();
-  GTEST_CHECK(cnrtSuccess ==
-              cnrtPlaceNotifier(n_stop, exe_context_->queue));
+  GTEST_CHECK(cnrtSuccess == cnrtPlaceNotifier(n_stop, exe_context_->queue));
   GTEST_CHECK(cnrtSuccess == cnrtQueueSync(exe_context_->queue));
   size_t tp = MONITOR_CLOCK::now().time_since_epoch().count();
   GTEST_CHECK(cnrtSuccess == cnrtNotifierDuration(n_start, n_stop, &hwtime));
@@ -572,11 +569,12 @@ void Executor::perfRepeat() {
 
 bool Executor::checkMluMemoryLeak() {
   if (mlu_mem_status_.allocated_before != mlu_mem_status_.allocated_after) {
-    LOG(ERROR) << "Duplicated MLU Memory allocated during ::compute, which is "
-                  "illegal during perf_repeat. "
-                  "You should consider ::workspaceMalloc and ::workspaceFree, "
-                  "or setup internal state"
-               << "(case: " << eva_res_.case_path << ")";
+    LOG_ERROR(
+        "Duplicated MLU Memory allocated during ::compute, which is "
+        "illegal during perf_repeat. "
+        "You should consider ::workspaceMalloc and ::workspaceFree, "
+        "or setup internal state(case: {})",
+        eva_res_.case_path);
     return false;
   }
   return true;
@@ -881,17 +879,15 @@ bool Executor::checkBaseline() {
           updateBaselineStrategy(hw_time_mean, scale_bound, threshold_absolute,
                                  threshold_relative, &hw_time_base);
       if (!baseline_check) {
-        LOG(ERROR) << "[Baseline:" << case_name
-                   << "]:scale_bound:" << scale_bound
-                   << " ,threshold_absolute:" << threshold_absolute
-                   << " ,threshold_relative:" << threshold_relative * 100
-                   << "%";
-        LOG(ERROR) << "[Baseline:" << case_name
-                   << "]:hardware time of baseline is " << hw_time_base
-                   << " (us).";
-        LOG(ERROR) << "[Baseline:" << case_name
-                   << "]:hardware time of this test is " << hw_time_mean
-                   << " (us).";
+        LOG_ERROR(
+            "[Baseline:{}]:scale_bound:{} ,threshold_absolute:{} "
+            ",threshold_relative:{}%",
+            case_name, scale_bound, threshold_absolute,
+            threshold_relative * 100);
+        LOG_ERROR("[Baseline:{}]:hardware time of baseline is {} (us).",
+                  case_name, hw_time_base);
+        LOG_ERROR("[Baseline:{}]:hardware time of this test is {} (us).",
+                  case_name, hw_time_mean);
         eva_res_.what.emplace_back(
             "The performance result exceed baseline threshold.");
       }
@@ -1974,7 +1970,7 @@ void Executor::quantizeTensorByChannel(
   auto shape = parser_->node()->input(1).shape();
   auto layout = parser_->node()->input(1).layout();
   if (layout != mluoptest::LAYOUT_NDHWC || layout != mluoptest::LAYOUT_NHWC) {
-    LOG(ERROR) << "unsupport data layput for convolution forward";
+    LOG_ERROR("unsupport data layput for convolution forward");
     return;
   }
   int co = shape.dims(0);
@@ -2136,9 +2132,8 @@ void Executor::copyIn() {
       // runtime error )
       auto t_a = std::chrono::system_clock::now();
       // host to dev for compute
-      GTEST_CHECK(cnrtSuccess == cnrtMemcpy(db->device_origin_ptr,
-                                                 db->host_ptr, db->size,
-                                                 cnrtMemcpyHostToDev));
+      GTEST_CHECK(cnrtSuccess == cnrtMemcpy(db->device_origin_ptr, db->host_ptr,
+                                            db->size, cnrtMemcpyHostToDev));
       auto t_b = std::chrono::system_clock::now();
       auto dur =
           std::chrono::duration_cast<std::chrono::microseconds>(t_b - t_a);
@@ -2146,9 +2141,9 @@ void Executor::copyIn() {
     }
     if (needDevPerfDataSpace()) {
       VLOG(4) << "copy from device_origin_ptr to device_perf_data_ptr";
-      GTEST_CHECK(cnrtSuccess ==
-                  cnrtMemcpy(db->device_perf_data_ptr, db->device_origin_ptr,
-                             db->size, cnrtMemcpyDevToDev));
+      GTEST_CHECK(cnrtSuccess == cnrtMemcpy(db->device_perf_data_ptr,
+                                            db->device_origin_ptr, db->size,
+                                            cnrtMemcpyDevToDev));
     }
     // for debug
     if (exe_config_->dump_data) {
@@ -2202,9 +2197,8 @@ void Executor::copyOut() {
 
     // memcpy dev to host
     auto t_a = std::chrono::system_clock::now();
-    GTEST_CHECK(cnrtSuccess == cnrtMemcpy(db->host_ptr,
-                                               db->device_origin_ptr, db->size,
-                                               cnrtMemcpyDevToHost));
+    GTEST_CHECK(cnrtSuccess == cnrtMemcpy(db->host_ptr, db->device_origin_ptr,
+                                          db->size, cnrtMemcpyDevToHost));
     auto t_b = std::chrono::system_clock::now();
     auto dur = std::chrono::duration_cast<std::chrono::microseconds>(t_b - t_a);
     eva_res_.mlu.d2h_time += dur.count();
@@ -2442,7 +2436,7 @@ void Executor::getPerfTestMode() {
     if (exe_config_->zero_input && !rely_real_data_ && doPerf()) {
       zero_input_ = true;
     }  // exe_config_->zero_input
-  }    // not compute_diff
+  }  // not compute_diff
   printPerfTestInfo();
 }
 

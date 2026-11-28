@@ -177,7 +177,7 @@ void RoipointPool3dExecutor::paramCheck() {
   GTEST_CHECK(parser_->getInputNum() == 3);
   GTEST_CHECK(parser_->getOutputNum() == 2);
   if (!parser_->getProtoNode()->has_roipoint_pool3d_param()) {
-    LOG(ERROR) << "[GTEST_ROIPOINT_POOL3D] Missing roipoint_pool3d param.";
+    LOG_ERROR("[GTEST_ROIPOINT_POOL3D] Missing roipoint_pool3d param.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }

@@ -133,8 +133,8 @@ void BorderAlignBackwardExecutor::cpuCompute() {
                        TensorLayout new_order, int32_t n, int32_t c, int32_t h,
                        int32_t w) {
     if (old_data == nullptr || new_data == nullptr) {
-      LOG(ERROR)
-          << "Data address malloc error in border_align_backward cpu compute.";
+      LOG_ERROR(
+          "Data address malloc error in border_align_backward cpu compute.");
       return;
     }
 

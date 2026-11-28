@@ -130,8 +130,7 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
   PARAM_CHECK(API, grad_attn_weight_desc->getDim() == 5);
 
   // check stride
-  STRIDE_TENSOR_CHECK(API, value_desc,
-                      "value_desc must be contiguous");
+  STRIDE_TENSOR_CHECK(API, value_desc, "value_desc must be contiguous");
   STRIDE_TENSOR_CHECK(API, spatial_shapes_desc,
                       "spatial_shapes_desc must be contiguous");
   STRIDE_TENSOR_CHECK(API, level_start_index_desc,
@@ -178,37 +177,39 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
   // check all the input relationship
   for (int32_t i = 0; i < value_desc->getDim(); ++i) {
     if (value_desc->getDimIndex(i) != grad_value_desc->getDimIndex(i)) {
-      LOG(ERROR) << "[mluOpMsDeformAttnBackward] The shape of value should be "
-                    "the same as grad_value."
-                 << " But now value_desc->getDimIndex(" << i << ") is "
-                 << value_desc->getDimIndex(i) << ", and grad_value_desc->dims["
-                 << i << "] is " << grad_value_desc->getDimIndex(i) << ".";
+      LOG_ERROR(
+          "[mluOpMsDeformAttnBackward] The shape of value should be "
+          "the same as grad_value. But now value_desc->getDimIndex({}) "
+          "is {}, and grad_value_desc->dims[{}] is {}.",
+          i, value_desc->getDimIndex(i), i, grad_value_desc->getDimIndex(i));
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   for (int32_t i = 0; i < sampling_loc_desc->getDim(); ++i) {
     if (sampling_loc_desc->getDimIndex(i) !=
         grad_sampling_loc_desc->getDimIndex(i)) {
-      LOG(ERROR) << "[mluOpMsDeformAttnBackward] The shape of "
-                    "sampling_loc_desc should be the "
-                    "same as grad_sampling_loc_desc."
-                 << " But now sampling_loc_desc->getDimIndex(" << i << ") is "
-                 << sampling_loc_desc->getDimIndex(i)
-                 << ", and grad_sampling_loc_desc->getDimIndex(" << i << ") is "
-                 << grad_sampling_loc_desc->getDimIndex(i) << ".";
+      LOG_ERROR(
+          "[mluOpMsDeformAttnBackward] The shape of "
+          "sampling_loc_desc should be the same as "
+          "grad_sampling_loc_desc. But now "
+          "sampling_loc_desc->getDimIndex({}) is {}, and "
+          "grad_sampling_loc_desc->getDimIndex({}) is {}.",
+          i, sampling_loc_desc->getDimIndex(i), i,
+          grad_sampling_loc_desc->getDimIndex(i));
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   for (int32_t i = 0; i < attn_weight_desc->getDim(); ++i) {
     if (attn_weight_desc->getDimIndex(i) !=
         grad_attn_weight_desc->getDimIndex(i)) {
-      LOG(ERROR) << "[mluOpMsDeformAttnBackward] The shape of "
-                    "attn_weight_desc should be the "
-                    "same as grad_attn_weight_desc."
-                 << " But now attn_weight_desc->getDimIndex(" << i << ") is "
-                 << attn_weight_desc->getDimIndex(i)
-                 << ", and grad_attn_weight_desc->getDimIndex(" << i << ") is "
-                 << grad_attn_weight_desc->getDimIndex(i) << ".";
+      LOG_ERROR(
+          "[mluOpMsDeformAttnBackward] The shape of "
+          "attn_weight_desc should be the same as "
+          "grad_attn_weight_desc. But now "
+          "attn_weight_desc->getDimIndex({}) is {}, and "
+          "grad_attn_weight_desc->getDimIndex({}) is {}.",
+          i, attn_weight_desc->getDimIndex(i), i,
+          grad_attn_weight_desc->getDimIndex(i));
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -252,9 +253,9 @@ static mluOpStatus_t msDeformAttnBackwardParamCheck(
 
   // check zero
   if (batch * channels * num_heads * num_query == 0) {
-    LOG(ERROR) << "[mluOpMsDeformAttnBackward] The batch, channels, num_key, "
-                  "num_heads or "
-                  "num_query of the input is zero.";
+    LOG_ERROR(
+        "[mluOpMsDeformAttnBackward] The batch, channels, num_key, "
+        "num_heads or num_query of the input is zero.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if ((num_levels == 0) || ((num_points == 0) && num_key == 0)) {

@@ -76,7 +76,7 @@ class CPURuntime : public Runtime {
     T obj = NULL;
     mluOpStatus_t status = (*ctor)(&obj);
     if (status != MLUOP_STATUS_SUCCESS) {
-      LOG(ERROR) << "CPURuntime: Failed to allocate " << name;
+      LOG_ERROR("CPURuntime: Failed to allocate {}", name);
       throw std::invalid_argument(std::string(__FILE__) + " +" +
                                   std::to_string(__LINE__));
       return NULL;
@@ -109,8 +109,8 @@ class CPURuntime : public Runtime {
                              return b->id == (void *)object;
                            });
     if (it == memory_blocks_.end()) {
-      LOG(ERROR) << "CPURuntime: Failed to deallocate " << (void *)object
-                 << ", double free.";
+      LOG_ERROR("CPURuntime: Failed to deallocate {}, double free.",
+                (void *)object);
       throw std::invalid_argument(std::string(__FILE__) + " +" +
                                   std::to_string(__LINE__));
       return CNRT_RET_ERR_INVALID;

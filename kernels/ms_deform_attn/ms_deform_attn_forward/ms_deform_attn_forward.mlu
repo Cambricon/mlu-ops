@@ -222,7 +222,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMsDeformAttnForward(
   const int32_t num_points = data_sampling_loc_desc->getDimIndex(4);
   // check element num zero
   if (batch_size == 0 || num_heads == 0 || channels == 0 || num_queries == 0) {
-    LOG(ERROR) << "[mluOpMsDeformAttnForward] Check failed: element num zero.";
+    LOG_ERROR("[mluOpMsDeformAttnForward] Check failed: element num zero.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (num_levels == 0 || num_points == 0) {

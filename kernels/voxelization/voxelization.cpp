@@ -64,8 +64,9 @@ mluOpStatus_t voxelizationParamCheck(
     const mluOpTensorDescriptor_t voxel_num_desc, bool *is_zero_element) {
   // check arch
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << "[mluOpVoxelization] The operator only support architecture "
-                  "which is greater than or equal to 372.";
+    LOG_ERROR(
+        "[mluOpVoxelization] The operator only support architecture "
+        "which is greater than or equal to 372.");
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
@@ -151,8 +152,9 @@ mluOpStatus_t voxelizationParamCheck(
         coors_element_num >= LARGE_TENSOR_NUM ||
         num_points_per_voxel_element_num >= LARGE_TENSOR_NUM ||
         voxel_num_element_num >= LARGE_TENSOR_NUM) {
-      LOG(ERROR) << "[mluOpVoxelization] Overflow max tensor num."
-                 << "Currently, MLU-OPS supports tensor num smaller than 2^31.";
+      LOG_ERROR(
+          "[mluOpVoxelization] Overflow max tensor num."
+          "Currently, MLU-OPS supports tensor num smaller than 2^31.");
       return MLUOP_STATUS_NOT_SUPPORTED;
     }
 
@@ -160,8 +162,7 @@ mluOpStatus_t voxelizationParamCheck(
     *is_zero_element = false;
     if (points_element_num == 0 || voxel_size_element_num == 0 ||
         coors_range_element_num == 0) {
-      LOG(ERROR)
-          << "[mluOpVoxelization] Check failed: Input zero element tensor.";
+      LOG_ERROR("[mluOpVoxelization] Check failed: Input zero element tensor.");
       return MLUOP_STATUS_BAD_PARAM;
     }
 

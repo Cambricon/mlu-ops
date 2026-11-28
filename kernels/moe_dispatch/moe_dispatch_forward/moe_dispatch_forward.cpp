@@ -55,8 +55,10 @@ static mluOpStatus_t MoeDispatchForwardParamCheck(
   PARAM_CHECK(op_name, handle != NULL);
   // platform check
   if (handle->arch < MLUOP_MLU370) {
-    LOG(ERROR) << op_name << "Only mlu300 and above devices are supported."
-               << "Please check the device version!";
+    LOG_ERROR(
+        "{}Only mlu300 and above devices are supported."
+        "Please check the device version!",
+        op_name);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 

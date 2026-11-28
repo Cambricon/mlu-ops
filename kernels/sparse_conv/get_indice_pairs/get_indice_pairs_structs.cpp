@@ -31,8 +31,9 @@
 mluOpStatus_t MLUOP_WIN_API mluOpCreateSparseConvolutionDescriptor(
     mluOpSparseConvolutionDescriptor_t *desc) {
   if (desc == NULL) {
-    LOG(ERROR) << "mluOpCreateSparseConvolutionDescriptor failed, "
-               << "can't create desc when desc == NULL.";
+    LOG_ERROR(
+        "mluOpCreateSparseConvolutionDescriptor failed, "
+        "can't create desc when desc == NULL.");
     return MLUOP_STATUS_NOT_INITIALIZED;
   }
   mluOpSparseConvolutionStruct *ts =
@@ -58,16 +59,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetSparseConvolutionDescriptor(
   PARAM_CHECK(interface_name, filter_space != NULL);
   PARAM_CHECK(interface_name, output_space != NULL);
   if (dimNb != 5) {
-    LOG(ERROR) << interface_name << " only "
-               << "support 3D_conv, dimnb should be 5. now dimNb is " << dimNb
-               << ".";
+    LOG_ERROR("{} only support 3D_conv, dimnb should be 5. now dimNb is {}.",
+              interface_name, dimNb);
     return MLUOP_STATUS_BAD_PARAM;
   }
   sparse_conv_desc->dimNb = dimNb;
 
   if (batch <= 0) {
-    LOG(ERROR) << interface_name << " only "
-               << "support postive batch. now batch is " << batch << ".";
+    LOG_ERROR("{} only support postive batch. now batch is {}.", interface_name,
+              batch);
     return MLUOP_STATUS_BAD_PARAM;
   }
   sparse_conv_desc->batch = batch;
@@ -75,15 +75,15 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetSparseConvolutionDescriptor(
   sparse_conv_desc->sub_m = sub_m;
 
   if (transpose != 0) {
-    LOG(ERROR) << interface_name << " : not "
-               << "support transpose . now transpose is " << transpose << ".";
+    LOG_ERROR("{} : not support transpose . now transpose is {}.",
+              interface_name, transpose);
     return MLUOP_STATUS_BAD_PARAM;
   }
   sparse_conv_desc->transpose = transpose;
 
   if (inverse != 0) {
-    LOG(ERROR) << interface_name << " : not "
-               << "support inverse. now inverse is " << inverse << ".";
+    LOG_ERROR("{} : not support inverse. now inverse is {}.", interface_name,
+              inverse);
     return MLUOP_STATUS_BAD_PARAM;
   }
   sparse_conv_desc->inverse = inverse;
@@ -111,9 +111,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetSparseConvolutionDescriptor(
 mluOpStatus_t MLUOP_WIN_API mluOpGetSparseConvolutionNumActOut(
     mluOpSparseConvolutionDescriptor_t desc, int *num_act_out) {
   if (desc == NULL || num_act_out == NULL) {
-    LOG(ERROR) << "mluOpCreateSparseConvolutionDescriptor or "
-               << "num_act_out failed "
-               << " Passing NULL ptr to this API.";
+    LOG_ERROR(
+        "mluOpCreateSparseConvolutionDescriptor or "
+        "num_act_out failed  Passing NULL ptr to this API.");
     return MLUOP_STATUS_NOT_INITIALIZED;
   }
   int size = 0;
@@ -125,8 +125,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetSparseConvolutionNumActOut(
 mluOpStatus_t MLUOP_WIN_API mluOpDestroySparseConvolutionDescriptor(
     mluOpSparseConvolutionDescriptor_t desc) {
   if (desc == NULL) {
-    LOG(ERROR) << "mluOpDestroySparseConvolutionDescriptor fail. Passing NULL "
-                  "ptr to this API.";
+    LOG_ERROR(
+        "mluOpDestroySparseConvolutionDescriptor fail. Passing NULL "
+        "ptr to this API.");
     return MLUOP_STATUS_EXECUTION_FAILED;
   }
   delete desc;

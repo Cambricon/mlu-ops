@@ -28,10 +28,10 @@ namespace mluoptest {
 
 void AdamWLightExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_adamw_param()) {
-    LOG(ERROR) << "Lose AdamWLightExecutor param. ";
+    LOG_ERROR("Lose AdamWLightExecutor param. ");
   }
   if (parser_->getInputNum() != 5) {
-    LOG(ERROR) << "AdamWLight input number is wrong. ";
+    LOG_ERROR("AdamWLight input number is wrong. ");
   }
   // set flag
   flag_input_reuse_ = true;
@@ -68,14 +68,14 @@ void AdamWLightExecutor::compute() {
   interface_timer_.start();
   if (need_remove_nan) {
     const auto adamw_status = bangc_kernels::mluAdamW(
-        handle_->queue, fp32_lr, fp32_beta1, fp32_beta2, fp32_bias1,
-        fp32_bias2, fp32_epsilon, fp32_weight_decay, fp32_scale, use_nesterov,
+        handle_->queue, fp32_lr, fp32_beta1, fp32_beta2, fp32_bias1, fp32_bias2,
+        fp32_epsilon, fp32_weight_decay, fp32_scale, use_nesterov,
         need_remove_nan, size, (float *)dev_paramh, (float *)dev_grad,
         (float *)dev_param, (float *)dev_momentum, (float *)dev_velocity);
   } else {
     const auto adamw_status = bangc_kernels::mluAdamW(
-        handle_->queue, fp32_lr, fp32_beta1, fp32_beta2, fp32_bias1,
-        fp32_bias2, fp32_epsilon, fp32_weight_decay, fp32_scale, use_nesterov,
+        handle_->queue, fp32_lr, fp32_beta1, fp32_beta2, fp32_bias1, fp32_bias2,
+        fp32_epsilon, fp32_weight_decay, fp32_scale, use_nesterov,
         need_remove_nan, size, BANG_WRAP_T((Eigen::bfloat16 *)dev_paramh),
         BANG_WRAP_T((Eigen::bfloat16 *)dev_grad), (float *)dev_param,
         (float *)dev_momentum, (float *)dev_velocity);
@@ -102,8 +102,7 @@ void AdamWLightExecutor::cpuCompute() {
   float fp32_weight_decay =
       parser_->getProtoNode()->adamw_param().weight_decay();
   float fp32_scale = parser_->getProtoNode()->adamw_param().scale();
-  float use_nesterov =
-      parser_->getProtoNode()->adamw_param().use_nesterov();
+  float use_nesterov = parser_->getProtoNode()->adamw_param().use_nesterov();
   bool need_remove_nan =
       parser_->getProtoNode()->adamw_param().need_remove_nan();
 
@@ -164,13 +163,12 @@ void AdamWLightExecutor::cpuCompute() {
     }
 
     // remove nan
-    if (need_remove_nan &&
-        ((std::isnan(cpu_tensor_momentum_output[i])
-          || std::isinf(cpu_tensor_momentum_output[i]))
-         && (std::isnan(cpu_tensor_velocity_output[i])
-             || std::isinf(cpu_tensor_velocity_output[i]))
-         && (std::isnan(cpu_tensor_param_output[i])
-             || std::isinf(cpu_tensor_param_output[i])))) {
+    if (need_remove_nan && ((std::isnan(cpu_tensor_momentum_output[i]) ||
+                             std::isinf(cpu_tensor_momentum_output[i])) &&
+                            (std::isnan(cpu_tensor_velocity_output[i]) ||
+                             std::isinf(cpu_tensor_velocity_output[i])) &&
+                            (std::isnan(cpu_tensor_param_output[i]) ||
+                             std::isinf(cpu_tensor_param_output[i])))) {
       cpu_tensor_momentum_output[i] = cpu_tensor_momentum[i];
       cpu_tensor_velocity_output[i] = cpu_tensor_velocity[i];
       cpu_tensor_param_output[i] = cpu_tensor_param[i];
@@ -182,8 +180,7 @@ void AdamWLightExecutor::cpuCompute() {
   if (need_remove_nan) {
     cpu_tensor_paramh_output[0] = cpu_tensor_paramh[0] + 1;
     if (std::isinf(cpu_tensor_paramh_output[0])) {
-      cpu_tensor_paramh_output[0] =
-          std::numeric_limits<float>::max();
+      cpu_tensor_paramh_output[0] = std::numeric_limits<float>::max();
     }
   }
 }

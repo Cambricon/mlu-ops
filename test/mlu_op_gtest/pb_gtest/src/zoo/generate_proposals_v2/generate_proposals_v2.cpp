@@ -30,7 +30,7 @@ namespace mluoptest {
 
 void GenerateProposalsV2Executor::paramCheck() {
   if (!parser_->getProtoNode()->has_generate_proposals_v2_param()) {
-    LOG(ERROR) << "Lose poly_nms_param. ";
+    LOG_ERROR("Lose poly_nms_param. ");
   }
   GTEST_CHECK(parser_->inputs().size() == 5,
               "[GenerateProposalsV2Executor] input number is wrong. ");

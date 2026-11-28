@@ -376,9 +376,11 @@ class Evaluator {
     if (!nan_inf_wrong_pos_.empty()) {
       auto first_pos = *std::min_element(std::begin(nan_inf_wrong_pos_),
                                          std::end(nan_inf_wrong_pos_));
-      LOG(ERROR) << "Found NaN or Inf, but mlu is not equal to baseline,"
-                 << " return DBL_MAX instead."
-                 << "The first wrong position is " << first_pos;
+      LOG_ERROR(
+          "Found NaN or Inf, but mlu is not equal to baseline,"
+          " return DBL_MAX instead."
+          "The first wrong position is {}",
+          first_pos);
       return;
     }
     if (has_nan_inf) {
@@ -435,9 +437,9 @@ class Evaluator {
     double denominator_sum_imag = 0.0;
     T *base_array = reinterpret_cast<T *>(base_array_);
     T *mlu_array = reinterpret_cast<T *>(mlu_array_);
-#pragma omp parallel for reduction \
-        (+:numerator_sum, denominator_sum, numerator_sum_imag, \
-         denominator_sum_imag) schedule(guided)
+#pragma omp parallel for reduction(+ : numerator_sum, denominator_sum, \
+                                       numerator_sum_imag,             \
+                                       denominator_sum_imag) schedule(guided)
     for (size_t i = 0; i < count_total_; i += stride_) {
       numerator_sum += std::abs(double(mlu_array[i]) - double(base_array[i]));
       denominator_sum += std::abs(double(base_array[i]));
@@ -461,9 +463,9 @@ class Evaluator {
     double denominator_sum_imag = 0.0;
     T *base_array = reinterpret_cast<T *>(base_array_);
     T *mlu_array = reinterpret_cast<T *>(mlu_array_);
-#pragma omp parallel for reduction \
-        (+:numerator_sum, denominator_sum, numerator_sum_imag, \
-        denominator_sum_imag) schedule(guided)
+#pragma omp parallel for reduction(+ : numerator_sum, denominator_sum, \
+                                       numerator_sum_imag,             \
+                                       denominator_sum_imag) schedule(guided)
     for (size_t i = 0; i < count_total_; i += stride_) {
       numerator_sum +=
           std::pow(double(mlu_array[i]) - double(base_array[i]), 2);
@@ -494,8 +496,7 @@ class Evaluator {
                dtype_ == MLUOP_DTYPE_COMPLEX_FLOAT) {
       EPS = EPSILON_FLOAT;
     }
-#pragma omp parallel for reduction(max                          \
-                                   : max_ratio, max_ratio_imag) \
+#pragma omp parallel for reduction(max : max_ratio, max_ratio_imag) \
     schedule(guided)
     for (size_t i = 0; i < count_total_; i += stride_) {
       double numerator = std::abs(double(mlu_array[i]) - double(base_array[i]));
@@ -524,8 +525,7 @@ class Evaluator {
     T *mlu_array = reinterpret_cast<T *>(mlu_array_);
     double max_ratio = 0;
     double max_ratio_imag = 0;
-#pragma omp parallel for reduction(max                          \
-                                   : max_ratio, max_ratio_imag) \
+#pragma omp parallel for reduction(max : max_ratio, max_ratio_imag) \
     schedule(guided)
     for (size_t i = 0; i < count_total_; i += stride_) {
       double ratio = std::abs(double(mlu_array[i]) - double(base_array[i]));
@@ -644,8 +644,7 @@ class Evaluator {
     T *mlu_array = reinterpret_cast<T *>(mlu_array_);
     if (hasNanOrInf(base_array, count_total_) ||
         hasNanOrInf(mlu_array, count_total_)) {
-      LOG(ERROR)
-          << "Found NaN or Inf when compute diff, return DBL_MAX instead.";
+      LOG_ERROR("Found NaN or Inf when compute diff, return DBL_MAX instead.");
       skip_compute_diff_ = true;
       nan_inf_pass_ = false;
     }

@@ -34,7 +34,7 @@ mluOpCreateAdamWDescriptor(mluOpAdamWDescriptor_t *adamw_desc) {
   PARAM_CHECK("mluOpCreateAdamWDescriptor", adamw_desc != nullptr);
   mluOpAdamWStruct *ts = new mluOpAdamWStruct();
   if (ts == nullptr) {
-    LOG(ERROR) << "mluOpCreateAdamWDescriptor: alloc failed.";
+    LOG_ERROR("mluOpCreateAdamWDescriptor: alloc failed.");
     return MLUOP_STATUS_ALLOC_FAILED;
   }
   *adamw_desc = ts;
@@ -74,7 +74,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetAdamWDescAttr(
       }
     }; break;
     default: {
-      LOG(ERROR) << "[mluOpSetAdamWDescAttr] failed, attr is not supported.";
+      LOG_ERROR("[mluOpSetAdamWDescAttr] failed, attr is not supported.");
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -84,7 +84,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpSetAdamWDescAttr(
 mluOpStatus_t MLUOP_WIN_API
 mluOpDestroyAdamWDescriptor(mluOpAdamWDescriptor_t desc) {
   if (desc == nullptr) {
-    LOG(ERROR) << "mluOpDestroyAdamWDescriptor: passing nullptr to this API.";
+    LOG_ERROR("mluOpDestroyAdamWDescriptor: passing nullptr to this API.");
     return MLUOP_STATUS_BAD_PARAM;
   }
   delete desc;
@@ -92,15 +92,14 @@ mluOpDestroyAdamWDescriptor(mluOpAdamWDescriptor_t desc) {
 }
 
 mluOpStatus_t MLUOP_WIN_API
-mluOpAdamW(
-    mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
-    const mluOpTensorDescriptor_t param_desc, void *param,
-    const mluOpTensorDescriptor_t paramh_or_step_desc, void *paramh_or_step,
-    const mluOpTensorDescriptor_t momentum_desc, void *momentum,
-    const mluOpTensorDescriptor_t velocity_desc, void *velocity,
-    const mluOpTensorDescriptor_t grad_desc, void *grad, const float lr,
-    const float beta1, const float beta2, const float bias1,
-    const float bias2, const float epsilon) {
+mluOpAdamW(mluOpHandle_t handle, const mluOpAdamWDescriptor_t adamw_desc,
+           const mluOpTensorDescriptor_t param_desc, void *param,
+           const mluOpTensorDescriptor_t paramh_or_step_desc,
+           void *paramh_or_step, const mluOpTensorDescriptor_t momentum_desc,
+           void *momentum, const mluOpTensorDescriptor_t velocity_desc,
+           void *velocity, const mluOpTensorDescriptor_t grad_desc, void *grad,
+           const float lr, const float beta1, const float beta2,
+           const float bias1, const float bias2, const float epsilon) {
   PARAM_CHECK("[mluOpAdamW]", handle != nullptr);
   PARAM_CHECK("[mluOpAdamW]", param_desc != nullptr);
   PARAM_CHECK("[mluOpAdamW]", momentum_desc != nullptr);
@@ -164,24 +163,23 @@ mluOpAdamW(
     if (adamw_desc->need_remove_nan == false) {
       if (param_dims != paramh_dims || param_dims != momentum_dims ||
           param_dims != velocity_dims || param_dims != grad_dims) {
-        LOG(ERROR)
-            << "[mluOpAdamW] the size of param, param_h, momentum, velocity"
-            << " and grad should be the same. But now the size of param is "
-            << param_dims << ", the size of param_h is " << paramh_dims
-            << ", the size of momentum is " << momentum_dims
-            << ", the size of velocity is " << velocity_dims
-            << ", the size of grad is " << grad_dims << ".";
+        LOG_ERROR(
+            "[mluOpAdamW] the size of param, param_h, momentum, velocity"
+            " and grad should be the same. But now the size of param is "
+            "{}, the size of param_h is {}, the size of momentum is {}, "
+            "the size of velocity is {}, the size of grad is {}.",
+            param_dims, paramh_dims, momentum_dims, velocity_dims, grad_dims);
         return MLUOP_STATUS_BAD_PARAM;
       }
     } else {
       if (param_dims != momentum_dims || param_dims != velocity_dims ||
           param_dims != grad_dims) {
-        LOG(ERROR)
-          << "[mluOpAdamW] the size of param, param_h, momentum, velocity"
-          << " and grad should be the same. But now the size of param is "
-          << param_dims << ", the size of momentum is " << momentum_dims
-          << ", the size of velocity is " << velocity_dims
-          << ", the size of grad is " << grad_dims << ".";
+        LOG_ERROR(
+            "[mluOpAdamW] the size of param, param_h, momentum, velocity"
+            " and grad should be the same. But now the size of param is "
+            "{}, the size of momentum is {}, the size of velocity is {}, "
+            "the size of grad is {}.",
+            param_dims, momentum_dims, velocity_dims, grad_dims);
         return MLUOP_STATUS_BAD_PARAM;
       }
     }
@@ -189,24 +187,24 @@ mluOpAdamW(
     param_dims = mluOpGetTensorElementNum(param_desc);
     if (param_dims != momentum_dims || param_dims != velocity_dims ||
         param_dims != grad_dims) {
-      LOG(ERROR)
-          << "[mluOpAdamW] the size of param, momentum, velocity"
-          << " and grad should be the same. But now the size of param is "
-          << param_dims << ", the size of momentum is " << momentum_dims
-          << ", the size of velocity is " << velocity_dims
-          << ", the size of grad is " << grad_dims << ".";
+      LOG_ERROR(
+          "[mluOpAdamW] the size of param, momentum, velocity"
+          " and grad should be the same. But now the size of param is "
+          "{}, the size of momentum is {}, the size of velocity is {}, "
+          "the size of grad is {}.",
+          param_dims, momentum_dims, velocity_dims, grad_dims);
       return MLUOP_STATUS_BAD_PARAM;
     }
   } else {
     paramh_dims = mluOpGetTensorElementNum(paramh_or_step_desc);
     if (paramh_dims != momentum_dims || paramh_dims != velocity_dims ||
         paramh_dims != grad_dims) {
-      LOG(ERROR)
-          << "[mluOpAdamW] the size of param_h, momentum, velocity"
-          << " and grad should be the same. But now the size of param_h is "
-          << paramh_dims << ", the size of momentum is " << momentum_dims
-          << ", the size of velocity is " << velocity_dims
-          << ", the size of grad is " << grad_dims << ".";
+      LOG_ERROR(
+          "[mluOpAdamW] the size of param_h, momentum, velocity"
+          " and grad should be the same. But now the size of param_h "
+          "is {}, the size of momentum is {}, the size of velocity is "
+          "{}, the size of grad is {}.",
+          paramh_dims, momentum_dims, velocity_dims, grad_dims);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -236,8 +234,8 @@ mluOpAdamW(
     GEN_CASE_HANDLE(handle);
     if (param != nullptr && paramh_or_step != nullptr) {
       GEN_CASE_DATA(true, "param", param, param_desc, 1, 0);
-      GEN_CASE_DATA(true, "paramh_or_step", paramh_or_step,
-                    paramh_or_step_desc, 1, 0);
+      GEN_CASE_DATA(true, "paramh_or_step", paramh_or_step, paramh_or_step_desc,
+                    1, 0);
       GEN_CASE_DATA(false, "param", param, param_desc, 1, 0);
       GEN_CASE_DATA(false, "paramh_or_step", paramh_or_step,
                     paramh_or_step_desc, 1, 0);
@@ -245,8 +243,8 @@ mluOpAdamW(
       GEN_CASE_DATA(true, "param", param, param_desc, 1, 0);
       GEN_CASE_DATA(false, "param", param, param_desc, 1, 0);
     } else {
-      GEN_CASE_DATA(true, "paramh_or_step", paramh_or_step,
-                    paramh_or_step_desc, 1, 0);
+      GEN_CASE_DATA(true, "paramh_or_step", paramh_or_step, paramh_or_step_desc,
+                    1, 0);
       GEN_CASE_DATA(false, "paramh_or_step", paramh_or_step,
                     paramh_or_step_desc, 1, 0);
     }
@@ -295,7 +293,7 @@ mluOpAdamW(
   if (param_dims <= small_case_thread) k_dim.y = 1;
   switch (k_type) {
     default: {
-      LOG(ERROR) << "[mluOpAdamW] Failed to choose kernel to launch";
+      LOG_ERROR("[mluOpAdamW] Failed to choose kernel to launch");
       GEN_CASE_END();
       return MLUOP_STATUS_ARCH_MISMATCH;
     }
@@ -304,12 +302,12 @@ mluOpAdamW(
               << ", " << k_dim.x << ", " << k_dim.y << ", " << k_dim.z << ">>>";
       CHECK_RETURN(
           "[mluOpAdamW]",
-          KernelApplyAdamW(
-              k_dim, k_type, handle->queue, (void *)param,
-              (void *)paramh_or_step, (void *)grad, (void *)momentum,
-              (void *)velocity, lr, beta1, beta2, bias1, bias2, epsilon,
-              adamw_desc->weight_decay, adamw_desc->grad_scale,
-              adamw_desc->use_nesterov, adamw_desc->need_remove_nan, size));
+          KernelApplyAdamW(k_dim, k_type, handle->queue, (void *)param,
+                           (void *)paramh_or_step, (void *)grad,
+                           (void *)momentum, (void *)velocity, lr, beta1, beta2,
+                           bias1, bias2, epsilon, adamw_desc->weight_decay,
+                           adamw_desc->grad_scale, adamw_desc->use_nesterov,
+                           adamw_desc->need_remove_nan, size));
     }
   }
   GEN_CASE_END();

@@ -102,7 +102,7 @@ mluOpStatus_t selectFFTStrategy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
 mluOpStatus_t MLUOP_WIN_API mluOpCreateFFTPlan(mluOpFFTPlan_t *fft_plan) {
   mluOpFFTStruct *ts = new (std::nothrow) mluOpFFTStruct();
   if (ts == nullptr) {
-    LOG(ERROR) << "[mluOpCreateFFTPlan]: alloc failed";
+    LOG_ERROR("[mluOpCreateFFTPlan]: alloc failed");
     return MLUOP_STATUS_ALLOC_FAILED;
   }
   CNRT_CHECK(
@@ -128,8 +128,8 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateTwiddlesLine(
       twiddles[(butterfly_num * (k - 1) + j)] = (DT)cos(phase);  // r
       twiddles[(butterfly_num * (k - 1) + j) + butterfly_num * (radix - 1)] =
           (DT)sin(phase);  // i
-    }                      // radix
-  }                        // butterfly_num
+    }  // radix
+  }  // butterfly_num
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -150,7 +150,7 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateR2CTwiddlesLine(
       twiddles[(((butterfly_num + 2) / 2) * (k - 1) + j) +
                ((butterfly_num + 2) / 2) * (radix - 1)] = (DT)sin(phase);  // i
     }  // radix
-  }    // butterfly_num
+  }  // butterfly_num
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -169,8 +169,8 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateTwiddlesLineColumn(
       twiddles[((radix - 1) * k + (j - 1))] = (DT)cos(phase);  // r
       twiddles[((radix - 1) * k + (j - 1)) + butterfly_num * (radix - 1)] =
           (DT)sin(phase);  // i
-    }                      // radix
-  }                        // butterfly_num
+    }  // radix
+  }  // butterfly_num
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -222,7 +222,7 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateTwiddles(mluOpFFTPlan_t fft_plan,
       twiddles += butterfly_num * (cur_small_radix - 1) * 2;
       tw_offset +=
           butterfly_num * (cur_small_radix - 1);  // complex element offset
-    }                                             // small_stage_count
+    }  // small_stage_count
     factors[small_factors_offset + 2] =
         (tw_offset - factors[small_factors_offset + 1]) * sizeof(DT) * 2;
   }  // stage_count
@@ -281,7 +281,7 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateR2CTwiddles(void *&_twiddles,
         twiddles += ((butterfly_num + 2) / 2) * (cur_small_radix - 1) * 2;
         tw_offset += ((butterfly_num + 2) / 2) *
                      (cur_small_radix - 1);  // complex element offset
-      }                                      // small_stage_count
+      }  // small_stage_count
     } else {
       for (small_loop_stage = 2; small_loop_stage <= small_stage_count;
            small_loop_stage++) {
@@ -294,7 +294,7 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateR2CTwiddles(void *&_twiddles,
         twiddles += butterfly_num * (cur_small_radix - 1) * 2;
         tw_offset +=
             butterfly_num * (cur_small_radix - 1);  // complex element offset
-      }                                             // small_stage_count
+      }  // small_stage_count
     }
     factors[small_factors_offset + 2] =
         (tw_offset - factors[small_factors_offset + 1]) * sizeof(DT) * 2;
@@ -352,7 +352,7 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateTwiddlesC2R(
       twiddles += butterfly_num * (cur_small_radix - 1) * 2;
       tw_offset +=
           butterfly_num * (cur_small_radix - 1);  // complex element offset
-    }                                             // small_stage_count
+    }  // small_stage_count
     factors[small_factors_offset + 2] =
         (tw_offset - factors[small_factors_offset + 1]) * sizeof(DT) * 2;
   }  // stage_count
@@ -406,7 +406,7 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateTwiddlesColumn(
       twiddles += butterfly_num * (cur_small_radix - 1) * 2;
       tw_offset +=
           butterfly_num * (cur_small_radix - 1);  // complex element offset
-    }                                             // small_stage_count
+    }  // small_stage_count
     factors[small_factors_offset + 2] =
         (tw_offset - factors[small_factors_offset + 1]) * sizeof(DT) * 2;
   }  // stage_count
@@ -434,7 +434,7 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateDftMatrixKernel(DT *dft_matrix,
         dft_matrix[align_K * k + j + align_K * radix] = (DT)0.0;  // i
       }
     }  // radix
-  }    // butterfly_num
+  }  // butterfly_num
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -451,7 +451,7 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateDftMatrixKernelNoPad(DT *dft_matrix,
       phase = sign * 2 * FFT_PI * k * j / radix;
       dft_matrix[radix * k + j] = (DT)cos(phase);                  // r
       dft_matrix[radix * k + j + radix * radix] = (DT)sin(phase);  // i
-    }                                                              // radix
+    }  // radix
   }  // butterfly_num
   return MLUOP_STATUS_SUCCESS;
 }
@@ -474,7 +474,7 @@ fftGenerateC2RDftMatrixKernelNoPad(DT *dft_matrix, const int radix) {
         dft_matrix[2 * half * k + j + half] = -2 * (DT)sin(phase);  // i neg
       }
     }  // radix
-  }    // butterfly_num
+  }  // butterfly_num
   return MLUOP_STATUS_SUCCESS;
 }
 
@@ -491,7 +491,7 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateHalfDftMatrixKernelNoPad(DT *dft_matrix,
       phase = sign * 2 * FFT_PI * k * j / radix;
       dft_matrix[radix * k + j] = (DT)cos(phase);                 // r
       dft_matrix[radix * k + j + radix * rows] = (DT)sin(phase);  // i
-    }                                                             // radix
+    }  // radix
   }  // butterfly_num
   return MLUOP_STATUS_SUCCESS;
 }
@@ -551,7 +551,7 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateDftMatrix(void *&_dft_matrix,
           cur_offset += cur_small_radix * align_K;
 
           if (cur_table_entry == MAX_DFT_MATRIX_NR) {
-            LOG(ERROR) << api << ": too much dft matrices.";
+            LOG_ERROR("{}: too much dft matrices.", api);
             return MLUOP_STATUS_NOT_SUPPORTED;
           }
           break;
@@ -562,7 +562,7 @@ mluOpStatus_t MLUOP_WIN_API fftGenerateDftMatrix(void *&_dft_matrix,
         }
       }
     }  // small_stage_count
-  }    // stage_count
+  }  // stage_count
 
   return MLUOP_STATUS_SUCCESS;
 }
@@ -2450,7 +2450,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
   // plan NULL check
   PARAM_CHECK_NE(make_plan_api, handle, NULL);
   if (fft_plan == NULL) {
-    LOG(ERROR) << make_plan_api + ": plan is not allocated.";
+    LOG_ERROR("{}: plan is not allocated.", make_plan_api);
     return MLUOP_STATUS_NOT_INITIALIZED;
   }
   PARAM_CHECK_NE(make_plan_api, input_desc, NULL);
@@ -2461,16 +2461,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
 
   // plan rank can only be 1, 2, 3
   if (rank < 1 || rank > FFT_DIM_MAX) {
-    LOG(ERROR) << make_plan_api + ": invalid rank, should be 1, 2 or 3. Now is "
-               << rank << ".";
+    LOG_ERROR("{}: invalid rank, should be 1, 2 or 3. Now is {}.",
+              make_plan_api, rank);
     return MLUOP_STATUS_BAD_PARAM;
   }
   for (auto i = 0; i < rank; i++) {
     if (n[i] <= 0) {
-      LOG(ERROR)
-          << make_plan_api +
-                 ": fourier transform length should be greater than 0. Now n["
-          << i << "] is " << n[i] << ".";
+      LOG_ERROR(
+          "{}: fourier transform length should be greater than 0. "
+          "Now n[{}] is {}.",
+          make_plan_api, i, n[i]);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -2489,9 +2489,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
                  ": input and output dimension mismatch.");
 
   if (!(fft_plan->idim == rank || fft_plan->idim == rank + 1)) {
-    LOG(ERROR) << make_plan_api << ": invalid input dimension, should be "
-               << rank << " or " << rank + 1 << ". Now is " << fft_plan->idim
-               << ".";
+    LOG_ERROR("{}: invalid input dimension, should be {} or {}. Now is {}.",
+              make_plan_api, rank, rank + 1, fft_plan->idim);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -2569,11 +2568,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
   } else if (input_dtype == f_c_dtype && output_dtype == f_r_dtype) {
     fft_plan->fft_type = CNFFT_COMPLEX_FLOAT2FLOAT;
   } else {
-    LOG(ERROR) << make_plan_api
-               << ": invalid data type combination. Now input data type is "
-               << mluOpGetNameOfDataType(input_dtype)
-               << ", and output data type is "
-               << mluOpGetNameOfDataType(output_dtype) << ".";
+    LOG_ERROR(
+        "{}: invalid data type combination. Now input data type is {}, "
+        "and output data type is {}.",
+        make_plan_api, mluOpGetNameOfDataType(input_dtype),
+        mluOpGetNameOfDataType(output_dtype));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -2614,7 +2613,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
                      "mismatch in C2R.");
     }; break;
     default: {
-      LOG(ERROR) << make_plan_api << ": invalid fft type.";
+      LOG_ERROR("{}: invalid fft type.", make_plan_api);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -2628,16 +2627,14 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       if (supportFloatConv(handle)) {
         if (!(execution_dtype == hf_r_dtype ||
               execution_dtype == MLUOP_DTYPE_INT16)) {
-          LOG(ERROR) << make_plan_api << ": invalid execution dtype "
-                     << mluOpGetNameOfDataType(fft_plan->execution_dtype)
-                     << ".";
+          LOG_ERROR("{}: invalid execution dtype {}.", make_plan_api,
+                    mluOpGetNameOfDataType(fft_plan->execution_dtype));
           return MLUOP_STATUS_BAD_PARAM;
         }
       } else {
         if (!(execution_dtype == MLUOP_DTYPE_INT16)) {
-          LOG(ERROR) << make_plan_api << ": invalid execution dtype "
-                     << mluOpGetNameOfDataType(fft_plan->execution_dtype)
-                     << ".";
+          LOG_ERROR("{}: invalid execution dtype {}.", make_plan_api,
+                    mluOpGetNameOfDataType(fft_plan->execution_dtype));
           return MLUOP_STATUS_BAD_PARAM;
         }
       }
@@ -2649,30 +2646,28 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       if (supportFloatConv(handle)) {
         if (!(execution_dtype == f_r_dtype ||
               execution_dtype == MLUOP_DTYPE_INT31)) {
-          LOG(ERROR) << make_plan_api << ": invalid execution dtype "
-                     << mluOpGetNameOfDataType(fft_plan->execution_dtype)
-                     << ".";
+          LOG_ERROR("{}: invalid execution dtype {}.", make_plan_api,
+                    mluOpGetNameOfDataType(fft_plan->execution_dtype));
           return MLUOP_STATUS_BAD_PARAM;
         }
       } else {
         if (!(execution_dtype == MLUOP_DTYPE_INT31)) {
-          LOG(ERROR) << make_plan_api << ": invalid execution dtype "
-                     << mluOpGetNameOfDataType(fft_plan->execution_dtype)
-                     << ".";
+          LOG_ERROR("{}: invalid execution dtype {}.", make_plan_api,
+                    mluOpGetNameOfDataType(fft_plan->execution_dtype));
           return MLUOP_STATUS_BAD_PARAM;
         }
       }
     }; break;
     default: {
-      LOG(ERROR) << make_plan_api << ": invalid execution dtype.";
+      LOG_ERROR("{}: invalid execution dtype.", make_plan_api);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
 
   // unsupported param
   if (fft_plan->rank != 1 && fft_plan->rank != 2) {
-    LOG(ERROR) << make_plan_api
-               << ": 3-dimensional FFT are not supported currently.";
+    LOG_ERROR("{}: 3-dimensional FFT are not supported currently.",
+              make_plan_api);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -2680,10 +2675,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
       fft_plan->fft_type == CNFFT_COMPLEX_HALF2HALF ||
       fft_plan->fft_type == CNFFT_COMPLEX_HALF2COMPLEX_HALF) {
     if ((n[rank - 1] & (n[rank - 1] - 1)) != 0) {
-      LOG(ERROR) << make_plan_api
-                 << ": the signal lengths of half-precision FFT are"
-                 << " restriced to power of two only, but now is " << n[0]
-                 << ".";
+      LOG_ERROR(
+          "{}: the signal lengths of half-precision FFT are restriced "
+          "to power of two only, but now is {}.",
+          make_plan_api, n[0]);
       return MLUOP_STATUS_NOT_SUPPORTED;
     }
   }
@@ -2763,9 +2758,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpMakeFFTPlanMany(
 
   if (fft_plan->prime > 0 && rank == 2 &&
       fft_plan->fft_type != CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT) {
-    LOG(ERROR) << make_plan_api << ": Only supports FFT2d sizes with factors"
-               << " decomposed within the range of 2 to 64"
-               << ".";
+    LOG_ERROR(
+        "{}: Only supports FFT2d sizes with factors decomposed within "
+        "the range of 2 to 64.",
+        make_plan_api);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -2954,7 +2950,7 @@ mluOpStatus_t destroyFFT2dReserveArea(mluOpFFTPlan_t fft_plan,
       CPX_TYPE_SIZE = 4 * 2;
     }; break;
     default: {
-      LOG(ERROR) << make_plan_api << ": invalid 2d fft type.";
+      LOG_ERROR("{}: invalid 2d fft type.", make_plan_api);
       status = MLUOP_STATUS_NOT_SUPPORTED;
       return status;
     }
@@ -3005,7 +3001,7 @@ mluOpStatus_t destroyFFT2dReserveArea(mluOpFFTPlan_t fft_plan,
         CNRT_CHECK(cnrtFreeHost(fft_plan->dft_matrix_2d));
       }; break;
       default: {
-        LOG(ERROR) << make_plan_api << ": invalid 2d fft type.";
+        LOG_ERROR("{}: invalid 2d fft type.", make_plan_api);
         status = MLUOP_STATUS_NOT_SUPPORTED;
         return status;
       }
@@ -3162,9 +3158,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(mluOpHandle_t handle,
   if (fft_plan->rank == 2 &&
       (mluop::strideCaseWithNotConsistentDense(1, fft_plan->input_desc) ||
        mluop::strideCaseWithNotConsistentDense(1, fft_plan->output_desc))) {
-    LOG(ERROR)
-        << exec_api
-        << ": 2d stride case with not consistent dense is not supported now.";
+    LOG_ERROR(
+        "{}: 2d stride case with not consistent dense is not supported now.",
+        exec_api);
     status = MLUOP_STATUS_BAD_PARAM;
     GEN_CASE_END();
     return status;
@@ -3174,12 +3170,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(mluOpHandle_t handle,
     case CNFFT_HALF2COMPLEX_HALF:
     case CNFFT_FLOAT2COMPLEX_FLOAT: {
       if ((fft_plan->idist < (fft_plan->odist * 2)) && is_in_place) {
-        LOG(ERROR)
-            << exec_api
-            << ": output overwritten may occur during an in-place "
-               "real-to-complex fft "
-               "execution, input needs to be slightly padding. Please refer to "
-               "mluOpExecFFT document for detail.";
+        LOG_ERROR(
+            "{}: output overwritten may occur during an in-place "
+            "real-to-complex fft execution, input needs to be slightly "
+            "padding. Please refer to mluOpExecFFT document for detail.",
+            exec_api);
         status = MLUOP_STATUS_BAD_PARAM;
       }
       if (fft_plan->rank == 1) {
@@ -3187,8 +3182,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(mluOpHandle_t handle,
                             output);
       } else if (fft_plan->rank == 2) {
         if (fft_plan->inembed[1] > fft_plan->n[1]) {
-          LOG(ERROR) << exec_api
-                     << ": inembed[1] > fft_plan->n[1] is not supported now";
+          LOG_ERROR("{}: inembed[1] > fft_plan->n[1] is not supported now",
+                    exec_api);
           status = MLUOP_STATUS_BAD_PARAM;
 
         } else {
@@ -3204,12 +3199,12 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(mluOpHandle_t handle,
     case CNFFT_COMPLEX_HALF2COMPLEX_HALF:
     case CNFFT_COMPLEX_FLOAT2COMPLEX_FLOAT: {
       if ((fft_plan->idist < fft_plan->odist) && is_in_place) {
-        LOG(ERROR)
-            << exec_api
-            << ": output overwritten may occur during an in-place "
-               "complex-to-complex fft "
-               "execution, input needs to be slightly padding. Please refer to "
-               "mluOpExecFFT document for detail.";
+        LOG_ERROR(
+            "{}: output overwritten may occur during an in-place "
+            "complex-to-complex fft execution, input needs to be "
+            "slightly padding. Please refer to mluOpExecFFT document "
+            "for detail.",
+            exec_api);
         status = MLUOP_STATUS_BAD_PARAM;
       }
       if (fft_plan->rank == 1) {
@@ -3217,8 +3212,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(mluOpHandle_t handle,
                            output, direction);
       } else if (fft_plan->rank == 2) {
         if (fft_plan->inembed[1] > fft_plan->n[1]) {
-          LOG(ERROR) << exec_api
-                     << ": inembed[1] > fft_plan->n[1] is not supported now";
+          LOG_ERROR("{}: inembed[1] > fft_plan->n[1] is not supported now",
+                    exec_api);
           status = MLUOP_STATUS_BAD_PARAM;
 
         } else {
@@ -3234,12 +3229,11 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(mluOpHandle_t handle,
     case CNFFT_COMPLEX_HALF2HALF:
     case CNFFT_COMPLEX_FLOAT2FLOAT: {
       if (((fft_plan->idist * 2) > fft_plan->odist) && is_in_place) {
-        LOG(ERROR)
-            << exec_api
-            << ": output overwritten may occur during an in-place "
-               "complex-to-real fft "
-               "execution, input needs to be slightly padding. Please refer to "
-               "mluOpExecFFT document for detail.";
+        LOG_ERROR(
+            "{}: output overwritten may occur during an in-place "
+            "complex-to-real fft execution, input needs to be slightly "
+            "padding. Please refer to mluOpExecFFT document for detail.",
+            exec_api);
         status = MLUOP_STATUS_BAD_PARAM;
       }
       if (fft_plan->rank == 1) {
@@ -3247,8 +3241,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpExecFFT(mluOpHandle_t handle,
                              output);
       } else if (fft_plan->rank == 2) {
         if (fft_plan->inembed[1] > (fft_plan->n[1] / 2 + 1)) {
-          LOG(ERROR) << exec_api
-                     << ": inembed[1] > fft_plan->n[1] is not supported now";
+          LOG_ERROR("{}: inembed[1] > fft_plan->n[1] is not supported now",
+                    exec_api);
           status = MLUOP_STATUS_BAD_PARAM;
 
         } else {

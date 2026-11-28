@@ -83,18 +83,22 @@ static mluOpStatus_t RotatedFeatureAlignForwardPreCheck(
 
   for (int i = 0; i < input_desc->getDim(); i++) {
     if (input_desc->getDimIndex(i) != output_desc->getDimIndex(i)) {
-      LOG(ERROR)
-          << "[mluOpRotatedFeatureAlignForward] Check failed: input_desc->dims["
-          << i << "] should be equal to output_desc->getDimIndex(" << i << ").";
+      LOG_ERROR(
+          "[mluOpRotatedFeatureAlignForward] Check failed: "
+          "input_desc->dims[{}] should be equal to "
+          "output_desc->getDimIndex({}).",
+          i, i);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
 
   for (int i = 0; i < input_desc->getDim() - 1; i++) {
     if (input_desc->getDimIndex(i) != bboxes_desc->getDimIndex(i)) {
-      LOG(ERROR)
-          << "[mluOpRotatedFeatureAlignForward] Check failed: input_desc->dims["
-          << i << "] should be equal to bboxes_desc->getDimIndex(" << i << ").";
+      LOG_ERROR(
+          "[mluOpRotatedFeatureAlignForward] Check failed: "
+          "input_desc->dims[{}] should be equal to "
+          "bboxes_desc->getDimIndex({}).",
+          i, i);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -160,20 +164,22 @@ static mluOpStatus_t RotatedFeatureAlignBackwardPreCheck(
 
   for (int i = 0; i < top_output_desc->getDim(); i++) {
     if (top_output_desc->getDimIndex(i) != bottom_input_desc->getDimIndex(i)) {
-      LOG(ERROR) << "[mluOpRotatedFeatureAlignBackward] Check failed: "
-                    "top_output_desc->dims["
-                 << i << "] should be equal to bottom_input_desc->dims[" << i
-                 << "].";
+      LOG_ERROR(
+          "[mluOpRotatedFeatureAlignBackward] Check failed: "
+          "top_output_desc->dims[{}] should be equal to "
+          "bottom_input_desc->dims[{}].",
+          i, i);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
 
   for (int i = 0; i < top_output_desc->getDim() - 1; i++) {
     if (top_output_desc->getDimIndex(i) != bboxes_desc->getDimIndex(i)) {
-      LOG(ERROR) << "[mluOpRotatedFeatureAlignBackward] Check failed: "
-                    "top_output_desc->dims["
-                 << i << "] should be equal to bboxes_desc->getDimIndex(" << i
-                 << ").";
+      LOG_ERROR(
+          "[mluOpRotatedFeatureAlignBackward] Check failed: "
+          "top_output_desc->dims[{}] should be equal to "
+          "bboxes_desc->getDimIndex({}).",
+          i, i);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }

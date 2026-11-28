@@ -66,8 +66,7 @@ void RoiAlignBackwardExecutor::compute() {
     MLUOP_CHECK(mluOpRoiAlignBackward_v2(
         handle_, grads_desc, grads_ptr, boxes_desc, boxes_ptr, argmax_x_desc,
         argmax_x_ptr, argmax_y_desc, argmax_y_ptr, spatial_scale,
-        sampling_ratio, aligned, pool_mode, grads_image_desc,
-        grads_image_ptr));
+        sampling_ratio, aligned, pool_mode, grads_image_desc, grads_image_ptr));
   } else {
     VLOG(4) << "call mluOp mluOpRoiAlignBackward_v2 with max mode";
     auto argmax_x_desc = parser_->getMetaTensor(2).tensor;
@@ -81,9 +80,8 @@ void RoiAlignBackwardExecutor::compute() {
     MLUOP_CHECK(mluOpRoiAlignBackward_v2(
         handle_, grads_desc, grads_ptr, boxes_desc, boxes_ptr, argmax_x_desc,
         argmax_x_ptr, argmax_y_desc, argmax_y_ptr, spatial_scale,
-        sampling_ratio, aligned, pool_mode, grads_image_desc,
-        grads_image_ptr));
-    }
+        sampling_ratio, aligned, pool_mode, grads_image_desc, grads_image_ptr));
+  }
   interface_timer_.stop();
 }
 
@@ -212,11 +210,11 @@ void RoiAlignBackwardExecutor::cpuCompute() {
                          x_high * output_c + ic] += g4;
                 }
               }  // for ix
-            }    // for iy
-          }      // for ic
-        }        // for iw
-      }          // for ih
-    }            // for idx_n
+            }  // for iy
+          }  // for ic
+        }  // for iw
+      }  // for ih
+    }  // for idx_n
   } else if (pool_mode == 0) {
     auto argmax_x = parser_->getMetaTensor(2).cpu_ptr;
     auto argmax_x_desc = parser_->getMetaTensor(2).tensor;
@@ -240,8 +238,7 @@ void RoiAlignBackwardExecutor::cpuCompute() {
       // check whether box_idx is valid
       int curr_idx = (int)boxes[idx_n * 5];
       if (curr_idx < 0 || curr_idx >= output_n) {
-        LOG(ERROR)
-            << "mluOpRoiAlignBackward: boxes_id is out range of output_n.";
+        LOG_ERROR("mluOpRoiAlignBackward: boxes_id is out range of output_n.");
         continue;
       }
       int output_offset = curr_idx * output_offset_n;
@@ -275,12 +272,12 @@ void RoiAlignBackwardExecutor::cpuCompute() {
                 output[output_offset + y_high * output_offset_h +
                        x_high * output_c + ic] += g4;
               }  // if x_low, x_high, y_low, y_high
-            }    // if y
-          }      // for ic
-        }        // for iw
-      }          // for ih
-    }            // for idx_n
-  }              // if pool_mode
+            }  // if y
+          }  // for ic
+        }  // for iw
+      }  // for ih
+    }  // for idx_n
+  }  // if pool_mode
   return;
 }  // cpuCompute()
 

@@ -32,23 +32,24 @@ namespace mluoptest {
 void PsroipoolForwardExecutor::paramCheck() {
   VLOG(4) << "[PsroipoolForwardExecutor] param check.";
   if (parser_->getInputNum() != 2) {
-    LOG(ERROR)
-        << "[PsroipoolForwardExecutor] input number is wrong. It should be 2, "
-        << "but now is " << parser_->getInputNum();
+    LOG_ERROR(
+        "[PsroipoolForwardExecutor] input number is wrong. It should be 2, "
+        "but now is {}",
+        parser_->getInputNum());
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   if (parser_->getOutputNum() != 2) {
-    LOG(ERROR)
-        << "[PsroipoolForwardExecutor] output number is wrong. It should be 2, "
-        << "but now is" << parser_->getOutputNum();
+    LOG_ERROR(
+        "[PsroipoolForwardExecutor] output number is wrong. It should be 2, "
+        "but now is{}",
+        parser_->getOutputNum());
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   for (int i = 0; i < parser_->getInputNum(); i++) {
     if (i == 1 && parser_->inputIsNull(i)) {
-      LOG(ERROR) << "[PsroipoolForwardExecutor] input [" << i
-                 << "] is nullptr.";
+      LOG_ERROR("[PsroipoolForwardExecutor] input [{}] is nullptr.", i);
       throw std::invalid_argument(std::string(__FILE__) + " +" +
                                   std::to_string(__LINE__));
     }
@@ -73,10 +74,10 @@ void PsroipoolForwardExecutor::compute() {
   auto output_desc = tensor_desc_[2].tensor;
   auto mapping_channel_desc = tensor_desc_[3].tensor;
 
-  const void* input = data_vector_[0].device_ptr;
-  const void* rois = data_vector_[1].device_ptr;
-  void* output = data_vector_[2].device_ptr;
-  void* mapping_channel = data_vector_[3].device_ptr;
+  const void *input = data_vector_[0].device_ptr;
+  const void *rois = data_vector_[1].device_ptr;
+  void *output = data_vector_[2].device_ptr;
+  void *mapping_channel = data_vector_[3].device_ptr;
 
   interface_timer_.start();
   MLUOP_CHECK(mluOpPsRoiPoolForward(

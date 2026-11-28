@@ -97,9 +97,10 @@ mluOpStatus_t makeFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
   switch (fft_plan->fft_strategy) {
     case CNFFT_FUNC_MATMUL: {
       if (n > FFT_L_LIMIT_MATMUL) {
-        LOG(ERROR)
-            << "[mluOpMakeFFTPlanMany]: FFT1d CNFFT_FUNC_MATMUL length > "
-            << FFT_L_LIMIT_MATMUL << " is not supported currently.";
+        LOG_ERROR(
+            "[mluOpMakeFFTPlanMany]: FFT1d CNFFT_FUNC_MATMUL length > "
+            "{} is not supported currently.",
+            FFT_L_LIMIT_MATMUL);
         return MLUOP_STATUS_NOT_SUPPORTED;
       }
 
@@ -248,8 +249,9 @@ mluOpStatus_t makeFFT1dPolicy(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan) {
       int L = fft_plan->L;
       int m = (1 << fft_plan->m);
       if (L > FFT_L_LIMIT) {
-        LOG(ERROR) << "[mluOpMakeFFTPlanMany]: FFT1d CNFFT_FUNC_COOLEY_TUKEY "
-                   << "n = L * 2^m and L > 4096 is not supported currently.";
+        LOG_ERROR(
+            "[mluOpMakeFFTPlanMany]: FFT1d CNFFT_FUNC_COOLEY_TUKEY "
+            "n = L * 2^m and L > 4096 is not supported currently.");
         return MLUOP_STATUS_NOT_SUPPORTED;
       }
 
@@ -602,7 +604,7 @@ mluOpStatus_t setFFT2dReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
       CPX_TYPE_SIZE = 4 * 2;
     }; break;
     default: {
-      LOG(ERROR) << make_plan_api << ": invalid 2d fft type.";
+      LOG_ERROR("{}: invalid 2d fft type.", make_plan_api);
       status = MLUOP_STATUS_NOT_SUPPORTED;
       return status;
     }
@@ -838,7 +840,7 @@ mluOpStatus_t setFFT2dReserveArea(mluOpHandle_t handle, mluOpFFTPlan_t fft_plan,
                                    handle->queue, cnrtMemcpyHostToDev));
       }; break;
       default: {
-        LOG(ERROR) << make_plan_api << ": invalid 2d fft type.";
+        LOG_ERROR("{}: invalid 2d fft type.", make_plan_api);
         status = MLUOP_STATUS_NOT_SUPPORTED;
         return status;
       }
@@ -1961,8 +1963,8 @@ mluOpStatus_t kernelFFT2dBluesteinRow(mluOpHandle_t handle, cnrtDim3_t k_dim,
   CHECK_RETURN(api, kernelFFT2dButterflyRow(k_dim, k_type, handle->queue,
                                             fft_plan, FFT_BACKWARD, FFT_IFFT));
   // step8
-  policyMatrixDotVectorFunc(handle, &k_dim_2, &k_type_2, orig_n1, 1,
-                            row_major, &large_col);
+  policyMatrixDotVectorFunc(handle, &k_dim_2, &k_type_2, orig_n1, 1, row_major,
+                            &large_col);
   CHECK_RETURN(
       api, KernelComplexMatrixDotVector(
                k_dim_2, k_type_2, handle->queue, fft_plan->bluestein_chirpz_row,

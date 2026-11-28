@@ -103,13 +103,14 @@ bool checkAccuracyBaselineStrategy(std::string case_name,
   for (int i = 0; i < base_errors.size(); i++) {
     double error_diff = errors[i] - base_errors[i];
     if (error_diff > base_errors[i] * threshold) {
-      LOG(ERROR) << "[Accuracy Baseline:" << case_name
-                 << "]:the accuracy result exceed baseline threshold which is "
-                 << threshold * 100 << "%.";
-      LOG(ERROR) << "[Accuracy Baseline:" << case_name
-                 << "]:diff of baseline is " << base_errors[i];
-      LOG(ERROR) << "[Accuracy Baseline:" << case_name
-                 << "]:diff of this test is " << errors[i];
+      LOG_ERROR(
+          "[Accuracy Baseline:{}]:the accuracy result exceed "
+          "baseline threshold which is {}%.",
+          case_name, threshold * 100);
+      LOG_ERROR("[Accuracy Baseline:{}]:diff of baseline is {}", case_name,
+                base_errors[i]);
+      LOG_ERROR("[Accuracy Baseline:{}]:diff of this test is {}", case_name,
+                errors[i]);
       return false;
     }
   }

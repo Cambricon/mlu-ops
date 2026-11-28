@@ -108,20 +108,18 @@ void RoiAlignRotatedBackwardExecutor::preCalcForBilinearInterpolate(
 
 void RoiAlignRotatedBackwardExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_roi_align_rotated_backward_param()) {
-    LOG(ERROR)
-        << "mluOpRoiAlignRotatedBackward: lose roi_align_rotated_param. ";
+    LOG_ERROR("mluOpRoiAlignRotatedBackward: lose roi_align_rotated_param. ");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   if (parser_->getInputNum() != 2) {
-    LOG(ERROR) << "mluOpRoiAlignRotatedBackward: tensor input number is wrong.";
+    LOG_ERROR("mluOpRoiAlignRotatedBackward: tensor input number is wrong.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "output number is" << parser_->getOutputNum();
-    LOG(ERROR)
-        << "mluOpRoiAlignRotatedBackward: tensor output number is wrong.";
+    LOG_ERROR("output number is{}", parser_->getOutputNum());
+    LOG_ERROR("mluOpRoiAlignRotatedBackward: tensor output number is wrong.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
@@ -255,8 +253,7 @@ void RoiAlignRotatedBackwardExecutor::cpuCompute() {
 
     for (int c_idx = 0; c_idx < channel; ++c_idx) {
       // next stmt not count theory_ops_
-      int bottom_grad_offset = roi_batch_idx * height * width * channel +
-      c_idx;
+      int bottom_grad_offset = roi_batch_idx * height * width * channel + c_idx;
       int pre_calc_idx = 0;
 
       // loop for each bin

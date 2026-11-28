@@ -46,12 +46,11 @@ static inline mluOpStatus_t mluOpSetTensorDescriptorZeroDim(
     desc->setTensorDescriptorZeroDim();
     return MLUOP_STATUS_SUCCESS;
   } else {
-    LOG(ERROR)
-        << "[mluOpSetTensorDescriptorDim]: Currently, the dim can be set to 0"
-        << " only when the pointer mode of desc is MLUOP_POINTER_MODE_HOST. "
-        << "Please use [mluOpSetTensorDescriptorPointerMode] to set the "
-           "pointer "
-        << "mode of desc.";
+    LOG_ERROR(
+        "[mluOpSetTensorDescriptorDim]: Currently, the dim can be set to 0"
+        " only when the pointer mode of desc is MLUOP_POINTER_MODE_HOST. "
+        "Please use [mluOpSetTensorDescriptorPointerMode] to set the "
+        "pointer mode of desc.");
     return MLUOP_STATUS_BAD_PARAM;
   }
 }
@@ -64,8 +63,9 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetSizeOfDataType(mluOpDataType_t data_type,
     *size = mluop::getSizeOfDataType(data_type);
     return MLUOP_STATUS_SUCCESS;
   } else {
-    LOG(ERROR) << "[mluOpGetSizeOfDataType]:data_type should not be "
-                  "MLUOP_DTYPE_INVALID. ";
+    LOG_ERROR(
+        "[mluOpGetSizeOfDataType]:data_type should not be "
+        "MLUOP_DTYPE_INVALID. ");
     return MLUOP_STATUS_BAD_PARAM;
   }
 }
@@ -467,7 +467,6 @@ mluOpStatus_t mluOpTensorStruct::setTensorDescriptorOnchipDataType(
   this->onchip_dtype = onchip_dtype;
   return MLUOP_STATUS_SUCCESS;
 }
-
 
 mluOpStatus_t mluOpTensorStruct::setTensorDescriptorPointerMode(
     mluOpPointerMode_t pointer_mode) {

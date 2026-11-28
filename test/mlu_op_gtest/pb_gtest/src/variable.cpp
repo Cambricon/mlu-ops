@@ -207,9 +207,9 @@ void GlobalVar::validate() {
     kernel_trace_policy_ = "cnpapi";
   }
   if (!kernelTracingCtx::is_method_available(kernel_trace_policy_)) {
-    LOG(ERROR) << "INVALID kernel tracing policy: " << kernel_trace_policy_
-               << ". Supported: "
-               << kernelTracingCtx::getSupportedMethodNames();
+    LOG_ERROR("INVALID kernel tracing policy: {}. Supported: {}",
+              kernel_trace_policy_,
+              kernelTracingCtx::getSupportedMethodNames());
     throw std::runtime_error(
         "invalid kernel tracing policy, please check you input");
   }
@@ -246,12 +246,11 @@ void GlobalVar::checkUnsupportedTest() const {
   // don't use it in multi-thread mode
   if (thread_num_ > 1) {
     if (random_mlu_address_) {
-      LOG(ERROR) << "Does not support random_mlu_address in multi-thread mode.";
+      LOG_ERROR("Does not support random_mlu_address in multi-thread mode.");
       exit(EXIT_FAILURE_MLUOP);
     }
     if (monitor_mlu_hardware_) {
-      LOG(ERROR)
-          << "Does not support monitor_mlu_hardware in multi-thread mode.";
+      LOG_ERROR("Does not support monitor_mlu_hardware in multi-thread mode.");
       exit(EXIT_FAILURE_MLUOP);
     }
   }

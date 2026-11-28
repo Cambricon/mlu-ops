@@ -93,9 +93,10 @@ static mluOpStatus_t internalGetIndicePairs(
 
   // check platform
   if (handle->arch < 372) {
-    LOG(ERROR) << interface_name
-               << " Only mlu300 and above devices are supported."
-               << " Please check the device version!";
+    LOG_ERROR(
+        "{} Only mlu300 and above devices are supported. "
+        "Please check the device version!",
+        interface_name);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
@@ -136,9 +137,10 @@ static mluOpStatus_t internalGetIndicePairs(
     PARAM_CHECK_V2(interface_name, sparse_conv_desc->stride[i] >= 1, << i_str);
     if (sparse_conv_desc->dilation[i] != 1 &&
         sparse_conv_desc->stride[i] != 1) {
-      LOG(ERROR) << interface_name << "sparse_conv_desc->dilation[" << i
-                 << "] and sparse_conv_desc->stride[" << i
-                 << "] cannot both be 1.";
+      LOG_ERROR(
+          "{}sparse_conv_desc->dilation[{}] and "
+          "sparse_conv_desc->stride[{}] cannot both be 1.",
+          interface_name, i, i);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -165,8 +167,10 @@ static mluOpStatus_t internalGetIndicePairs(
       mluOpGetTensorElementNum(out_indices_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(indice_pairs_desc) >= LARGE_TENSOR_NUM ||
       mluOpGetTensorElementNum(indice_num_desc) >= LARGE_TENSOR_NUM) {
-    LOG(ERROR) << interface_name << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    LOG_ERROR(
+        "{} Overflow max tensor num. Currently, MLU-OPS supports "
+        "tensor num smaller than 2^31.",
+        interface_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 

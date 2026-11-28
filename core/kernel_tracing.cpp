@@ -104,8 +104,8 @@ class kernelMapping {
     int status = 0;
     char *name = abi::__cxa_demangle(symbol, NULL, NULL, &status);
     if (status != 0) {
-      LOG(ERROR) << "demangle kernel symbol failed for " << symbol
-                 << ", status is " << status;
+      LOG_ERROR("demangle kernel symbol failed for {}, status is {}", symbol,
+                status);
       instance().kernel_mapping_[key] = symbol;
     } else {
       DBG_LOG << " add device kernel function: " << name;
@@ -262,7 +262,7 @@ class libcnrt {
     DBG_LOG << "dlsym " << fname;
     void *symbol = dlsym(getHandle(), fname);
     if (symbol == nullptr) {
-      LOG(ERROR) << "dlsym " << fname << " failed, reason: " << dlerror();
+      LOG_ERROR("dlsym {} failed, reason: {}", fname, dlerror());
       return dispatch_failed<RetType, ArgType...>;
     }
     return (F<RetType, ArgType...>)symbol;
@@ -273,7 +273,7 @@ class libcnrt {
     if (handle == nullptr) {
       std::ostringstream err;
       err << "dlopen " << name() << " failed, reason: " << dlerror();
-      LOG(ERROR) << err.str();
+      LOG_ERROR("{}", err.str());
     }
     return handle;
   }
@@ -303,19 +303,18 @@ static cnrtRet_t __real_cnrtInvokeKernel(const void *kernel, cnrtDim3_t dim,
 #if !defined(MLUOP_EXPERIMENTAL_TRACE)
 __attribute__((weak))
 #endif
-extern void
-__real___bangRegisterFunction(void **module, const char *hostFunc,
-                              char *deviceFunc, const char *deviceName,
-                              int unionLimit, cnrtDim3_t *taskId,
-                              cnrtDim3_t *taskDim, int *wSize);
+extern void __real___bangRegisterFunction(void **module, const char *hostFunc,
+                                          char *deviceFunc,
+                                          const char *deviceName,
+                                          int unionLimit, cnrtDim3_t *taskId,
+                                          cnrtDim3_t *taskDim, int *wSize);
 
 #if !defined(MLUOP_EXPERIMENTAL_TRACE)
 __attribute__((weak))
 #endif
-extern cnrtRet_t
-__real_cnrtInvokeKernel(const void *kernel, cnrtDim3_t dim,
-                        cnrtFunctionType_t ktype, void **args, size_t reserved,
-                        cnrtQueue_t queue);
+extern cnrtRet_t __real_cnrtInvokeKernel(const void *kernel, cnrtDim3_t dim,
+                                         cnrtFunctionType_t ktype, void **args,
+                                         size_t reserved, cnrtQueue_t queue);
 #endif  // MLUOP_TRACE_WITH_DLOPEN
 
 void WRAP_FUNC(__bangRegisterFunction)(void **module, const char *hostFunc,

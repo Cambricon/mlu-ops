@@ -501,8 +501,8 @@ class PbNode {
                                   data_size, memcpy_dir)) {
       return data;
     } else {
-      LOG(ERROR) << "[gen_case] Dump data failed! cnrtMemcpy data size is "
-                 << data_size << " byte.";
+      LOG_ERROR("[gen_case] Dump data failed! cnrtMemcpy data size is {} byte.",
+                data_size);
       return nullptr;
     }
   }
@@ -577,8 +577,10 @@ inline void PbNode::appendOpParam<const void *>(std::string param_name,
                                   data_width, cnrtMemcpyDevToHost)) {
       op_param.params.push_back({param_name, get_data_string(dtype, data, 0)});
     } else {
-      LOG(ERROR) << "[gen_case] dump op param failed, param_name is "
-                 << param_name << " param_node_name is " << param_node_name;
+      LOG_ERROR(
+          "[gen_case] dump op param failed, param_name is {} "
+          "param_node_name is {}",
+          param_name, param_node_name);
     }
     free(data);
   } else {

@@ -113,18 +113,20 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
 
   // check dtype
   if (!isSupportType(new_xyz_desc->getDtype(), support_type, 2)) {
-    LOG(ERROR) << "[mluOpBallQuery]:Only half and float are supported in input "
-                  "new_xyz tensor, but the data type of tensor is "
-               << mluOpGetNameOfDataType(new_xyz_desc->getDtype()) << ".";
+    LOG_ERROR(
+        "[mluOpBallQuery]:Only half and float are supported in input "
+        "new_xyz tensor, but the data type of tensor is {}.",
+        mluOpGetNameOfDataType(new_xyz_desc->getDtype()));
     return MLUOP_STATUS_BAD_PARAM;
   }
   PARAM_CHECK_EQ("[mluOpBallQuery]", new_xyz_desc->getDtype(),
                  xyz_desc->getDtype());
 
   if (idx_desc->getDtype() != MLUOP_DTYPE_INT32) {
-    LOG(ERROR) << "[mluOpBallQuery]:Only int32 is supportedin output idx, but "
-                  "data type of tensor is "
-               << mluOpGetNameOfDataType(idx_desc->getDtype()) << ".";
+    LOG_ERROR(
+        "[mluOpBallQuery]:Only int32 is supportedin output idx, but "
+        "data type of tensor is {}.",
+        mluOpGetNameOfDataType(idx_desc->getDtype()));
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -142,15 +144,16 @@ mluOpStatus_t MLUOP_WIN_API mluOpBallQuery(
 
   if ((mluOpGetTensorElementNum(new_xyz_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(idx_desc) >= LARGE_TENSOR_NUM)) {
-    LOG(ERROR) << "ball_query Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    LOG_ERROR(
+        "ball_query Overflow max tensor num. Currently, MLU-OPS "
+        "supports tensor num smaller than 2^31.");
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   if (mluOpGetTensorElementNum(xyz_desc) >= max_input_num) {
-    LOG(ERROR)
-        << "ball_query's xyz_tensor element number is bigger max tensor num."
-        << " Currently, xyz_tensor supports tensor num smaller than "
-        << max_input_num << ".";
+    LOG_ERROR(
+        "ball_query's xyz_tensor element number is bigger max tensor num. "
+        "Currently, xyz_tensor supports tensor num smaller than {}.",
+        max_input_num);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 

@@ -69,8 +69,9 @@ void MoeDispatchBackwardDataExecutor::paramCheck() {
   GTEST_CHECK(parser_->getInputNum() == 4);
   GTEST_CHECK(parser_->getOutputNum() == 1);
   if (!parser_->getProtoNode()->has_moe_dispatch_backward_data_param()) {
-    LOG(ERROR) << "MoeDispatchBackwardDataExecutor::paramCheck() Missing "
-                  "moe_dispatch_backward_data param.";
+    LOG_ERROR(
+        "MoeDispatchBackwardDataExecutor::paramCheck() Missing "
+        "moe_dispatch_backward_data param.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }

@@ -27,7 +27,7 @@
 namespace mluoptest {
 void YoloBoxExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_yolo_box_param()) {
-    LOG(ERROR) << "Lose yolo_box_param. ";
+    LOG_ERROR("Lose yolo_box_param. ");
   }
   GTEST_CHECK(parser_->inputs().size() == 3,
               "[YoloBoxExecutor] input number is wrong. ");

@@ -47,7 +47,7 @@ static mluOpStatus_t foolCheckNoPtr(
 
   // check platform
   if (handle->arch < 372) {
-    LOG(ERROR) << api << " Only support hardware over MLU300 .";
+    LOG_ERROR("{} Only support hardware over MLU300 .", api);
     return MLUOP_STATUS_ARCH_MISMATCH;
   }
 
@@ -60,9 +60,10 @@ static mluOpStatus_t foolCheckNoPtr(
   // check shape
   PARAM_CHECK(api, indice_pairs_desc->getDimIndex(1) == 2);
   if (indice_pairs_desc->getDimIndex(2) > INDICE_IN_LARGE_TENSOR_NUM) {
-    LOG(ERROR) << api << " Check failed: "
-               << "indice_pairs_desc->getDimIndex(2) cannot be greater than "
-               << INDICE_IN_LARGE_TENSOR_NUM << ".";
+    LOG_ERROR(
+        "{} Check failed: indice_pairs_desc->getDimIndex(2) cannot be "
+        "greater than {}.",
+        api, INDICE_IN_LARGE_TENSOR_NUM);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -83,9 +84,10 @@ static mluOpStatus_t foolCheckNoPtr(
                       filters_desc->getLayout() == MLUOP_LAYOUT_NDHWC ||
                       filters_desc->getLayout() == MLUOP_LAYOUT_ARRAY;
   if (!layout_check) {
-    LOG(ERROR) << api
-               << " The filters tensor only supports "
-                  "NHWC/NCHW/HWCN/NCDHW/NDHWC/ARRAY layout.";
+    LOG_ERROR(
+        "{} The filters tensor only supports "
+        "NHWC/NCHW/HWCN/NCDHW/NDHWC/ARRAY layout.",
+        api);
     return MLUOP_STATUS_BAD_PARAM;
   }
   // check stride
@@ -127,33 +129,37 @@ static mluOpStatus_t foolCheckNoPtr(
     PARAM_CHECK(api, indice_num[kk] >= 0);
   }
   if (inverse == 1) {
-    LOG(ERROR) << api << " Not support inverse == 1 yet.";
+    LOG_ERROR("{} Not support inverse == 1 yet.", api);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
   // check algorithm, relationship between params
   if (K != indice_pairs_desc->getDimIndex(0)) {
-    LOG(ERROR) << api
-               << " The dims[0] of indice_pairs should be equal to the "
-                  "multiple of kd, kh and kw.";
+    LOG_ERROR(
+        "{} The dims[0] of indice_pairs should be equal to the "
+        "multiple of kd, kh and kw.",
+        api);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (output_grad_desc->getDimIndex(1) != dyc) {
-    LOG(ERROR) << api
-               << " The dims[1] of output_grad should be equal to dyc of "
-                  "filters tensor.";
+    LOG_ERROR(
+        "{} The dims[1] of output_grad should be equal to dyc of "
+        "filters tensor.",
+        api);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_grad_desc->getDimIndex(1) != dxc) {
-    LOG(ERROR) << api
-               << " The dims[1] of input_grad should be equal to dxc of "
-                  "filters tensor.";
+    LOG_ERROR(
+        "{} The dims[1] of input_grad should be equal to dxc of "
+        "filters tensor.",
+        api);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (input_grad_desc->getDimIndex(0) != indice_pairs_desc->getDimIndex(2)) {
-    LOG(ERROR) << api
-               << " The dims[0] of input_grad should be equal to the dims[2] "
-                  "of indice_pairs.";
+    LOG_ERROR(
+        "{} The dims[0] of input_grad should be equal to the dims[2] "
+        "of indice_pairs.",
+        api);
     return MLUOP_STATUS_BAD_PARAM;
   }
   int max_indice_num = getMaxNumInArray(indice_num, K);
@@ -162,40 +168,44 @@ static mluOpStatus_t foolCheckNoPtr(
     VLOG(5) << "indice_pairs_desc->getDimIndex(2) "
             << indice_pairs_desc->getDimIndex(2) << " max_indice_num "
             << max_indice_num;
-    LOG(ERROR) << api
-               << " The data in indice_num array should be smaller or equal to"
-               << " the dims[2] of indice_pairs.";
+    LOG_ERROR(
+        "{} The data in indice_num array should be smaller or equal to"
+        " the dims[2] of indice_pairs.",
+        api);
     return MLUOP_STATUS_BAD_PARAM;
   }
   if (sub_m == 1) {
     if (input_grad_desc->getDimIndex(0) != output_grad_desc->getDimIndex(0)) {
-      LOG(ERROR) << api
-                 << " The dims[0] of input_grad should be equal to the dims[0]"
-                 << " of output_grad when sub_m is 1.";
+      LOG_ERROR(
+          "{} The dims[0] of input_grad should be equal to the dims[0]"
+          " of output_grad when sub_m is 1.",
+          api);
       return MLUOP_STATUS_BAD_PARAM;
     }
 
     if (indice_num[K / 2] < max_indice_num) {
-      LOG(ERROR) << api
-                 << " The middle number of the indice_num array should be the "
-                 << "maximum of the array when sub_m is 1. Now the maximum is "
-                 << max_indice_num << " while the middle number of the array "
-                 << "is " << indice_num[K / 2] << ".";
+      LOG_ERROR(
+          "{} The middle number of the indice_num array should be the "
+          "maximum of the array when sub_m is 1. Now the maximum is {} "
+          "while the middle number of the array is {}.",
+          api, max_indice_num, indice_num[K / 2]);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
 
   if (output_grad_desc->getDimIndex(0) < max_indice_num) {
-    LOG(ERROR)
-        << api
-        << " The dims[0] of output_grad should be larger than or equal to the"
-        << " maximum number of indice_num.";
+    LOG_ERROR(
+        "{} The dims[0] of output_grad should be larger than or equal "
+        "to the maximum number of indice_num.",
+        api);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
   if (sub_m == 1 && K % 2 == 0) {
-    LOG(ERROR) << api << " When sub_m value is 1, the filters dims (Kd, Kh & "
-               << "Kw) should be odd numbers.";
+    LOG_ERROR(
+        "{} When sub_m value is 1, the filters dims (Kd, Kh & Kw) "
+        "should be odd numbers.",
+        api);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -364,8 +374,7 @@ mluOpStatus_t MLUOP_WIN_API mluOpGetIndiceConvolutionBackwardDataWorkspaceSize(
   const char *api_name = "[mluOpGetIndiceConvolutionBackwardDataWorkspaceSize]";
   bool is_zero_element = false;
   if (workspace_size == NULL) {
-    LOG(ERROR) << api_name
-               << " The pointer workspace_size should not be nullptr.";
+    LOG_ERROR("{} The pointer workspace_size should not be nullptr.", api_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   mluOpStatus_t ret =

@@ -282,7 +282,7 @@ void generateRandomData(T *data, size_t count, const RandomData *random_param,
     case DTYPE_BOOL: {
       // bool with data other than 0/1 is allowed
       if (!hasRamdomBound(random_param)) {
-        LOG(ERROR) << "Generate bool data should use uniform distribution.";
+        LOG_ERROR("Generate bool data should use uniform distribution.");
         throw std::invalid_argument(std::string(__FILE__) + " +" +
                                     std::to_string(__LINE__));
       }
@@ -293,7 +293,7 @@ void generateRandomData(T *data, size_t count, const RandomData *random_param,
       }
     }; break;
     default:
-      LOG(ERROR) << "Generate random data failed. ";
+      LOG_ERROR("Generate random data failed. ");
       throw std::invalid_argument(std::string(__FILE__) + " +" +
                                   std::to_string(__LINE__));
   }

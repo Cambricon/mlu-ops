@@ -131,7 +131,7 @@ mluOpStatus_t binaryOpParamCheck(
 
   // check data type support
   if (!isSupportType(input1_desc->getDtype(), support_type, len)) {
-    LOG(ERROR) << op_name << ":input1_desc's data type is not supported.";
+    LOG_ERROR("{}:input1_desc's data type is not supported.", op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
 
@@ -156,36 +156,35 @@ mluOpStatus_t binaryOpParamCheck(
     }
 
     if (output_desc->getDim() != max_dim) {
-      LOG(ERROR)
-          << op_name
-          << " The dimension size of the output tensors does not meet the "
-             "requirements of broadcast.";
+      LOG_ERROR(
+          "{} The dimension size of the output tensors does not meet "
+          "the requirements of broadcast.",
+          op_name);
       return MLUOP_STATUS_BAD_PARAM;
     }
 
     for (int i = 0; i < max_dim; ++i) {
       if (left_aligned_dims[i] != right_aligned_dims[i] &&
           left_aligned_dims[i] != 1 && right_aligned_dims[i] != 1) {
-        LOG(ERROR)
-            << op_name << " The shape of the two inputs do not meet the"
-            << " requirements of broadcast. In the broadcast dimension, the"
-            << " dimension size of x is " << left_aligned_dims[i]
-            << " the dimension size of y is " << right_aligned_dims[i] << ".";
+        LOG_ERROR(
+            "{} The shape of the two inputs do not meet the requirements "
+            "of broadcast. In the broadcast dimension, the dimension size "
+            "of x is {} the dimension size of y is {}.",
+            op_name, left_aligned_dims[i], right_aligned_dims[i]);
         return MLUOP_STATUS_BAD_PARAM;
       }
       int max_dim_value = std::max(left_aligned_dims[i], right_aligned_dims[i]);
       int min_dim_value = std::min(left_aligned_dims[i], right_aligned_dims[i]);
       if ((min_dim_value > 0 && max_dim_value != output_desc->getDimIndex(i)) ||
           (min_dim_value == 0 && output_desc->getDimIndex(i) != 0)) {
-        LOG(ERROR)
-            << op_name << " The shape of the inferred tensors is not equal"
-            << " to the output tensor. In the broadcast shape"
-            << ", the shape of x is "
-            << array2String(input1_desc->getDim(), input1_desc->getDims())
-            << ", the shape of y is "
-            << array2String(input2_desc->getDim(), input2_desc->getDims())
-            << ", the shape of z is "
-            << array2String(output_desc->getDim(), output_desc->getDims());
+        LOG_ERROR(
+            "{} The shape of the inferred tensors is not equal to the "
+            "output tensor. In the broadcast shape, the shape of x is {}, "
+            "the shape of y is {}, the shape of z is {}",
+            op_name,
+            array2String(input1_desc->getDim(), input1_desc->getDims()),
+            array2String(input2_desc->getDim(), input2_desc->getDims()),
+            array2String(output_desc->getDim(), output_desc->getDims()));
         return MLUOP_STATUS_BAD_PARAM;
       }
     }
@@ -246,17 +245,19 @@ mluOpStatus_t binaryOpParamSameShapeCheck(
   // check shape
   for (int i = 0; i < input1_desc->getDim(); i++) {
     if (input1_desc->getDimIndex(i) != input2_desc->getDimIndex(i)) {
-      LOG(ERROR) << op_name << ":The shape of input1 should be equal to input2"
-                 << ". But now input1's shape[" << i << "] is "
-                 << input1_desc->getDimIndex(i) << ", input2's shape[" << i
-                 << "] is " << input2_desc->getDimIndex(i) << ".";
+      LOG_ERROR(
+          "{}:The shape of input1 should be equal to input2. But now "
+          "input1's shape[{}] is {}, input2's shape[{}] is {}.",
+          op_name, i, input1_desc->getDimIndex(i), i,
+          input2_desc->getDimIndex(i));
       return MLUOP_STATUS_BAD_PARAM;
     }
     if (input1_desc->getDimIndex(i) != output_desc->getDimIndex(i)) {
-      LOG(ERROR) << op_name << ":The shape of input1 should be equal to output"
-                 << ". But now input1's shape[" << i << "] is "
-                 << input1_desc->getDimIndex(i) << ", output's shape[" << i
-                 << "] is " << output_desc->getDimIndex(i) << ".";
+      LOG_ERROR(
+          "{}:The shape of input1 should be equal to output. But now "
+          "input1's shape[{}] is {}, output's shape[{}] is {}.",
+          op_name, i, input1_desc->getDimIndex(i), i,
+          output_desc->getDimIndex(i));
       return MLUOP_STATUS_BAD_PARAM;
     }
   }

@@ -63,8 +63,8 @@ mluOpLog(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
   }
   // check stride
   if (mluop::strideCaseWithNotConsistentDense(2, x_desc, y_desc)) {
-    LOG(ERROR) << op_name
-               << ": stride case with not consistent dense is not supported.";
+    LOG_ERROR("{}: stride case with not consistent dense is not supported.",
+              op_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -90,8 +90,10 @@ mluOpLog(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
   if (base != mluOpLogBase_t::MLUOP_LOG_E &&
       base != mluOpLogBase_t::MLUOP_LOG_2 &&
       base != mluOpLogBase_t::MLUOP_LOG_10) {
-    LOG(ERROR) << "[mluOpLog] The value of base only supports e, 2 or 10"
-               << ". But now the base is " << base << ".";
+    LOG_ERROR(
+        "[mluOpLog] The value of base only supports e, 2 or 10"
+        ". But now the base is {}.",
+        static_cast<int>(base));
     return MLUOP_STATUS_BAD_PARAM;
   }
 

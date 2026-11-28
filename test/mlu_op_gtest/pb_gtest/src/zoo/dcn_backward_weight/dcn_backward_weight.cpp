@@ -59,7 +59,7 @@ int DcnBackwardWeightExecutor::getCoefficientOfLT2CT() {
 
 void DcnBackwardWeightExecutor::paramCheck() {
   if (parser_->getInputNum() != 3 && parser_->getInputNum() != 4) {
-    LOG(ERROR) << "DCN_Backward_Weight: tensor input number is wrong.";
+    LOG_ERROR("DCN_Backward_Weight: tensor input number is wrong.");
   }
 
   auto dtype =
@@ -86,15 +86,15 @@ void DcnBackwardWeightExecutor::paramCheck() {
   }
 
   if (!parser_->getProtoNode()->has_dcn_param()) {
-    LOG(ERROR) << "Missing dcn param. ";
+    LOG_ERROR("Missing dcn param. ");
   }
 
   if (parser_->getOutputNum() != 1 && parser_->getOutputNum() != 2) {
-    LOG(ERROR) << "DCN_Backward_Weight tensor output number is wrong.";
+    LOG_ERROR("DCN_Backward_Weight tensor output number is wrong.");
   }
   TensorLayout input_order = parser_->getProtoNode()->input(0).layout();
   if (input_order != LAYOUT_NHWC) {
-    LOG(ERROR) << "DCN_Backward_Weight input tensor layout should be NHWC.";
+    LOG_ERROR("DCN_Backward_Weight input tensor layout should be NHWC.");
   }
 
   int N = parser_->getProtoNode()->input(0).shape().dims(0);
@@ -123,23 +123,23 @@ void DcnBackwardWeightExecutor::paramCheck() {
   }
 
   if (dimnb != 4) {
-    LOG(ERROR) << "[DCN_Backward_Weight]: dimnb should be 4.";
+    LOG_ERROR("[DCN_Backward_Weight]: dimnb should be 4.");
   }
 
   if (ci % dg) {
-    LOG(ERROR) << "[DCN_Backward_Weight]: deformable_group is wrong.";
+    LOG_ERROR("[DCN_Backward_Weight]: deformable_group is wrong.");
   }
 
   if (ci % g) {
-    LOG(ERROR) << "[DCN_Backward_Weight]: conv_group is wrong.";
+    LOG_ERROR("[DCN_Backward_Weight]: conv_group is wrong.");
   }
 
   if (co % g) {
-    LOG(ERROR) << "[DCN_Backward_Weight]: conv_group is wrong.";
+    LOG_ERROR("[DCN_Backward_Weight]: conv_group is wrong.");
   }
 
   if (N % im2col_step) {
-    LOG(ERROR) << "[DCN_Backward_Weight]: im2col_step is wrong.";
+    LOG_ERROR("[DCN_Backward_Weight]: im2col_step is wrong.");
   }
 }
 
@@ -355,11 +355,13 @@ void DcnBackwardWeightExecutor::transpose(float *input, float *output,
   int64_t dim_desc = dim_num;
   std::vector<int> permute_desc;
   if (dim_desc > 8 || dim_desc <= 0) {
-    LOG(ERROR) << "dim_desc is " << dim_desc
-               << ", it shoule less than 8 and greater than 0";
+    LOG_ERROR("dim_desc is {}, it shoule less than 8 and greater than 0",
+              dim_desc);
     return;
   }
-  { std::vector<int>().swap(permute_desc); }
+  {
+    std::vector<int>().swap(permute_desc);
+  }
   for (int i = 0; i < dim_num; i++) {
     permute_desc.push_back(permute[i]);
   }
@@ -611,7 +613,7 @@ void DcnBackwardWeightExecutor::cpuCompute() {
   float *buffer = nullptr;
   buffer = (float *)cpu_runtime_.allocate(cpu_buffer_size);
   if (buffer == nullptr) {
-    LOG(ERROR) << "dcn_backward_weight: allocate buffer failed.";
+    LOG_ERROR("dcn_backward_weight: allocate buffer failed.");
   }
   if (cpu_grad_weight) {
     memset(cpu_grad_weight, 0, co * kh * kw * ci / g * sizeof(float));

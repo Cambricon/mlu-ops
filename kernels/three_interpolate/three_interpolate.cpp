@@ -287,37 +287,41 @@ mluOpStatus_t threeInterpolateForwardParamCheck(
                         output_desc->getDtype() == MLUOP_DTYPE_FLOAT));
   // check shape
   if (features_desc->getDimIndex(0) != indices_desc->getDimIndex(0)) {
-    LOG(ERROR) << op_name
-               << "Check failed: features_desc->getDimIndex(0) should be "
-                  "equal to indices_desc->getDimIndex(0).";
+    LOG_ERROR(
+        "{}Check failed: features_desc->getDimIndex(0) should be equal to "
+        "indices_desc->getDimIndex(0).",
+        op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   for (int64_t i = 0; i < indices_desc->getDim(); ++i) {
     if (indices_desc->getDimIndex(i) != weights_desc->getDimIndex(i)) {
-      LOG(ERROR) << op_name << " Check failed: indices_desc->dims[" << i
-                 << "] should be equal to weightss_desc->getDimIndex(" << i
-                 << ").";
+      LOG_ERROR(
+          "{} Check failed: indices_desc->dims[{}] should be equal to "
+          "weightss_desc->getDimIndex({}).",
+          op_name, i, i);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   if (weights_desc->getDimIndex(2) != 3) {
-    LOG(ERROR)
-        << op_name
-        << " Check failed: weights_desc->getDimIndex(2) should be equal to 3.";
+    LOG_ERROR(
+        "{} Check failed: weights_desc->getDimIndex(2) should be equal to 3.",
+        op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   for (int64_t i = 0; i < output_desc->getDim() - 1; ++i) {
     if (output_desc->getDimIndex(i) != features_desc->getDimIndex(i)) {
-      LOG(ERROR) << op_name << " Check failed: output_desc->dims[" << i
-                 << "] should be equal to features_desc->getDimIndex(" << i
-                 << ").";
+      LOG_ERROR(
+          "{} Check failed: output_desc->dims[{}] should be equal to "
+          "features_desc->getDimIndex({}).",
+          op_name, i, i);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   if (output_desc->getDimIndex(2) != indices_desc->getDimIndex(1)) {
-    LOG(ERROR) << op_name
-               << " Check failed: output_desc->getDimIndex(2) should be "
-                  "equal to indices_desc->getDimIndex(1).";
+    LOG_ERROR(
+        "{} Check failed: output_desc->getDimIndex(2) should be equal to "
+        "indices_desc->getDimIndex(1).",
+        op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   // check stride
@@ -334,15 +338,17 @@ mluOpStatus_t threeInterpolateForwardParamCheck(
       (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(weights_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(output_desc) >= LARGE_TENSOR_NUM)) {
-    LOG(ERROR) << op_name << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    LOG_ERROR(
+        "{} Overflow max tensor num. Currently, MLU-OPS supports tensor "
+        "num smaller than 2^31.",
+        op_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   // check zero element
   if ((mluOpGetTensorElementNum(indices_desc) == 0) ||
       (mluOpGetTensorElementNum(weights_desc) == 0) ||
       (mluOpGetTensorElementNum(output_desc) == 0)) {
-    LOG(ERROR) << op_name << " Zero element tensor failure.";
+    LOG_ERROR("{} Zero element tensor failure.", op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   // the shape of features is [B, C, M]. currently only M equal to 0 is
@@ -393,38 +399,42 @@ mluOpStatus_t threeInterpolateBackwardParamCheck(
                         grad_output_desc->getDtype() == MLUOP_DTYPE_FLOAT));
   // check shape
   if (grad_output_desc->getDimIndex(0) != indices_desc->getDimIndex(0)) {
-    LOG(ERROR) << op_name
-               << " Check failed: grad_output_desc->getDimIndex(0) should be "
-                  "equal to indices_desc->getDimIndex(0).";
+    LOG_ERROR(
+        "{} Check failed: grad_output_desc->getDimIndex(0) should be equal "
+        "to indices_desc->getDimIndex(0).",
+        op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   for (int64_t i = 0; i < indices_desc->getDim(); ++i) {
     if (indices_desc->getDimIndex(i) != weights_desc->getDimIndex(i)) {
-      LOG(ERROR) << op_name << " Check failed: indices_desc->dims[" << i
-                 << "] should be equal to weightss_desc->getDimIndex(" << i
-                 << ").";
+      LOG_ERROR(
+          "{} Check failed: indices_desc->dims[{}] should be equal to "
+          "weightss_desc->getDimIndex({}).",
+          op_name, i, i);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   if (weights_desc->getDimIndex(2) != 3) {
-    LOG(ERROR)
-        << op_name
-        << " Check failed: weights_desc->getDimIndex(2) should be equal to 3.";
+    LOG_ERROR(
+        "{} Check failed: weights_desc->getDimIndex(2) should be equal to 3.",
+        op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   for (int64_t i = 0; i < grad_output_desc->getDim() - 1; ++i) {
     if (grad_output_desc->getDimIndex(i) !=
         grad_features_desc->getDimIndex(i)) {
-      LOG(ERROR) << op_name << " Check failed: grad_output_desc->dims[" << i
-                 << "] should be equal to grad_features_desc->dims[" << i
-                 << "].";
+      LOG_ERROR(
+          "{} Check failed: grad_output_desc->dims[{}] should be equal to "
+          "grad_features_desc->dims[{}].",
+          op_name, i, i);
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
   if (grad_output_desc->getDimIndex(2) != indices_desc->getDimIndex(1)) {
-    LOG(ERROR) << op_name
-               << " Check failed: grad_output_desc->getDimIndex(2) should be "
-                  "equal to indices_desc->getDimIndex(1).";
+    LOG_ERROR(
+        "{} Check failed: grad_output_desc->getDimIndex(2) should be equal "
+        "to indices_desc->getDimIndex(1).",
+        op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   // check stride
@@ -441,15 +451,17 @@ mluOpStatus_t threeInterpolateBackwardParamCheck(
       (mluOpGetTensorElementNum(indices_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(weights_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(grad_features_desc) >= LARGE_TENSOR_NUM)) {
-    LOG(ERROR) << op_name << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    LOG_ERROR(
+        "{} Overflow max tensor num. Currently, MLU-OPS supports tensor "
+        "num smaller than 2^31.",
+        op_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
   // check zero element
   if ((mluOpGetTensorElementNum(grad_output_desc) == 0) ||
       (mluOpGetTensorElementNum(indices_desc) == 0) ||
       (mluOpGetTensorElementNum(weights_desc) == 0)) {
-    LOG(ERROR) << op_name << " Zero element tensor failure.";
+    LOG_ERROR("{} Zero element tensor failure.", op_name);
     return MLUOP_STATUS_BAD_PARAM;
   }
   // the shape of grad_features is [B, C, M]. currently only M equal to 0 is

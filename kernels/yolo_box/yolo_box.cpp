@@ -82,8 +82,7 @@ static mluOpStatus_t yoloBoxParamCheck(
   // check param except tensor
   if (iou_aware) {
     if (iou_aware_factor < 0 || iou_aware_factor > 1) {
-      LOG(ERROR) << "[mluOpYoloBox]: iou_aware_factor should be"
-                 << " between [0, 1].";
+      LOG_ERROR("[mluOpYoloBox]: iou_aware_factor should be between [0, 1].");
       return MLUOP_STATUS_BAD_PARAM;
     }
   }
@@ -127,8 +126,10 @@ static mluOpStatus_t yoloBoxParamCheck(
       (mluOpGetTensorElementNum(anchors_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(boxes_desc) >= LARGE_TENSOR_NUM) ||
       (mluOpGetTensorElementNum(scores_desc) >= LARGE_TENSOR_NUM)) {
-    LOG(ERROR) << op_name << " Overflow max tensor num."
-               << " Currently, MLU-OPS supports tensor num smaller than 2^31.";
+    LOG_ERROR(
+        "{} Overflow max tensor num. Currently, MLU-OPS supports "
+        "tensor num smaller than 2^31.",
+        op_name);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 

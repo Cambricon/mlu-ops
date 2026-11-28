@@ -104,9 +104,10 @@ mluOpNmsRotated(mluOpHandle_t handle, const float iou_threshold,
               boxes_desc->getDimIndex(0) == output_desc->getDimIndex(0));
   if (boxes_desc->getDimIndex(1) != SINGLE_BOX_DIM &&
       boxes_desc->getDimIndex(1) != (SINGLE_BOX_DIM + 1)) {
-    LOG(ERROR) << "[mluOpNmsRotated] Check failed: The Boxes' last dimenstion "
-                  "should be 5 or 6. Now is "
-               << boxes_desc->getDimIndex(1) << ".";
+    LOG_ERROR(
+        "[mluOpNmsRotated] Check failed: The Boxes' last dimenstion "
+        "should be 5 or 6. Now is {}.",
+        boxes_desc->getDimIndex(1));
     return MLUOP_STATUS_BAD_PARAM;
   }
 

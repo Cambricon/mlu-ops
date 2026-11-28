@@ -51,10 +51,10 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
     }
   }
   if (param_check_prefer != MLUOP_STATUS_SUCCESS) {
-    LOG(ERROR) << op_name_forward
-               << ":prefer's mode is not supported, it should be "
-                  "MLUOP_COMPUTATION_FAST "
-                  "or MLUOP_COMPUTATION_HIGH_PRECISION.";
+    LOG_ERROR(
+        "{}:prefer's mode is not supported, it should be "
+        "MLUOP_COMPUTATION_FAST or MLUOP_COMPUTATION_HIGH_PRECISION.",
+        op_name_forward);
     return param_check_prefer;
   }
 
@@ -91,8 +91,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrt(mluOpHandle_t handle,
   }
   // check stride
   if (mluop::strideCaseWithNotConsistentDense(2, x_desc, y_desc)) {
-    LOG(ERROR) << op_name_forward
-               << ": stride case with not consistent dense is not supported.";
+    LOG_ERROR("{}: stride case with not consistent dense is not supported.",
+              op_name_forward);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 
@@ -142,8 +142,8 @@ mluOpStatus_t MLUOP_WIN_API mluOpSqrtBackward(
 
   // check stride
   if (mluop::strideCaseWithNotConsistentDense(3, y_desc, dy_desc, dx_desc)) {
-    LOG(ERROR) << op_name_backward
-               << " stride case with not consistent dense is not supported.";
+    LOG_ERROR("{} stride case with not consistent dense is not supported.",
+              op_name_backward);
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 

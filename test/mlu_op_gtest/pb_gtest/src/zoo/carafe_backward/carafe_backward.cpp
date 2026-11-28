@@ -26,7 +26,7 @@
 namespace mluoptest {
 void CarafeBackwardExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_carafe_param()) {
-    LOG(ERROR) << "Missing carafe param. ";
+    LOG_ERROR("Missing carafe param. ");
   }
 }
 
@@ -136,9 +136,9 @@ void CarafeBackwardExecutor::cpuCompute() {
               host_grad_output[grad_output_offset + iter];
           theory_ops_ += 2;
         }  // iter
-      }    // iw iter
-    }      // ih iter
-  }        // i iter
+      }  // iw iter
+    }  // ih iter
+  }  // i iter
 }
 
 int64_t CarafeBackwardExecutor::getTheoryOps() {

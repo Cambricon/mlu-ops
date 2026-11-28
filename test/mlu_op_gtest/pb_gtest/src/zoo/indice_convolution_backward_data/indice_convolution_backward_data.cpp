@@ -82,10 +82,10 @@ void IndiceConvolutionBackwardDataExecutor::setSpconvdataParams() {
 
 void IndiceConvolutionBackwardDataExecutor::paramCheck() {
   if (parser_->getInputNum() != 3) {
-    LOG(ERROR) << "indice_convolution_backward_data input number is wrong. ";
+    LOG_ERROR("indice_convolution_backward_data input number is wrong. ");
   }
   if (parser_->getOutputNum() != 1) {
-    LOG(ERROR) << "indice_convolution_backward_data output number is wrong. ";
+    LOG_ERROR("indice_convolution_backward_data output number is wrong. ");
   }
   if (parser_->getProtoNode()
               ->indice_convolution_backward_data_param()
@@ -93,7 +93,7 @@ void IndiceConvolutionBackwardDataExecutor::paramCheck() {
       parser_->getProtoNode()
               ->indice_convolution_backward_data_param()
               .inverse() != 1) {
-    LOG(ERROR) << "indice_convolution_backward_data inverse param is wrong. ";
+    LOG_ERROR("indice_convolution_backward_data inverse param is wrong. ");
   }
   if (parser_->getProtoNode()
               ->indice_convolution_backward_data_param()
@@ -101,7 +101,7 @@ void IndiceConvolutionBackwardDataExecutor::paramCheck() {
       parser_->getProtoNode()
               ->indice_convolution_backward_data_param()
               .sub_m() != 1) {
-    LOG(ERROR) << "indice_convolution_backward_data sub_m param is wrong. ";
+    LOG_ERROR("indice_convolution_backward_data sub_m param is wrong. ");
   }
 }
 

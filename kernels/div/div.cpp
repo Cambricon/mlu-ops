@@ -51,8 +51,9 @@ mluOpDiv(mluOpHandle_t handle, const mluOpComputationPreference_t prefer,
   }
   // check stride
   if (mluop::strideCaseWithNotConsistentDense(3, x_desc, y_desc, z_desc)) {
-    LOG(ERROR) << "[mluOpDiv]: stride case with not consistent dense is not "
-                  "supported.";
+    LOG_ERROR(
+        "[mluOpDiv]: stride case with not consistent dense is "
+        "not supported.");
     return MLUOP_STATUS_NOT_SUPPORTED;
   }
 

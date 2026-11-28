@@ -171,8 +171,7 @@ class mluOpTrace {
           serializeLine(case_file, line_cnt++, s);
         }
       } else {
-        LOG(ERROR) << __func__ << ": failed to write file: " << filename
-                   << " !";
+        LOG_ERROR("{}: failed to write file: {} !", __func__, filename);
       }
       case_file.close();
     }
@@ -180,9 +179,8 @@ class mluOpTrace {
 
   void dumpTraceData() {
     if (mkdirRecursive(raw_data_dir_.c_str()) != 0) {
-      LOG(ERROR) << __func__ << ": failed to create folder: " << raw_data_dir_
-                 << " ! (" << errno << ": " << strerror(errno) << ")"
-                 << std::endl;
+      LOG_ERROR("{}: failed to create folder: {} ! ({}: {})\n", __func__,
+                raw_data_dir_, errno, strerror(errno));
       return;
     }
     if (getInstance().trace_api_enabled) {
@@ -274,9 +272,7 @@ class mluOpTrace {
   static inline bool flag_dump_api() { return getInstance().dump_api_count_; }
 
  private:
-  mluOpTrace()
-      : api_counter_(
-            std::vector<std::atomic_int>(0)) {
+  mluOpTrace() : api_counter_(std::vector<std::atomic_int>(0)) {
 #if DEBUG
     printf("mluOpTrace singleten init\n");
 #endif

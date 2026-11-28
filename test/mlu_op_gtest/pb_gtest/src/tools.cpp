@@ -69,10 +69,11 @@ size_t shapeStrideCount(const Shape *shape) {
     }
   } else {
     if (shape->dims_size() != shape->dim_stride_size()) {
-      LOG(ERROR) << "[GTEST] prototxt reading error! The dimensions size of"
-                 << " tensor (which is " << shape->dims_size()
-                 << ") is not equal to the dimensions size of it's"
-                 << " strides (which is " << shape->dim_stride_size() << ").";
+      LOG_ERROR(
+          "[GTEST] prototxt reading error! The dimensions size of"
+          " tensor (which is {}) is not equal to the dimensions size"
+          " of it's strides (which is {}).",
+          shape->dims_size(), shape->dim_stride_size());
       GTEST_CHECK(shape->dim_stride_size() == shape->dims_size());
     }
     for (int i = 0; i < shape->dims_size(); ++i) {
@@ -199,7 +200,7 @@ void readDataFromFile(const std::string &file, float *data, size_t count) {
     std::string line;
     getline(fin, line);
     if (line.empty()) {
-      LOG(ERROR) << "Data in " << file << " not enough, at least " << count;
+      LOG_ERROR("Data in {} not enough, at least {}", file, count);
       throw std::invalid_argument(std::string(__FILE__) + " +" +
                                   std::to_string(__LINE__));
     }
@@ -342,7 +343,7 @@ void saveHexDataToFile(const std::string &file, void *data,
       }
     } break;
     default: {
-      LOG(ERROR) << "Unsupported dtype " << mluop::getNameOfDataType(dtype);
+      LOG_ERROR("Unsupported dtype {}", mluop::getNameOfDataType(dtype));
     } break;
   }
   fout.close();
@@ -377,7 +378,7 @@ cnrtDataType_V2_t cvtMluOpDtypeToCnrt_V2(mluOpDataType_t dtype) {
     case MLUOP_DTYPE_UINT64:
       return cnrtUlonglong;
     default:
-      LOG(ERROR) << "NOT support this dtype yet";
+      LOG_ERROR("NOT support this dtype yet");
       throw std::invalid_argument(std::string(__FILE__) + " +" +
                                   std::to_string(__LINE__));
   }
@@ -420,7 +421,7 @@ mluOpDataType_t cvtProtoDtypeToMluOp(DataType dtype) {
     case DTYPE_UINT64:
       return MLUOP_DTYPE_UINT64;
     default:
-      LOG(ERROR) << "NOT support this dtype yet";
+      LOG_ERROR("NOT support this dtype yet");
       throw std::invalid_argument(std::string(__FILE__) + " +" +
                                   std::to_string(__LINE__));
   }
@@ -451,7 +452,7 @@ mluOpTensorLayout_t cvtProtoLayoutToMluOp(TensorLayout order) {
     case LAYOUT_NCL:
       return MLUOP_LAYOUT_NCL;
     default:
-      LOG(ERROR) << "Don't support this layout.";
+      LOG_ERROR("Don't support this layout.");
       throw std::invalid_argument(std::string(__FILE__) + " +" +
                                   std::to_string(__LINE__));
   }
@@ -576,8 +577,7 @@ size_t proc_usage_peak() {
         // cvt to digit
         return std::stoul(kb_str) * 1024;
       } catch (std::exception &e) {
-        LOG(ERROR) << "MLUOPGTEST: grep number in " << line << " failed, "
-                   << e.what();
+        LOG_ERROR("MLUOPGTEST: grep number in {} failed, {}", line, e.what());
         return 0;
       }
     }
@@ -796,9 +796,10 @@ static inline void arrayCastFloatAndNormalDispatch(
               dst_dtype == MLUOP_DTYPE_COMPLEX_HALF)) {
     arrayCastFloatToHalf((int16_t *)dst_data, (float *)src_data, 2 * num);
   } else {
-    LOG(ERROR) << "MLUOPGTEST: arrayCastFloatAndNormal not supported! the "
-                  "src_dtype is "
-               << src_dtype << ", the dst_dype is " << dst_dtype << ".";
+    LOG_ERROR(
+        "MLUOPGTEST: arrayCastFloatAndNormal not supported! the "
+        "src_dtype is {}, the dst_dype is {}.",
+        static_cast<int>(src_dtype), static_cast<int>(dst_dtype));
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
@@ -828,7 +829,7 @@ std::unordered_map<std::string, std::vector<std::string>> readFileByLine(
   std::string line;
   std::ifstream fin(file, std::ios::in);
   if (!fin) {
-    LOG(ERROR) << "MLUOPGTEST: " << __func__ << " failed on file " << file;
+    LOG_ERROR("MLUOPGTEST: {} failed on file {}", __func__, file);
     return map_info;
   } else {
     std::string key_str = "";
@@ -964,7 +965,7 @@ int float_number_is_nan_inf(int data_width, int float_number) {
       return 0;
     }
   } else {
-    LOG(ERROR) << "Don't support this data_width.";
+    LOG_ERROR("Don't support this data_width.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
@@ -1205,7 +1206,7 @@ int float_add_up_down(int in_a, int in_b, int float_16or32, int round_mode,
     }  // not ieee754 fp16 add
     // fp16 add
   } else {
-    LOG(ERROR) << "CPU float add only support half add now.";
+    LOG_ERROR("CPU float add only support half add now.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }
@@ -1412,7 +1413,7 @@ int float_mult_up_down(int in_a, int in_b, int float_16or32, int round_mode,
     }  // not ieee754 fp16 mult
     // fp16 mult
   } else {
-    LOG(ERROR) << "CPU float mult only support half now.";
+    LOG_ERROR("CPU float mult only support half now.");
     throw std::invalid_argument(std::string(__FILE__) + " +" +
                                 std::to_string(__LINE__));
   }

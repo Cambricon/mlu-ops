@@ -33,7 +33,7 @@ namespace mluoptest {
 
 void DcnBackwardDataExecutor::paramCheck() {
   if (!parser_->getProtoNode()->has_dcn_param()) {
-    LOG(ERROR) << "Missing dcn param. ";
+    LOG_ERROR("Missing dcn param. ");
   }
 
   int input_tensor_number = parser_->inputs().size();
@@ -42,8 +42,7 @@ void DcnBackwardDataExecutor::paramCheck() {
         (input_tensor_number == 4 && output_tensor_number == 2))) {
     // if use mask, mask and grad_mask is valid, input number = 5 and
     // output_number =3. otherwise, mask and grad_mask should be null
-    LOG(ERROR)
-        << "The number of input tensors and output tensors is mismatched.";
+    LOG_ERROR("The number of input tensors and output tensors is mismatched.");
   }
   use_mask_ = input_tensor_number == 5;
   auto dcn_desc_node = parser_->getProtoNode()->dcn_param();
@@ -494,8 +493,8 @@ void DcnBackwardDataExecutor::col2img4D(float *grad_col, float *input,
                 weight * cur_top_grad[iter] * mask_value;
           }
         }  // if cur h and cur w is valid
-      }    // dw iter
-    }      // dh iter
+      }  // dw iter
+    }  // dh iter
     // dcn backward data end
 
     // dcn backward mask

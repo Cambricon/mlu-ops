@@ -47,13 +47,13 @@ bool getTxtData(std::string case_name, double *txt_time,
   if (getenv("MLUOP_BASELINE_XML_FILE") != NULL) {
     txt_file = std::string(getenv("MLUOP_BASELINE_XML_FILE")) + ".txt";
   } else {
-    LOG(ERROR) << "getTxtData:The env of MLUOP_BASELINE_XML_FILE is NULL.";
+    LOG_ERROR("getTxtData:The env of MLUOP_BASELINE_XML_FILE is NULL.");
     return is_get;
   }
 
   std::ifstream file(txt_file.c_str(), std::fstream::in);
   if (!file.is_open()) {
-    LOG(ERROR) << "getTxtData: failed to open file " << txt_file << "\n";
+    LOG_ERROR("getTxtData: failed to open file {}\n", txt_file);
     return is_get;
   }
   std::string hw_input, ws_input, result;
@@ -167,13 +167,15 @@ bool updateBaselineStrategy(double hw_time_mean, double scale_bound,
                             double threshold_absolute,
                             double threshold_relative, double *hw_time_base) {
   if (*hw_time_base <= 0) {
-    LOG(ERROR) << "updateBaselineStrategy:baseline time is error, it must be "
-                  "greater than zero";
+    LOG_ERROR(
+        "updateBaselineStrategy:baseline time is error, it must be "
+        "greater than zero");
     return false;
   }
   if (scale_bound <= 0 || threshold_absolute <= 0 || threshold_relative <= 0) {
-    LOG(ERROR) << "updateBaselineStrategy:threshold is wrong, it must be "
-                  "greater than zero";
+    LOG_ERROR(
+        "updateBaselineStrategy:threshold is wrong, it must be "
+        "greater than zero");
     return false;
   }
   double time_base = *hw_time_base;
